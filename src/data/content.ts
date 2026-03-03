@@ -188,7 +188,7 @@ export const theoriesData: Theory[] = [
       zh: "新模式 Pure Fiction 的策略"
     },
     summary: {
-      ru: "Советы по прохождению сложных этапов в Pure Fiction с фокусом на DPS и поддержку.",
+      ru: "Советы по прохождению сложных этапов в Чистом Вымысле с фокусом на DPS и поддержку.",
       en: "Tips for tackling challenging stages in Pure Fiction with a focus on DPS and support.",
       by: "Саветы па праходжанні складаных этапаў у Pure Fiction з фокусам на DPS і падтрымку.",
       jp: "Pure Fiction の難しいステージを攻略するためのヒント、DPS とサポートに焦点。",
@@ -197,7 +197,7 @@ export const theoriesData: Theory[] = [
       zh: "Pure Fiction 挑战阶段的攻略提示，重点关注 DPS 和辅助。"
     },
     content: {
-      ru: "<p>Pure Fiction — это новый игровой режим, требующий быстрого переключения команд и оптимизации ротаций. Для успеха сосредоточьтесь на персонажах с высоким AoE-уроном, таких как Топаз или Фаенон.</p><p><b>Советы:</b> Используйте реликвии с фокусом на скорость и критический урон. Команды с двойным DPS работают лучше всего.</p><p><b>Пример команды:</b> Топаз (основной DPS), Робин (поддержка), Рваная (дебаффер) и Люк (хилер).</p><p>Этот режим идеален для фарминга реликвий и тестирования новых сборок.</p>",
+      ru: "<p>Чистый Вымысел — это новый игровой режим, требующий быстрого переключения команд и оптимизации ротаций. Для успеха сосредоточьтесь на персонажах с высоким AoE-уроном, таких как Топаз или Фэйсяо.</p><p><b>Советы:</b> Используйте реликвии с фокусом на скорость и критический урон. Команды с двойным DPS работают лучше всего.</p><p><b>Пример команды:</b> Топаз (основной DPS), Зарянка (поддержка), Жуань Мэй (дебаффер) и Линша (хилер).</p><p>Этот режим идеален для фарминга реликвий и тестирования новых сборок.</p>",
       en: "<p>Pure Fiction is a new game mode requiring quick team switches and optimized rotations. For success, focus on characters with high AoE damage, like Topaz or Feixiao.</p><p><b>Tips:</b> Use relics focused on speed and crit damage. Double DPS teams work best.</p><p><b>Example Team:</b> Topaz (main DPS), Robin (support), Ruan Mei (debuffer), and Lingsha (healer).</p><p>This mode is perfect for relic farming and testing new builds.</p>",
       by: "<p>Pure Fiction — гэта новы ігровы рэжым, які патрабуе хуткага пераключэньня каманд і аптымізацыі ротацыяў. Для паспеху сканцэнтруйцеся на персанажах з высокім AoE-урон, такіх як Топаз або Фэйсяо.</p><p><b>Саветы:</b> Выкарыстоўвайце рэліквіі з фокусам на хуткасць і крытычны ўрон. Каманды з двойным DPS працуюйце лепей за ўсё.</p><p><b>Прыклад каманды:</b> Топаз (галоўны DPS), Робін (падтрымка), Руань Мэй (дэбаффер) і Лінша (хілер).</p><p>Гэты рэжым ідэальны для фармінгу рэліквій і тэставаньня новых зборак.</p>",
       jp: "<p>Pure Fiction は、チームの素早い切り替えと最適化されたローテーションを必要とする新しいゲームモードです。成功のためには、トパーズや飛霄のような高い AoE ダメージのキャラクターに焦点を当ててください。</p><p><b>ヒント:</b> 速度とクリティカルダメージに焦点を当てた遺物を装備。ダブル DPS チームが最適です。</p><p><b>例のチーム:</b> トパーズ (メイン DPS)、ロビン (サポート)、ルアン・メイ (デバフ)、リンシャ (ヒーラー)。</p><p>このモードは遺物のファーミングと新しいビルドのテストに最適です。</p>",
@@ -236,6 +236,99 @@ export const theoriesData: Theory[] = [
       fr: "<p>L'Astral Express n'est pas seulement un moyen de transport, mais un symbole d'espoir et de connexion entre les mondes. Créé par l'Éon Akivili, l'Express continue son voyage même après la disparition de son créateur.</p><p>Chaque wagon de l'Express détient sa propre histoire, chaque passager apporte avec lui un nouveau destin. Pom-Pom, le conducteur de l'Express, est le gardien de ses traditions et de ses souvenirs.</p><p>Les théories sur la destination de l'Express sont infinies. Peut-être cherche-t-il son créateur, ou peut-être accomplit-il leur dernier souhait—connecter tous les mondes ensemble.</p>",
       zh: "<p>星穹列车不仅是一种交通工具，更是希望和世界间联系的象征。由星神阿基维利创造的列车，即使在创造者消失后仍继续其旅程。</p><p>每节车厢都有自己的故事，每位乘客都带来新的命运。列车车长邦布，是列车传统和记忆的守护者。</p><p>关于列车去向的理论无穷无尽。也许它在寻找它的创造者，或者它在实现他们的最后愿望——将所有世界连接在一起。</p>"
     }
+  },
+  {
+    id: 'theory-8',
+    category: 'gameplay',
+    title: {
+      ru: "Сборка Спаркси (Искорка) для патча 4.0",
+      en: "Sparkle Build Guide for Patch 4.0",
+      by: "Зборка Спарксі (Іскарка) для патча 4.0",
+      jp: "パッチ4.0向け花火ビルドガイド",
+      de: "Sparkle Build Guide für Patch 4.0",
+      fr: "Guide de build Sparkle pour le patch 4.0",
+      zh: "4.0版本花火培养攻略"
+    },
+    summary: {
+      ru: "Лучшие реликвии, конусы и команды для Спаркси в актуальной мете.",
+      en: "Best relics, light cones, and teams for Sparkle in the current meta.",
+      by: "Лепшыя рэліквіі, конусы і каманды для Спарксі ў актуальнай меце.",
+      jp: "現在のメタにおける花火の最適な遺物、光円錐、チーム編成。",
+      de: "Beste Relikte, Lichtkegel und Teams für Sparkle in der aktuellen Meta.",
+      fr: "Meilleures reliques, cônes de lumière et équipes pour Sparkle dans la méta actuelle.",
+      zh: "当前版本花火的最佳遗器、光锥和配队推荐。"
+    },
+    content: {
+      ru: "<p>Спаркси (Искорка) остается одним из лучших саппортов в игре. В версии 4.0 рекомендуется собирать ее в скорость (160+) и критический урон.</p><p><b>Реликвии:</b> Лучший сет - Вестник блуждающего в хакерском пространстве. Планарные украшения - Сломанный киль или Земля грез Пенакония.</p><p><b>Конусы:</b> Лучший конус - ее сигнатурный 'Мирские шалости', но 'Битва не окончена' или 'Танцуй! Танцуй! Танцуй!' тоже отличные варианты.</p>",
+      en: "<p>Sparkle remains one of the best supports in the game. In version 4.0, it is recommended to build her with high speed (160+) and critical damage.</p><p><b>Relics:</b> The best set is Messenger Traversing Hackerspace. Planar Ornaments - Broken Keel or Penacony, Land of the Dreams.</p><p><b>Light Cones:</b> Her signature 'Earthly Escapade' is best, but 'But the Battle Isn't Over' or 'Dance! Dance! Dance!' are also great options.</p>",
+      by: "<p>Спарксі (Іскарка) застаецца адным з лепшых саппортаў у гульні. У версіі 4.0 рэкамендуецца збіраць яе ў хуткасць (160+) і крытычны ўрон.</p><p><b>Рэліквіі:</b> Лепшы сэт - Веснік, які блукае ў хакерскай прасторы. Планарныя ўпрыгажэнні - Зламаны кіль або Зямля мар Пенаконія.</p><p><b>Конусы:</b> Лепшы конус - яе сігнатурны 'Мірскія свавольствы', але 'Бітва не скончана' або 'Танцуй! Танцуй! Танцуй!' таксама выдатныя варыянты.</p>",
+      jp: "<p>花火はゲーム内で最高のサポートの一人です。バージョン4.0では、高い速度（160以上）とクリティカルダメージを重視してビルドすることをお勧めします。</p><p><b>遺物:</b> 最適なセットは「仮想空間を漫遊するメッセンジャー」です。次元界オーナメントは「折れた竜骨」または「夢の地ピノコニー」。</p><p><b>光円錐:</b> モチーフの「人生は遊び」が最適ですが、「だが戦闘は終わらない」や「ダンス！ダンス！ダンス！」も優れた選択肢です。</p>",
+      de: "<p>Sparkle bleibt einer der besten Supports im Spiel. In Version 4.0 wird empfohlen, sie auf hohe Geschwindigkeit (160+) und kritischen Schaden zu bauen.</p><p><b>Relikte:</b> Das beste Set ist 'Bote durch den Hackerspace'. Planar-Ornamente - 'Gebrochener Kiel' oder 'Penacony, Land der Träume'.</p><p><b>Lichtkegel:</b> Ihr Signature-Kegel 'Irdische Eskapade' ist am besten, aber 'Der Kampf ist nicht vorüber' oder 'Tanz! Tanz! Tanz!' sind ebenfalls großartige Optionen.</p>",
+      fr: "<p>Sparkle reste l'un des meilleurs supports du jeu. Dans la version 4.0, il est recommandé de la construire avec une vitesse élevée (160+) et des dégâts critiques.</p><p><b>Reliques :</b> Le meilleur set est 'Messager traversant le hackerspace'. Ornements planaires - 'Quille brisée' ou 'Penacony, Terre des Rêves'.</p><p><b>Cônes de lumière :</b> Son cône signature 'Escapade terrestre' est le meilleur, mais 'Le combat n'est pas terminé' ou 'Danse ! Danse ! Danse !' sont aussi d'excellentes options.</p>",
+      zh: "<p>花火仍然是游戏中最强的辅助之一。在4.0版本中，建议将她的速度堆到160以上，并注重暴击伤害。</p><p><b>遗器：</b> 最佳套装是“骇域漫游的信使”。位面饰品推荐“折断的龙骨”或“梦想之地匹诺康尼”。</p><p><b>光锥：</b> 专属光锥“游戏尘寰”是最佳选择，但“但战斗还未结束”或“舞！舞！舞！”也是非常好的替代品。</p>"
+    }
+  },
+  {
+    id: 'theory-9',
+    category: 'gameplay',
+    title: {
+      ru: "Механика ДоТов (Урон с течением времени) в 4.0",
+      en: "DoT Mechanics (Damage over Time) in 4.0",
+      by: "Механіка ДоТаў (Урон з цягам часу) у 4.0",
+      jp: "4.0におけるDoT（持続ダメージ）の仕組み",
+      de: "DoT-Mechaniken (Schaden über Zeit) in 4.0",
+      fr: "Mécaniques de DoT (Dégâts sur la durée) dans la 4.0",
+      zh: "4.0版本 DoT（持续伤害）机制解析"
+    },
+    summary: {
+      ru: "Как работает урон с течением времени и как правильно собирать DoT-команды.",
+      en: "How Damage over Time works and how to build proper DoT teams.",
+      by: "Як працуе ўрон з цягам часу і як правільна збіраць DoT-каманды.",
+      jp: "持続ダメージの仕組みと、適切なDoTチームの構築方法。",
+      de: "Wie Schaden über Zeit funktioniert und wie man richtige DoT-Teams aufbaut.",
+      fr: "Comment fonctionnent les dégâts sur la durée et comment construire de bonnes équipes DoT.",
+      zh: "持续伤害的工作原理以及如何构建正确的 DoT 队伍。"
+    },
+    content: {
+      ru: "<p>DoT (Damage over Time) - это эффекты Шок, Выветривание, Кровотечение и Горение. Они не могут наносить критический урон, поэтому для DoT-персонажей (Кафка, Черный Лебедь, Сампо) важны Сила Атаки, Скорость и Шанс попадания эффектов.</p><p>В патче 4.0 DoT-команды стали еще сильнее благодаря новым реликвиям и саппортам. Ключевой персонаж для любой DoT-команды - Кафка, так как она может активировать DoT-эффекты вне хода противника.</p>",
+      en: "<p>DoT (Damage over Time) includes Shock, Wind Shear, Bleed, and Burn effects. They cannot deal critical damage, so ATK, Speed, and Effect Hit Rate are crucial for DoT characters (Kafka, Black Swan, Sampo).</p><p>In patch 4.0, DoT teams have become even stronger thanks to new relics and supports. The key character for any DoT team is Kafka, as she can trigger DoT effects outside the enemy's turn.</p>",
+      by: "<p>DoT (Damage over Time) - гэта эфекты Шок, Выветрыванне, Крывацёк і Гарэнне. Яны не могуць наносіць крытычны ўрон, таму для DoT-персанажаў (Кафка, Чорны Лебедзь, Сампо) важныя Сіла Атакі, Хуткасць і Шанц траплення эфектаў.</p><p>У патчы 4.0 DoT-каманды сталі яшчэ мацней дзякуючы новым рэліквіям і саппортам. Ключавы персанаж для любой DoT-каманды - Кафка, бо яна можа актываваць DoT-эфекты па-за ходам праціўніка.</p>",
+      jp: "<p>DoT（持続ダメージ）には、感電、風化、裂創、燃焼の効果が含まれます。これらはクリティカルヒットしないため、DoTキャラクター（カフカ、ブラックスワン、サンポ）には攻撃力、速度、効果命中が重要です。</p><p>パッチ4.0では、新しい遺物やサポートのおかげでDoTチームはさらに強力になりました。DoTチームの鍵となるキャラクターはカフカであり、彼女は敵のターン外でもDoT効果を起爆させることができます。</p>",
+      de: "<p>DoT (Damage over Time) umfasst Schock, Windscherung, Bluten und Verbrennen. Sie können keinen kritischen Schaden verursachen, daher sind ANG, Geschwindigkeit und Effekt-Trefferrate für DoT-Charaktere (Kafka, Black Swan, Sampo) entscheidend.</p><p>In Patch 4.0 sind DoT-Teams dank neuer Relikte und Supports noch stärker geworden. Der Schlüsselcharakter für jedes DoT-Team ist Kafka, da sie DoT-Effekte außerhalb des gegnerischen Zuges auslösen kann.</p>",
+      fr: "<p>Les DoT (Dégâts sur la durée) incluent les effets de Choc, Faille du vent, Saignement et Brûlure. Ils ne peuvent pas infliger de dégâts critiques, donc l'ATQ, la Vitesse et les Chances d'application d'effets sont cruciaux pour les personnages DoT (Kafka, Black Swan, Sampo).</p><p>Dans le patch 4.0, les équipes DoT sont devenues encore plus fortes grâce à de nouvelles reliques et supports. Le personnage clé de toute équipe DoT est Kafka, car elle peut déclencher les effets DoT en dehors du tour de l'ennemi.</p>",
+      zh: "<p>DoT（持续伤害）包括触电、风化、裂伤和灼烧效果。它们不能造成暴击伤害，因此攻击力、速度和效果命中对于 DoT 角色（卡芙卡、黑天鹅、桑博）至关重要。</p><p>在4.0版本中，得益于新的遗器和辅助，DoT 队伍变得更加强大。任何 DoT 队伍的核心角色都是卡芙卡，因为她可以在敌人回合外引爆 DoT 效果。</p>"
+    }
+  },
+  {
+    id: 'theory-10',
+    category: 'gameplay',
+    title: {
+      ru: "Сборка Яогуан: Лучший билд и команды",
+      en: "Yaoguang Build: Best Relics and Teams",
+      by: "Зборка Яагуан: Лепшы білд і каманды",
+      jp: "揺光（ヨウコウ）ビルド：最適な遺物とチーム",
+      de: "Yaoguang Build: Beste Relikte und Teams",
+      fr: "Build Yaoguang : Meilleures reliques et équipes",
+      zh: "摇光培养攻略：最佳遗器与配队"
+    },
+    summary: {
+      ru: "Полное руководство по сборке Яогуан, нового персонажа патча 4.0.",
+      en: "A complete guide to building Yaoguang, the new character in patch 4.0.",
+      by: "Поўнае кіраўніцтва па зборцы Яагуан, новага персанажа патча 4.0.",
+      jp: "パッチ4.0の新キャラクター、揺光（ヨウコウ）の完全ビルドガイド。",
+      de: "Ein vollständiger Leitfaden zum Aufbau von Yaoguang, dem neuen Charakter in Patch 4.0.",
+      fr: "Un guide complet pour construire Yaoguang, le nouveau personnage du patch 4.0.",
+      zh: "4.0版本新角色摇光的完整培养指南。"
+    },
+    content: {
+      ru: "<p>Яогуан - мощный персонаж, появившийся в версии 4.0. Ее основной фокус - нанесение огромного урона по площади и пробитие уязвимости.</p><p><b>Реликвии:</b> Лучший сет реликвий для нее - новый сет из 4.0, увеличивающий урон от пробития. В характеристиках ищите Эффект пробития, Скорость и Силу атаки.</p><p><b>Команды:</b> Идеальные напарники для Яогуан - Жуань Мэй и Первопроходец (Гармония), которые максимизируют ее потенциал пробития.</p>",
+      en: "<p>Yaoguang is a powerful character introduced in version 4.0. Her main focus is dealing massive AoE damage and breaking weaknesses.</p><p><b>Relics:</b> The best relic set for her is the new 4.0 set that increases break damage. Look for Break Effect, Speed, and ATK in stats.</p><p><b>Teams:</b> Ideal teammates for Yaoguang are Ruan Mei and Trailblazer (Harmony), who maximize her break potential.</p>",
+      by: "<p>Яагуан - магутны персанаж, які з'явіўся ў версіі 4.0. Яе асноўны фокус - нанясенне вялізнага ўрону па плошчы і прабіцце ўразлівасці.</p><p><b>Рэліквіі:</b> Лепшы сэт рэліквій для яе - новы сэт з 4.0, які павялічвае ўрон ад прабіцця. У характарыстыках шукайце Эфект прабіцця, Хуткасць і Сілу атакі.</p><p><b>Каманды:</b> Ідэальныя напарнікі для Яагуан - Жуань Мэй і Першапраходзец (Гармонія), якія максімізуюць яе патэнцыял прабіцця.</p>",
+      jp: "<p>揺光（ヨウコウ）はバージョン4.0で登場した強力なキャラクターです。彼女の主な焦点は、大規模な範囲ダメージを与え、弱点を撃破することです。</p><p><b>遺物:</b> 彼女に最適な遺物セットは、撃破ダメージを増加させる新しい4.0のセットです。ステータスでは撃破特効、速度、攻撃力を探してください。</p><p><b>チーム:</b> 揺光の理想的なチームメイトは、ルアン・メイと開拓者（調和）であり、彼女の撃破ポテンシャルを最大化します。</p>",
+      de: "<p>Yaoguang ist ein mächtiger Charakter, der in Version 4.0 eingeführt wurde. Ihr Hauptfokus liegt auf massivem AoE-Schaden und dem Brechen von Schwächen.</p><p><b>Relikte:</b> Das beste Relikt-Set für sie ist das neue 4.0-Set, das den Bruchschaden erhöht. Suchen Sie nach Brucheffekt, Geschwindigkeit und ANG in den Werten.</p><p><b>Teams:</b> Ideale Teamkollegen für Yaoguang sind Ruan Mei und Trailblazer (Harmonie), die ihr Bruchpotenzial maximieren.</p>",
+      fr: "<p>Yaoguang est un personnage puissant introduit dans la version 4.0. Son objectif principal est d'infliger des dégâts de zone massifs et de briser les faiblesses.</p><p><b>Reliques :</b> Le meilleur set de reliques pour elle est le nouveau set de la 4.0 qui augmente les dégâts de rupture. Recherchez l'Effet de rupture, la Vitesse et l'ATQ dans les statistiques.</p><p><b>Équipes :</b> Les coéquipiers idéaux pour Yaoguang sont Ruan Mei et le Pionnier (Harmonie), qui maximisent son potentiel de rupture.</p>",
+      zh: "<p>摇光是4.0版本中引入的强大角色。她的主要特点是造成巨大的范围伤害和击破弱点。</p><p><b>遗器：</b> 最适合她的遗器套装是4.0新增的增加击破伤害的套装。在属性中寻找击破特攻、速度和攻击力。</p><p><b>配队：</b> 摇光的理想队友是阮·梅和开拓者（同谐），他们能最大化她的击破潜力。</p>"
+    }
   }
 ];
 
@@ -248,6 +341,37 @@ export interface BlogPost {
 }
 
 export const blogPostsData: BlogPost[] = [
+  {
+    id: 'blog-3',
+    category: 'updates',
+    title: {
+      ru: "Рераны в патче 4.0: Кого крутить?",
+      en: "Reruns in Patch 4.0: Who to Pull?",
+      by: "Рэраны ў патчы 4.0: Каго круціць?",
+      jp: "パッチ4.0の復刻：誰を引くべきか？",
+      de: "Reruns in Patch 4.0: Wen ziehen?",
+      fr: "Relances dans le patch 4.0 : Qui invoquer ?",
+      zh: "4.0版本复刻：抽谁？"
+    },
+    summary: {
+      ru: "Анализ предстоящих реранов персонажей в версии 4.0 и советы по выбору.",
+      en: "Analysis of upcoming character reruns in version 4.0 and pulling advice.",
+      by: "Аналіз маючых адбыцца рэранаў персанажаў у версіі 4.0 і парады па выбары.",
+      jp: "バージョン4.0で予定されているキャラクターの復刻の分析と引くためのアドバイス。",
+      de: "Analyse der kommenden Charakter-Reruns in Version 4.0 und Zieh-Ratschläge.",
+      fr: "Analyse des relances de personnages à venir dans la version 4.0 et conseils d'invocation.",
+      zh: "4.0版本即将复刻角色的分析及抽取建议。"
+    },
+    content: {
+      ru: "<p>В патче 4.0 нас ждут долгожданные рераны! Ожидается возвращение таких сильных персонажей, как Цзинлю и Авантюрин.</p><p><b>Цзинлю</b> остается одним из лучших DPS-персонажей пути Разрушения. Если вам нужен сильный ледяной дамагер, она - отличный выбор.</p><p><b>Авантюрин</b> - превосходный персонаж Сохранения, обеспечивающий команду мощными щитами и дополнительным уроном. Он особенно хорош в командах бонус-атак.</p><p>Выбор зависит от потребностей вашей учетной записи. Не хватает урона? Крутите Цзинлю. Нужна выживаемость? Авантюрин - ваш выбор.</p>",
+      en: "<p>Patch 4.0 brings highly anticipated reruns! We expect the return of strong characters like Jingliu and Aventurine.</p><p><b>Jingliu</b> remains one of the best Destruction DPS characters. If you need a strong Ice damage dealer, she is an excellent choice.</p><p><b>Aventurine</b> is a superb Preservation character, providing the team with powerful shields and additional damage. He is especially good in follow-up attack teams.</p><p>The choice depends on your account's needs. Lacking damage? Pull Jingliu. Need survivability? Aventurine is your choice.</p>",
+      by: "<p>У патчы 4.0 нас чакаюць доўгачаканыя рэраны! Чакаецца вяртанне такіх моцных персанажаў, як Цзінлю і Авантурын.</p><p><b>Цзінлю</b> застаецца адным з лепшых DPS-персанажаў шляху Разбурэння. Калі вам патрэбен моцны ледзяны дамагер, яна - выдатны выбар.</p><p><b>Авантурын</b> - цудоўны персанаж Захавання, які забяспечвае каманду магутнымі шчытамі і дадатковым уронам. Ён асабліва добры ў камандах бонус-атак.</p><p>Выбар залежыць ад патрэбаў вашага ўліковага запісу. Не хапае ўрону? Круціце Цзінлю. Патрэбна выжывальнасць? Авантурын - ваш выбар.</p>",
+      jp: "<p>パッチ4.0では待望の復刻がやってきます！鏡流（ジンリュウ）やアベンチュリンのような強力なキャラクターの再登場が予想されます。</p><p><b>鏡流</b>は依然として最高の壊滅DPSキャラクターの一人です。強力な氷属性アタッカーが必要な場合、彼女は素晴らしい選択です。</p><p><b>アベンチュリン</b>は優れた存護キャラクターであり、チームに強力なシールドと追加ダメージを提供します。彼は特に追加攻撃チームで活躍します。</p><p>選択はあなたのアカウントのニーズによって異なります。ダメージが不足していますか？鏡流を引きましょう。生存力が必要ですか？アベンチュリンが最適です。</p>",
+      de: "<p>Patch 4.0 bringt lang erwartete Reruns! Wir erwarten die Rückkehr starker Charaktere wie Jingliu und Aventurine.</p><p><b>Jingliu</b> bleibt einer der besten Zerstörungs-DPS-Charaktere. Wenn Sie einen starken Eis-Schadensverursacher brauchen, ist sie eine ausgezeichnete Wahl.</p><p><b>Aventurine</b> ist ein hervorragender Bewahrungs-Charakter, der das Team mit mächtigen Schilden und zusätzlichem Schaden versorgt. Er ist besonders gut in Folgeangriffs-Teams.</p><p>Die Wahl hängt von den Bedürfnissen Ihres Kontos ab. Fehlt es an Schaden? Ziehen Sie Jingliu. Brauchen Sie Überlebensfähigkeit? Aventurine ist Ihre Wahl.</p>",
+      fr: "<p>Le patch 4.0 apporte des relances très attendues ! Nous attendons le retour de personnages forts comme Jingliu et Aventurine.</p><p><b>Jingliu</b> reste l'un des meilleurs personnages DPS de Destruction. Si vous avez besoin d'un puissant attaquant de glace, elle est un excellent choix.</p><p><b>Aventurine</b> est un superbe personnage de Préservation, fournissant à l'équipe de puissants boucliers et des dégâts supplémentaires. Il est particulièrement bon dans les équipes d'attaques de suivi.</p><p>Le choix dépend des besoins de votre compte. Vous manquez de dégâts ? Invoquez Jingliu. Besoin de survie ? Aventurine est votre choix.</p>",
+      zh: "<p>4.0版本带来了备受期待的复刻！我们预计镜流和砂金等强力角色将会回归。</p><p><b>镜流</b>仍然是最好的毁灭DPS角色之一。如果你需要一个强大的冰属性输出，她是一个绝佳的选择。</p><p><b>砂金</b>是一个出色的存护角色，为队伍提供强大的护盾和额外伤害。他在追加攻击队伍中表现尤为出色。</p><p>选择取决于你账号的需求。缺少伤害？抽镜流。需要生存能力？砂金是你的选择。</p>"
+    }
+  },
   {
     id: 'blog-1',
     category: 'updates',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, Menu, X, RefreshCw, Swords, Copy, Download, Search, MessageSquare } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, Menu, X, RefreshCw, Swords, Copy, Download, Search, MessageSquare, Star, ListOrdered } from 'lucide-react';
 import { Starfield } from './components/Starfield';
 import { Terminal } from './components/Terminal';
 import { Language, translations } from './data/translations';
@@ -31,8 +31,24 @@ export default function App() {
   const [theorySearch, setTheorySearch] = useState('');
   const [blogCategory, setBlogCategory] = useState('all');
   const [blogSearch, setBlogSearch] = useState('');
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('hsr_favorites') || '[]');
+    } catch {
+      return [];
+    }
+  });
 
   const t = translations[lang];
+
+  useEffect(() => {
+    localStorage.setItem('hsr_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  const toggleFavorite = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavorites(prev => prev.includes(id) ? prev.filter(favId => favId !== id) : [...prev, id]);
+  };
 
   useEffect(() => {
     // Force dark mode
@@ -69,6 +85,7 @@ export default function App() {
     { id: 'blog', label: t.navBlog, icon: Globe },
     { id: 'chronicle', label: t.navChronicle, icon: RefreshCw },
     { id: 'promo', label: t.navPromo, icon: Ticket },
+    { id: 'tierlist', label: t.navTierList, icon: ListOrdered },
   ] as const;
 
   const handleCopy = (text: string) => {
@@ -92,7 +109,8 @@ export default function App() {
   };
 
   const filteredTheories = theoriesData.filter(theory => {
-    const matchesCat = theoryCategory === 'all' || theory.category === theoryCategory;
+    const matchesCat = theoryCategory === 'all' || 
+                       (theoryCategory === 'favorites' ? favorites.includes(theory.id) : theory.category === theoryCategory);
     const search = theorySearch.toLowerCase();
     const matchesSearch = (theory.title[lang] || theory.title['en']).toLowerCase().includes(search) || 
                           (theory.summary[lang] || theory.summary['en']).toLowerCase().includes(search);
@@ -100,7 +118,8 @@ export default function App() {
   });
 
   const filteredBlog = blogPostsData.filter(post => {
-    const matchesCat = blogCategory === 'all' || post.category === blogCategory;
+    const matchesCat = blogCategory === 'all' || 
+                       (blogCategory === 'favorites' ? favorites.includes(post.id) : post.category === blogCategory);
     const search = blogSearch.toLowerCase();
     const matchesSearch = (post.title[lang] || post.title['en']).toLowerCase().includes(search) || 
                           (post.summary[lang] || post.summary['en']).toLowerCase().includes(search);
@@ -151,7 +170,7 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-[#3E3160]/90 backdrop-blur-md border-b border-[#5C4B8B] shadow-sm">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <h1 className="text-xl md:text-2xl font-bold text-[#C3A6E6] tracking-tight">
-            База Данных: Так написано мною
+            {t.siteName}
           </h1>
           
           {/* Desktop Nav */}
@@ -311,6 +330,7 @@ export default function App() {
                       <option value="lore">{t.filterLore}</option>
                       <option value="characters">{t.filterCharacters}</option>
                       <option value="gameplay">{t.filterGameplay}</option>
+                      <option value="favorites">{t.filterFavorites}</option>
                     </select>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -338,12 +358,20 @@ export default function App() {
                       <div 
                         key={theory.id}
                         onClick={() => setModalContent({ title: theory.title[lang] || theory.title['en'], content: theory.content[lang] || theory.content['en'] })}
-                        className="bg-[#3E3160]/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group"
+                        className="bg-[#3E3160]/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group relative"
                       >
-                        <div className="text-xs font-bold uppercase tracking-wider text-[#C3A6E6] mb-2 bg-[#C3A6E6]/10 inline-block px-3 py-1 rounded-full">
-                          {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="text-xs font-bold uppercase tracking-wider text-[#C3A6E6] bg-[#C3A6E6]/10 inline-block px-3 py-1 rounded-full">
+                            {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
+                          </div>
+                          <button 
+                            onClick={(e) => toggleFavorite(theory.id, e)}
+                            className={`p-2 rounded-full transition-colors ${favorites.includes(theory.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
+                          >
+                            <Star size={20} fill={favorites.includes(theory.id) ? "currentColor" : "none"} />
+                          </button>
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#C3A6E6] transition-colors">
+                        <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#C3A6E6] transition-colors pr-8">
                           {theory.title[lang] || theory.title['en']}
                         </h3>
                         <p className="text-gray-300 line-clamp-3">
@@ -370,6 +398,7 @@ export default function App() {
                       <option value="all">{t.filterAll}</option>
                       <option value="updates">{t.filterUpdates}</option>
                       <option value="personal">{t.filterPersonal}</option>
+                      <option value="favorites">{t.filterFavorites}</option>
                     </select>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
@@ -397,12 +426,20 @@ export default function App() {
                       <div 
                         key={post.id}
                         onClick={() => setModalContent({ title: post.title[lang] || post.title['en'], content: post.content[lang] || post.content['en'] })}
-                        className="bg-[#3E3160]/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group"
+                        className="bg-[#3E3160]/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group relative"
                       >
-                        <div className="text-xs font-bold uppercase tracking-wider text-[#C3A6E6] mb-2 bg-[#C3A6E6]/10 inline-block px-3 py-1 rounded-full">
-                          {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="text-xs font-bold uppercase tracking-wider text-[#C3A6E6] bg-[#C3A6E6]/10 inline-block px-3 py-1 rounded-full">
+                            {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
+                          </div>
+                          <button 
+                            onClick={(e) => toggleFavorite(post.id, e)}
+                            className={`p-2 rounded-full transition-colors ${favorites.includes(post.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
+                          >
+                            <Star size={20} fill={favorites.includes(post.id) ? "currentColor" : "none"} />
+                          </button>
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#C3A6E6] transition-colors">
+                        <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#C3A6E6] transition-colors pr-8">
                           {post.title[lang] || post.title['en']}
                         </h3>
                         <p className="text-gray-300 line-clamp-3">
@@ -462,6 +499,67 @@ export default function App() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {section === 'tierlist' && (
+              <div>
+                <h2 className="text-3xl font-bold text-[#C3A6E6] mb-8">{t.navTierList}</h2>
+                <div className="bg-[#3E3160]/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-[#5C4B8B]">
+                  <p className="text-gray-300 mb-6">
+                    {lang === 'ru' ? 'Актуальный тир-лист персонажей для версии 4.0. Оценки основаны на эффективности в Чистом Вымысле, Зале Забвения и Иллюзии Конца.' : 
+                     lang === 'en' ? 'Current character tier list for version 4.0. Ratings are based on performance in Pure Fiction, Memory of Chaos, and Apocalyptic Shadow.' :
+                     lang === 'by' ? 'Актуальны тыр-ліст персанажаў для версіі 4.0. Ацэнкі заснаваныя на эфектыўнасці ў Чыстым Вымысле, Зале Забыцця і Ілюзіі Канцы.' :
+                     lang === 'jp' ? 'バージョン4.0の最新キャラクターティアリスト。評価は虚構叙事、忘却の庭、末日の幻影でのパフォーマンスに基づいています。' :
+                     lang === 'de' ? 'Aktuelle Charakter-Tier-Liste für Version 4.0. Die Bewertungen basieren auf der Leistung in Pure Fiction, Memory of Chaos und Apocalyptic Shadow.' :
+                     lang === 'fr' ? 'Tier list actuelle des personnages pour la version 4.0. Les évaluations sont basées sur les performances dans Pure Fiction, Memory of Chaos et Apocalyptic Shadow.' :
+                     '4.0版本最新角色节奏榜。评分基于虚构叙事、忘却之庭和末日幻影中的表现。'}
+                  </p>
+                  
+                  <div className="space-y-6">
+                    {/* Tier S+ */}
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="w-full md:w-24 h-24 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-3xl font-bold text-red-400">S+</span>
+                      </div>
+                      <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                        {['Спаркси (Искорка)', 'Жуань Мэй', 'Авантюрин', 'Цзинлю', 'Яогуан', 'Ахерон', 'Светлячок'].map(char => (
+                          <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">
+                            {char}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tier S */}
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="w-full md:w-24 h-24 bg-orange-500/20 border border-orange-500/50 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-3xl font-bold text-orange-400">S</span>
+                      </div>
+                      <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                        {['Кафка', 'Черный Лебедь', 'Зарянка', 'Хохо', 'Фу Сюань', 'Пожиратель Луны', 'Фэйсяо', 'Линша'].map(char => (
+                          <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">
+                            {char}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tier A */}
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="w-full md:w-24 h-24 bg-yellow-500/20 border border-yellow-500/50 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-3xl font-bold text-yellow-400">A</span>
+                      </div>
+                      <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                        {['Топаз', 'Рацио', 'Броня', 'Тинъюнь', 'Пела', 'Галлахер', 'Лоча', 'Цзин Юань', 'Зеле'].map(char => (
+                          <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">
+                            {char}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
