@@ -62,14 +62,14 @@ export const translations = {
     timeRemaining: "Осталось времени"
   },
   en: {
-    siteName: "As I've Written",
+    siteName: "Write by Me",
     navHome: "Home",
     navTheories: "Theories",
     navBlog: "Blog",
     navChronicle: "Event Chronicle",
     navPromo: "Promo Codes",
     navTierList: "Tier List",
-    homeTitle: "Welcome to the Database: As I've Written!",
+    homeTitle: "Welcome to the Database: Write by Me!",
     homeDesc: "This is your personal resource for a deep dive into the Honkai: Star Rail universe. Here you will find theories, a blog, and an up-to-date chronicle of events and banners.",
     lastUpdate: "Last update: January 2026",
     filterAll: "All",

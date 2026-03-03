@@ -179,10 +179,9 @@ export default function App() {
               <div className="absolute top-[2rem] w-16 h-16 bg-[#C3A6E6]/20 rounded-full blur-xl animate-pulse" />
               <Globe size={40} className="absolute top-[2.5rem] text-[#C3A6E6]" />
               
-              <h2 className="text-2xl font-bold text-[#C3A6E6] tracking-[0.3em] mb-2">STATION_OS</h2>
+              <h2 className="text-2xl font-bold text-[#C3A6E6] tracking-[0.3em] mb-2">Write by Me</h2>
               <div className="flex items-center gap-2 text-[#9370DB] text-sm tracking-widest">
                 <RefreshCw size={14} className="animate-spin" />
-                <span>ESTABLISHING CONNECTION...</span>
               </div>
               
               <div className="w-64 h-1 bg-[#3E3160] rounded-full mt-8 overflow-hidden">
