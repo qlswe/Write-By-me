@@ -283,7 +283,7 @@ export default function App() {
                   {t.bannerBtnWeb || "Как установить Web-App"}
                 </button>
                 <a 
-                  href="https://wbm-static.my1.ru/app-debug-inst.apk" 
+                  href="https://wbm-static.my1.ru/write-by-me.apk" 
                   className="bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-6 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors text-center"
                 >
                   {t.bannerBtnAndroid || "Скачать Android APK"}
