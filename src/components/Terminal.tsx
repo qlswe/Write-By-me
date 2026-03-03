@@ -7,14 +7,127 @@ interface TerminalProps {
 
 export const Terminal: React.FC<TerminalProps> = ({ lang }) => {
   const t = translations[lang];
+  
+  const termStrings = {
+    ru: {
+      help: "Доступные команды:",
+      helpDesc: "Показать этот список",
+      warpDesc: "Симулятор гачи",
+      pityDesc: "Показать счетчик гаранта",
+      quoteDesc: "Случайная цитата",
+      pompomDesc: "Показать маскота",
+      feedbackDesc: "Показать сохраненный фидбек",
+      clearDesc: "Очистить терминал",
+      dateDesc: "Текущая дата",
+      pityText: "Текущий гарант:",
+      errorText: "Команда не найдена:",
+      typeHelp: "Введите 'help'.",
+      noFeedback: "Фидбека пока нет."
+    },
+    en: {
+      help: "Available commands:",
+      helpDesc: "Show this list",
+      warpDesc: "Gacha simulator",
+      pityDesc: "Show pity counter",
+      quoteDesc: "Random quote",
+      pompomDesc: "Show mascot",
+      feedbackDesc: "Show saved feedback",
+      clearDesc: "Clear terminal",
+      dateDesc: "Current date",
+      pityText: "Current Pity:",
+      errorText: "Command not found:",
+      typeHelp: "Type 'help'.",
+      noFeedback: "No feedback yet."
+    },
+    by: {
+      help: "Даступныя каманды:",
+      helpDesc: "Паказаць гэты спіс",
+      warpDesc: "Сімулятар гачы",
+      pityDesc: "Паказаць лічыльнік гаранта",
+      quoteDesc: "Выпадковая цытата",
+      pompomDesc: "Паказаць маскота",
+      feedbackDesc: "Паказаць захаваны фідбэк",
+      clearDesc: "Ачысціць тэрмінал",
+      dateDesc: "Бягучая дата",
+      pityText: "Бягучы гарант:",
+      errorText: "Каманда не знойдзена:",
+      typeHelp: "Увядзіце 'help'.",
+      noFeedback: "Фідбэка пакуль няма."
+    },
+    jp: {
+      help: "利用可能なコマンド:",
+      helpDesc: "このリストを表示",
+      warpDesc: "ガチャシミュレーター",
+      pityDesc: "天井カウンターを表示",
+      quoteDesc: "ランダムな名言",
+      pompomDesc: "マスコットを表示",
+      feedbackDesc: "保存されたフィードバックを表示",
+      clearDesc: "端末をクリア",
+      dateDesc: "現在の日付",
+      pityText: "現在の天井:",
+      errorText: "コマンドが見つかりません:",
+      typeHelp: "「help」と入力してください。",
+      noFeedback: "フィードバックはまだありません。"
+    },
+    de: {
+      help: "Verfügbare Befehle:",
+      helpDesc: "Diese Liste anzeigen",
+      warpDesc: "Gacha-Simulator",
+      pityDesc: "Pity-Zähler anzeigen",
+      quoteDesc: "Zufälliges Zitat",
+      pompomDesc: "Maskottchen anzeigen",
+      feedbackDesc: "Gespeichertes Feedback anzeigen",
+      clearDesc: "Terminal leeren",
+      dateDesc: "Aktuelles Datum",
+      pityText: "Aktuelles Pity:",
+      errorText: "Befehl nicht gefunden:",
+      typeHelp: "Geben Sie 'help' ein.",
+      noFeedback: "Noch kein Feedback."
+    },
+    fr: {
+      help: "Commandes disponibles:",
+      helpDesc: "Afficher cette liste",
+      warpDesc: "Simulateur de gacha",
+      pityDesc: "Afficher le compteur de pity",
+      quoteDesc: "Citation aléatoire",
+      pompomDesc: "Afficher la mascotte",
+      feedbackDesc: "Afficher les retours enregistrés",
+      clearDesc: "Effacer le terminal",
+      dateDesc: "Date actuelle",
+      pityText: "Pity actuelle:",
+      errorText: "Commande introuvable:",
+      typeHelp: "Tapez 'help'.",
+      noFeedback: "Aucun retour pour le moment."
+    },
+    zh: {
+      help: "可用命令:",
+      helpDesc: "显示此列表",
+      warpDesc: "抽卡模拟器",
+      pityDesc: "显示保底计数",
+      quoteDesc: "随机名言",
+      pompomDesc: "显示吉祥物",
+      feedbackDesc: "显示已保存的反馈",
+      clearDesc: "清除终端",
+      dateDesc: "当前日期",
+      pityText: "当前保底:",
+      errorText: "未找到命令:",
+      typeHelp: "输入 'help'。",
+      noFeedback: "暂无反馈。"
+    }
+  };
+
+  const ts = termStrings[lang] || termStrings['en'];
+
   const [history, setHistory] = useState<{ type: 'command' | 'response' | 'error', content: string | React.ReactNode }[]>([
     { type: 'response', content: t.terminalWelcome }
   ]);
   const [input, setInput] = useState('');
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
   }, [history]);
 
   const handleCommand = (cmd: string) => {
@@ -29,15 +142,15 @@ export const Terminal: React.FC<TerminalProps> = ({ lang }) => {
           type: 'response',
           content: (
             <div className="flex flex-col gap-1">
-              <div>Available commands:</div>
-              <div><span className="text-purple-400">help</span> - Show this list</div>
-              <div><span className="text-purple-400">warp</span> - Gacha simulator</div>
-              <div><span className="text-purple-400">pity</span> - Show pity counter</div>
-              <div><span className="text-purple-400">quote</span> - Random quote</div>
-              <div><span className="text-purple-400">pompom</span> - Show mascot</div>
-              <div><span className="text-purple-400">feedback</span> - {t.terminalFeedbackDesc || 'Show saved feedback'}</div>
-              <div><span className="text-purple-400">clear</span> - Clear terminal</div>
-              <div><span className="text-purple-400">date</span> - Current date</div>
+              <div>{ts.help}</div>
+              <div><span className="text-purple-400">help</span> - {ts.helpDesc}</div>
+              <div><span className="text-purple-400">warp</span> - {ts.warpDesc}</div>
+              <div><span className="text-purple-400">pity</span> - {ts.pityDesc}</div>
+              <div><span className="text-purple-400">quote</span> - {ts.quoteDesc}</div>
+              <div><span className="text-purple-400">pompom</span> - {ts.pompomDesc}</div>
+              <div><span className="text-purple-400">feedback</span> - {ts.feedbackDesc}</div>
+              <div><span className="text-purple-400">clear</span> - {ts.clearDesc}</div>
+              <div><span className="text-purple-400">date</span> - {ts.dateDesc}</div>
             </div>
           )
         });
@@ -68,7 +181,7 @@ export const Terminal: React.FC<TerminalProps> = ({ lang }) => {
         break;
       case 'pity':
         const currentPity = localStorage.getItem('warpPity') || '0';
-        newHistory.push({ type: 'response', content: `Current Pity: ${currentPity} / 90` });
+        newHistory.push({ type: 'response', content: `${ts.pityText} ${currentPity} / 90` });
         break;
       case 'quote':
         const quotes = [
@@ -96,7 +209,7 @@ export const Terminal: React.FC<TerminalProps> = ({ lang }) => {
       case 'feedback':
         const fbData = JSON.parse(localStorage.getItem('hsr_feedback') || '[]');
         if (fbData.length === 0) {
-          newHistory.push({ type: 'response', content: t.noFeedback || "No feedback yet." });
+          newHistory.push({ type: 'response', content: ts.noFeedback });
         } else {
           const fbContent = fbData.map((fb: any) => (
             <div key={fb.id} className="mb-2 border-b border-[#5C4B8B] pb-2 last:border-0">
@@ -111,7 +224,7 @@ export const Terminal: React.FC<TerminalProps> = ({ lang }) => {
         }
         break;
       default:
-        newHistory.push({ type: 'error', content: `Command not found: ${cmd}. Type 'help'.` });
+        newHistory.push({ type: 'error', content: `${ts.errorText} ${cmd}. ${ts.typeHelp}` });
     }
 
     setHistory(newHistory);
@@ -128,7 +241,7 @@ export const Terminal: React.FC<TerminalProps> = ({ lang }) => {
         </div>
         <div className="text-xs text-gray-400 ml-2">{t.terminalTitle}</div>
       </div>
-      <div className="p-4 h-48 overflow-y-auto text-gray-300 flex flex-col gap-2">
+      <div ref={containerRef} className="p-4 h-48 overflow-y-auto text-gray-300 flex flex-col gap-2">
         {history.map((item, i) => (
           <div key={i} className={
             item.type === 'command' ? 'text-gray-400' :
@@ -149,7 +262,6 @@ export const Terminal: React.FC<TerminalProps> = ({ lang }) => {
             autoComplete="off"
           />
         </div>
-        <div ref={bottomRef} />
       </div>
     </div>
   );

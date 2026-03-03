@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, Menu, X, RefreshCw, Swords, Copy, Download, Search, MessageSquare, Star, ListOrdered } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, Menu, X, RefreshCw, Swords, Copy, Download, Search, MessageSquare, Star, ListOrdered, ImagePlus } from 'lucide-react';
 import { Starfield } from './components/Starfield';
 import { Terminal } from './components/Terminal';
 import { Language, translations } from './data/translations';
@@ -25,6 +25,7 @@ export default function App() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackType, setFeedbackType] = useState<'bug' | 'suggestion'>('bug');
   const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
 
   // Filters
   const [theoryCategory, setTheoryCategory] = useState('all');
@@ -95,36 +96,69 @@ export default function App() {
 
   const handleFeedbackSubmit = () => {
     if (!feedbackText.trim()) return;
+    
+    const subject = encodeURIComponent(`[${feedbackType.toUpperCase()}] HSR Database Feedback`);
+    const body = encodeURIComponent(`${feedbackText}\n\n---\nApp Version: BETA-V03\nLanguage: ${lang}`);
+    
+    // Create a mailto link
+    const mailtoLink = `mailto:semegladysev527@gmail.com?subject=${subject}&body=${body}`;
+    
+    // Open the user's email client
+    window.location.href = mailtoLink;
+    
+    // Also save locally for the terminal to show history
     const existing = JSON.parse(localStorage.getItem('hsr_feedback') || '[]');
     existing.push({
       id: Date.now(),
       type: feedbackType,
       text: feedbackText,
+      hasImage: !!feedbackImage,
       date: new Date().toISOString()
     });
     localStorage.setItem('hsr_feedback', JSON.stringify(existing));
+    
     setFeedbackOpen(false);
     setFeedbackText('');
+    setFeedbackImage(null);
     setToast(t.feedbackSuccess || "Thank you!");
   };
 
-  const filteredTheories = theoriesData.filter(theory => {
-    const matchesCat = theoryCategory === 'all' || 
-                       (theoryCategory === 'favorites' ? favorites.includes(theory.id) : theory.category === theoryCategory);
-    const search = theorySearch.toLowerCase();
-    const matchesSearch = (theory.title[lang] || theory.title['en']).toLowerCase().includes(search) || 
-                          (theory.summary[lang] || theory.summary['en']).toLowerCase().includes(search);
-    return matchesCat && matchesSearch;
-  });
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setToast("Image too large (max 5MB)");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFeedbackImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-  const filteredBlog = blogPostsData.filter(post => {
-    const matchesCat = blogCategory === 'all' || 
-                       (blogCategory === 'favorites' ? favorites.includes(post.id) : post.category === blogCategory);
-    const search = blogSearch.toLowerCase();
-    const matchesSearch = (post.title[lang] || post.title['en']).toLowerCase().includes(search) || 
-                          (post.summary[lang] || post.summary['en']).toLowerCase().includes(search);
-    return matchesCat && matchesSearch;
-  });
+  const filteredTheories = useMemo(() => {
+    return theoriesData.filter(theory => {
+      const matchesCat = theoryCategory === 'all' || 
+                         (theoryCategory === 'favorites' ? favorites.includes(theory.id) : theory.category === theoryCategory);
+      const search = theorySearch.toLowerCase();
+      const matchesSearch = (theory.title[lang] || theory.title['en']).toLowerCase().includes(search) || 
+                            (theory.summary[lang] || theory.summary['en']).toLowerCase().includes(search);
+      return matchesCat && matchesSearch;
+    });
+  }, [theoryCategory, theorySearch, lang, favorites]);
+
+  const filteredBlog = useMemo(() => {
+    return blogPostsData.filter(post => {
+      const matchesCat = blogCategory === 'all' || 
+                         (blogCategory === 'favorites' ? favorites.includes(post.id) : post.category === blogCategory);
+      const search = blogSearch.toLowerCase();
+      const matchesSearch = (post.title[lang] || post.title['en']).toLowerCase().includes(search) || 
+                            (post.summary[lang] || post.summary['en']).toLowerCase().includes(search);
+      return matchesCat && matchesSearch;
+    });
+  }, [blogCategory, blogSearch, lang, favorites]);
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0]">
@@ -145,9 +179,10 @@ export default function App() {
               <div className="absolute top-[2rem] w-16 h-16 bg-[#C3A6E6]/20 rounded-full blur-xl animate-pulse" />
               <Globe size={40} className="absolute top-[2.5rem] text-[#C3A6E6]" />
               
-              <h2 className="text-2xl font-bold text-[#C3A6E6] tracking-[0.3em] mb-2">Write by Me</h2>
+              <h2 className="text-2xl font-bold text-[#C3A6E6] tracking-[0.3em] mb-2">STATION_OS</h2>
               <div className="flex items-center gap-2 text-[#9370DB] text-sm tracking-widest">
                 <RefreshCw size={14} className="animate-spin" />
+                <span>ESTABLISHING CONNECTION...</span>
               </div>
               
               <div className="w-64 h-1 bg-[#3E3160] rounded-full mt-8 overflow-hidden">
@@ -283,7 +318,7 @@ export default function App() {
                   {t.bannerBtnWeb || "Как установить Web-App"}
                 </button>
                 <a 
-                  href="https://wbm-static.my1.ru/write-by-me.apk" 
+                  href="https://wbm-static.my1.ru/app-debug-inst.apk" 
                   className="bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-6 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors text-center"
                 >
                   {t.bannerBtnAndroid || "Скачать Android APK"}
@@ -674,7 +709,7 @@ export default function App() {
         <div className="max-w-5xl mx-auto px-4 py-12">
           <Terminal lang={lang} />
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
             <div>
               <h4 className="text-[#C3A6E6] font-bold uppercase tracking-wider text-sm mb-4">{t.systemStatus}</h4>
               <ul className="space-y-2 text-sm text-gray-400">
@@ -693,20 +728,7 @@ export default function App() {
               </ul>
             </div>
             
-            <div>
-              <h4 className="text-[#C3A6E6] font-bold uppercase tracking-wider text-sm mb-4">{t.quickLinks}</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                {navItems.map(item => (
-                  <li key={item.id}>
-                    <button onClick={() => setSection(item.id)} className="hover:text-[#C3A6E6] transition-colors">
-                      {item.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-gray-400 md:text-right">
               <div className="inline-block px-3 py-1 rounded-full bg-[#3E3160] border border-[#5C4B8B] font-mono text-xs mb-4">
                 Build: BETA-V03
               </div>
@@ -776,6 +798,36 @@ export default function App() {
                     placeholder={t.feedbackPlaceholder || "Describe..."}
                     className="w-full h-32 bg-[#2F244F] border border-[#5C4B8B] rounded-xl p-3 text-gray-200 focus:outline-none focus:border-[#C3A6E6] resize-none"
                   />
+                </div>
+                <div>
+                  <input 
+                    type="file" 
+                    id="feedback-image" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleImageUpload}
+                  />
+                  <label 
+                    htmlFor="feedback-image"
+                    className="flex items-center justify-center gap-2 w-full p-3 border border-dashed border-[#5C4B8B] rounded-xl text-gray-400 hover:text-[#C3A6E6] hover:border-[#C3A6E6] transition-colors cursor-pointer bg-[#2F244F]/50"
+                  >
+                    <ImagePlus size={20} />
+                    {feedbackImage ? "Image attached (Click to change)" : "Attach Image (Optional)"}
+                  </label>
+                  {feedbackImage && (
+                    <div className="mt-2 relative rounded-lg overflow-hidden border border-[#5C4B8B] inline-block">
+                      <img src={feedbackImage} alt="Attachment preview" className="h-20 object-cover" />
+                      <button 
+                        onClick={() => setFeedbackImage(null)}
+                        className="absolute top-1 right-1 bg-black/50 rounded-full p-1 hover:bg-red-500/80 transition-colors"
+                      >
+                        <X size={12} className="text-white" />
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Note: Images cannot be sent directly via email client link. Please attach the image manually in your email client if you wish to send it.
+                  </p>
                 </div>
               </div>
               <div className="p-6 border-t border-[#5C4B8B] bg-[#2F244F] flex justify-end gap-3">
