@@ -145,9 +145,10 @@ export default function App() {
               <div className="absolute top-[2rem] w-16 h-16 bg-[#C3A6E6]/20 rounded-full blur-xl animate-pulse" />
               <Globe size={40} className="absolute top-[2.5rem] text-[#C3A6E6]" />
               
-              <h2 className="text-2xl font-bold text-[#C3A6E6] tracking-[0.3em] mb-2">Wtite by Me</h2>
+              <h2 className="text-2xl font-bold text-[#C3A6E6] tracking-[0.3em] mb-2">STATION_OS</h2>
               <div className="flex items-center gap-2 text-[#9370DB] text-sm tracking-widest">
                 <RefreshCw size={14} className="animate-spin" />
+                <span>ESTABLISHING CONNECTION...</span>
               </div>
               
               <div className="w-64 h-1 bg-[#3E3160] rounded-full mt-8 overflow-hidden">
@@ -173,34 +174,32 @@ export default function App() {
           </h1>
           
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-2 bg-[#2F244F]/80 backdrop-blur-md p-1.5 rounded-2xl border border-[#5C4B8B]/50">
             {navItems.map(item => (
               <button
                 key={item.id}
                 onClick={() => setSection(item.id)}
-                className={`text-base font-semibold transition-colors relative py-1 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all relative ${
                   section === item.id 
-                    ? 'text-[#C3A6E6]' 
-                    : 'text-gray-300 hover:text-[#C3A6E6]'
+                    ? 'text-white bg-[#5C4B8B] shadow-md' 
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-[#3E3160]/50'
                 }`}
               >
+                <item.icon size={16} />
                 {item.label}
-                {section === item.id && (
-                  <motion.div 
-                    layoutId="nav-indicator"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C3A6E6] rounded-full"
-                  />
-                )}
               </button>
             ))}
           </nav>
 
           <div className="flex items-center gap-3">
             <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
               <select 
                 value={lang} 
                 onChange={(e) => setLang(e.target.value as Language)}
-                className="appearance-none bg-[#2F244F] border border-[#5C4B8B] rounded-lg pl-3 pr-10 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C3A6E6] text-gray-200 cursor-pointer hover:border-[#C3A6E6] transition-colors"
+                className="appearance-none bg-[#2F244F] border border-[#5C4B8B] rounded-lg pl-9 pr-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C3A6E6] text-gray-200 cursor-pointer hover:border-[#C3A6E6] transition-colors"
               >
                 <option value="ru">RU</option>
                 <option value="en">EN</option>
@@ -210,9 +209,6 @@ export default function App() {
                 <option value="fr">FR</option>
                 <option value="zh">ZH</option>
               </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-              </div>
             </div>
 
             <button 
@@ -315,15 +311,18 @@ export default function App() {
             )}
 
             {section === 'theories' && (
-              <div>
+              <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
                 <h2 className="text-3xl font-bold text-[#C3A6E6] mb-8">{t.navTheories}</h2>
                 
                 <div className="flex flex-col sm:flex-row gap-4 mb-8">
                   <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
                     <select 
                       value={theoryCategory}
                       onChange={(e) => setTheoryCategory(e.target.value)}
-                      className="appearance-none bg-[#3E3160] border border-[#5C4B8B] rounded-xl pl-4 pr-12 py-3 text-gray-200 focus:outline-none focus:border-[#C3A6E6] cursor-pointer w-full sm:w-auto hover:border-[#C3A6E6] transition-colors"
+                      className="appearance-none bg-[#3E3160] border border-[#5C4B8B] rounded-xl pl-12 pr-4 py-3 text-gray-200 focus:outline-none focus:border-[#C3A6E6] cursor-pointer w-full sm:w-auto hover:border-[#C3A6E6] transition-colors"
                     >
                       <option value="all">{t.filterAll}</option>
                       <option value="lore">{t.filterLore}</option>
@@ -331,9 +330,6 @@ export default function App() {
                       <option value="gameplay">{t.filterGameplay}</option>
                       <option value="favorites">{t.filterFavorites}</option>
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </div>
                   </div>
                   <div className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -384,24 +380,24 @@ export default function App() {
             )}
 
             {section === 'blog' && (
-              <div>
+              <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
                 <h2 className="text-3xl font-bold text-[#C3A6E6] mb-8">{t.navBlog}</h2>
                 
                 <div className="flex flex-col sm:flex-row gap-4 mb-8">
                   <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
                     <select 
                       value={blogCategory}
                       onChange={(e) => setBlogCategory(e.target.value)}
-                      className="appearance-none bg-[#3E3160] border border-[#5C4B8B] rounded-xl pl-4 pr-12 py-3 text-gray-200 focus:outline-none focus:border-[#C3A6E6] cursor-pointer w-full sm:w-auto hover:border-[#C3A6E6] transition-colors"
+                      className="appearance-none bg-[#3E3160] border border-[#5C4B8B] rounded-xl pl-12 pr-4 py-3 text-gray-200 focus:outline-none focus:border-[#C3A6E6] cursor-pointer w-full sm:w-auto hover:border-[#C3A6E6] transition-colors"
                     >
                       <option value="all">{t.filterAll}</option>
                       <option value="updates">{t.filterUpdates}</option>
                       <option value="personal">{t.filterPersonal}</option>
                       <option value="favorites">{t.filterFavorites}</option>
                     </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                    </div>
                   </div>
                   <div className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -452,7 +448,7 @@ export default function App() {
             )}
 
             {section === 'chronicle' && (
-              <div>
+              <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
                 <h2 className="text-3xl font-bold text-[#C3A6E6] mb-8">{t.navChronicle}</h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {eventsData.map(event => {
@@ -503,59 +499,142 @@ export default function App() {
             )}
 
             {section === 'tierlist' && (
-              <div>
-                <h2 className="text-3xl font-bold text-[#C3A6E6] mb-8">{t.navTierList}</h2>
-                <div className="bg-[#3E3160]/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-[#5C4B8B]">
-                  <p className="text-gray-300 mb-6">
-                    {lang === 'ru' ? 'Актуальный тир-лист персонажей для версии 4.0. Оценки основаны на эффективности в Чистом Вымысле, Зале Забвения и Иллюзии Конца.' : 
-                     lang === 'en' ? 'Current character tier list for version 4.0. Ratings are based on performance in Pure Fiction, Memory of Chaos, and Apocalyptic Shadow.' :
-                     lang === 'by' ? 'Актуальны тыр-ліст персанажаў для версіі 4.0. Ацэнкі заснаваныя на эфектыўнасці ў Чыстым Вымысле, Зале Забыцця і Ілюзіі Канцы.' :
-                     lang === 'jp' ? 'バージョン4.0の最新キャラクターティアリスト。評価は虚構叙事、忘却の庭、末日の幻影でのパフォーマンスに基づいています。' :
-                     lang === 'de' ? 'Aktuelle Charakter-Tier-Liste für Version 4.0. Die Bewertungen basieren auf der Leistung in Pure Fiction, Memory of Chaos und Apocalyptic Shadow.' :
-                     lang === 'fr' ? 'Tier list actuelle des personnages pour la version 4.0. Les évaluations sont basées sur les performances dans Pure Fiction, Memory of Chaos et Apocalyptic Shadow.' :
-                     '4.0版本最新角色节奏榜。评分基于虚构叙事、忘却之庭和末日幻影中的表现。'}
-                  </p>
-                  
-                  <div className="space-y-6">
-                    {/* Tier S+ */}
-                    <div className="flex flex-col md:flex-row gap-4">
-                      <div className="w-full md:w-24 h-24 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-3xl font-bold text-red-400">S+</span>
+              <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
+                <h2 className="text-3xl font-bold text-[#C3A6E6] mb-6">{t.navTierList}</h2>
+                <p className="text-gray-300 mb-8">
+                  {lang === 'ru' ? 'Актуальный тир-лист персонажей для версии 4.0. Оценки основаны на эффективности в Чистом Вымысле, Зале Забвения и Иллюзии Конца.' : 
+                   lang === 'en' ? 'Current character tier list for version 4.0. Ratings are based on performance in Pure Fiction, Memory of Chaos, and Apocalyptic Shadow.' :
+                   lang === 'by' ? 'Актуальны тыр-ліст персанажаў для версіі 4.0. Ацэнкі заснаваныя на эфектыўнасці ў Чыстым Вымысле, Зале Забыцця і Ілюзіі Канцы.' :
+                   lang === 'jp' ? 'バージョン4.0の最新キャラクターティアリスト。評価は虚構叙事、忘却の庭、末日の幻影でのパフォーマンスに基づいています。' :
+                   lang === 'de' ? 'Aktuelle Charakter-Tier-Liste für Version 4.0. Die Bewertungen basieren auf der Leistung in Pure Fiction, Memory of Chaos und Apocalyptic Shadow.' :
+                   lang === 'fr' ? 'Tier list actuelle des personnages pour la version 4.0. Les évaluations sont basées sur les performances dans Pure Fiction, Memory of Chaos et Apocalyptic Shadow.' :
+                   '4.0版本最新角色节奏榜。评分基于虚构叙事、忘却之庭和末日幻影中的表现。'}
+                </p>
+                
+                <div className="space-y-12">
+                  {/* DD (Damage Dealers) */}
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-6 border-b border-[#5C4B8B] pb-2">
+                      {lang === 'ru' ? 'ДД (Урон)' : 'DD (Damage)'}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-red-400">S+</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Ахерон', 'Светлячок', 'Фэйсяо', 'Юньли', 'Бутхилл'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                        {['Спаркси (Искорка)', 'Жуань Мэй', 'Авантюрин', 'Цзинлю', 'Яогуан', 'Ахерон', 'Светлячок'].map(char => (
-                          <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">
-                            {char}
-                          </span>
-                        ))}
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-orange-500/20 border border-orange-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-orange-400">S</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Цзинлю', 'Дань Хэн: ПЛ', 'Кафка', 'Черный Лебедь', 'Рацио', 'Зеле', 'Цзин Юань', 'Аргенти', 'Блэйд', 'Клара'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-yellow-500/20 border border-yellow-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-yellow-400">A</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Топаз', 'Химеко', 'Герта', 'Сюэи', 'Миша', 'Цинцюэ'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-blue-500/20 border border-blue-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-blue-400">B</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Яньцин', 'Сушан', 'Дань Хэн', 'Хук', 'Арлан', 'Физ. Первопроходец'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Tier S */}
-                    <div className="flex flex-col md:flex-row gap-4">
-                      <div className="w-full md:w-24 h-24 bg-orange-500/20 border border-orange-500/50 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-3xl font-bold text-orange-400">S</span>
+                  {/* Amplifiers */}
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-6 border-b border-[#5C4B8B] pb-2">
+                      {lang === 'ru' ? 'Амплификаторы (Поддержка)' : 'Amplifiers (Support)'}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-red-400">S+</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Жуань Мэй', 'Искорка', 'Зарянка', 'Цзяоцю', 'Серебряный Волк', 'Тинъюнь'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                        {['Кафка', 'Черный Лебедь', 'Зарянка', 'Хохо', 'Фу Сюань', 'Пожиратель Луны', 'Фэйсяо', 'Линша'].map(char => (
-                          <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">
-                            {char}
-                          </span>
-                        ))}
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-orange-500/20 border border-orange-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-orange-400">S</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Броня', 'Пела', 'Гуйнайфэнь', 'Аста', 'Ханья', 'Юйкун'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-yellow-500/20 border border-yellow-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-yellow-400">A</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Сампо', 'Лука'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Tier A */}
-                    <div className="flex flex-col md:flex-row gap-4">
-                      <div className="w-full md:w-24 h-24 bg-yellow-500/20 border border-yellow-500/50 rounded-xl flex items-center justify-center shrink-0">
-                        <span className="text-3xl font-bold text-yellow-400">A</span>
+                  {/* Sustain */}
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-6 border-b border-[#5C4B8B] pb-2">
+                      {lang === 'ru' ? 'Сустейн (Выживаемость)' : 'Sustain (Survival)'}
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-red-400">S+</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Авантюрин', 'Хохо', 'Фу Сюань', 'Линша', 'Галлахер'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                        {['Топаз', 'Рацио', 'Броня', 'Тинъюнь', 'Пела', 'Галлахер', 'Лоча', 'Цзин Юань', 'Зеле'].map(char => (
-                          <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">
-                            {char}
-                          </span>
-                        ))}
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-orange-500/20 border border-orange-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-orange-400">S</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Лоча', 'Гепард', 'Байлу'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="w-full md:w-24 h-24 bg-yellow-500/20 border border-yellow-500/50 rounded-xl flex items-center justify-center shrink-0">
+                          <span className="text-3xl font-bold text-yellow-400">A</span>
+                        </div>
+                        <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+                          {['Рысь', 'Март 7', 'Наташа', 'Огненный Первопроходец'].map(char => (
+                            <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -592,7 +671,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#221A3D]/80 backdrop-blur-md border-t border-[#5C4B8B] mt-auto relative z-10">
+      <footer className="bg-[#3E3160]/90 backdrop-blur-md border-t border-[#5C4B8B] mt-auto relative z-10">
         <div className="max-w-5xl mx-auto px-4 py-12">
           <Terminal lang={lang} />
           
