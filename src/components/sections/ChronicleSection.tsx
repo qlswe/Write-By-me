@@ -24,7 +24,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang }) => {
           const countdown = formatCountdown(nextDate, t);
           
           return (
-            <div key={event.id} className="bg-[#3E3160]/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-[#5C4B8B] relative overflow-hidden group">
+            <div key={event.id} className="bg-[#3E3160] p-6 rounded-2xl shadow-lg border border-[#5C4B8B] relative overflow-hidden group">
               <div className="absolute top-0 left-0 w-full h-1 bg-[#2F244F]">
                 <motion.div 
                   className="h-full bg-[#C3A6E6] shadow-[0_0_10px_#C3A6E6]"

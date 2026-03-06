@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, LogIn, LogOut, User as UserIcon } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
@@ -13,6 +13,10 @@ interface HeaderProps {
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
   navItems: readonly { id: string; label: string; icon: any }[];
+  favorites: string[];
+  clearFavorites: () => void;
+  lowPerfMode?: boolean;
+  toggleLowPerfMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,7 +26,11 @@ export const Header: React.FC<HeaderProps> = ({
   setSection,
   mobileMenuOpen,
   setMobileMenuOpen,
-  navItems
+  navItems,
+  favorites,
+  clearFavorites,
+  lowPerfMode,
+  toggleLowPerfMode
 }) => {
   const t = translations[lang];
   const { user, loginWithGoogle, logout } = useAuth();
@@ -114,6 +122,41 @@ export const Header: React.FC<HeaderProps> = ({
                               </p>
                             </div>
                           </div>
+                          
+                          <div className="flex items-center justify-between bg-[#2F244F] border border-[#5C4B8B] rounded-lg p-3 mb-4">
+                            <div className="flex items-center gap-2">
+                              <Bookmark size={16} className="text-[#C3A6E6]" />
+                              <span className="text-sm font-bold text-white">{t.savedArticles || "Saved Articles"}</span>
+                            </div>
+                            <span className="bg-[#C3A6E6] text-[#2F244F] text-xs font-bold px-2 py-0.5 rounded-full">
+                              {favorites.length}
+                            </span>
+                          </div>
+
+                          {favorites.length > 0 && (
+                            <button 
+                              onClick={() => { clearFavorites(); setProfileOpen(false); }}
+                              className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-orange-500/20 text-orange-400 hover:text-orange-300 border border-[#5C4B8B] hover:border-orange-500/50 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
+                            >
+                              <Trash2 size={16} />
+                              {t.clearFavorites || "Clear Favorites"}
+                            </button>
+                          )}
+
+                          {toggleLowPerfMode && (
+                            <button 
+                              onClick={toggleLowPerfMode}
+                              className={`w-full flex items-center justify-center gap-2 bg-[#2F244F] border border-[#5C4B8B] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-4 ${
+                                lowPerfMode 
+                                  ? 'text-yellow-400 hover:bg-yellow-400/10 hover:border-yellow-400/50' 
+                                  : 'text-gray-300 hover:bg-[#3E3160] hover:text-white'
+                              }`}
+                            >
+                              {lowPerfMode ? <ZapOff size={16} /> : <Zap size={16} />}
+                              {lowPerfMode ? (t.lowPerfModeOn || "Low Perf Mode: ON") : (t.lowPerfModeOff || "Low Perf Mode: OFF")}
+                            </button>
+                          )}
+
                           <button 
                             onClick={() => { logout(); setProfileOpen(false); }}
                             className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-[#5C4B8B] hover:border-red-500/50 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -190,6 +233,41 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="font-bold text-[#C3A6E6] mb-1">{t.profileInfo || "Profile Information"}</div>
                     <p className="text-xs opacity-80">{t.profileDesc || "Your language preferences and favorite articles are stored here. They sync across your devices."}</p>
                   </div>
+                  
+                  <div className="flex items-center justify-between bg-[#3E3160] p-3 rounded-xl border border-[#5C4B8B]">
+                    <div className="flex items-center gap-2">
+                      <Bookmark size={20} className="text-[#C3A6E6]" />
+                      <span className="font-bold text-white">{t.savedArticles || "Saved Articles"}</span>
+                    </div>
+                    <span className="bg-[#C3A6E6] text-[#2F244F] font-bold px-3 py-1 rounded-full">
+                      {favorites.length}
+                    </span>
+                  </div>
+
+                  {favorites.length > 0 && (
+                    <button 
+                      onClick={() => { clearFavorites(); setMobileMenuOpen(false); }}
+                      className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-orange-500/20 text-orange-400 border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"
+                    >
+                      <Trash2 size={20} />
+                      {t.clearFavorites || "Clear Favorites"}
+                    </button>
+                  )}
+
+                  {toggleLowPerfMode && (
+                    <button 
+                      onClick={toggleLowPerfMode}
+                      className={`w-full flex items-center justify-center gap-2 bg-[#2F244F] border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors ${
+                        lowPerfMode 
+                          ? 'text-yellow-400 hover:bg-yellow-400/10' 
+                          : 'text-gray-300 hover:bg-[#3E3160]'
+                      }`}
+                    >
+                      {lowPerfMode ? <ZapOff size={20} /> : <Zap size={20} />}
+                      {lowPerfMode ? (t.lowPerfModeOn || "Low Perf Mode: ON") : (t.lowPerfModeOff || "Low Perf Mode: OFF")}
+                    </button>
+                  )}
+
                   <button 
                     onClick={() => { logout(); setMobileMenuOpen(false); }}
                     className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-red-500/20 text-red-400 border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"

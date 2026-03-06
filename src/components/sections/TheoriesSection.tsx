@@ -12,7 +12,7 @@ interface TheoriesSectionProps {
   setTheorySearch: (search: string) => void;
   favorites: string[];
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
-  setModalContent: (content: { title: string; content: string }) => void;
+  setModalContent: (content: { id?: string; title: string; content: string }) => void;
 }
 
 export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
@@ -82,8 +82,8 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
           {filteredTheories.map(theory => (
             <div 
               key={theory.id}
-              onClick={() => setModalContent({ title: theory.title[lang] || theory.title['en'], content: theory.content[lang] || theory.content['en'] })}
-              className="bg-[#3E3160]/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group relative"
+              onClick={() => setModalContent({ id: theory.id, title: theory.title[lang] || theory.title['en'], content: theory.content[lang] || theory.content['en'] })}
+              className="bg-[#3E3160] p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group relative"
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="text-xs font-bold uppercase tracking-wider text-[#C3A6E6] bg-[#C3A6E6]/10 inline-block px-3 py-1 rounded-full">

@@ -1,69 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from './useAuth';
-import { auth } from '../firebase';
-
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string;
-    email?: string | null;
-    emailVerified?: boolean;
-    isAnonymous?: boolean;
-    tenantId?: string | null;
-    providerInfo: {
-      providerId: string;
-      displayName: string | null;
-      email: string | null;
-      photoUrl: string | null;
-    }[];
-  }
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
+import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 
 interface UserData {
   favorites: string[];
   lang: string;
+  lowPerfMode?: boolean;
 }
 
 export function useUserData(initialLang: string) {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [lang, setLang] = useState<string>(initialLang);
+  const [lowPerfMode, setLowPerfMode] = useState<boolean>(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // Load from local storage initially for fast render
@@ -77,6 +28,11 @@ export function useUserData(initialLang: string) {
       const localLang = localStorage.getItem('hsr_lang');
       if (localLang && !isDataLoaded) {
         setLang(localLang);
+      }
+
+      const localPerf = localStorage.getItem('hsr_low_perf');
+      if (localPerf === 'true' && !isDataLoaded) {
+        setLowPerfMode(true);
       }
     } catch (e) {
       console.error("Error loading local data", e);
@@ -103,11 +59,16 @@ export function useUserData(initialLang: string) {
           setLang(data.lang);
           localStorage.setItem('hsr_lang', data.lang);
         }
+        if (data.lowPerfMode !== undefined) {
+          setLowPerfMode(data.lowPerfMode);
+          localStorage.setItem('hsr_low_perf', String(data.lowPerfMode));
+        }
       } else {
         // Create initial document if it doesn't exist
         setDoc(userRef, {
           favorites: favorites,
           lang: lang,
+          lowPerfMode: lowPerfMode,
           createdAt: new Date().toISOString()
         }, { merge: true }).catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
       }
@@ -145,6 +106,20 @@ export function useUserData(initialLang: string) {
     }
   }, [favorites, user]);
 
+  const clearFavorites = useCallback(async () => {
+    setFavorites([]);
+    localStorage.setItem('hsr_favorites', JSON.stringify([]));
+
+    if (user) {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { favorites: [] }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+      }
+    }
+  }, [user]);
+
   const updateLang = useCallback(async (newLang: string) => {
     setLang(newLang);
     localStorage.setItem('hsr_lang', newLang);
@@ -159,5 +134,20 @@ export function useUserData(initialLang: string) {
     }
   }, [user]);
 
-  return { favorites, toggleFavorite, lang, updateLang, isDataLoaded };
+  const toggleLowPerfMode = useCallback(async () => {
+    const newValue = !lowPerfMode;
+    setLowPerfMode(newValue);
+    localStorage.setItem('hsr_low_perf', String(newValue));
+
+    if (user) {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { lowPerfMode: newValue }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+      }
+    }
+  }, [lowPerfMode, user]);
+
+  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded };
 }

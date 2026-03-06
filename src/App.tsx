@@ -31,12 +31,12 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [section, setSection] = useState<Section>('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [modalContent, setModalContent] = useState<{title: string, content: string} | null>(null);
+  const [modalContent, setModalContent] = useState<{id?: string, title: string, content: string} | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(false);
 
   // User Data (Syncs with Firebase)
-  const { favorites, toggleFavorite, lang, updateLang, isDataLoaded } = useUserData('ru');
+  const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded } = useUserData('ru');
 
   // Feedback state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -134,7 +134,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0]">
       <LoadingScreen isLoading={isLoading} />
-      <Starfield />
+      <Starfield lowPerfMode={lowPerfMode} />
       
       <Header 
         lang={lang as Language} 
@@ -144,6 +144,10 @@ export default function App() {
         mobileMenuOpen={mobileMenuOpen} 
         setMobileMenuOpen={setMobileMenuOpen} 
         navItems={navItems} 
+        favorites={favorites}
+        clearFavorites={clearFavorites}
+        lowPerfMode={lowPerfMode}
+        toggleLowPerfMode={toggleLowPerfMode}
       />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 relative z-10">
@@ -214,7 +218,7 @@ export default function App() {
         handleFeedbackSubmit={handleFeedbackSubmit}
       />
 
-      <ContentModal modalContent={modalContent} setModalContent={setModalContent} />
+      <ContentModal modalContent={modalContent} setModalContent={setModalContent} lang={lang as Language} />
 
       {/* Toast Notification */}
       <AnimatePresence>

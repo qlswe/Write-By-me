@@ -11,7 +11,18 @@ service cloud.firestore {
     // Fields:
     //   - favorites: list of strings (optional) - List of favorite item IDs
     //   - lang: string (optional) - Preferred language
+    //   - lowPerfMode: boolean (optional) - Low performance mode flag
     //   - createdAt: string (optional) - ISO timestamp of creation
+    //
+    // Collection: comments
+    // Document ID: auto-generated
+    // Fields:
+    //   - targetId: string (required) - ID of the theory or post
+    //   - authorUid: string (required) - UID of the author
+    //   - authorName: string (required) - Display name of the author
+    //   - authorPhoto: string (optional) - Photo URL of the author
+    //   - content: string (required) - The comment text
+    //   - createdAt: string (required) - ISO timestamp of creation
     //
     // ===============================================================
 
@@ -31,11 +42,27 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly(fields);
     }
 
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['favorites', 'lang', 'createdAt']) &&
+      return hasOnlyAllowedFields(['favorites', 'lang', 'lowPerfMode', 'createdAt']) &&
              (!('favorites' in data) || (data.favorites is list && data.favorites.size() <= 1000)) &&
              (!('lang' in data) || (data.lang is string && data.lang.size() <= 10)) &&
+             (!('lowPerfMode' in data) || data.lowPerfMode is bool) &&
              (!('createdAt' in data) || data.createdAt is string);
+    }
+
+    function isValidComment(data) {
+      return hasRequiredFields(['targetId', 'authorUid', 'authorName', 'content', 'createdAt']) &&
+             hasOnlyAllowedFields(['targetId', 'authorUid', 'authorName', 'authorPhoto', 'content', 'createdAt']) &&
+             data.targetId is string && data.targetId.size() > 0 && data.targetId.size() <= 100 &&
+             data.authorUid is string && data.authorUid == request.auth.uid &&
+             data.authorName is string && data.authorName.size() > 0 && data.authorName.size() <= 100 &&
+             (!('authorPhoto' in data) || (data.authorPhoto is string && data.authorPhoto.size() <= 1000)) &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 2000 &&
+             data.createdAt is string;
     }
 
     // ===============================================================
@@ -50,6 +77,16 @@ service cloud.firestore {
                      !('createdAt' in resource.data) || 
                      request.resource.data.createdAt == resource.data.createdAt);
       allow delete: if isOwner(userId);
+    }
+
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidComment(request.resource.data);
+      allow update: if isOwner(resource.data.authorUid) && isValidComment(request.resource.data) &&
+                    request.resource.data.authorUid == resource.data.authorUid &&
+                    request.resource.data.targetId == resource.data.targetId &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(resource.data.authorUid);
     }
   }
 }

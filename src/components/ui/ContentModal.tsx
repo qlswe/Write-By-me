@@ -2,13 +2,16 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import { usePerfLogger } from '../../utils/logger';
+import { CommentsSection } from '../sections/CommentsSection';
+import { Language } from '../../data/translations';
 
 interface ContentModalProps {
-  modalContent: { title: string; content: string } | null;
-  setModalContent: (content: { title: string; content: string } | null) => void;
+  modalContent: { id?: string; title: string; content: string } | null;
+  setModalContent: (content: { id?: string; title: string; content: string } | null) => void;
+  lang: Language;
 }
 
-export const ContentModal: React.FC<ContentModalProps> = ({ modalContent, setModalContent }) => {
+export const ContentModal: React.FC<ContentModalProps> = ({ modalContent, setModalContent, lang }) => {
   const { trackRender } = usePerfLogger('ContentModal');
   trackRender();
 
@@ -43,6 +46,9 @@ export const ContentModal: React.FC<ContentModalProps> = ({ modalContent, setMod
             className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none"
             dangerouslySetInnerHTML={{ __html: modalContent.content }}
           />
+          {modalContent.id && !modalContent.id.startsWith('promo') && (
+            <CommentsSection targetId={modalContent.id} lang={lang} />
+          )}
         </div>
       </motion.div>
     </div>

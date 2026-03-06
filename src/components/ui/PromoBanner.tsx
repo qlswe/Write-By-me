@@ -7,7 +7,7 @@ import { usePerfLogger } from '../../utils/logger';
 interface PromoBannerProps {
   showBanner: boolean;
   lang: Language;
-  setModalContent: (content: { title: string; content: string }) => void;
+  setModalContent: (content: { id?: string; title: string; content: string }) => void;
 }
 
 export const PromoBanner: React.FC<PromoBannerProps> = ({ showBanner, lang, setModalContent }) => {
@@ -37,7 +37,7 @@ export const PromoBanner: React.FC<PromoBannerProps> = ({ showBanner, lang, setM
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <button 
-              onClick={() => setModalContent({ title: t.installGuideTitle || "Как установить Web-App", content: t.installGuideContent || "<p>1. Откройте меню браузера.</p><p>2. Выберите «Добавить на главный экран».</p>" })}
+              onClick={() => setModalContent({ id: 'promo-install', title: t.installGuideTitle || "Как установить Web-App", content: t.installGuideContent || "<p>1. Откройте меню браузера.</p><p>2. Выберите «Добавить на главный экран».</p>" })}
               className="bg-[#2F244F] border border-[#5C4B8B] hover:border-[#C3A6E6] text-gray-200 px-4 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors"
             >
               {t.bannerBtnWeb || "Как установить Web-App"}

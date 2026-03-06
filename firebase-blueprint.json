@@ -16,11 +16,47 @@
           "type": "string",
           "description": "Preferred language"
         },
+        "lowPerfMode": {
+          "type": "boolean",
+          "description": "Low performance mode flag"
+        },
         "createdAt": {
           "type": "string",
           "description": "ISO timestamp of creation"
         }
       }
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A user comment on a theory or post",
+      "type": "object",
+      "properties": {
+        "targetId": {
+          "type": "string",
+          "description": "ID of the theory or post"
+        },
+        "authorUid": {
+          "type": "string",
+          "description": "UID of the author"
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Display name of the author"
+        },
+        "authorPhoto": {
+          "type": "string",
+          "description": "Photo URL of the author"
+        },
+        "content": {
+          "type": "string",
+          "description": "The comment text"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation"
+        }
+      },
+      "required": ["targetId", "authorUid", "authorName", "content", "createdAt"]
     }
   },
   "firestore": {
@@ -29,6 +65,12 @@
         "$ref": "#/entities/UserProfile"
       },
       "description": "User profile data"
+    },
+    "/comments/{commentId}": {
+      "schema": {
+        "$ref": "#/entities/Comment"
+      },
+      "description": "Comments on theories and posts"
     }
   }
 }

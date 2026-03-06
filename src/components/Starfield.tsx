@@ -1,6 +1,19 @@
 import React from 'react';
 
-export const Starfield: React.FC = () => {
+interface StarfieldProps {
+  lowPerfMode?: boolean;
+}
+
+export const Starfield: React.FC<StarfieldProps> = ({ lowPerfMode }) => {
+  if (lowPerfMode) {
+    return (
+      <div className="fixed inset-0 -z-10 bg-[#1A1230] overflow-hidden">
+        {/* Static background for low performance mode */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,#3E3160_0%,transparent_70%)] opacity-40" />
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 -z-10 bg-[#1A1230] overflow-hidden">
       {/* Animated radial gradient for depth */}

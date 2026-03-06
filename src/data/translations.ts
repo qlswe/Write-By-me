@@ -67,7 +67,15 @@ export const translations = {
     logout: "Выйти",
     loginWithGoogle: "Войти через Google",
     profileInfo: "Информация профиля",
-    profileDesc: "Здесь хранятся ваши настройки языка и избранные статьи. Они синхронизируются между вашими устройствами."
+    profileDesc: "Здесь хранятся ваши настройки языка и избранные статьи. Они синхронизируются между вашими устройствами.",
+    savedArticles: "Сохраненные статьи",
+    clearFavorites: "Очистить избранное",
+    lowPerfModeOn: "Слабое устройство: ВКЛ",
+    lowPerfModeOff: "Слабое устройство: ВЫКЛ",
+    comments: "Комментарии",
+    writeComment: "Написать комментарий...",
+    loginToComment: "Войдите, чтобы оставить комментарий",
+    delete: "Удалить"
   },
   en: {
     siteName: "As I've Written",
@@ -137,7 +145,15 @@ export const translations = {
     logout: "Logout",
     loginWithGoogle: "Login with Google",
     profileInfo: "Profile Information",
-    profileDesc: "Your language preferences and favorite articles are stored here. They sync across your devices."
+    profileDesc: "Your language preferences and favorite articles are stored here. They sync across your devices.",
+    savedArticles: "Saved Articles",
+    clearFavorites: "Clear Favorites",
+    lowPerfModeOn: "Low Perf Mode: ON",
+    lowPerfModeOff: "Low Perf Mode: OFF",
+    comments: "Comments",
+    writeComment: "Write a comment...",
+    loginToComment: "Log in to leave a comment",
+    delete: "Delete"
   },
   by: {
     siteName: "Так напісана мною",
@@ -207,7 +223,15 @@ export const translations = {
     logout: "Выйсці",
     loginWithGoogle: "Увайсці праз Google",
     profileInfo: "Інфармацыя профілю",
-    profileDesc: "Тут захоўваюцца вашы налады мовы і выбраныя артыкулы. Яны сінхранізуюцца паміж вашымі прыладамі."
+    profileDesc: "Тут захоўваюцца вашы налады мовы і выбраныя артыкулы. Яны сінхранізуюцца паміж вашымі прыладамі.",
+    savedArticles: "Захаваныя артыкулы",
+    clearFavorites: "Ачысціць выбранае",
+    lowPerfModeOn: "Слабая прылада: УКЛ",
+    lowPerfModeOff: "Слабая прылада: ВЫКЛ",
+    comments: "Каментарыі",
+    writeComment: "Напісаць каментарый...",
+    loginToComment: "Увайдзіце, каб пакінуць каментарый",
+    delete: "Выдаліць"
   },
   jp: {
     siteName: "私が書いたように",
@@ -277,7 +301,15 @@ export const translations = {
     logout: "ログアウト",
     loginWithGoogle: "Googleでログイン",
     profileInfo: "プロフィール情報",
-    profileDesc: "言語設定とお気に入りの記事がここに保存されます。デバイス間で同期されます。"
+    profileDesc: "言語設定とお気に入りの記事がここに保存されます。デバイス間で同期されます。",
+    savedArticles: "保存された記事",
+    clearFavorites: "お気に入りをクリア",
+    lowPerfModeOn: "低パフォーマンスモード: オン",
+    lowPerfModeOff: "低パフォーマンスモード: オフ",
+    comments: "コメント",
+    writeComment: "コメントを書く...",
+    loginToComment: "コメントを残すにはログインしてください",
+    delete: "削除"
   },
   de: {
     siteName: "Wie ich geschrieben habe",
@@ -347,7 +379,15 @@ export const translations = {
     logout: "Abmelden",
     loginWithGoogle: "Mit Google anmelden",
     profileInfo: "Profilinformationen",
-    profileDesc: "Ihre Spracheinstellungen und bevorzugten Artikel werden hier gespeichert. Sie werden über Ihre Geräte hinweg synchronisiert."
+    profileDesc: "Ihre Spracheinstellungen und bevorzugten Artikel werden hier gespeichert. Sie werden über Ihre Geräte hinweg synchronisiert.",
+    savedArticles: "Gespeicherte Artikel",
+    clearFavorites: "Favoriten löschen",
+    lowPerfModeOn: "Niedrige Leistung: EIN",
+    lowPerfModeOff: "Niedrige Leistung: AUS",
+    comments: "Kommentare",
+    writeComment: "Schreibe einen Kommentar...",
+    loginToComment: "Melden Sie sich an, um einen Kommentar zu hinterlassen",
+    delete: "Löschen"
   },
   fr: {
     siteName: "Comme je l'ai écrit",
@@ -417,7 +457,15 @@ export const translations = {
     logout: "Déconnexion",
     loginWithGoogle: "Connexion avec Google",
     profileInfo: "Informations du profil",
-    profileDesc: "Vos préférences linguistiques et vos articles favoris sont stockés ici. Ils se synchronisent sur vos appareils."
+    profileDesc: "Vos préférences linguistiques et vos articles favoris sont stockés ici. Ils se synchronisent sur vos appareils.",
+    savedArticles: "Articles enregistrés",
+    clearFavorites: "Effacer les favoris",
+    lowPerfModeOn: "Mode basse perf : ACTIVÉ",
+    lowPerfModeOff: "Mode basse perf : DÉSACTIVÉ",
+    comments: "Commentaires",
+    writeComment: "Écrire un commentaire...",
+    loginToComment: "Connectez-vous pour laisser un commentaire",
+    delete: "Supprimer"
   },
   zh: {
     siteName: "如我所写",
@@ -487,7 +535,15 @@ export const translations = {
     logout: "登出",
     loginWithGoogle: "使用 Google 登录",
     profileInfo: "个人资料信息",
-    profileDesc: "您的语言偏好和收藏的文章存储在这里。它们将在您的设备之间同步。"
+    profileDesc: "您的语言偏好和收藏的文章存储在这里。它们将在您的设备之间同步。",
+    savedArticles: "已保存的文章",
+    clearFavorites: "清除收藏",
+    lowPerfModeOn: "低性能模式：开",
+    lowPerfModeOff: "低性能模式：关",
+    comments: "评论",
+    writeComment: "写评论...",
+    loginToComment: "登录后发表评论",
+    delete: "删除"
   }
 };
 

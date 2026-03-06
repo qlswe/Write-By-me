@@ -12,7 +12,7 @@ interface BlogSectionProps {
   setBlogSearch: (search: string) => void;
   favorites: string[];
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
-  setModalContent: (content: { title: string; content: string }) => void;
+  setModalContent: (content: { id?: string; title: string; content: string }) => void;
 }
 
 export const BlogSection: React.FC<BlogSectionProps> = ({
@@ -81,8 +81,8 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           {filteredBlog.map(post => (
             <div 
               key={post.id}
-              onClick={() => setModalContent({ title: post.title[lang] || post.title['en'], content: post.content[lang] || post.content['en'] })}
-              className="bg-[#3E3160]/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group relative"
+              onClick={() => setModalContent({ id: post.id, title: post.title[lang] || post.title['en'], content: post.content[lang] || post.content['en'] })}
+              className="bg-[#3E3160] p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group relative"
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="text-xs font-bold uppercase tracking-wider text-[#C3A6E6] bg-[#C3A6E6]/10 inline-block px-3 py-1 rounded-full">
