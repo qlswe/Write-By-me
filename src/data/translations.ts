@@ -59,17 +59,25 @@ export const translations = {
     feedbackSuccess: "Спасибо! Ваш отзыв сохранен.",
     terminalFeedbackDesc: "Показать сохраненные отзывы",
     noFeedback: "Отзывов пока нет.",
-    timeRemaining: "Осталось времени"
+    timeRemaining: "Осталось времени",
+    attachImage: "Прикрепить изображение (Необязательно)",
+    imageAttached: "Изображение прикреплено (Нажмите, чтобы изменить)",
+    imageNote: "Примечание: Изображения не могут быть отправлены напрямую через ссылку почтового клиента. Пожалуйста, прикрепите изображение вручную в вашем почтовом клиенте.",
+    login: "Войти",
+    logout: "Выйти",
+    loginWithGoogle: "Войти через Google",
+    profileInfo: "Информация профиля",
+    profileDesc: "Здесь хранятся ваши настройки языка и избранные статьи. Они синхронизируются между вашими устройствами."
   },
   en: {
-    siteName: "Write by Me",
+    siteName: "As I've Written",
     navHome: "Home",
     navTheories: "Theories",
     navBlog: "Blog",
     navChronicle: "Event Chronicle",
     navPromo: "Promo Codes",
     navTierList: "Tier List",
-    homeTitle: "Welcome to the Database: Write by Me!",
+    homeTitle: "Welcome to the Database: As I've Written!",
     homeDesc: "This is your personal resource for a deep dive into the Honkai: Star Rail universe. Here you will find theories, a blog, and an up-to-date chronicle of events and banners.",
     lastUpdate: "Last update: January 2026",
     filterAll: "All",
@@ -121,7 +129,15 @@ export const translations = {
     feedbackSuccess: "Thank you! Your feedback has been saved.",
     terminalFeedbackDesc: "Show saved feedback",
     noFeedback: "No feedback yet.",
-    timeRemaining: "Time Remaining"
+    timeRemaining: "Time Remaining",
+    attachImage: "Attach Image (Optional)",
+    imageAttached: "Image attached (Click to change)",
+    imageNote: "Note: Images cannot be sent directly via email client link. Please attach the image manually in your email client.",
+    login: "Login",
+    logout: "Logout",
+    loginWithGoogle: "Login with Google",
+    profileInfo: "Profile Information",
+    profileDesc: "Your language preferences and favorite articles are stored here. They sync across your devices."
   },
   by: {
     siteName: "Так напісана мною",
@@ -183,7 +199,15 @@ export const translations = {
     feedbackSuccess: "Дзякуй! Ваш водгук захаваны.",
     terminalFeedbackDesc: "Паказаць захаваныя водгукі",
     noFeedback: "Водгукаў пакуль няма.",
-    timeRemaining: "Засталося часу"
+    timeRemaining: "Засталося часу",
+    attachImage: "Далучыць малюнак (Неабавязкова)",
+    imageAttached: "Малюнак далучаны (Націсніце, каб змяніць)",
+    imageNote: "Заўвага: Малюнкі не могуць быць адпраўлены напрамую праз спасылку паштовага кліента. Калі ласка, далучыце малюнак уручную.",
+    login: "Увайсці",
+    logout: "Выйсці",
+    loginWithGoogle: "Увайсці праз Google",
+    profileInfo: "Інфармацыя профілю",
+    profileDesc: "Тут захоўваюцца вашы налады мовы і выбраныя артыкулы. Яны сінхранізуюцца паміж вашымі прыладамі."
   },
   jp: {
     siteName: "私が書いたように",
@@ -245,7 +269,15 @@ export const translations = {
     feedbackSuccess: "ありがとうございます！フィードバックが保存されました。",
     terminalFeedbackDesc: "保存されたフィードバックを表示",
     noFeedback: "フィードバックはまだありません。",
-    timeRemaining: "残り時間"
+    timeRemaining: "残り時間",
+    attachImage: "画像を添付 (任意)",
+    imageAttached: "画像が添付されました (クリックして変更)",
+    imageNote: "注: 画像はメールクライアントのリンク経由で直接送信することはできません。手動で画像を添付してください。",
+    login: "ログイン",
+    logout: "ログアウト",
+    loginWithGoogle: "Googleでログイン",
+    profileInfo: "プロフィール情報",
+    profileDesc: "言語設定とお気に入りの記事がここに保存されます。デバイス間で同期されます。"
   },
   de: {
     siteName: "Wie ich geschrieben habe",
@@ -307,7 +339,15 @@ export const translations = {
     feedbackSuccess: "Danke! Ihr Feedback wurde gespeichert.",
     terminalFeedbackDesc: "Gespeichertes Feedback anzeigen",
     noFeedback: "Noch kein Feedback.",
-    timeRemaining: "Verbleibende Zeit"
+    timeRemaining: "Verbleibende Zeit",
+    attachImage: "Bild anhängen (Optional)",
+    imageAttached: "Bild angehängt (Klicken zum Ändern)",
+    imageNote: "Hinweis: Bilder können nicht direkt über den E-Mail-Client-Link gesendet werden. Bitte hängen Sie das Bild manuell an.",
+    login: "Anmelden",
+    logout: "Abmelden",
+    loginWithGoogle: "Mit Google anmelden",
+    profileInfo: "Profilinformationen",
+    profileDesc: "Ihre Spracheinstellungen und bevorzugten Artikel werden hier gespeichert. Sie werden über Ihre Geräte hinweg synchronisiert."
   },
   fr: {
     siteName: "Comme je l'ai écrit",
@@ -369,7 +409,15 @@ export const translations = {
     feedbackSuccess: "Merci ! Vos commentaires ont été enregistrés.",
     terminalFeedbackDesc: "Afficher les commentaires enregistrés",
     noFeedback: "Aucun commentaire pour le moment.",
-    timeRemaining: "Temps restant"
+    timeRemaining: "Temps restant",
+    attachImage: "Joindre une image (Facultatif)",
+    imageAttached: "Image jointe (Cliquez pour modifier)",
+    imageNote: "Remarque : Les images ne peuvent pas être envoyées directement via le lien du client de messagerie. Veuillez joindre l'image manuellement.",
+    login: "Connexion",
+    logout: "Déconnexion",
+    loginWithGoogle: "Connexion avec Google",
+    profileInfo: "Informations du profil",
+    profileDesc: "Vos préférences linguistiques et vos articles favoris sont stockés ici. Ils se synchronisent sur vos appareils."
   },
   zh: {
     siteName: "如我所写",
@@ -431,7 +479,15 @@ export const translations = {
     feedbackSuccess: "谢谢！您的反馈已保存。",
     terminalFeedbackDesc: "显示保存的反馈",
     noFeedback: "暂无反馈。",
-    timeRemaining: "剩余时间"
+    timeRemaining: "剩余时间",
+    attachImage: "附加图片 (可选)",
+    imageAttached: "图片已附加 (点击更改)",
+    imageNote: "注意：图片无法通过电子邮件客户端链接直接发送。请手动附加图片。",
+    login: "登录",
+    logout: "登出",
+    loginWithGoogle: "使用 Google 登录",
+    profileInfo: "个人资料信息",
+    profileDesc: "您的语言偏好和收藏的文章存储在这里。它们将在您的设备之间同步。"
   }
 };
 
