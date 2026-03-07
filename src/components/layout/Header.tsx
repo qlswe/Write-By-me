@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
@@ -37,6 +37,17 @@ export const Header: React.FC<HeaderProps> = ({
   const [profileOpen, setProfileOpen] = useState(false);
   const { trackRender } = usePerfLogger('Header');
   trackRender();
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [mobileMenuOpen]);
 
   return (
     <>
@@ -197,9 +208,9 @@ export const Header: React.FC<HeaderProps> = ({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="md:hidden fixed inset-0 z-40 bg-[#2F244F] pt-20 px-4 flex flex-col"
+            className="md:hidden fixed inset-0 z-40 bg-[#2F244F] pt-20 px-4 flex flex-col overflow-y-auto pb-6"
           >
-            <div className="flex flex-col gap-4 flex-1">
+            <div className="flex flex-col gap-4 flex-1 shrink-0">
               {navItems.map(item => (
                 <button
                   key={item.id}
@@ -219,7 +230,7 @@ export const Header: React.FC<HeaderProps> = ({
               ))}
             </div>
             
-            <div className="p-6 border-t border-[#5C4B8B] mt-auto">
+            <div className="p-6 border-t border-[#5C4B8B] mt-auto shrink-0">
               {user ? (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-3 bg-[#3E3160] p-3 rounded-xl border border-[#5C4B8B]">
