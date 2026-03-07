@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from './firebase';
+import { logger, usePerfLogger } from './utils/logger';
+import { handleFirestoreError, OperationType } from './utils/errorHandlers';
 import { Starfield } from './components/Starfield';
 import { Language, translations } from './data/translations';
 import { useAuth } from './hooks/useAuth';
 import { useUserData } from './hooks/useUserData';
-import { usePerfLogger } from './utils/logger';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -91,29 +94,36 @@ export default function App() {
     setToast(t.copySuccess);
   };
 
-  const handleFeedbackSubmit = () => {
+  const handleFeedbackSubmit = async () => {
     if (!feedbackText.trim()) return;
     
-    const subject = encodeURIComponent(`[${feedbackType.toUpperCase()}] HSR Database Feedback`);
-    const body = encodeURIComponent(`${feedbackText}\n\n---\nApp Version: BETA-V03\nLanguage: ${lang}\nUser: ${user ? user.uid : 'Anonymous'}`);
-    
-    const mailtoLink = `mailto:semegladysev527@gmail.com?subject=${subject}&body=${body}`;
-    window.location.href = mailtoLink;
-    
-    const existing = JSON.parse(localStorage.getItem('hsr_feedback') || '[]');
-    existing.push({
-      id: Date.now(),
-      type: feedbackType,
-      text: feedbackText,
-      hasImage: !!feedbackImage,
-      date: new Date().toISOString()
-    });
-    localStorage.setItem('hsr_feedback', JSON.stringify(existing));
-    
-    setFeedbackOpen(false);
-    setFeedbackText('');
-    setFeedbackImage(null);
-    setToast(t.feedbackSuccess || "Thank you!");
+    try {
+      const logsString = logger.getLogsString();
+      const feedbackData: any = {
+        type: feedbackType,
+        text: feedbackText,
+        uid: user?.uid || 'anonymous',
+        createdAt: new Date().toISOString()
+      };
+
+      if (feedbackImage) {
+        feedbackData.image = feedbackImage;
+      }
+      if (logsString) {
+        // Truncate logs if they are too large (1MB limit in Firestore, let's keep it safe at 500KB)
+        feedbackData.logs = logsString.length > 500000 ? logsString.substring(logsString.length - 500000) : logsString;
+      }
+
+      await addDoc(collection(db, 'feedback'), feedbackData);
+
+      setFeedbackOpen(false);
+      setFeedbackText('');
+      setFeedbackImage(null);
+      setToast(t.feedbackSuccess || "Спасибо! Ваш отзыв сохранен.");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'feedback');
+      setToast("Error submitting feedback. Please try again.");
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,7 +188,6 @@ export default function App() {
                 setTheorySearch={setTheorySearch}
                 favorites={favorites}
                 toggleFavorite={toggleFavorite}
-                setModalContent={setModalContent}
               />
             )}
 
@@ -191,7 +200,6 @@ export default function App() {
                 setBlogSearch={setBlogSearch}
                 favorites={favorites}
                 toggleFavorite={toggleFavorite}
-                setModalContent={setModalContent}
               />
             )}
 

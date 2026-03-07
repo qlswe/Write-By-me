@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, deleteDoc, doc, updateDoc, increment, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
-import { Trash2, Send } from 'lucide-react';
+import { Trash2, Send, Heart } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
 
@@ -15,6 +15,8 @@ interface Comment {
   authorName: string;
   authorPhoto?: string;
   content: string;
+  likesCount?: number;
+  likedBy?: string[];
   createdAt: string;
 }
 
@@ -74,6 +76,8 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
         authorName: user.displayName || 'Anonymous',
         authorPhoto: user.photoURL || '',
         content: newComment.trim(),
+        likesCount: 0,
+        likedBy: [],
         createdAt: new Date().toISOString()
       });
       setNewComment('');
@@ -90,6 +94,26 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
       await deleteDoc(doc(db, 'comments', commentId));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `comments/${commentId}`);
+    }
+  };
+
+  const handleLike = async (commentId: string, isLiked: boolean) => {
+    if (!user) return;
+    try {
+      const commentRef = doc(db, 'comments', commentId);
+      if (isLiked) {
+        await updateDoc(commentRef, {
+          likesCount: increment(-1),
+          likedBy: arrayRemove(user.uid)
+        });
+      } else {
+        await updateDoc(commentRef, {
+          likesCount: increment(1),
+          likedBy: arrayUnion(user.uid)
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `comments/${commentId}`);
     }
   };
 
@@ -147,15 +171,26 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
                     })}
                   </span>
                 </div>
-                {user && user.uid === comment.authorUid && (
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => handleDelete(comment.id)}
-                    className="text-gray-400 hover:text-red-400 transition-colors p-1"
-                    title={t.delete || "Удалить"}
+                    onClick={() => handleLike(comment.id, comment.likedBy?.includes(user?.uid || '') || false)}
+                    className={`flex items-center gap-1 transition-colors p-1 ${comment.likedBy?.includes(user?.uid || '') ? 'text-red-400' : 'text-gray-400 hover:text-red-400'}`}
+                    title={t.like || "Нравится"}
+                    disabled={!user}
                   >
-                    <Trash2 size={16} />
+                    <Heart size={16} fill={comment.likedBy?.includes(user?.uid || '') ? "currentColor" : "none"} />
+                    <span className="text-xs">{comment.likesCount || 0}</span>
                   </button>
-                )}
+                  {user && user.uid === comment.authorUid && (
+                    <button
+                      onClick={() => handleDelete(comment.id)}
+                      className="text-gray-400 hover:text-red-400 transition-colors p-1"
+                      title={t.delete || "Удалить"}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-gray-300 whitespace-pre-wrap break-words">{comment.content}</p>
             </div>

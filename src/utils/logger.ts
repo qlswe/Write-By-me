@@ -13,7 +13,7 @@ interface LogEntry {
 class Logger {
   private logs: LogEntry[] = [];
   private maxLogs = 1000;
-  private isEnabled = process.env.NODE_ENV !== 'production';
+  private isEnabled = true; // Always keep logs in memory for feedback
 
   private addLog(level: LogLevel, message: string, data?: any, component?: string) {
     if (!this.isEnabled) return;
@@ -32,13 +32,12 @@ class Logger {
     }
 
     // Also log to console in dev
-    if (this.isEnabled) {
+    if (process.env.NODE_ENV !== 'production') {
       const prefix = `[${level.toUpperCase()}]${component ? ` [${component}]` : ''}`;
       switch (level) {
         case 'info': console.log(prefix, message, data || ''); break;
         case 'warn': console.warn(prefix, message, data || ''); break;
         case 'error': console.error(prefix, message, data || ''); break;
-        // case 'perf': console.log(`%c${prefix} ${message}`, 'color: #C3A6E6; font-weight: bold;', data || ''); break;
       }
     }
   }
@@ -49,6 +48,7 @@ class Logger {
   perf(message: string, data?: any, component?: string) { this.addLog('perf', message, data, component); }
 
   getLogs() { return [...this.logs]; }
+  getLogsString() { return JSON.stringify(this.logs, null, 2); }
   clear() { this.logs = []; }
   
   exportLogs() {

@@ -22,6 +22,18 @@ service cloud.firestore {
     //   - authorName: string (required) - Display name of the author
     //   - authorPhoto: string (optional) - Photo URL of the author
     //   - content: string (required) - The comment text
+    //   - likesCount: number (optional) - Number of likes
+    //   - likedBy: list of strings (optional) - List of UIDs who liked the comment
+    //   - createdAt: string (required) - ISO timestamp of creation
+    //
+    // Collection: feedback
+    // Document ID: auto-generated
+    // Fields:
+    //   - type: string (required) - Type of feedback
+    //   - text: string (required) - Feedback content
+    //   - image: string (optional) - Base64 encoded image
+    //   - logs: string (optional) - Application logs
+    //   - uid: string (optional) - User ID if logged in
     //   - createdAt: string (required) - ISO timestamp of creation
     //
     // ===============================================================
@@ -56,12 +68,47 @@ service cloud.firestore {
 
     function isValidComment(data) {
       return hasRequiredFields(['targetId', 'authorUid', 'authorName', 'content', 'createdAt']) &&
-             hasOnlyAllowedFields(['targetId', 'authorUid', 'authorName', 'authorPhoto', 'content', 'createdAt']) &&
+             hasOnlyAllowedFields(['targetId', 'authorUid', 'authorName', 'authorPhoto', 'content', 'likesCount', 'likedBy', 'createdAt']) &&
              data.targetId is string && data.targetId.size() > 0 && data.targetId.size() <= 100 &&
              data.authorUid is string && data.authorUid == request.auth.uid &&
              data.authorName is string && data.authorName.size() > 0 && data.authorName.size() <= 100 &&
              (!('authorPhoto' in data) || (data.authorPhoto is string && data.authorPhoto.size() <= 1000)) &&
              data.content is string && data.content.size() > 0 && data.content.size() <= 2000 &&
+             (!('likesCount' in data) || (data.likesCount is number && data.likesCount >= 0)) &&
+             (!('likedBy' in data) || (data.likedBy is list && data.likedBy.size() <= 10000)) &&
+             data.createdAt is string;
+    }
+
+    function isValidLikeUpdate() {
+      let diff = request.resource.data.diff(resource.data);
+      let affectedKeys = diff.affectedKeys();
+      let oldLikesCount = resource.data.get('likesCount', 0);
+      let newLikesCount = request.resource.data.get('likesCount', 0);
+      let oldLikedBy = resource.data.get('likedBy', []);
+      let newLikedBy = request.resource.data.get('likedBy', []);
+      
+      return isAuthenticated() &&
+             affectedKeys.hasOnly(['likesCount', 'likedBy']) &&
+             (
+               // Like
+               (newLikesCount == oldLikesCount + 1 &&
+                !(request.auth.uid in oldLikedBy) &&
+                (request.auth.uid in newLikedBy)) ||
+               // Unlike
+               (newLikesCount == oldLikesCount - 1 &&
+                (request.auth.uid in oldLikedBy) &&
+                !(request.auth.uid in newLikedBy))
+             );
+    }
+
+    function isValidFeedback(data) {
+      return hasRequiredFields(['type', 'text', 'createdAt']) &&
+             hasOnlyAllowedFields(['type', 'text', 'image', 'logs', 'uid', 'createdAt']) &&
+             data.type is string && data.type.size() > 0 && data.type.size() <= 50 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 5000 &&
+             (!('image' in data) || (data.image is string && data.image.size() <= 5242880)) && // 5MB limit
+             (!('logs' in data) || (data.logs is string && data.logs.size() <= 1048576)) && // 1MB limit
+             (!('uid' in data) || (data.uid is string && (data.uid == request.auth.uid || data.uid == 'anonymous'))) &&
              data.createdAt is string;
     }
 
@@ -82,11 +129,19 @@ service cloud.firestore {
     match /comments/{commentId} {
       allow read: if true;
       allow create: if isAuthenticated() && isValidComment(request.resource.data);
-      allow update: if isOwner(resource.data.authorUid) && isValidComment(request.resource.data) &&
-                    request.resource.data.authorUid == resource.data.authorUid &&
-                    request.resource.data.targetId == resource.data.targetId &&
-                    request.resource.data.createdAt == resource.data.createdAt;
+      allow update: if (isOwner(resource.data.authorUid) && isValidComment(request.resource.data) &&
+                        request.resource.data.authorUid == resource.data.authorUid &&
+                        request.resource.data.targetId == resource.data.targetId &&
+                        request.resource.data.createdAt == resource.data.createdAt) ||
+                       isValidLikeUpdate();
       allow delete: if isOwner(resource.data.authorUid);
+    }
+
+    match /feedback/{feedbackId} {
+      allow read: if false; // Only admins can read feedback (not implemented yet)
+      allow create: if isValidFeedback(request.resource.data);
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }

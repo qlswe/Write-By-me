@@ -75,7 +75,8 @@ export const translations = {
     comments: "Комментарии",
     writeComment: "Написать комментарий...",
     loginToComment: "Войдите, чтобы оставить комментарий",
-    delete: "Удалить"
+    delete: "Удалить",
+    like: "Нравится"
   },
   en: {
     siteName: "As I've Written",
@@ -153,7 +154,8 @@ export const translations = {
     comments: "Comments",
     writeComment: "Write a comment...",
     loginToComment: "Log in to leave a comment",
-    delete: "Delete"
+    delete: "Delete",
+    like: "Like"
   },
   by: {
     siteName: "Так напісана мною",
@@ -231,7 +233,8 @@ export const translations = {
     comments: "Каментарыі",
     writeComment: "Напісаць каментарый...",
     loginToComment: "Увайдзіце, каб пакінуць каментарый",
-    delete: "Выдаліць"
+    delete: "Выдаліць",
+    like: "Падабаецца"
   },
   jp: {
     siteName: "私が書いたように",
@@ -309,7 +312,8 @@ export const translations = {
     comments: "コメント",
     writeComment: "コメントを書く...",
     loginToComment: "コメントを残すにはログインしてください",
-    delete: "削除"
+    delete: "削除",
+    like: "いいね"
   },
   de: {
     siteName: "Wie ich geschrieben habe",
@@ -387,7 +391,8 @@ export const translations = {
     comments: "Kommentare",
     writeComment: "Schreibe einen Kommentar...",
     loginToComment: "Melden Sie sich an, um einen Kommentar zu hinterlassen",
-    delete: "Löschen"
+    delete: "Löschen",
+    like: "Gefällt mir"
   },
   fr: {
     siteName: "Comme je l'ai écrit",
@@ -465,7 +470,8 @@ export const translations = {
     comments: "Commentaires",
     writeComment: "Écrire un commentaire...",
     loginToComment: "Connectez-vous pour laisser un commentaire",
-    delete: "Supprimer"
+    delete: "Supprimer",
+    like: "J'aime"
   },
   zh: {
     siteName: "如我所写",
@@ -543,7 +549,8 @@ export const translations = {
     comments: "评论",
     writeComment: "写评论...",
     loginToComment: "登录后发表评论",
-    delete: "删除"
+    delete: "删除",
+    like: "赞"
   }
 };
 

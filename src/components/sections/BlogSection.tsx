@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
-import { Star, Search } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Star, Search, ArrowLeft } from 'lucide-react';
 import { blogPostsData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
+import { CommentsSection } from './CommentsSection';
 
 interface BlogSectionProps {
   lang: Language;
@@ -12,7 +13,6 @@ interface BlogSectionProps {
   setBlogSearch: (search: string) => void;
   favorites: string[];
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
-  setModalContent: (content: { id?: string; title: string; content: string }) => void;
 }
 
 export const BlogSection: React.FC<BlogSectionProps> = ({
@@ -22,11 +22,11 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   blogSearch,
   setBlogSearch,
   favorites,
-  toggleFavorite,
-  setModalContent
+  toggleFavorite
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('BlogSection');
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   trackRender();
 
   const filteredBlog = useMemo(() => {
@@ -39,6 +39,42 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
       return matchesCat && matchesSearch;
     });
   }, [blogCategory, blogSearch, lang, favorites]);
+
+  const selectedPost = useMemo(() => {
+    return selectedPostId ? blogPostsData.find(p => p.id === selectedPostId) : null;
+  }, [selectedPostId]);
+
+  if (selectedPost) {
+    return (
+      <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
+        <button 
+          onClick={() => setSelectedPostId(null)}
+          className="flex items-center gap-2 text-[#C3A6E6] hover:text-white transition-colors mb-6 font-bold"
+        >
+          <ArrowLeft size={20} />
+          {t.navBlog}
+        </button>
+        
+        <div className="flex justify-between items-start mb-6">
+          <h2 className="text-3xl font-bold text-white pr-8">
+            {selectedPost.title[lang] || selectedPost.title['en']}
+          </h2>
+          <button 
+            onClick={(e) => toggleFavorite(selectedPost.id, e)}
+            className={`p-3 rounded-full transition-colors shrink-0 ${favorites.includes(selectedPost.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
+          >
+            <Star size={24} fill={favorites.includes(selectedPost.id) ? "currentColor" : "none"} />
+          </button>
+        </div>
+
+        <div className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8"
+          dangerouslySetInnerHTML={{ __html: selectedPost.content[lang] || selectedPost.content['en'] }}
+        />
+
+        <CommentsSection targetId={selectedPost.id} lang={lang} />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
@@ -81,7 +117,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           {filteredBlog.map(post => (
             <div 
               key={post.id}
-              onClick={() => setModalContent({ id: post.id, title: post.title[lang] || post.title['en'], content: post.content[lang] || post.content['en'] })}
+              onClick={() => setSelectedPostId(post.id)}
               className="bg-[#3E3160] p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group relative"
             >
               <div className="flex justify-between items-start mb-2">

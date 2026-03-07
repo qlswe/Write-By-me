@@ -51,12 +51,55 @@
           "type": "string",
           "description": "The comment text"
         },
+        "likesCount": {
+          "type": "number",
+          "description": "Number of likes"
+        },
+        "likedBy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of UIDs who liked the comment"
+        },
         "createdAt": {
           "type": "string",
           "description": "ISO timestamp of creation"
         }
       },
       "required": ["targetId", "authorUid", "authorName", "content", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback submission",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Type of feedback (bug, suggestion)"
+        },
+        "text": {
+          "type": "string",
+          "description": "Feedback content"
+        },
+        "image": {
+          "type": "string",
+          "description": "Base64 encoded image or URL"
+        },
+        "logs": {
+          "type": "string",
+          "description": "Application logs"
+        },
+        "uid": {
+          "type": "string",
+          "description": "User ID if logged in"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation"
+        }
+      },
+      "required": ["type", "text", "createdAt"]
     }
   },
   "firestore": {
@@ -71,6 +114,12 @@
         "$ref": "#/entities/Comment"
       },
       "description": "Comments on theories and posts"
+    },
+    "/feedback/{feedbackId}": {
+      "schema": {
+        "$ref": "#/entities/Feedback"
+      },
+      "description": "User feedback submissions"
     }
   }
 }
