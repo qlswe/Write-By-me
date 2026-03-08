@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Download } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 
@@ -8,9 +8,10 @@ interface PromoBannerProps {
   showBanner: boolean;
   lang: Language;
   setModalContent: (content: { id?: string; title: string; content: string }) => void;
+  onClose: () => void;
 }
 
-export const PromoBanner: React.FC<PromoBannerProps> = ({ showBanner, lang, setModalContent }) => {
+export const PromoBanner: React.FC<PromoBannerProps> = ({ showBanner, lang, setModalContent, onClose }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('PromoBanner');
   trackRender();
@@ -22,8 +23,14 @@ export const PromoBanner: React.FC<PromoBannerProps> = ({ showBanner, lang, setM
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="bg-[#3E3160] border border-[#5C4B8B] border-l-4 border-l-[#C3A6E6] rounded-xl p-5 mb-8 flex flex-col sm:flex-row items-center gap-4 shadow-lg"
+          className="relative bg-[#3E3160] border border-[#5C4B8B] border-l-4 border-l-[#C3A6E6] rounded-xl p-5 mb-8 flex flex-col sm:flex-row items-center gap-4 shadow-lg"
         >
+          <button 
+            onClick={onClose}
+            className="absolute top-2 right-2 p-1 text-gray-400 hover:text-white transition-colors"
+          >
+            <X size={18} />
+          </button>
           <div className="text-[#C3A6E6] shrink-0">
             <Download size={32} />
           </div>

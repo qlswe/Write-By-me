@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { Star, Search, ArrowLeft } from 'lucide-react';
 import { theoriesData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { CommentsSection } from './CommentsSection';
+import { TheoryCard } from './TheoryCard';
 
 interface TheoriesSectionProps {
   lang: Language;
@@ -27,7 +29,14 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   const t = translations[lang];
   const { trackRender } = usePerfLogger('TheoriesSection');
   const [selectedTheoryId, setSelectedTheoryId] = useState<string | null>(null);
+  const [isFiltering, setIsFiltering] = useState(true);
   trackRender();
+
+  useEffect(() => {
+    setIsFiltering(true);
+    const timer = setTimeout(() => setIsFiltering(false), 500);
+    return () => clearTimeout(timer);
+  }, [theoryCategory, theorySearch]);
 
   const filteredTheories = useMemo(() => {
     return theoriesData.filter(theory => {
@@ -44,9 +53,23 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
     return selectedTheoryId ? theoriesData.find(t => t.id === selectedTheoryId) : null;
   }, [selectedTheoryId]);
 
+  const handleTheoryClick = useCallback((id: string) => {
+    setSelectedTheoryId(id);
+  }, []);
+
+  const handleToggleFavorite = useCallback((id: string, e: React.MouseEvent) => {
+    toggleFavorite(id, e);
+  }, [toggleFavorite]);
+
   if (selectedTheory) {
     return (
-      <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+        className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-4 sm:p-8 shadow-xl border border-[#5C4B8B]"
+      >
         <button 
           onClick={() => setSelectedTheoryId(null)}
           className="flex items-center gap-2 text-[#C3A6E6] hover:text-white transition-colors mb-6 font-bold"
@@ -56,29 +79,34 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
         </button>
         
         <div className="flex justify-between items-start mb-6">
-          <h2 className="text-3xl font-bold text-white pr-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white pr-4 sm:pr-8">
             {selectedTheory.title[lang] || selectedTheory.title['en']}
           </h2>
           <button 
             onClick={(e) => toggleFavorite(selectedTheory.id, e)}
-            className={`p-3 rounded-full transition-colors shrink-0 ${favorites.includes(selectedTheory.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
+            className={`p-2 sm:p-3 rounded-full transition-colors shrink-0 ${favorites.includes(selectedTheory.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
           >
-            <Star size={24} fill={favorites.includes(selectedTheory.id) ? "currentColor" : "none"} />
+            <Star size={24} className="w-5 h-5 sm:w-6 sm:h-6" fill={favorites.includes(selectedTheory.id) ? "currentColor" : "none"} />
           </button>
         </div>
 
-        <div className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8"
+        <div className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8 text-sm sm:text-base"
           dangerouslySetInnerHTML={{ __html: selectedTheory.content[lang] || selectedTheory.content['en'] }}
         />
 
         <CommentsSection targetId={selectedTheory.id} lang={lang} />
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
-      <h2 className="text-3xl font-bold text-[#C3A6E6] mb-8">{t.navTheories}</h2>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-4 sm:p-8 shadow-xl border border-[#5C4B8B]"
+    >
+      <h2 className="text-2xl sm:text-3xl font-bold text-[#C3A6E6] mb-6 sm:mb-8">{t.navTheories}</h2>
       
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative">
@@ -109,39 +137,38 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
         </div>
       </div>
 
-      {filteredTheories.length === 0 ? (
+      {isFiltering ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-6 h-[200px] animate-pulse">
+              <div className="flex justify-between items-start mb-4">
+                <div className="w-2/3 h-6 bg-[#3E3160] rounded"></div>
+                <div className="w-8 h-8 bg-[#3E3160] rounded-full"></div>
+              </div>
+              <div className="w-1/4 h-4 bg-[#3E3160] rounded mb-4"></div>
+              <div className="w-full h-16 bg-[#3E3160] rounded"></div>
+            </div>
+          ))}
+        </div>
+      ) : filteredTheories.length === 0 ? (
         <div className="text-center py-12 text-gray-400 bg-[#3E3160]/50 rounded-2xl border border-dashed border-[#5C4B8B]">
           {t.noResults}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredTheories.map(theory => (
-            <div 
+          {filteredTheories.map((theory, index) => (
+            <TheoryCard
               key={theory.id}
-              onClick={() => setSelectedTheoryId(theory.id)}
-              className="bg-[#3E3160] p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group relative"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div className="text-xs font-bold uppercase tracking-wider text-[#C3A6E6] bg-[#C3A6E6]/10 inline-block px-3 py-1 rounded-full">
-                  {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
-                </div>
-                <button 
-                  onClick={(e) => toggleFavorite(theory.id, e)}
-                  className={`p-2 rounded-full transition-colors ${favorites.includes(theory.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
-                >
-                  <Star size={20} fill={favorites.includes(theory.id) ? "currentColor" : "none"} />
-                </button>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#C3A6E6] transition-colors pr-8">
-                {theory.title[lang] || theory.title['en']}
-              </h3>
-              <p className="text-gray-300 line-clamp-3">
-                {theory.summary[lang] || theory.summary['en']}
-              </p>
-            </div>
+              theory={theory}
+              index={index}
+              lang={lang}
+              isFavorite={favorites.includes(theory.id)}
+              onClick={() => handleTheoryClick(theory.id)}
+              onToggleFavorite={(e) => handleToggleFavorite(theory.id, e)}
+            />
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };

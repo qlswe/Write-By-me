@@ -1,6 +1,6 @@
 import React from 'react';
 import { MessageSquare } from 'lucide-react';
-import { Terminal } from '../Terminal';
+import { DailyFortune } from '../ui/DailyFortune';
 import { Language, translations } from '../../data/translations';
 import { logger, usePerfLogger } from '../../utils/logger';
 
@@ -17,7 +17,7 @@ export const Footer: React.FC<FooterProps> = ({ lang, setFeedbackOpen }) => {
   return (
     <footer className="bg-[#3E3160]/90 backdrop-blur-md border-t border-[#5C4B8B] mt-auto relative z-10">
       <div className="max-w-5xl mx-auto px-4 py-12">
-        <Terminal lang={lang} />
+        <DailyFortune lang={lang} />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
           <div>

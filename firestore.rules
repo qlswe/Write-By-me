@@ -68,7 +68,7 @@ service cloud.firestore {
 
     function isValidComment(data) {
       return hasRequiredFields(['targetId', 'authorUid', 'authorName', 'content', 'createdAt']) &&
-             hasOnlyAllowedFields(['targetId', 'authorUid', 'authorName', 'authorPhoto', 'content', 'likesCount', 'likedBy', 'createdAt']) &&
+             hasOnlyAllowedFields(['targetId', 'authorUid', 'authorName', 'authorPhoto', 'content', 'likesCount', 'likedBy', 'reactions', 'isEdited', 'createdAt']) &&
              data.targetId is string && data.targetId.size() > 0 && data.targetId.size() <= 100 &&
              data.authorUid is string && data.authorUid == request.auth.uid &&
              data.authorName is string && data.authorName.size() > 0 && data.authorName.size() <= 100 &&
@@ -76,6 +76,8 @@ service cloud.firestore {
              data.content is string && data.content.size() > 0 && data.content.size() <= 2000 &&
              (!('likesCount' in data) || (data.likesCount is number && data.likesCount >= 0)) &&
              (!('likedBy' in data) || (data.likedBy is list && data.likedBy.size() <= 10000)) &&
+             (!('reactions' in data) || (data.reactions is map)) &&
+             (!('isEdited' in data) || (data.isEdited is bool)) &&
              data.createdAt is string;
     }
 
@@ -133,7 +135,8 @@ service cloud.firestore {
                         request.resource.data.authorUid == resource.data.authorUid &&
                         request.resource.data.targetId == resource.data.targetId &&
                         request.resource.data.createdAt == resource.data.createdAt) ||
-                       isValidLikeUpdate();
+                       isValidLikeUpdate() ||
+                       (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
       allow delete: if isOwner(resource.data.authorUid);
     }
 

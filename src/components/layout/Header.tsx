@@ -4,6 +4,7 @@ import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface HeaderProps {
   lang: Language;
@@ -35,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   const t = translations[lang];
   const { user, loginWithGoogle, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { trackRender } = usePerfLogger('Header');
   trackRender();
 
@@ -169,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({
                           )}
 
                           <button 
-                            onClick={() => { logout(); setProfileOpen(false); }}
+                            onClick={() => { setLogoutConfirmOpen(true); setProfileOpen(false); }}
                             className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-[#5C4B8B] hover:border-red-500/50 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                           >
                             <LogOut size={16} />
@@ -280,7 +282,7 @@ export const Header: React.FC<HeaderProps> = ({
                   )}
 
                   <button 
-                    onClick={() => { logout(); setMobileMenuOpen(false); }}
+                    onClick={() => { setLogoutConfirmOpen(true); setMobileMenuOpen(false); }}
                     className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-red-500/20 text-red-400 border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"
                   >
                     <LogOut size={20} />
@@ -300,6 +302,16 @@ export const Header: React.FC<HeaderProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+      <ConfirmModal
+        isOpen={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={logout}
+        title={t.confirmLogoutTitle || "Log Out"}
+        message={t.confirmLogoutMessage || "Are you sure you want to log out?"}
+        confirmText={t.logout || "Logout"}
+        cancelText={t.cancelBtn || "Cancel"}
+        isDestructive={true}
+      />
     </>
   );
 };

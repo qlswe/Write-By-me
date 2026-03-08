@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
@@ -17,11 +17,12 @@ import { LoadingScreen } from './components/ui/LoadingScreen';
 import { PromoBanner } from './components/ui/PromoBanner';
 import { ContentModal } from './components/ui/ContentModal';
 import { FeedbackModal } from './components/ui/FeedbackModal';
-import { TheoriesSection } from './components/sections/TheoriesSection';
-import { BlogSection } from './components/sections/BlogSection';
-import { ChronicleSection } from './components/sections/ChronicleSection';
-import { TierListSection } from './components/sections/TierListSection';
-import { PromoSection } from './components/sections/PromoSection';
+// Lazy load sections for better performance
+const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
+const BlogSection = lazy(() => import('./components/sections/BlogSection').then(m => ({ default: m.BlogSection })));
+const ChronicleSection = lazy(() => import('./components/sections/ChronicleSection').then(m => ({ default: m.ChronicleSection })));
+const TierListSection = lazy(() => import('./components/sections/TierListSection').then(m => ({ default: m.TierListSection })));
+const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
 
 type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'tierlist';
 
@@ -58,8 +59,15 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.add('dark');
     
+    if (lowPerfMode) {
+      document.body.classList.add('low-perf-mode');
+    } else {
+      document.body.classList.remove('low-perf-mode');
+    }
+    
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    if (!isStandalone) {
+    const isDismissed = localStorage.getItem('hideInstallBanner') === 'true';
+    if (!isStandalone && !isDismissed) {
       setShowBanner(true);
     }
 
@@ -71,7 +79,7 @@ export default function App() {
     }
     
     return () => clearTimeout(loaderTimer);
-  }, [authLoading, isDataLoaded]);
+  }, [authLoading, isDataLoaded, lowPerfMode]);
 
   useEffect(() => {
     if (toast) {
@@ -99,29 +107,22 @@ export default function App() {
     
     try {
       const logsString = logger.getLogsString();
-      const feedbackData: any = {
-        type: feedbackType,
-        text: feedbackText,
-        uid: user?.uid || 'anonymous',
-        createdAt: new Date().toISOString()
-      };
-
-      if (feedbackImage) {
-        feedbackData.image = feedbackImage;
-      }
-      if (logsString) {
-        // Truncate logs if they are too large (1MB limit in Firestore, let's keep it safe at 500KB)
-        feedbackData.logs = logsString.length > 500000 ? logsString.substring(logsString.length - 500000) : logsString;
-      }
-
-      await addDoc(collection(db, 'feedback'), feedbackData);
+      
+      const subject = encodeURIComponent(`Feedback (${feedbackType})`);
+      const body = encodeURIComponent(
+        `Type: ${feedbackType}\n\n` +
+        `Message:\n${feedbackText}\n\n` +
+        `--- Crashlog ---\n${logsString}`
+      );
+      
+      window.location.href = `mailto:semegladysev527@gmail.com?subject=${subject}&body=${body}`;
 
       setFeedbackOpen(false);
       setFeedbackText('');
       setFeedbackImage(null);
-      setToast(t.feedbackSuccess || "Спасибо! Ваш отзыв сохранен.");
+      setToast(t.feedbackSuccess || "Opening email client...");
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'feedback');
+      console.error(error);
       setToast("Error submitting feedback. Please try again.");
     }
   };
@@ -139,6 +140,11 @@ export default function App() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCloseBanner = () => {
+    setShowBanner(false);
+    localStorage.setItem('hideInstallBanner', 'true');
   };
 
   return (
@@ -161,7 +167,7 @@ export default function App() {
       />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 relative z-10">
-        <PromoBanner showBanner={showBanner} lang={lang as Language} setModalContent={setModalContent} />
+        <PromoBanner showBanner={showBanner} lang={lang as Language} setModalContent={setModalContent} onClose={handleCloseBanner} />
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -171,41 +177,43 @@ export default function App() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            {section === 'home' && (
-              <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
-                <h2 className="text-3xl font-bold text-[#C3A6E6] mb-4">{t.homeTitle}</h2>
-                <p className="text-lg text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: t.homeDesc }} />
-                <div className="text-sm text-gray-400 italic">{t.lastUpdate}</div>
-              </div>
-            )}
+            <Suspense fallback={<div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-[#C3A6E6] border-t-transparent rounded-full animate-spin"></div></div>}>
+              {section === 'home' && (
+                <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
+                  <h2 className="text-3xl font-bold text-[#C3A6E6] mb-4">{t.homeTitle}</h2>
+                  <p className="text-lg text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: t.homeDesc }} />
+                  <div className="text-sm text-gray-400 italic">{t.lastUpdate}</div>
+                </div>
+              )}
 
-            {section === 'theories' && (
-              <TheoriesSection 
-                lang={lang as Language}
-                theoryCategory={theoryCategory}
-                setTheoryCategory={setTheoryCategory}
-                theorySearch={theorySearch}
-                setTheorySearch={setTheorySearch}
-                favorites={favorites}
-                toggleFavorite={toggleFavorite}
-              />
-            )}
+              {section === 'theories' && (
+                <TheoriesSection 
+                  lang={lang as Language}
+                  theoryCategory={theoryCategory}
+                  setTheoryCategory={setTheoryCategory}
+                  theorySearch={theorySearch}
+                  setTheorySearch={setTheorySearch}
+                  favorites={favorites}
+                  toggleFavorite={toggleFavorite}
+                />
+              )}
 
-            {section === 'blog' && (
-              <BlogSection 
-                lang={lang as Language}
-                blogCategory={blogCategory}
-                setBlogCategory={setBlogCategory}
-                blogSearch={blogSearch}
-                setBlogSearch={setBlogSearch}
-                favorites={favorites}
-                toggleFavorite={toggleFavorite}
-              />
-            )}
+              {section === 'blog' && (
+                <BlogSection 
+                  lang={lang as Language}
+                  blogCategory={blogCategory}
+                  setBlogCategory={setBlogCategory}
+                  blogSearch={blogSearch}
+                  setBlogSearch={setBlogSearch}
+                  favorites={favorites}
+                  toggleFavorite={toggleFavorite}
+                />
+              )}
 
-            {section === 'chronicle' && <ChronicleSection lang={lang as Language} />}
-            {section === 'tierlist' && <TierListSection lang={lang as Language} />}
-            {section === 'promo' && <PromoSection lang={lang as Language} handleCopy={handleCopy} />}
+              {section === 'chronicle' && <ChronicleSection lang={lang as Language} />}
+              {section === 'tierlist' && <TierListSection lang={lang as Language} />}
+              {section === 'promo' && <PromoSection lang={lang as Language} handleCopy={handleCopy} />}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>
@@ -227,7 +235,7 @@ export default function App() {
       />
 
       <ContentModal modalContent={modalContent} setModalContent={setModalContent} lang={lang as Language} />
-
+      
       {/* Toast Notification */}
       <AnimatePresence>
         {toast && (

@@ -76,7 +76,14 @@ export const translations = {
     writeComment: "Написать комментарий...",
     loginToComment: "Войдите, чтобы оставить комментарий",
     delete: "Удалить",
-    like: "Нравится"
+    like: "Нравится",
+    confirmLogoutTitle: "Выход из аккаунта",
+    confirmLogoutMessage: "Вы уверены, что хотите выйти?",
+    confirmDeleteTitle: "Удаление комментария",
+    confirmDeleteMessage: "Вы уверены, что хотите удалить этот комментарий? Это действие нельзя отменить.",
+    commentLimitReached: "Вы достигли лимита комментариев (макс. 5) для этого поста.",
+    cancelBtn: "Отмена",
+    confirmBtn: "Подтвердить"
   },
   en: {
     siteName: "As I've Written",
@@ -155,7 +162,14 @@ export const translations = {
     writeComment: "Write a comment...",
     loginToComment: "Log in to leave a comment",
     delete: "Delete",
-    like: "Like"
+    like: "Like",
+    confirmLogoutTitle: "Log Out",
+    confirmLogoutMessage: "Are you sure you want to log out?",
+    confirmDeleteTitle: "Delete Comment",
+    confirmDeleteMessage: "Are you sure you want to delete this comment? This action cannot be undone.",
+    commentLimitReached: "You have reached the comment limit (max 5) for this post.",
+    cancelBtn: "Cancel",
+    confirmBtn: "Confirm"
   },
   by: {
     siteName: "Так напісана мною",
@@ -234,7 +248,14 @@ export const translations = {
     writeComment: "Напісаць каментарый...",
     loginToComment: "Увайдзіце, каб пакінуць каментарый",
     delete: "Выдаліць",
-    like: "Падабаецца"
+    like: "Падабаецца",
+    confirmLogoutTitle: "Выхад з акаўнта",
+    confirmLogoutMessage: "Вы ўпэўненыя, што хочаце выйсці?",
+    confirmDeleteTitle: "Выдаленне каментара",
+    confirmDeleteMessage: "Вы ўпэўненыя, што хочаце выдаліць гэты каментар? Гэта дзеянне нельга адмяніць.",
+    commentLimitReached: "Вы дасягнулі ліміту каментароў (макс. 5) для гэтага паста.",
+    cancelBtn: "Адмена",
+    confirmBtn: "Пацвердзіць"
   },
   jp: {
     siteName: "私が書いたように",
@@ -313,7 +334,14 @@ export const translations = {
     writeComment: "コメントを書く...",
     loginToComment: "コメントを残すにはログインしてください",
     delete: "削除",
-    like: "いいね"
+    like: "いいね",
+    confirmLogoutTitle: "ログアウト",
+    confirmLogoutMessage: "本当にログアウトしますか？",
+    confirmDeleteTitle: "コメントを削除",
+    confirmDeleteMessage: "このコメントを削除してもよろしいですか？この操作は元に戻せません。",
+    commentLimitReached: "この投稿のコメント制限（最大5件）に達しました。",
+    cancelBtn: "キャンセル",
+    confirmBtn: "確認"
   },
   de: {
     siteName: "Wie ich geschrieben habe",
@@ -392,7 +420,14 @@ export const translations = {
     writeComment: "Schreibe einen Kommentar...",
     loginToComment: "Melden Sie sich an, um einen Kommentar zu hinterlassen",
     delete: "Löschen",
-    like: "Gefällt mir"
+    like: "Gefällt mir",
+    confirmLogoutTitle: "Abmelden",
+    confirmLogoutMessage: "Sind Sie sicher, dass Sie sich abmelden möchten?",
+    confirmDeleteTitle: "Kommentar löschen",
+    confirmDeleteMessage: "Möchten Sie diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    commentLimitReached: "Sie haben das Kommentar-Limit (max. 5) für diesen Beitrag erreicht.",
+    cancelBtn: "Abbrechen",
+    confirmBtn: "Bestätigen"
   },
   fr: {
     siteName: "Comme je l'ai écrit",
@@ -471,7 +506,14 @@ export const translations = {
     writeComment: "Écrire un commentaire...",
     loginToComment: "Connectez-vous pour laisser un commentaire",
     delete: "Supprimer",
-    like: "J'aime"
+    like: "J'aime",
+    confirmLogoutTitle: "Se déconnecter",
+    confirmLogoutMessage: "Êtes-vous sûr de vouloir vous déconnecter ?",
+    confirmDeleteTitle: "Supprimer le commentaire",
+    confirmDeleteMessage: "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action ne peut pas être annulée.",
+    commentLimitReached: "Vous avez atteint la limite de commentaires (max 5) pour cet article.",
+    cancelBtn: "Annuler",
+    confirmBtn: "Confirmer"
   },
   zh: {
     siteName: "如我所写",
@@ -550,7 +592,14 @@ export const translations = {
     writeComment: "写评论...",
     loginToComment: "登录后发表评论",
     delete: "删除",
-    like: "赞"
+    like: "赞",
+    confirmLogoutTitle: "登出",
+    confirmLogoutMessage: "您确定要登出吗？",
+    confirmDeleteTitle: "删除评论",
+    confirmDeleteMessage: "您确定要删除此评论吗？此操作无法撤销。",
+    commentLimitReached: "您已达到此帖子的评论上限（最多5条）。",
+    cancelBtn: "取消",
+    confirmBtn: "确认"
   }
 };
 

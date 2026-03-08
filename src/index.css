@@ -32,4 +32,20 @@
     0% { transform: scale(1); }
     100% { transform: scale(1.1); }
   }
+
+  body.low-perf-mode::before {
+    animation: none;
+    background: #2F244F;
+  }
+
+  body.low-perf-mode .backdrop-blur-sm,
+  body.low-perf-mode .backdrop-blur-md,
+  body.low-perf-mode .backdrop-blur-lg {
+    backdrop-filter: none !important;
+    background-color: #3E3160 !important;
+  }
+
+  body.low-perf-mode * {
+    box-shadow: none !important;
+  }
 }

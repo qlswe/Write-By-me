@@ -62,6 +62,14 @@
           },
           "description": "List of UIDs who liked the comment"
         },
+        "reactions": {
+          "type": "object",
+          "description": "Map of emoji to list of UIDs"
+        },
+        "isEdited": {
+          "type": "boolean",
+          "description": "Whether the comment has been edited"
+        },
         "createdAt": {
           "type": "string",
           "description": "ISO timestamp of creation"
