@@ -189,29 +189,27 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
 
   const renderCommentContent = (comment: Comment, isReply = false) => {
     return (
-      <div key={comment.id} className={`flex flex-col sm:flex-row gap-3 sm:gap-4 ${isReply ? 'mt-4' : ''}`}>
-        <div className="flex items-center gap-3 sm:block">
-          <img
-            src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=5C4B8B&color=fff&size=${lowPerfMode ? '32' : '64'}`}
-            alt={comment.authorName}
-            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#5C4B8B] shrink-0"
-          />
-          <span className="font-bold text-white sm:hidden">{comment.authorName}</span>
-        </div>
-        <div className="flex-1 bg-[#2F244F] rounded-2xl sm:rounded-tl-none p-3 sm:p-4 border border-[#5C4B8B]">
-          <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
-            <div className="flex flex-col sm:flex-row sm:items-center">
-              <span className="font-bold text-white mr-2 hidden sm:inline">{comment.authorName}</span>
-              <span className="text-xs text-gray-400">
-                {formatDistanceToNow(new Date(comment.createdAt), {
-                  addSuffix: true,
-                  locale: locales[lang] || locales.en
-                })}
-                {comment.isEdited && <span className="ml-1 italic">(изменено)</span>}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 ml-auto">
-              {user && user.uid === comment.authorUid && (
+      <div key={comment.id} className={`flex gap-3 sm:gap-4 ${isReply ? 'mt-4' : ''}`}>
+        <img
+          src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=5C4B8B&color=fff&size=${lowPerfMode ? '32' : '64'}`}
+          alt={comment.authorName}
+          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#5C4B8B] shrink-0 mt-1"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="bg-[#2F244F] rounded-2xl rounded-tl-none p-3 sm:p-4 border border-[#5C4B8B]">
+            <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
+              <div className="flex items-center flex-wrap gap-2">
+                <span className="font-bold text-white">{comment.authorName}</span>
+                <span className="text-xs text-gray-400">
+                  {formatDistanceToNow(new Date(comment.createdAt), {
+                    addSuffix: true,
+                    locale: locales[lang] || locales.en
+                  })}
+                  {comment.isEdited && <span className="ml-1 italic">(изменено)</span>}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+                {user && user.uid === comment.authorUid && (
                 <>
                   <button
                     onClick={() => handleEdit(comment)}
@@ -312,6 +310,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
               </button>
             )}
           </div>
+        </div>
         </div>
       </div>
     );

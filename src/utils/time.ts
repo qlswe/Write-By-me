@@ -7,35 +7,32 @@ export function getNextEventDate(event: GameEvent): Date | null {
   const now = new Date();
   
   if (event.type === 'daily') {
-    const [hours, minutes, seconds] = (event.timeStr || "00:00:00").split(':').map(Number);
-    const target = new Date(now);
-    target.setHours(hours, minutes, seconds, 0);
+    // All events reset at 03:00 UTC (06:00 MSK)
+    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0));
     
     if (target <= now) {
-      target.setDate(target.getDate() + 1);
+      target.setUTCDate(target.getUTCDate() + 1);
     }
     return target;
   }
   
   if (event.type === 'weekly' && event.dayOfWeek !== undefined) {
-    const [hours, minutes, seconds] = (event.timeStr || "00:00:00").split(':').map(Number);
-    const target = new Date(now);
-    target.setHours(hours, minutes, seconds, 0);
+    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0));
     
-    let daysUntilTarget = event.dayOfWeek - target.getDay();
+    let daysUntilTarget = event.dayOfWeek - target.getUTCDay();
     if (daysUntilTarget < 0 || (daysUntilTarget === 0 && target <= now)) {
       daysUntilTarget += 7;
     }
     
-    target.setDate(target.getDate() + daysUntilTarget);
+    target.setUTCDate(target.getUTCDate() + daysUntilTarget);
     
     if (event.weekOffset !== undefined) {
       // Calculate weeks since reference date
       const targetMonday = new Date(target);
-      const targetDay = targetMonday.getDay();
+      const targetDay = targetMonday.getUTCDay();
       const diffToMonday = targetDay === 0 ? -6 : 1 - targetDay;
-      targetMonday.setDate(targetMonday.getDate() + diffToMonday);
-      targetMonday.setHours(0, 0, 0, 0);
+      targetMonday.setUTCDate(targetMonday.getUTCDate() + diffToMonday);
+      targetMonday.setUTCHours(0, 0, 0, 0);
       
       const diffTime = targetMonday.getTime() - REFERENCE_DATE.getTime();
       const diffWeeks = Math.round(diffTime / (1000 * 60 * 60 * 24 * 7));
@@ -44,7 +41,7 @@ export function getNextEventDate(event: GameEvent): Date | null {
       
       // If the week doesn't match the offset, add 7 days
       if (normalizedDiff !== event.weekOffset) {
-        target.setDate(target.getDate() + 7);
+        target.setUTCDate(target.getUTCDate() + 7);
       }
     }
     
@@ -85,7 +82,26 @@ export function getEventProgress(event: GameEvent): { nextDate: Date | null, pro
   return { nextDate, progress };
 }
 
-export function formatCountdown(targetDate: Date | null, t: any): string {
+export function pluralize(count: number, forms: string | string[], lang: string): string {
+  if (typeof forms === 'string') return forms;
+  
+  if (lang === 'ru' || lang === 'by') {
+    const n = Math.abs(count) % 100;
+    const n1 = n % 10;
+    if (n > 10 && n < 20) return forms[2];
+    if (n1 > 1 && n1 < 5) return forms[1];
+    if (n1 === 1) return forms[0];
+    return forms[2];
+  }
+  
+  if (lang === 'en' || lang === 'de' || lang === 'fr') {
+    return count === 1 ? forms[0] : forms[1];
+  }
+  
+  return forms[0];
+}
+
+export function formatCountdown(targetDate: Date | null, t: any, lang: string): string {
   if (!targetDate) return t.ended;
   
   const now = new Date();
@@ -99,10 +115,10 @@ export function formatCountdown(targetDate: Date | null, t: any): string {
   const seconds = Math.floor((diff % (1000 * 60)) / 1000);
   
   const parts = [];
-  if (days > 0) parts.push(`${days}${t.days}`);
-  if (hours > 0 || days > 0) parts.push(`${hours}${t.hours}`);
-  if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}${t.minutes}`);
-  parts.push(`${seconds}${t.seconds}`);
+  if (days > 0) parts.push(`${days} ${pluralize(days, t.days, lang)}`);
+  if (hours > 0 || days > 0) parts.push(`${hours} ${pluralize(hours, t.hours, lang)}`);
+  if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes} ${pluralize(minutes, t.minutes, lang)}`);
+  parts.push(`${seconds} ${pluralize(seconds, t.seconds, lang)}`);
   
   return `${parts.join(' ')} ${t.remaining}`;
 }

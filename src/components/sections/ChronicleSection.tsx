@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Globe, RefreshCw, Swords } from 'lucide-react';
 import { eventsData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
-import { getNextEventDate, getEventProgress, formatCountdown } from '../../utils/time';
+import { getNextEventDate, getEventProgress, formatCountdown, pluralize } from '../../utils/time';
 import { usePerfLogger } from '../../utils/logger';
 
 interface ChronicleSectionProps {
@@ -16,13 +16,22 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
   const { trackRender } = usePerfLogger('ChronicleSection');
   trackRender();
 
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
       <h2 className="text-3xl font-bold text-[#C3A6E6] mb-8">{t.navChronicle}</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {eventsData.map(event => {
           const { nextDate, progress } = getEventProgress(event);
-          const countdown = formatCountdown(nextDate, t);
+          const countdown = formatCountdown(nextDate, t, lang);
           
           return (
             <div key={event.id} className="bg-[#3E3160] p-6 rounded-2xl shadow-lg border border-[#5C4B8B] relative overflow-hidden group">

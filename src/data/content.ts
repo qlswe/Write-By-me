@@ -550,7 +550,6 @@ export interface GameEvent {
   title: LocalizedString;
   description: LocalizedString;
   type: 'daily' | 'weekly' | 'one-time';
-  timeStr?: string; // HH:MM:SS in UTC
   dayOfWeek?: number; // 0-6 (Sun-Sat)
   weekOffset?: number; // 0 for even weeks, 1 for odd weeks
   startDate?: string; // ISO string
@@ -571,16 +570,15 @@ export const eventsData: GameEvent[] = [
       zh: "每日刷新"
     },
     description: {
-      ru: "Ежедневное обновление происходит каждый день в 08:00 по местному времени. Сброс ежедневных миссий, наград и лимитов.",
-      en: "Daily reset occurs every day at 08:00 local time. Resets daily missions, rewards and limits.",
-      by: "Штодзённае абнаўленне адбываецца кожны дзень у 08:00 па мясцовым часе. Скід штодзённых місій, узнагарод і лімітаў.",
-      jp: "毎日のリセットは毎日現地時間08:00に行われます。デイリーミッション、報酬、制限のリセット。",
-      de: "Tägliches Reset findet jeden Tag um 08:00 Ortszeit statt. Setzt tägliche Missionen, Belohnungen und Limits zurück.",
-      fr: "Réinitialisation quotidienne a lieu tous les jours à 08:00 heure locale. Réinitialise les missions quotidiennes, récompenses et limites.",
-      zh: "每日刷新时间为当地时间 08:00。重置每日任务、奖励和限制。"
+      ru: "Ежедневное обновление происходит каждый день в 06:00 по МСК. Сброс ежедневных миссий, наград и лимитов.",
+      en: "Daily reset occurs every day at 03:00 UTC. Resets daily missions, rewards and limits.",
+      by: "Штодзённае абнаўленне адбываецца кожны дзень у 06:00 па МСК. Скід штодзённых місій, узнагарод і лімітаў.",
+      jp: "毎日のリセットは毎日03:00 UTCに行われます。デイリーミッション、報酬、制限のリセット。",
+      de: "Tägliches Reset findet jeden Tag um 03:00 UTC statt. Setzt tägliche Missionen, Belohnungen und Limits zurück.",
+      fr: "Réinitialisation quotidienne a lieu tous les jours à 03:00 UTC. Réinitialise les missions quotidiennes, récompenses et limites.",
+      zh: "每日刷新时间为 03:00 UTC。重置每日任务、奖励和限制。"
     },
-    type: 'daily',
-    timeStr: "08:00:00"
+    type: 'daily'
   },
   {
     id: 'event-2',
@@ -595,18 +593,17 @@ export const eventsData: GameEvent[] = [
       zh: "货币战争"
     },
     description: {
-      ru: "Валютные войны обновляются раз в две недели в 8:00 по местному времени, чередуясь с Виртуальной вселенной.",
-      en: "Currency wars update every two weeks at 8:00 local time, alternating with the Simulated Universe.",
-      by: "Валютныя вайны абнаўляюцца раз на два тыдні ў 8:00 па мясцовым часе, чаргуючыся з Віртуальным сусветам.",
-      jp: "通貨戦争は現地時間8:00に2週間ごとに更新され、模擬宇宙と交互に行われます。",
-      de: "Währungskriege werden alle zwei Wochen um 8:00 Uhr Ortszeit aktualisiert und wechseln sich mit dem Simulierten Universum ab.",
-      fr: "Les guerres de devises sont mises à jour toutes les deux semaines à 8h00, heure locale, en alternance avec l'Univers Simulé.",
-      zh: "货币战争每两周在当地时间8:00更新一次，与模拟宇宙交替进行。"
+      ru: "Валютные войны обновляются раз в две недели в 06:00 по МСК, чередуясь с Виртуальной вселенной.",
+      en: "Currency wars update every two weeks at 03:00 UTC, alternating with the Simulated Universe.",
+      by: "Валютныя вайны абнаўляюцца раз на два тыдні ў 06:00 па МСК, чаргуючыся з Віртуальным сусветам.",
+      jp: "通貨戦争は03:00 UTCに2週間ごとに更新され、模擬宇宙と交互に行われます。",
+      de: "Währungskriege werden alle zwei Wochen um 03:00 UTC aktualisiert und wechseln sich mit dem Simulierten Universum ab.",
+      fr: "Les guerres de devises sont mises à jour toutes les deux semaines à 03:00 UTC, en alternance avec l'Univers Simulé.",
+      zh: "货币战争每两周在 03:00 UTC 更新一次，与模拟宇宙交替进行。"
     },
     type: 'weekly',
     dayOfWeek: 1,
-    weekOffset: 0,
-    timeStr: "08:00:00"
+    weekOffset: 0
   },
   {
     id: 'event-3',
@@ -621,17 +618,16 @@ export const eventsData: GameEvent[] = [
       zh: "模拟宇宙"
     },
     description: {
-      ru: "Виртуальная вселенная обновляется раз в две недели в 8:00 по местному времени, чередуясь с Валютными войнами.",
-      en: "The Simulated Universe updates every two weeks at 8:00 local time, alternating with Currency Wars.",
-      by: "Віртуальны сусвет абнаўляецца раз на два тыдні ў 8:00 па мясцовым часе, чаргуючыся з Валютнымі войнамі.",
-      jp: "模擬宇宙は現地時間8:00に2週間ごとに更新され、通貨戦争と交互に行われます。",
-      de: "Das Simulierte Universum wird alle zwei Wochen um 8:00 Uhr Ortszeit aktualisiert und wechselt sich mit den Währungskriegen ab.",
-      fr: "L'Univers Simulé est mis à jour toutes les deux semaines à 8h00, heure locale, en alternance avec les Guerres Monétaires.",
-      zh: "模拟宇宙每两周在当地时间8:00更新一次，与货币战争交替进行。"
+      ru: "Виртуальная вселенная обновляется раз в две недели в 06:00 по МСК, чередуясь с Валютными войнами.",
+      en: "The Simulated Universe updates every two weeks at 03:00 UTC, alternating with Currency Wars.",
+      by: "Віртуальны сусвет абнаўляецца раз на два тыдні ў 06:00 па МСК, чаргуючыся з Валютнымі войнамі.",
+      jp: "模擬宇宙は03:00 UTCに2週間ごとに更新され、通貨戦争と交互に行われます。",
+      de: "Das Simulierte Universum wird alle zwei Wochen um 03:00 UTC aktualisiert und wechselt sich mit den Währungskriegen ab.",
+      fr: "L'Univers Simulé est mis à jour toutes les deux semaines à 03:00 UTC, en alternance avec les Guerres Monétaires.",
+      zh: "模拟宇宙每两周在 03:00 UTC 更新一次，与货币战争交替进行。"
     },
     type: 'weekly',
     dayOfWeek: 1,
-    weekOffset: 1,
-    timeStr: "08:00:00"
+    weekOffset: 1
   }
 ];
