@@ -8,6 +8,11 @@ interface UserData {
   favorites: string[];
   lang: string;
   lowPerfMode?: boolean;
+  hsrUid?: string;
+  hsrServer?: string;
+  trailblazerLevel?: number;
+  signature?: string;
+  mainCharacter?: string;
 }
 
 export function useUserData(initialLang: string) {
@@ -15,6 +20,11 @@ export function useUserData(initialLang: string) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [lang, setLang] = useState<string>(initialLang);
   const [lowPerfMode, setLowPerfMode] = useState<boolean>(false);
+  const [hsrUid, setHsrUid] = useState<string>('');
+  const [hsrServer, setHsrServer] = useState<string>('Europe');
+  const [trailblazerLevel, setTrailblazerLevel] = useState<number>(1);
+  const [signature, setSignature] = useState<string>('');
+  const [mainCharacter, setMainCharacter] = useState<string>('Stelle');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // Load from local storage initially for fast render
@@ -63,12 +73,22 @@ export function useUserData(initialLang: string) {
           setLowPerfMode(data.lowPerfMode);
           localStorage.setItem('hsr_low_perf', String(data.lowPerfMode));
         }
+        if (data.hsrUid !== undefined) setHsrUid(data.hsrUid);
+        if (data.hsrServer !== undefined) setHsrServer(data.hsrServer);
+        if (data.trailblazerLevel !== undefined) setTrailblazerLevel(data.trailblazerLevel);
+        if (data.signature !== undefined) setSignature(data.signature);
+        if (data.mainCharacter !== undefined) setMainCharacter(data.mainCharacter);
       } else {
         // Create initial document if it doesn't exist
         setDoc(userRef, {
           favorites: favorites,
           lang: lang,
           lowPerfMode: lowPerfMode,
+          hsrUid: hsrUid,
+          hsrServer: hsrServer,
+          trailblazerLevel: trailblazerLevel,
+          signature: signature,
+          mainCharacter: mainCharacter,
           createdAt: new Date().toISOString()
         }, { merge: true }).catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
       }
@@ -149,5 +169,28 @@ export function useUserData(initialLang: string) {
     }
   }, [lowPerfMode, user]);
 
-  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded };
+  const updateProfile = useCallback(async (uid: string, server: string, level: number, sig: string, mainChar: string) => {
+    setHsrUid(uid);
+    setHsrServer(server);
+    setTrailblazerLevel(level);
+    setSignature(sig);
+    setMainCharacter(mainChar);
+
+    if (user) {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { 
+          hsrUid: uid,
+          hsrServer: server,
+          trailblazerLevel: level,
+          signature: sig,
+          mainCharacter: mainChar
+        }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+      }
+    }
+  }, [user]);
+
+  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, hsrUid, hsrServer, trailblazerLevel, signature, mainCharacter, updateProfile, isDataLoaded };
 }

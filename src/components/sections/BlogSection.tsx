@@ -15,6 +15,7 @@ interface BlogSectionProps {
   setBlogSearch: (search: string) => void;
   favorites: string[];
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
+  lowPerfMode?: boolean;
 }
 
 export const BlogSection: React.FC<BlogSectionProps> = ({
@@ -24,19 +25,13 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   blogSearch,
   setBlogSearch,
   favorites,
-  toggleFavorite
+  toggleFavorite,
+  lowPerfMode
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('BlogSection');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [isFiltering, setIsFiltering] = useState(true);
   trackRender();
-
-  useEffect(() => {
-    setIsFiltering(true);
-    const timer = setTimeout(() => setIsFiltering(false), 500);
-    return () => clearTimeout(timer);
-  }, [blogCategory, blogSearch]);
 
   const filteredBlog = useMemo(() => {
     return blogPostsData.filter(post => {
@@ -94,7 +89,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           dangerouslySetInnerHTML={{ __html: selectedPost.content[lang] || selectedPost.content['en'] }}
         />
 
-        <CommentsSection targetId={selectedPost.id} lang={lang} />
+        <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} />
       </motion.div>
     );
   }
@@ -136,20 +131,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
         </div>
       </div>
 
-      {isFiltering ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-6 h-[200px] animate-pulse">
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-2/3 h-6 bg-[#3E3160] rounded"></div>
-                <div className="w-8 h-8 bg-[#3E3160] rounded-full"></div>
-              </div>
-              <div className="w-1/4 h-4 bg-[#3E3160] rounded mb-4"></div>
-              <div className="w-full h-16 bg-[#3E3160] rounded"></div>
-            </div>
-          ))}
-        </div>
-      ) : filteredBlog.length === 0 ? (
+      {filteredBlog.length === 0 ? (
         <div className="text-center py-12 text-gray-400 bg-[#3E3160]/50 rounded-2xl border border-dashed border-[#5C4B8B]">
           {t.noResults}
         </div>

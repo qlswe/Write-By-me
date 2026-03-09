@@ -112,9 +112,20 @@ export default function App() {
       const body = encodeURIComponent(
         `Type: ${feedbackType}\n\n` +
         `Message:\n${feedbackText}\n\n` +
-        `--- Crashlog ---\n${logsString}`
+        `[Please attach the downloaded crashlog.txt file to this email if applicable]`
       );
       
+      // Download logs as a file
+      const blob = new Blob([logsString], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'crashlog.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
       window.location.href = `mailto:semegladysev527@gmail.com?subject=${subject}&body=${body}`;
 
       setFeedbackOpen(false);
@@ -172,10 +183,10 @@ export default function App() {
         <AnimatePresence mode="wait">
           <motion.div
             key={section}
-            initial={{ opacity: 0, y: 20 }}
+            initial={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
+            exit={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
+            transition={lowPerfMode ? { duration: 0 } : { duration: 0.3 }}
           >
             <Suspense fallback={<div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-[#C3A6E6] border-t-transparent rounded-full animate-spin"></div></div>}>
               {section === 'home' && (
@@ -195,6 +206,7 @@ export default function App() {
                   setTheorySearch={setTheorySearch}
                   favorites={favorites}
                   toggleFavorite={toggleFavorite}
+                  lowPerfMode={lowPerfMode}
                 />
               )}
 
@@ -207,11 +219,12 @@ export default function App() {
                   setBlogSearch={setBlogSearch}
                   favorites={favorites}
                   toggleFavorite={toggleFavorite}
+                  lowPerfMode={lowPerfMode}
                 />
               )}
 
-              {section === 'chronicle' && <ChronicleSection lang={lang as Language} />}
-              {section === 'tierlist' && <TierListSection lang={lang as Language} />}
+              {section === 'chronicle' && <ChronicleSection lang={lang as Language} lowPerfMode={lowPerfMode} />}
+              {section === 'tierlist' && <TierListSection lang={lang as Language} lowPerfMode={lowPerfMode} />}
               {section === 'promo' && <PromoSection lang={lang as Language} handleCopy={handleCopy} />}
             </Suspense>
           </motion.div>

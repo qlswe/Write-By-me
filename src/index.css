@@ -26,16 +26,26 @@
     pointer-events: none;
     z-index: -1;
     animation: backgroundShift 20s ease-in-out infinite alternate;
+    will-change: transform;
+    transform: translateZ(0);
   }
 
   @keyframes backgroundShift {
-    0% { transform: scale(1); }
-    100% { transform: scale(1.1); }
+    0% { transform: scale(1) translateZ(0); }
+    100% { transform: scale(1.1) translateZ(0); }
+  }
+
+  body.low-perf-mode *,
+  body.low-perf-mode *::before,
+  body.low-perf-mode *::after {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
   }
 
   body.low-perf-mode::before {
-    animation: none;
-    background: #2F244F;
+    animation: none !important;
+    background: #2F244F !important;
   }
 
   body.low-perf-mode .backdrop-blur-sm,
@@ -43,9 +53,5 @@
   body.low-perf-mode .backdrop-blur-lg {
     backdrop-filter: none !important;
     background-color: #3E3160 !important;
-  }
-
-  body.low-perf-mode * {
-    box-shadow: none !important;
   }
 }

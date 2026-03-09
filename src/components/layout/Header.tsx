@@ -5,6 +5,7 @@ import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { ProfileModal } from '../ui/ProfileModal';
 
 interface HeaderProps {
   lang: Language;
@@ -36,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   const t = translations[lang];
   const { user, loginWithGoogle, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { trackRender } = usePerfLogger('Header');
   trackRender();
@@ -145,6 +147,14 @@ export const Header: React.FC<HeaderProps> = ({
                               {favorites.length}
                             </span>
                           </div>
+
+                          <button 
+                            onClick={() => { setProfileModalOpen(true); setProfileOpen(false); }}
+                            className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-[#5C4B8B] text-white border border-[#5C4B8B] hover:border-[#C3A6E6] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
+                          >
+                            <UserIcon size={16} />
+                            {lang === 'ru' ? 'Настройки профиля' : 'Profile Settings'}
+                          </button>
 
                           {favorites.length > 0 && (
                             <button 
@@ -257,6 +267,14 @@ export const Header: React.FC<HeaderProps> = ({
                     </span>
                   </div>
 
+                  <button 
+                    onClick={() => { setProfileModalOpen(true); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-[#5C4B8B] text-white border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"
+                  >
+                    <UserIcon size={20} />
+                    {lang === 'ru' ? 'Настройки профиля' : 'Profile Settings'}
+                  </button>
+
                   {favorites.length > 0 && (
                     <button 
                       onClick={() => { clearFavorites(); setMobileMenuOpen(false); }}
@@ -312,6 +330,7 @@ export const Header: React.FC<HeaderProps> = ({
         cancelText={t.cancelBtn || "Cancel"}
         isDestructive={true}
       />
+      <ProfileModal isOpen={profileModalOpen} onClose={() => setProfileModalOpen(false)} lang={lang} />
     </>
   );
 };

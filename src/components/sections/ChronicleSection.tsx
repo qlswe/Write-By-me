@@ -8,9 +8,10 @@ import { usePerfLogger } from '../../utils/logger';
 
 interface ChronicleSectionProps {
   lang: Language;
+  lowPerfMode?: boolean;
 }
 
-export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang }) => {
+export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPerfMode }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('ChronicleSection');
   trackRender();
@@ -28,9 +29,9 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang }) => {
               <div className="absolute top-0 left-0 w-full h-1 bg-[#2F244F]">
                 <motion.div 
                   className="h-full bg-[#C3A6E6] shadow-[0_0_10px_#C3A6E6]"
-                  initial={{ width: 0 }}
+                  initial={lowPerfMode ? { width: `${progress}%` } : { width: 0 }}
                   animate={{ width: `${progress}%` }}
-                  transition={{ duration: 1, ease: "easeOut" }}
+                  transition={lowPerfMode ? { duration: 0 } : { duration: 1, ease: "easeOut" }}
                 />
               </div>
               

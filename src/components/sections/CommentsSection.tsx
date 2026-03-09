@@ -26,6 +26,7 @@ interface Comment {
 interface CommentsSectionProps {
   targetId: string;
   lang: Language;
+  lowPerfMode?: boolean;
 }
 
 const locales = {
@@ -38,7 +39,7 @@ const locales = {
   zh: zhCN
 };
 
-export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang }) => {
+export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang, lowPerfMode }) => {
   const { user, loginWithGoogle } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -54,19 +55,6 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   const hasReachedLimit = userCommentCount >= MAX_COMMENTS_PER_POST;
 
   const EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
-
-  const EMOJI_MAP: Record<string, string> = {
-    '👍': '1f44d',
-    '❤️': '2764',
-    '😂': '1f602',
-    '😮': '1f62e',
-    '😢': '1f622'
-  };
-
-  const getTwemojiUrl = (emoji: string) => {
-    const hex = EMOJI_MAP[emoji];
-    return hex ? `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${hex}.svg` : '';
-  };
 
   useEffect(() => {
     if (!targetId) return;
@@ -234,7 +222,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
           <div key={comment.id} className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex items-center gap-3 sm:block">
               <img
-                src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=5C4B8B&color=fff`}
+                src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=5C4B8B&color=fff&size=${lowPerfMode ? '32' : '64'}`}
                 alt={comment.authorName}
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#5C4B8B] shrink-0"
               />
@@ -311,16 +299,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
                       onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
                       className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors ${hasReacted ? 'bg-[#C3A6E6]/20 border border-[#C3A6E6]/50' : 'bg-[#3E3160] border border-transparent hover:border-[#5C4B8B]'}`}
                     >
-                      <img 
-                        src={getTwemojiUrl(emoji)} 
-                        alt={emoji} 
-                        className="w-4 h-4" 
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                      <span className="hidden leading-none text-sm">{emoji}</span>
+                      <span className="text-sm leading-none">{emoji}</span>
                       <span className="text-gray-300">{users.length}</span>
                     </button>
                   );
@@ -344,16 +323,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
                             onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
                             className="p-2 hover:bg-[#5C4B8B] rounded-full transition-colors"
                           >
-                            <img 
-                              src={getTwemojiUrl(emoji)} 
-                              alt={emoji} 
-                              className="w-6 h-6" 
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                              }}
-                            />
-                            <span className="hidden text-xl leading-none">{emoji}</span>
+                            <span className="text-xl leading-none">{emoji}</span>
                           </button>
                         ))}
                       </div>

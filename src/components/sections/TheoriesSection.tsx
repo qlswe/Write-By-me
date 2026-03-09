@@ -15,6 +15,7 @@ interface TheoriesSectionProps {
   setTheorySearch: (search: string) => void;
   favorites: string[];
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
+  lowPerfMode?: boolean;
 }
 
 export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
@@ -24,19 +25,13 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   theorySearch,
   setTheorySearch,
   favorites,
-  toggleFavorite
+  toggleFavorite,
+  lowPerfMode
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('TheoriesSection');
   const [selectedTheoryId, setSelectedTheoryId] = useState<string | null>(null);
-  const [isFiltering, setIsFiltering] = useState(true);
   trackRender();
-
-  useEffect(() => {
-    setIsFiltering(true);
-    const timer = setTimeout(() => setIsFiltering(false), 500);
-    return () => clearTimeout(timer);
-  }, [theoryCategory, theorySearch]);
 
   const filteredTheories = useMemo(() => {
     return theoriesData.filter(theory => {
@@ -94,7 +89,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
           dangerouslySetInnerHTML={{ __html: selectedTheory.content[lang] || selectedTheory.content['en'] }}
         />
 
-        <CommentsSection targetId={selectedTheory.id} lang={lang} />
+        <CommentsSection targetId={selectedTheory.id} lang={lang} lowPerfMode={lowPerfMode} />
       </motion.div>
     );
   }
@@ -137,20 +132,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
         </div>
       </div>
 
-      {isFiltering ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-6 h-[200px] animate-pulse">
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-2/3 h-6 bg-[#3E3160] rounded"></div>
-                <div className="w-8 h-8 bg-[#3E3160] rounded-full"></div>
-              </div>
-              <div className="w-1/4 h-4 bg-[#3E3160] rounded mb-4"></div>
-              <div className="w-full h-16 bg-[#3E3160] rounded"></div>
-            </div>
-          ))}
-        </div>
-      ) : filteredTheories.length === 0 ? (
+      {filteredTheories.length === 0 ? (
         <div className="text-center py-12 text-gray-400 bg-[#3E3160]/50 rounded-2xl border border-dashed border-[#5C4B8B]">
           {t.noResults}
         </div>

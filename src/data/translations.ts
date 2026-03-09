@@ -83,7 +83,14 @@ export const translations = {
     confirmDeleteMessage: "Вы уверены, что хотите удалить этот комментарий? Это действие нельзя отменить.",
     commentLimitReached: "Вы достигли лимита комментариев (макс. 5) для этого поста.",
     cancelBtn: "Отмена",
-    confirmBtn: "Подтвердить"
+    confirmBtn: "Подтвердить",
+    editProfile: "Редактировать профиль",
+    server: "Сервер",
+    trailblazerLevel: "Уровень Освоения",
+    signature: "Подпись",
+    signaturePlaceholder: "Правила созданы для того, чтобы их нарушать!",
+    mainCharacter: "Любимый персонаж",
+    saveBtn: "Сохранить"
   },
   en: {
     siteName: "As I've Written",
@@ -169,7 +176,14 @@ export const translations = {
     confirmDeleteMessage: "Are you sure you want to delete this comment? This action cannot be undone.",
     commentLimitReached: "You have reached the comment limit (max 5) for this post.",
     cancelBtn: "Cancel",
-    confirmBtn: "Confirm"
+    confirmBtn: "Confirm",
+    editProfile: "Edit Profile",
+    server: "Server",
+    trailblazerLevel: "Trailblazer Level",
+    signature: "Signature",
+    signaturePlaceholder: "Rules are made to be broken!",
+    mainCharacter: "Main Character",
+    saveBtn: "Save"
   },
   by: {
     siteName: "Так напісана мною",
@@ -255,7 +269,14 @@ export const translations = {
     confirmDeleteMessage: "Вы ўпэўненыя, што хочаце выдаліць гэты каментар? Гэта дзеянне нельга адмяніць.",
     commentLimitReached: "Вы дасягнулі ліміту каментароў (макс. 5) для гэтага паста.",
     cancelBtn: "Адмена",
-    confirmBtn: "Пацвердзіць"
+    confirmBtn: "Пацвердзіць",
+    editProfile: "Рэдагаваць профіль",
+    server: "Сервер",
+    trailblazerLevel: "Узровень Асваення",
+    signature: "Подпіс",
+    signaturePlaceholder: "Правілы створаны для таго, каб іх парушаць!",
+    mainCharacter: "Любімы персанаж",
+    saveBtn: "Захаваць"
   },
   jp: {
     siteName: "私が書いたように",
@@ -341,7 +362,14 @@ export const translations = {
     confirmDeleteMessage: "このコメントを削除してもよろしいですか？この操作は元に戻せません。",
     commentLimitReached: "この投稿のコメント制限（最大5件）に達しました。",
     cancelBtn: "キャンセル",
-    confirmBtn: "確認"
+    confirmBtn: "確認",
+    editProfile: "プロフィールを編集",
+    server: "サーバー",
+    trailblazerLevel: "開拓レベル",
+    signature: "署名",
+    signaturePlaceholder: "ルールは破るためにある！",
+    mainCharacter: "メインキャラクター",
+    saveBtn: "保存"
   },
   de: {
     siteName: "Wie ich geschrieben habe",
@@ -427,7 +455,14 @@ export const translations = {
     confirmDeleteMessage: "Möchten Sie diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     commentLimitReached: "Sie haben das Kommentar-Limit (max. 5) für diesen Beitrag erreicht.",
     cancelBtn: "Abbrechen",
-    confirmBtn: "Bestätigen"
+    confirmBtn: "Bestätigen",
+    editProfile: "Profil bearbeiten",
+    server: "Server",
+    trailblazerLevel: "Trailblazer-Stufe",
+    signature: "Signatur",
+    signaturePlaceholder: "Regeln sind dazu da, gebrochen zu werden!",
+    mainCharacter: "Hauptcharakter",
+    saveBtn: "Speichern"
   },
   fr: {
     siteName: "Comme je l'ai écrit",
@@ -513,7 +548,14 @@ export const translations = {
     confirmDeleteMessage: "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action ne peut pas être annulée.",
     commentLimitReached: "Vous avez atteint la limite de commentaires (max 5) pour cet article.",
     cancelBtn: "Annuler",
-    confirmBtn: "Confirmer"
+    confirmBtn: "Confirmer",
+    editProfile: "Modifier le profil",
+    server: "Serveur",
+    trailblazerLevel: "Niveau de Pionnier",
+    signature: "Signature",
+    signaturePlaceholder: "Les règles sont faites pour être enfreintes !",
+    mainCharacter: "Personnage principal",
+    saveBtn: "Enregistrer"
   },
   zh: {
     siteName: "如我所写",
@@ -599,7 +641,14 @@ export const translations = {
     confirmDeleteMessage: "您确定要删除此评论吗？此操作无法撤销。",
     commentLimitReached: "您已达到此帖子的评论上限（最多5条）。",
     cancelBtn: "取消",
-    confirmBtn: "确认"
+    confirmBtn: "确认",
+    editProfile: "编辑资料",
+    server: "服务器",
+    trailblazerLevel: "开拓等级",
+    signature: "签名",
+    signaturePlaceholder: "规则就是用来打破的！",
+    mainCharacter: "主要角色",
+    saveBtn: "保存"
   }
 };
 

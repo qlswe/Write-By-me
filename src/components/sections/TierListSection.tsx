@@ -4,12 +4,26 @@ import { usePerfLogger } from '../../utils/logger';
 
 interface TierListSectionProps {
   lang: Language;
+  lowPerfMode?: boolean;
 }
 
-export const TierListSection: React.FC<TierListSectionProps> = ({ lang }) => {
+export const TierListSection: React.FC<TierListSectionProps> = ({ lang, lowPerfMode }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('TierListSection');
   trackRender();
+
+  const renderCharList = (chars: string[]) => (
+    <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
+      {chars.map(char => (
+        <div key={char} className="flex flex-col items-center gap-1 w-16 sm:w-20 group">
+          <div className="relative">
+            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(char)}&background=3E3160&color=fff&size=${lowPerfMode ? '32' : '64'}`} alt={char} className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-[#C3A6E6] shadow-lg group-hover:scale-110 transition-transform duration-200" />
+          </div>
+          <span className="text-[10px] sm:text-xs font-medium text-white text-center leading-tight line-clamp-2">{char}</span>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
@@ -35,41 +49,25 @@ export const TierListSection: React.FC<TierListSectionProps> = ({ lang }) => {
               <div className="w-full md:w-24 h-24 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-red-400">S+</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Ахерон', 'Светлячок', 'Фэйсяо', 'Юньли', 'Бутхилл'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Ахерон', 'Светлячок', 'Фэйсяо', 'Юньли', 'Бутхилл'])}
             </div>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full md:w-24 h-24 bg-orange-500/20 border border-orange-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-orange-400">S</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Цзинлю', 'Дань Хэн: ПЛ', 'Кафка', 'Черный Лебедь', 'Рацио', 'Зеле', 'Цзин Юань', 'Аргенти', 'Блэйд', 'Клара'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Цзинлю', 'Дань Хэн: ПЛ', 'Кафка', 'Черный Лебедь', 'Рацио', 'Зеле', 'Цзин Юань', 'Аргенти', 'Блэйд', 'Клара'])}
             </div>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full md:w-24 h-24 bg-yellow-500/20 border border-yellow-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-yellow-400">A</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Топаз', 'Химеко', 'Герта', 'Сюэи', 'Миша', 'Цинцюэ'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Топаз', 'Химеко', 'Герта', 'Сюэи', 'Миша', 'Цинцюэ'])}
             </div>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full md:w-24 h-24 bg-blue-500/20 border border-blue-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-blue-400">B</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Яньцин', 'Сушан', 'Дань Хэн', 'Хук', 'Арлан', 'Физ. Первопроходец'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Яньцин', 'Сушан', 'Дань Хэн', 'Хук', 'Арлан', 'Физ. Первопроходец'])}
             </div>
           </div>
         </div>
@@ -84,31 +82,19 @@ export const TierListSection: React.FC<TierListSectionProps> = ({ lang }) => {
               <div className="w-full md:w-24 h-24 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-red-400">S+</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Жуань Мэй', 'Искорка', 'Зарянка', 'Цзяоцю', 'Серебряный Волк', 'Тинъюнь'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Жуань Мэй', 'Искорка', 'Зарянка', 'Цзяоцю', 'Серебряный Волк', 'Тинъюнь'])}
             </div>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full md:w-24 h-24 bg-orange-500/20 border border-orange-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-orange-400">S</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Броня', 'Пела', 'Гуйнайфэнь', 'Аста', 'Ханья', 'Юйкун'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Броня', 'Пела', 'Гуйнайфэнь', 'Аста', 'Ханья', 'Юйкун'])}
             </div>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full md:w-24 h-24 bg-yellow-500/20 border border-yellow-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-yellow-400">A</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Сампо', 'Лука'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Сампо', 'Лука'])}
             </div>
           </div>
         </div>
@@ -123,31 +109,19 @@ export const TierListSection: React.FC<TierListSectionProps> = ({ lang }) => {
               <div className="w-full md:w-24 h-24 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-red-400">S+</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Авантюрин', 'Хохо', 'Фу Сюань', 'Линша', 'Галлахер'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Авантюрин', 'Хохо', 'Фу Сюань', 'Линша', 'Галлахер'])}
             </div>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full md:w-24 h-24 bg-orange-500/20 border border-orange-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-orange-400">S</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Лоча', 'Гепард', 'Байлу'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Лоча', 'Гепард', 'Байлу'])}
             </div>
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full md:w-24 h-24 bg-yellow-500/20 border border-yellow-500/50 rounded-xl flex items-center justify-center shrink-0">
                 <span className="text-3xl font-bold text-yellow-400">A</span>
               </div>
-              <div className="flex-1 bg-[#2F244F]/50 rounded-xl p-4 flex flex-wrap gap-3 items-center border border-[#5C4B8B]/50">
-                {['Рысь', 'Март 7', 'Наташа', 'Огненный Первопроходец'].map(char => (
-                  <span key={char} className="px-3 py-1.5 bg-[#3E3160] border border-[#5C4B8B] rounded-lg text-sm font-medium text-white shadow-sm">{char}</span>
-                ))}
-              </div>
+              {renderCharList(['Рысь', 'Март 7', 'Наташа', 'Огненный Первопроходец'])}
             </div>
           </div>
         </div>
