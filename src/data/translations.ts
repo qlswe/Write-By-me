@@ -85,7 +85,9 @@ export const translations = {
     cancelBtn: "Отмена",
     confirmBtn: "Подтвердить",
     reply: "Ответить",
-    writeReply: "Написать ответ..."
+    writeReply: "Написать ответ...",
+    showMore: "Читать далее",
+    showLess: "Свернуть"
   },
   en: {
     siteName: "As I've Written",
@@ -173,7 +175,9 @@ export const translations = {
     cancelBtn: "Cancel",
     confirmBtn: "Confirm",
     reply: "Reply",
-    writeReply: "Write a reply..."
+    writeReply: "Write a reply...",
+    showMore: "Show more",
+    showLess: "Show less"
   },
   by: {
     siteName: "Так напісана мною",
@@ -261,7 +265,9 @@ export const translations = {
     cancelBtn: "Адмена",
     confirmBtn: "Пацвердзіць",
     reply: "Адказаць",
-    writeReply: "Напісаць адказ..."
+    writeReply: "Напісаць адказ...",
+    showMore: "Чытаць далей",
+    showLess: "Згарнуць"
   },
   jp: {
     siteName: "私が書いたように",
@@ -349,7 +355,9 @@ export const translations = {
     cancelBtn: "キャンセル",
     confirmBtn: "確認",
     reply: "返信",
-    writeReply: "返信を書く..."
+    writeReply: "返信を書く...",
+    showMore: "もっと見る",
+    showLess: "折りたたむ"
   },
   de: {
     siteName: "Wie ich geschrieben habe",
@@ -437,7 +445,9 @@ export const translations = {
     cancelBtn: "Abbrechen",
     confirmBtn: "Bestätigen",
     reply: "Antworten",
-    writeReply: "Eine Antwort schreiben..."
+    writeReply: "Eine Antwort schreiben...",
+    showMore: "Mehr anzeigen",
+    showLess: "Weniger anzeigen"
   },
   fr: {
     siteName: "Comme je l'ai écrit",
@@ -525,7 +535,9 @@ export const translations = {
     cancelBtn: "Annuler",
     confirmBtn: "Confirmer",
     reply: "Répondre",
-    writeReply: "Écrire une réponse..."
+    writeReply: "Écrire une réponse...",
+    showMore: "Afficher plus",
+    showLess: "Afficher moins"
   },
   zh: {
     siteName: "如我所写",
@@ -613,7 +625,9 @@ export const translations = {
     cancelBtn: "取消",
     confirmBtn: "确认",
     reply: "回复",
-    writeReply: "写回复..."
+    writeReply: "写回复...",
+    showMore: "展开",
+    showLess: "收起"
   }
 };
 

@@ -51,7 +51,12 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const t = translations[lang];
+
+  const toggleExpand = (id: string) => {
+    setExpandedComments(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const MAX_COMMENTS_PER_POST = 50;
   const userCommentCount = user ? comments.filter(c => c.authorUid === user.uid).length : 0;
@@ -188,27 +193,30 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   const topLevelComments = comments.filter(c => !c.parentId);
 
   const renderCommentContent = (comment: Comment, isReply = false) => {
+    const isExpanded = expandedComments[comment.id];
+    const isLong = comment.content.length > 250;
+
     return (
-      <div key={comment.id} className={`flex gap-3 sm:gap-4 ${isReply ? 'mt-4' : ''}`}>
+      <div key={comment.id} className={`flex gap-3 sm:gap-4 group`}>
         <img
           src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=5C4B8B&color=fff&size=${lowPerfMode ? '32' : '64'}`}
           alt={comment.authorName}
-          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#5C4B8B] shrink-0 mt-1"
+          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#5C4B8B] shrink-0 mt-1 shadow-sm"
         />
         <div className="flex-1 min-w-0">
-          <div className="bg-[#2F244F] rounded-2xl rounded-tl-none p-3 sm:p-4 border border-[#5C4B8B]">
+          <div className={`bg-[#2F244F] rounded-2xl rounded-tl-none p-3 sm:p-4 border border-[#5C4B8B] shadow-sm transition-colors group-hover:border-[#C3A6E6]/50`}>
             <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
               <div className="flex items-center flex-wrap gap-2">
-                <span className="font-bold text-white">{comment.authorName}</span>
+                <span className="font-bold text-white text-sm sm:text-base">{comment.authorName}</span>
                 <span className="text-xs text-gray-400">
                   {formatDistanceToNow(new Date(comment.createdAt), {
                     addSuffix: true,
                     locale: locales[lang] || locales.en
                   })}
-                  {comment.isEdited && <span className="ml-1 italic">(изменено)</span>}
+                  {comment.isEdited && <span className="ml-1 italic opacity-70">(изменено)</span>}
                 </span>
               </div>
-              <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+              <div className="flex items-center gap-1 sm:gap-2 ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 {user && user.uid === comment.authorUid && (
                 <>
                   <button
@@ -253,7 +261,19 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
               </div>
             </div>
           ) : (
-            <p className="text-sm sm:text-base text-gray-300 whitespace-pre-wrap break-words">{comment.content}</p>
+            <div>
+              <p className={`text-sm sm:text-base text-gray-300 whitespace-pre-wrap break-words leading-relaxed ${!isExpanded && isLong ? 'line-clamp-4' : ''}`}>
+                {comment.content}
+              </p>
+              {isLong && (
+                <button
+                  onClick={() => toggleExpand(comment.id)}
+                  className="text-[#C3A6E6] text-xs sm:text-sm mt-2 hover:underline focus:outline-none font-medium"
+                >
+                  {isExpanded ? (t.showLess || "Свернуть") : (t.showMore || "Читать далее")}
+                </button>
+              )}
+            </div>
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2 relative">
@@ -275,7 +295,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
 
             {/* Add reaction button */}
             {user && (
-              <div className="relative">
+              <div>
                 <button
                   onClick={() => setShowReactionsFor(showReactionsFor === comment.id ? null : comment.id)}
                   className="p-1.5 rounded-full bg-[#3E3160] text-gray-400 hover:text-[#C3A6E6] transition-colors"
@@ -284,7 +304,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
                 </button>
                 
                 {showReactionsFor === comment.id && (
-                  <div className="absolute bottom-full left-0 mb-2 bg-[#3E3160] border border-[#5C4B8B] rounded-full p-1 flex gap-1 shadow-xl z-10">
+                  <div className="absolute bottom-full left-0 mb-2 bg-[#3E3160] border border-[#5C4B8B] rounded-full p-1 flex gap-1 shadow-xl z-50">
                     {EMOJIS.map(emoji => (
                       <button
                         key={emoji}
@@ -368,14 +388,14 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
               
               {/* Replies */}
               {replies.length > 0 && (
-                <div className="ml-8 sm:ml-12 space-y-2 border-l-2 border-[#5C4B8B] pl-4">
+                <div className="ml-6 sm:ml-12 mt-3 space-y-4 border-l-2 border-[#5C4B8B]/40 pl-3 sm:pl-4">
                   {replies.map(reply => renderCommentContent(reply, true))}
                 </div>
               )}
 
               {/* Reply Input */}
               {replyingTo === comment.id && (
-                <div className="ml-8 sm:ml-12 mt-2">
+                <div className="ml-6 sm:ml-12 mt-3">
                   <form onSubmit={(e) => handleSubmit(e, comment.id)} className="relative">
                     <textarea
                       value={replyContent}
