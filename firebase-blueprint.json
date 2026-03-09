@@ -35,6 +35,10 @@
           "type": "string",
           "description": "ID of the theory or post"
         },
+        "parentId": {
+          "type": "string",
+          "description": "ID of the parent comment, if this is a reply"
+        },
         "authorUid": {
           "type": "string",
           "description": "UID of the author"

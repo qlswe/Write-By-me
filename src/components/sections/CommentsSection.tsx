@@ -4,7 +4,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
-import { Trash2, Send, Heart, Edit2, X, Check } from 'lucide-react';
+import { Trash2, Send, Heart, Edit2, X, Check, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -12,6 +12,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 interface Comment {
   id: string;
   targetId: string;
+  parentId?: string | null;
   authorUid: string;
   authorName: string;
   authorPhoto?: string;
@@ -48,9 +49,11 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   const [editContent, setEditContent] = useState('');
   const [showReactionsFor, setShowReactionsFor] = useState<string | null>(null);
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
   const t = translations[lang];
 
-  const MAX_COMMENTS_PER_POST = 5;
+  const MAX_COMMENTS_PER_POST = 50;
   const userCommentCount = user ? comments.filter(c => c.authorUid === user.uid).length : 0;
   const hasReachedLimit = userCommentCount >= MAX_COMMENTS_PER_POST;
 
@@ -78,25 +81,32 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     return () => unsubscribe();
   }, [targetId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, parentId?: string) => {
     e.preventDefault();
-    if (!user || !newComment.trim() || isSubmitting) return;
+    const content = parentId ? replyContent : newComment;
+    if (!user || !content.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'comments'), {
         targetId,
+        parentId: parentId || null,
         authorUid: user.uid,
         authorName: user.displayName || 'Anonymous',
         authorPhoto: user.photoURL || '',
-        content: newComment.trim(),
+        content: content.trim(),
         likesCount: 0,
         likedBy: [],
         reactions: {},
         isEdited: false,
         createdAt: new Date().toISOString()
       });
-      setNewComment('');
+      if (parentId) {
+        setReplyingTo(null);
+        setReplyContent('');
+      } else {
+        setNewComment('');
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'comments');
     } finally {
@@ -114,10 +124,10 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>, parentId?: string) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e as any);
+      handleSubmit(e as any, parentId);
     }
   };
 
@@ -175,6 +185,138 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     }
   };
 
+  const topLevelComments = comments.filter(c => !c.parentId);
+
+  const renderCommentContent = (comment: Comment, isReply = false) => {
+    return (
+      <div key={comment.id} className={`flex flex-col sm:flex-row gap-3 sm:gap-4 ${isReply ? 'mt-4' : ''}`}>
+        <div className="flex items-center gap-3 sm:block">
+          <img
+            src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=5C4B8B&color=fff&size=${lowPerfMode ? '32' : '64'}`}
+            alt={comment.authorName}
+            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#5C4B8B] shrink-0"
+          />
+          <span className="font-bold text-white sm:hidden">{comment.authorName}</span>
+        </div>
+        <div className="flex-1 bg-[#2F244F] rounded-2xl sm:rounded-tl-none p-3 sm:p-4 border border-[#5C4B8B]">
+          <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <span className="font-bold text-white mr-2 hidden sm:inline">{comment.authorName}</span>
+              <span className="text-xs text-gray-400">
+                {formatDistanceToNow(new Date(comment.createdAt), {
+                  addSuffix: true,
+                  locale: locales[lang] || locales.en
+                })}
+                {comment.isEdited && <span className="ml-1 italic">(изменено)</span>}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+              {user && user.uid === comment.authorUid && (
+                <>
+                  <button
+                    onClick={() => handleEdit(comment)}
+                    className="text-gray-400 hover:text-[#C3A6E6] transition-colors p-1"
+                    title="Редактировать"
+                  >
+                    <Edit2 size={14} className="sm:w-4 sm:h-4" />
+                  </button>
+                  <button
+                    onClick={() => setCommentToDelete(comment.id)}
+                    className="text-gray-400 hover:text-red-400 transition-colors p-1"
+                    title={t.delete || "Удалить"}
+                  >
+                    <Trash2 size={14} className="sm:w-4 sm:h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {editingCommentId === comment.id ? (
+            <div className="mt-2">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full bg-[#3E3160] border border-[#5C4B8B] rounded-xl p-2 sm:p-3 text-sm sm:text-base text-gray-200 focus:outline-none focus:border-[#C3A6E6] resize-none min-h-[80px]"
+              />
+              <div className="flex justify-end gap-2 mt-2">
+                <button
+                  onClick={() => setEditingCommentId(null)}
+                  className="p-1 sm:p-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  <X size={16} className="sm:w-[18px] sm:h-[18px]" />
+                </button>
+                <button
+                  onClick={() => handleUpdate(comment.id)}
+                  className="p-1 sm:p-2 text-[#C3A6E6] hover:text-white transition-colors"
+                >
+                  <Check size={16} className="sm:w-[18px] sm:h-[18px]" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm sm:text-base text-gray-300 whitespace-pre-wrap break-words">{comment.content}</p>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 relative">
+            {/* Render existing reactions */}
+            {comment.reactions && Object.entries(comment.reactions).map(([emoji, users]) => {
+              if (users.length === 0) return null;
+              const hasReacted = user && users.includes(user.uid);
+              return (
+                <button
+                  key={emoji}
+                  onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors ${hasReacted ? 'bg-[#C3A6E6]/20 border border-[#C3A6E6]/50' : 'bg-[#3E3160] border border-transparent hover:border-[#5C4B8B]'}`}
+                >
+                  <span className="text-sm leading-none">{emoji}</span>
+                  <span className="text-gray-300">{users.length}</span>
+                </button>
+              );
+            })}
+
+            {/* Add reaction button */}
+            {user && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowReactionsFor(showReactionsFor === comment.id ? null : comment.id)}
+                  className="p-1.5 rounded-full bg-[#3E3160] text-gray-400 hover:text-[#C3A6E6] transition-colors"
+                >
+                  <Heart size={14} />
+                </button>
+                
+                {showReactionsFor === comment.id && (
+                  <div className="absolute bottom-full left-0 mb-2 bg-[#3E3160] border border-[#5C4B8B] rounded-full p-1 flex gap-1 shadow-xl z-10">
+                    {EMOJIS.map(emoji => (
+                      <button
+                        key={emoji}
+                        onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
+                        className="p-2 hover:bg-[#5C4B8B] rounded-full transition-colors"
+                      >
+                        <span className="text-xl leading-none">{emoji}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Reply button */}
+            {!isReply && user && (
+              <button
+                onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-[#C3A6E6] transition-colors"
+              >
+                <MessageCircle size={14} />
+                {t.reply || "Ответить"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="mt-8 pt-8 border-t border-[#5C4B8B]">
       <h3 className="text-xl font-bold text-[#C3A6E6] mb-6">
@@ -218,122 +360,45 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
       )}
 
       <div className="space-y-6">
-        {comments.map((comment) => (
-          <div key={comment.id} className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <div className="flex items-center gap-3 sm:block">
-              <img
-                src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=5C4B8B&color=fff&size=${lowPerfMode ? '32' : '64'}`}
-                alt={comment.authorName}
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#5C4B8B] shrink-0"
-              />
-              <span className="font-bold text-white sm:hidden">{comment.authorName}</span>
-            </div>
-            <div className="flex-1 bg-[#2F244F] rounded-2xl sm:rounded-tl-none p-3 sm:p-4 border border-[#5C4B8B]">
-              <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
-                <div className="flex flex-col sm:flex-row sm:items-center">
-                  <span className="font-bold text-white mr-2 hidden sm:inline">{comment.authorName}</span>
-                  <span className="text-xs text-gray-400">
-                    {formatDistanceToNow(new Date(comment.createdAt), {
-                      addSuffix: true,
-                      locale: locales[lang] || locales.en
-                    })}
-                    {comment.isEdited && <span className="ml-1 italic">(изменено)</span>}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 sm:gap-2 ml-auto">
-                  {user && user.uid === comment.authorUid && (
-                    <>
-                      <button
-                        onClick={() => handleEdit(comment)}
-                        className="text-gray-400 hover:text-[#C3A6E6] transition-colors p-1"
-                        title="Редактировать"
-                      >
-                        <Edit2 size={14} className="sm:w-4 sm:h-4" />
-                      </button>
-                      <button
-                        onClick={() => setCommentToDelete(comment.id)}
-                        className="text-gray-400 hover:text-red-400 transition-colors p-1"
-                        title={t.delete || "Удалить"}
-                      >
-                        <Trash2 size={14} className="sm:w-4 sm:h-4" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
+        {topLevelComments.map((comment) => {
+          const replies = comments.filter(c => c.parentId === comment.id).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          
+          return (
+            <div key={comment.id} className="space-y-2">
+              {renderCommentContent(comment, false)}
               
-              {editingCommentId === comment.id ? (
-                <div className="mt-2">
-                  <textarea
-                    value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    className="w-full bg-[#3E3160] border border-[#5C4B8B] rounded-xl p-2 sm:p-3 text-sm sm:text-base text-gray-200 focus:outline-none focus:border-[#C3A6E6] resize-none min-h-[80px]"
-                  />
-                  <div className="flex justify-end gap-2 mt-2">
-                    <button
-                      onClick={() => setEditingCommentId(null)}
-                      className="p-1 sm:p-2 text-gray-400 hover:text-white transition-colors"
-                    >
-                      <X size={16} className="sm:w-[18px] sm:h-[18px]" />
-                    </button>
-                    <button
-                      onClick={() => handleUpdate(comment.id)}
-                      className="p-1 sm:p-2 text-[#C3A6E6] hover:text-white transition-colors"
-                    >
-                      <Check size={16} className="sm:w-[18px] sm:h-[18px]" />
-                    </button>
-                  </div>
+              {/* Replies */}
+              {replies.length > 0 && (
+                <div className="ml-8 sm:ml-12 space-y-2 border-l-2 border-[#5C4B8B] pl-4">
+                  {replies.map(reply => renderCommentContent(reply, true))}
                 </div>
-              ) : (
-                <p className="text-sm sm:text-base text-gray-300 whitespace-pre-wrap break-words">{comment.content}</p>
               )}
 
-              <div className="mt-3 flex flex-wrap items-center gap-2 relative">
-                {/* Render existing reactions */}
-                {comment.reactions && Object.entries(comment.reactions).map(([emoji, users]) => {
-                  if (users.length === 0) return null;
-                  const hasReacted = user && users.includes(user.uid);
-                  return (
+              {/* Reply Input */}
+              {replyingTo === comment.id && (
+                <div className="ml-8 sm:ml-12 mt-2">
+                  <form onSubmit={(e) => handleSubmit(e, comment.id)} className="relative">
+                    <textarea
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, comment.id)}
+                      placeholder={t.writeReply || "Написать ответ..."}
+                      className="w-full bg-[#2F244F] border border-[#5C4B8B] rounded-xl p-3 pr-12 text-gray-200 focus:outline-none focus:border-[#C3A6E6] resize-none min-h-[80px] text-sm"
+                      maxLength={1000}
+                    />
                     <button
-                      key={emoji}
-                      onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
-                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors ${hasReacted ? 'bg-[#C3A6E6]/20 border border-[#C3A6E6]/50' : 'bg-[#3E3160] border border-transparent hover:border-[#5C4B8B]'}`}
+                      type="submit"
+                      disabled={!replyContent.trim() || isSubmitting}
+                      className="absolute bottom-3 right-3 p-1.5 bg-[#C3A6E6] text-[#2F244F] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B094EB] transition-colors"
                     >
-                      <span className="text-sm leading-none">{emoji}</span>
-                      <span className="text-gray-300">{users.length}</span>
+                      <Send size={14} />
                     </button>
-                  );
-                })}
-
-                {/* Add reaction button */}
-                {user && (
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowReactionsFor(showReactionsFor === comment.id ? null : comment.id)}
-                      className="p-1.5 rounded-full bg-[#3E3160] text-gray-400 hover:text-[#C3A6E6] transition-colors"
-                    >
-                      <Heart size={14} />
-                    </button>
-                    
-                    {showReactionsFor === comment.id && (
-                      <div className="absolute bottom-full left-0 mb-2 bg-[#3E3160] border border-[#5C4B8B] rounded-full p-1 flex gap-1 shadow-xl z-10">
-                        {EMOJIS.map(emoji => (
-                          <button
-                            key={emoji}
-                            onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
-                            className="p-2 hover:bg-[#5C4B8B] rounded-full transition-colors"
-                          >
-                            <span className="text-xl leading-none">{emoji}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                  </form>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <ConfirmModal

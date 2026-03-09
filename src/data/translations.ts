@@ -81,16 +81,11 @@ export const translations = {
     confirmLogoutMessage: "Вы уверены, что хотите выйти?",
     confirmDeleteTitle: "Удаление комментария",
     confirmDeleteMessage: "Вы уверены, что хотите удалить этот комментарий? Это действие нельзя отменить.",
-    commentLimitReached: "Вы достигли лимита комментариев (макс. 5) для этого поста.",
+    commentLimitReached: "Вы достигли лимита комментариев (макс. 50) для этого поста.",
     cancelBtn: "Отмена",
     confirmBtn: "Подтвердить",
-    editProfile: "Редактировать профиль",
-    server: "Сервер",
-    trailblazerLevel: "Уровень Освоения",
-    signature: "Подпись",
-    signaturePlaceholder: "Правила созданы для того, чтобы их нарушать!",
-    mainCharacter: "Любимый персонаж",
-    saveBtn: "Сохранить"
+    reply: "Ответить",
+    writeReply: "Написать ответ..."
   },
   en: {
     siteName: "As I've Written",
@@ -174,16 +169,11 @@ export const translations = {
     confirmLogoutMessage: "Are you sure you want to log out?",
     confirmDeleteTitle: "Delete Comment",
     confirmDeleteMessage: "Are you sure you want to delete this comment? This action cannot be undone.",
-    commentLimitReached: "You have reached the comment limit (max 5) for this post.",
+    commentLimitReached: "You have reached the comment limit (max 50) for this post.",
     cancelBtn: "Cancel",
     confirmBtn: "Confirm",
-    editProfile: "Edit Profile",
-    server: "Server",
-    trailblazerLevel: "Trailblazer Level",
-    signature: "Signature",
-    signaturePlaceholder: "Rules are made to be broken!",
-    mainCharacter: "Main Character",
-    saveBtn: "Save"
+    reply: "Reply",
+    writeReply: "Write a reply..."
   },
   by: {
     siteName: "Так напісана мною",
@@ -267,16 +257,11 @@ export const translations = {
     confirmLogoutMessage: "Вы ўпэўненыя, што хочаце выйсці?",
     confirmDeleteTitle: "Выдаленне каментара",
     confirmDeleteMessage: "Вы ўпэўненыя, што хочаце выдаліць гэты каментар? Гэта дзеянне нельга адмяніць.",
-    commentLimitReached: "Вы дасягнулі ліміту каментароў (макс. 5) для гэтага паста.",
+    commentLimitReached: "Вы дасягнулі ліміту каментароў (макс. 50) для гэтага паста.",
     cancelBtn: "Адмена",
     confirmBtn: "Пацвердзіць",
-    editProfile: "Рэдагаваць профіль",
-    server: "Сервер",
-    trailblazerLevel: "Узровень Асваення",
-    signature: "Подпіс",
-    signaturePlaceholder: "Правілы створаны для таго, каб іх парушаць!",
-    mainCharacter: "Любімы персанаж",
-    saveBtn: "Захаваць"
+    reply: "Адказаць",
+    writeReply: "Напісаць адказ..."
   },
   jp: {
     siteName: "私が書いたように",
@@ -360,16 +345,11 @@ export const translations = {
     confirmLogoutMessage: "本当にログアウトしますか？",
     confirmDeleteTitle: "コメントを削除",
     confirmDeleteMessage: "このコメントを削除してもよろしいですか？この操作は元に戻せません。",
-    commentLimitReached: "この投稿のコメント制限（最大5件）に達しました。",
+    commentLimitReached: "この投稿のコメント制限（最大50件）に達しました。",
     cancelBtn: "キャンセル",
     confirmBtn: "確認",
-    editProfile: "プロフィールを編集",
-    server: "サーバー",
-    trailblazerLevel: "開拓レベル",
-    signature: "署名",
-    signaturePlaceholder: "ルールは破るためにある！",
-    mainCharacter: "メインキャラクター",
-    saveBtn: "保存"
+    reply: "返信",
+    writeReply: "返信を書く..."
   },
   de: {
     siteName: "Wie ich geschrieben habe",
@@ -453,16 +433,11 @@ export const translations = {
     confirmLogoutMessage: "Sind Sie sicher, dass Sie sich abmelden möchten?",
     confirmDeleteTitle: "Kommentar löschen",
     confirmDeleteMessage: "Möchten Sie diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    commentLimitReached: "Sie haben das Kommentar-Limit (max. 5) für diesen Beitrag erreicht.",
+    commentLimitReached: "Sie haben das Kommentar-Limit (max. 50) für diesen Beitrag erreicht.",
     cancelBtn: "Abbrechen",
     confirmBtn: "Bestätigen",
-    editProfile: "Profil bearbeiten",
-    server: "Server",
-    trailblazerLevel: "Trailblazer-Stufe",
-    signature: "Signatur",
-    signaturePlaceholder: "Regeln sind dazu da, gebrochen zu werden!",
-    mainCharacter: "Hauptcharakter",
-    saveBtn: "Speichern"
+    reply: "Antworten",
+    writeReply: "Eine Antwort schreiben..."
   },
   fr: {
     siteName: "Comme je l'ai écrit",
@@ -546,16 +521,11 @@ export const translations = {
     confirmLogoutMessage: "Êtes-vous sûr de vouloir vous déconnecter ?",
     confirmDeleteTitle: "Supprimer le commentaire",
     confirmDeleteMessage: "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action ne peut pas être annulée.",
-    commentLimitReached: "Vous avez atteint la limite de commentaires (max 5) pour cet article.",
+    commentLimitReached: "Vous avez atteint la limite de commentaires (max 50) pour cet article.",
     cancelBtn: "Annuler",
     confirmBtn: "Confirmer",
-    editProfile: "Modifier le profil",
-    server: "Serveur",
-    trailblazerLevel: "Niveau de Pionnier",
-    signature: "Signature",
-    signaturePlaceholder: "Les règles sont faites pour être enfreintes !",
-    mainCharacter: "Personnage principal",
-    saveBtn: "Enregistrer"
+    reply: "Répondre",
+    writeReply: "Écrire une réponse..."
   },
   zh: {
     siteName: "如我所写",
@@ -639,16 +609,11 @@ export const translations = {
     confirmLogoutMessage: "您确定要登出吗？",
     confirmDeleteTitle: "删除评论",
     confirmDeleteMessage: "您确定要删除此评论吗？此操作无法撤销。",
-    commentLimitReached: "您已达到此帖子的评论上限（最多5条）。",
+    commentLimitReached: "您已达到此帖子的评论上限（最多50条）。",
     cancelBtn: "取消",
     confirmBtn: "确认",
-    editProfile: "编辑资料",
-    server: "服务器",
-    trailblazerLevel: "开拓等级",
-    signature: "签名",
-    signaturePlaceholder: "规则就是用来打破的！",
-    mainCharacter: "主要角色",
-    saveBtn: "保存"
+    reply: "回复",
+    writeReply: "写回复..."
   }
 };
 
