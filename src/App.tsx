@@ -9,6 +9,7 @@ import { Starfield } from './components/Starfield';
 import { Language, translations } from './data/translations';
 import { useAuth } from './hooks/useAuth';
 import { useUserData } from './hooks/useUserData';
+import { useContent } from './hooks/useContent';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -17,6 +18,9 @@ import { LoadingScreen } from './components/ui/LoadingScreen';
 import { PromoBanner } from './components/ui/PromoBanner';
 import { ContentModal } from './components/ui/ContentModal';
 import { FeedbackModal } from './components/ui/FeedbackModal';
+import { TheoryEditor } from './components/sections/TheoryEditor';
+import { BlogEditor } from './components/sections/BlogEditor';
+import { EventEditor } from './components/sections/EventEditor';
 // Lazy load sections for better performance
 const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
 const BlogSection = lazy(() => import('./components/sections/BlogSection').then(m => ({ default: m.BlogSection })));
@@ -41,6 +45,7 @@ export default function App() {
 
   // User Data (Syncs with Firebase)
   const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded } = useUserData('ru');
+  const { theories, blogPosts, events } = useContent();
 
   // Feedback state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -53,6 +58,14 @@ export default function App() {
   const [theorySearch, setTheorySearch] = useState('');
   const [blogCategory, setBlogCategory] = useState('all');
   const [blogSearch, setBlogSearch] = useState('');
+
+  // Editor state
+  const [editingTheory, setEditingTheory] = useState<any | null>(null);
+  const [isCreatingTheory, setIsCreatingTheory] = useState(false);
+  const [editingBlog, setEditingBlog] = useState<any | null>(null);
+  const [isCreatingBlog, setIsCreatingBlog] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any | null>(null);
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
   const t = translations[lang as Language];
 
@@ -207,6 +220,9 @@ export default function App() {
                   favorites={favorites}
                   toggleFavorite={toggleFavorite}
                   lowPerfMode={lowPerfMode}
+                  theories={theories}
+                  onEdit={setEditingTheory}
+                  onCreate={() => setIsCreatingTheory(true)}
                 />
               )}
 
@@ -220,10 +236,21 @@ export default function App() {
                   favorites={favorites}
                   toggleFavorite={toggleFavorite}
                   lowPerfMode={lowPerfMode}
+                  blogPosts={blogPosts}
+                  onEdit={setEditingBlog}
+                  onCreate={() => setIsCreatingBlog(true)}
                 />
               )}
 
-              {section === 'chronicle' && <ChronicleSection lang={lang as Language} lowPerfMode={lowPerfMode} />}
+              {section === 'chronicle' && (
+                <ChronicleSection 
+                  lang={lang as Language} 
+                  lowPerfMode={lowPerfMode} 
+                  events={events}
+                  onEdit={setEditingEvent}
+                  onCreate={() => setIsCreatingEvent(true)}
+                />
+              )}
               {section === 'tierlist' && <TierListSection lang={lang as Language} lowPerfMode={lowPerfMode} />}
               {section === 'promo' && <PromoSection lang={lang as Language} handleCopy={handleCopy} />}
             </Suspense>
@@ -260,6 +287,41 @@ export default function App() {
           >
             {toast}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {(isCreatingTheory || editingTheory) && (
+          <TheoryEditor 
+            theory={editingTheory} 
+            onClose={() => {
+              setIsCreatingTheory(false);
+              setEditingTheory(null);
+            }} 
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {(isCreatingBlog || editingBlog) && (
+          <BlogEditor 
+            post={editingBlog} 
+            onClose={() => {
+              setIsCreatingBlog(false);
+              setEditingBlog(null);
+            }} 
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {(isCreatingEvent || editingEvent) && (
+          <EventEditor 
+            event={editingEvent} 
+            onClose={() => {
+              setIsCreatingEvent(false);
+              setEditingEvent(null);
+            }} 
+          />
         )}
       </AnimatePresence>
     </div>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Star, Search, ArrowLeft } from 'lucide-react';
 import { theoriesData } from '../../data/content';
@@ -56,6 +56,19 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
     toggleFavorite(id, e);
   }, [toggleFavorite]);
 
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      const images = contentRef.current.querySelectorAll('img');
+      images.forEach(img => {
+        if (!img.hasAttribute('loading')) {
+          img.setAttribute('loading', 'lazy');
+        }
+      });
+    }
+  }, [selectedTheoryId, lang]);
+
   if (selectedTheory) {
     return (
       <motion.div 
@@ -85,7 +98,9 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
           </button>
         </div>
 
-        <div className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8 text-sm sm:text-base"
+        <div 
+          ref={contentRef}
+          className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8 text-sm sm:text-base"
           dangerouslySetInnerHTML={{ __html: selectedTheory.content[lang] || selectedTheory.content['en'] }}
         />
 

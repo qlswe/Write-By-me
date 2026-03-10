@@ -112,6 +112,33 @@
         }
       },
       "required": ["type", "text", "createdAt"]
+    },
+    "BlogPost": {
+      "title": "BlogPost",
+      "description": "A blog post",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "object",
+          "description": "Localized title"
+        },
+        "summary": {
+          "type": "object",
+          "description": "Localized summary"
+        },
+        "content": {
+          "type": "object",
+          "description": "Localized content"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the post"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        }
+      }
     }
   },
   "firestore": {
@@ -132,6 +159,12 @@
         "$ref": "#/entities/Feedback"
       },
       "description": "User feedback submissions"
+    },
+    "/blogPosts/{postId}": {
+      "schema": {
+        "$ref": "#/entities/BlogPost"
+      },
+      "description": "Blog posts"
     }
   }
 }

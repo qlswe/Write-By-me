@@ -17,7 +17,7 @@ export const TierListSection: React.FC<TierListSectionProps> = ({ lang, lowPerfM
       {chars.map(char => (
         <div key={char} className="flex flex-col items-center gap-1 w-16 sm:w-20 group">
           <div className="relative">
-            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(char)}&background=3E3160&color=fff&size=${lowPerfMode ? '32' : '64'}`} alt={char} className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-[#C3A6E6] shadow-lg group-hover:scale-110 transition-transform duration-200" />
+            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(char)}&background=3E3160&color=fff&size=${lowPerfMode ? '32' : '64'}`} alt={char} loading="lazy" className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-[#C3A6E6] shadow-lg group-hover:scale-110 transition-transform duration-200" />
           </div>
           <span className="text-[10px] sm:text-xs font-medium text-white text-center leading-tight line-clamp-2">{char}</span>
         </div>

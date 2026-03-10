@@ -116,6 +116,17 @@ service cloud.firestore {
              data.createdAt is string;
     }
 
+    function isValidBlogPost(data) {
+      return hasRequiredFields(['title', 'summary', 'content', 'category']) &&
+             hasOnlyAllowedFields(['id', 'title', 'summary', 'content', 'category', 'updatedAt']) &&
+             (!('id' in data) || data.id is string) &&
+             data.title is map &&
+             data.summary is map &&
+             data.content is map &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 50 &&
+             (!('updatedAt' in data) || data.updatedAt is string);
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -146,6 +157,13 @@ service cloud.firestore {
       allow read: if false; // Only admins can read feedback (not implemented yet)
       allow create: if isValidFeedback(request.resource.data);
       allow update: if false;
+      allow delete: if false;
+    }
+
+    match /blogPosts/{postId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidBlogPost(request.resource.data);
+      allow update: if isAuthenticated() && isValidBlogPost(request.resource.data);
       allow delete: if false;
     }
   }

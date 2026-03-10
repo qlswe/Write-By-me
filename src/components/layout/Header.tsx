@@ -99,6 +99,20 @@ export const Header: React.FC<HeaderProps> = ({
               </select>
             </div>
 
+            {toggleLowPerfMode && (
+              <button 
+                onClick={toggleLowPerfMode}
+                className={`hidden lg:flex items-center justify-center p-1.5 rounded-lg border transition-colors ${
+                  lowPerfMode 
+                    ? 'bg-yellow-400/10 border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/20' 
+                    : 'bg-[#2F244F] border-[#5C4B8B] text-gray-300 hover:text-white hover:border-[#C3A6E6]'
+                }`}
+                title={lowPerfMode ? (t.lowPerfModeOn || "Performance Mode: ON") : (t.lowPerfModeOff || "Performance Mode: OFF")}
+              >
+                {lowPerfMode ? <ZapOff size={18} /> : <Zap size={18} />}
+              </button>
+            )}
+
             <div className="hidden lg:block relative">
               {user ? (
                 <div className="relative">
@@ -166,20 +180,6 @@ export const Header: React.FC<HeaderProps> = ({
                             </button>
                           )}
 
-                          {toggleLowPerfMode && (
-                            <button 
-                              onClick={toggleLowPerfMode}
-                              className={`w-full flex items-center justify-center gap-2 bg-[#2F244F] border border-[#5C4B8B] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-4 ${
-                                lowPerfMode 
-                                  ? 'text-yellow-400 hover:bg-yellow-400/10 hover:border-yellow-400/50' 
-                                  : 'text-gray-300 hover:bg-[#3E3160] hover:text-white'
-                              }`}
-                            >
-                              {lowPerfMode ? <ZapOff size={16} /> : <Zap size={16} />}
-                              {lowPerfMode ? (t.lowPerfModeOn || "Low Perf Mode: ON") : (t.lowPerfModeOff || "Low Perf Mode: OFF")}
-                            </button>
-                          )}
-
                           <button 
                             onClick={() => { setLogoutConfirmOpen(true); setProfileOpen(false); }}
                             className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-[#5C4B8B] hover:border-red-500/50 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
@@ -242,9 +242,23 @@ export const Header: React.FC<HeaderProps> = ({
               ))}
             </div>
             
-            <div className="p-6 border-t border-[#5C4B8B] mt-auto shrink-0">
+            <div className="p-6 border-t border-[#5C4B8B] mt-auto shrink-0 flex flex-col gap-4">
+              {toggleLowPerfMode && (
+                <button 
+                  onClick={toggleLowPerfMode}
+                  className={`w-full flex items-center justify-center gap-2 bg-[#2F244F] border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors ${
+                    lowPerfMode 
+                      ? 'text-yellow-400 hover:bg-yellow-400/10' 
+                      : 'text-gray-300 hover:bg-[#3E3160]'
+                  }`}
+                >
+                  {lowPerfMode ? <ZapOff size={20} /> : <Zap size={20} />}
+                  {lowPerfMode ? (t.lowPerfModeOn || "Performance Mode: ON") : (t.lowPerfModeOff || "Performance Mode: OFF")}
+                </button>
+              )}
+
               {user ? (
-                <div className="flex flex-col gap-4">
+                <>
                   <div className="flex items-center gap-3 bg-[#3E3160] p-3 rounded-xl border border-[#5C4B8B]">
                     <img src={user.photoURL || ''} alt="Avatar" className="w-12 h-12 rounded-full border border-[#5C4B8B]" />
                     <div>
@@ -285,20 +299,6 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   )}
 
-                  {toggleLowPerfMode && (
-                    <button 
-                      onClick={toggleLowPerfMode}
-                      className={`w-full flex items-center justify-center gap-2 bg-[#2F244F] border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors ${
-                        lowPerfMode 
-                          ? 'text-yellow-400 hover:bg-yellow-400/10' 
-                          : 'text-gray-300 hover:bg-[#3E3160]'
-                      }`}
-                    >
-                      {lowPerfMode ? <ZapOff size={20} /> : <Zap size={20} />}
-                      {lowPerfMode ? (t.lowPerfModeOn || "Low Perf Mode: ON") : (t.lowPerfModeOff || "Low Perf Mode: OFF")}
-                    </button>
-                  )}
-
                   <button 
                     onClick={() => { setLogoutConfirmOpen(true); setMobileMenuOpen(false); }}
                     className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-red-500/20 text-red-400 border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"
@@ -306,7 +306,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <LogOut size={20} />
                     {t.logout || "Logout"}
                   </button>
-                </div>
+                </>
               ) : (
                 <button 
                   onClick={() => { loginWithGoogle(); setMobileMenuOpen(false); }}

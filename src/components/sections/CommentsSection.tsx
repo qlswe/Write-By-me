@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, addDoc, deleteDoc, doc, updateDoc, increment, arrayUnion, arrayRemove } from 'firebase/firestore';
+import React, { useState, useEffect, useMemo } from 'react';
+import { collection, query, where, orderBy, onSnapshot, addDoc, deleteDoc, doc, updateDoc, increment, arrayUnion, arrayRemove, limit } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
-import { Trash2, Send, Heart, Edit2, X, Check, MessageCircle } from 'lucide-react';
+import { usePerfLogger } from '../../utils/logger';
+import { Trash2, Send, Heart, Edit2, X, Check, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -41,6 +42,9 @@ const locales = {
 };
 
 export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang, lowPerfMode }) => {
+  const { trackRender } = usePerfLogger('CommentsSection');
+  trackRender();
+  
   const { user, loginWithGoogle } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -70,7 +74,8 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     const q = query(
       collection(db, 'comments'),
       where('targetId', '==', targetId),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -190,21 +195,36 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     }
   };
 
-  const topLevelComments = comments.filter(c => !c.parentId);
+  const topLevelComments = useMemo(() => comments.filter(c => !c.parentId), [comments]);
+  const repliesMap = useMemo(() => {
+    const map: Record<string, Comment[]> = {};
+    comments.forEach(c => {
+      if (c.parentId) {
+        if (!map[c.parentId]) map[c.parentId] = [];
+        map[c.parentId].push(c);
+      }
+    });
+    // Sort replies by date
+    Object.keys(map).forEach(parentId => {
+      map[parentId].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    });
+    return map;
+  }, [comments]);
 
   const renderCommentContent = (comment: Comment, isReply = false) => {
     const isExpanded = expandedComments[comment.id];
     const isLong = comment.content.length > 250;
 
     return (
-      <div key={comment.id} className={`flex gap-3 sm:gap-4 group`}>
+      <div key={comment.id} className={`flex gap-3 sm:gap-4 group ${isReply ? 'mt-4' : 'mt-6'}`}>
         <img
           src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=5C4B8B&color=fff&size=${lowPerfMode ? '32' : '64'}`}
           alt={comment.authorName}
-          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#5C4B8B] shrink-0 mt-1 shadow-sm"
+          loading="lazy"
+          className={`${isReply ? 'w-6 h-6 sm:w-8 sm:h-8' : 'w-8 h-8 sm:w-10 sm:h-10'} rounded-full border border-[#5C4B8B] shrink-0 mt-1 shadow-sm`}
         />
         <div className="flex-1 min-w-0">
-          <div className={`bg-[#2F244F] rounded-2xl rounded-tl-none p-3 sm:p-4 border border-[#5C4B8B] shadow-sm transition-colors group-hover:border-[#C3A6E6]/50`}>
+          <div className={`bg-[#2F244F] rounded-2xl ${isReply ? 'rounded-tl-xl' : 'rounded-tl-none'} p-3 sm:p-4 border border-[#5C4B8B] shadow-sm transition-colors group-hover:border-[#C3A6E6]/50`}>
             <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
               <div className="flex items-center flex-wrap gap-2">
                 <span className="font-bold text-white text-sm sm:text-base">{comment.authorName}</span>
@@ -262,21 +282,31 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
             </div>
           ) : (
             <div>
-              <p className={`text-sm sm:text-base text-gray-300 whitespace-pre-wrap break-words leading-relaxed ${!isExpanded && isLong ? 'line-clamp-4' : ''}`}>
+              <p className={`text-sm sm:text-base text-gray-200 whitespace-pre-wrap break-words leading-relaxed ${!isExpanded && isLong ? 'line-clamp-4' : ''}`}>
                 {comment.content}
               </p>
               {isLong && (
                 <button
                   onClick={() => toggleExpand(comment.id)}
-                  className="text-[#C3A6E6] text-xs sm:text-sm mt-2 hover:underline focus:outline-none font-medium"
+                  className="text-[#C3A6E6] text-xs sm:text-sm mt-2 hover:underline focus:outline-none font-medium flex items-center gap-1"
                 >
-                  {isExpanded ? (t.showLess || "Свернуть") : (t.showMore || "Читать далее")}
+                  {isExpanded ? (
+                    <>
+                      {t.showLess || "Свернуть"}
+                      <ChevronUp size={14} />
+                    </>
+                  ) : (
+                    <>
+                      {t.showMore || "Читать далее"}
+                      <ChevronDown size={14} />
+                    </>
+                  )}
                 </button>
               )}
             </div>
           )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 relative">
+          <div className="mt-3 pt-3 border-t border-[#5C4B8B]/30 flex flex-wrap items-center gap-2 relative">
             {/* Render existing reactions */}
             {comment.reactions && Object.entries(comment.reactions).map(([emoji, users]) => {
               if (users.length === 0) return null;
@@ -285,31 +315,31 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
                 <button
                   key={emoji}
                   onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
-                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors ${hasReacted ? 'bg-[#C3A6E6]/20 border border-[#C3A6E6]/50' : 'bg-[#3E3160] border border-transparent hover:border-[#5C4B8B]'}`}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all ${hasReacted ? 'bg-[#C3A6E6]/20 border border-[#C3A6E6]/50 text-[#C3A6E6]' : 'bg-[#3E3160] border border-transparent hover:border-[#5C4B8B] text-gray-300'}`}
                 >
                   <span className="text-sm leading-none">{emoji}</span>
-                  <span className="text-gray-300">{users.length}</span>
+                  <span className="font-medium">{users.length}</span>
                 </button>
               );
             })}
 
             {/* Add reaction button */}
             {user && (
-              <div>
+              <div className="relative">
                 <button
                   onClick={() => setShowReactionsFor(showReactionsFor === comment.id ? null : comment.id)}
-                  className="p-1.5 rounded-full bg-[#3E3160] text-gray-400 hover:text-[#C3A6E6] transition-colors"
+                  className="p-1.5 rounded-full bg-[#3E3160] text-gray-400 hover:text-[#C3A6E6] hover:bg-[#5C4B8B]/50 transition-colors"
                 >
                   <Heart size={14} />
                 </button>
                 
                 {showReactionsFor === comment.id && (
-                  <div className="absolute bottom-full left-0 mb-2 bg-[#3E3160] border border-[#5C4B8B] rounded-full p-1 flex gap-1 shadow-xl z-50">
+                  <div className="absolute bottom-full left-0 mb-2 bg-[#3E3160] border border-[#5C4B8B] rounded-full p-1.5 flex gap-1 shadow-xl z-50">
                     {EMOJIS.map(emoji => (
                       <button
                         key={emoji}
                         onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
-                        className="p-2 hover:bg-[#5C4B8B] rounded-full transition-colors"
+                        className="p-2 hover:bg-[#5C4B8B] rounded-full transition-transform hover:scale-110"
                       >
                         <span className="text-xl leading-none">{emoji}</span>
                       </button>
@@ -323,7 +353,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
             {!isReply && user && (
               <button
                 onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-[#C3A6E6] transition-colors"
+                className="ml-auto flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-[#C3A6E6] transition-colors px-2 py-1 rounded-md hover:bg-[#3E3160]"
               >
                 <MessageCircle size={14} />
                 {t.reply || "Ответить"}
@@ -380,7 +410,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
 
       <div className="space-y-6">
         {topLevelComments.map((comment) => {
-          const replies = comments.filter(c => c.parentId === comment.id).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+          const replies = repliesMap[comment.id] || [];
           
           return (
             <div key={comment.id} className="space-y-2">
@@ -388,14 +418,14 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
               
               {/* Replies */}
               {replies.length > 0 && (
-                <div className="ml-6 sm:ml-12 mt-3 space-y-4 border-l-2 border-[#5C4B8B]/40 pl-3 sm:pl-4">
+                <div className="ml-4 sm:ml-12 mt-2 space-y-0 border-l-2 border-[#5C4B8B]/30 pl-3 sm:pl-5">
                   {replies.map(reply => renderCommentContent(reply, true))}
                 </div>
               )}
 
               {/* Reply Input */}
               {replyingTo === comment.id && (
-                <div className="ml-6 sm:ml-12 mt-3">
+                <div className="ml-4 sm:ml-12 mt-3 pl-3 sm:pl-5 border-l-2 border-transparent">
                   <form onSubmit={(e) => handleSubmit(e, comment.id)} className="relative">
                     <textarea
                       value={replyContent}
