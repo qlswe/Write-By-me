@@ -29,7 +29,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
             <div className="absolute top-[2rem] w-16 h-16 bg-[#C3A6E6]/20 rounded-full blur-xl animate-pulse" />
             <Globe size={40} className="absolute top-[2.5rem] text-[#C3A6E6]" />
             
-            <h2 className="text-2xl font-bold text-[#C3A6E6] tracking-widest mb-2">Write by Me</h2>
+            <h2 className="text-2xl font-bold text-[#C3A6E6] tracking-widest mb-2">Ministry of Ahaha</h2>
           </div>
         </motion.div>
       )}

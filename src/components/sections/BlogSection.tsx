@@ -1,15 +1,11 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Star, Search, ArrowLeft, Edit, Save, X } from 'lucide-react';
-import { blogPostsData, BlogPost } from '../../data/content';
+import { Star, Search, ArrowLeft } from 'lucide-react';
+import { blogPostsData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { CommentsSection } from './CommentsSection';
 import { BlogCard } from './BlogCard';
-import { db } from '../../firebase';
-import { collection, doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
-import { useAuth } from '../../hooks/useAuth';
-import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 
 interface BlogSectionProps {
   lang: Language;
@@ -20,6 +16,9 @@ interface BlogSectionProps {
   favorites: string[];
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
   lowPerfMode?: boolean;
+  blogPosts?: any[];
+  onEdit?: (post: any) => void;
+  onCreate?: () => void;
 }
 
 export const BlogSection: React.FC<BlogSectionProps> = ({
@@ -30,45 +29,18 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   setBlogSearch,
   favorites,
   toggleFavorite,
-  lowPerfMode
+  lowPerfMode,
+  blogPosts = blogPostsData,
+  onEdit,
+  onCreate
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('BlogSection');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [firestorePosts, setFirestorePosts] = useState<Record<string, BlogPost>>({});
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<BlogPost | null>(null);
-  const { user } = useAuth();
   trackRender();
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'blogPosts'), (snapshot) => {
-      const posts: Record<string, BlogPost> = {};
-      snapshot.forEach((doc) => {
-        posts[doc.id] = { id: doc.id, ...doc.data() } as BlogPost;
-      });
-      setFirestorePosts(posts);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'blogPosts');
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const allPosts = useMemo(() => {
-    const merged = [...blogPostsData];
-    Object.values(firestorePosts).forEach(fp => {
-      const index = merged.findIndex(p => p.id === fp.id);
-      if (index !== -1) {
-        merged[index] = fp;
-      } else {
-        merged.push(fp);
-      }
-    });
-    return merged;
-  }, [firestorePosts]);
-
   const filteredBlog = useMemo(() => {
-    return allPosts.filter(post => {
+    return blogPosts.filter(post => {
       const matchesCat = blogCategory === 'all' || 
                          (blogCategory === 'favorites' ? favorites.includes(post.id) : post.category === blogCategory);
       const search = blogSearch.toLowerCase();
@@ -76,30 +48,11 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                             (post.summary[lang] || post.summary['en']).toLowerCase().includes(search);
       return matchesCat && matchesSearch;
     });
-  }, [allPosts, blogCategory, blogSearch, lang, favorites]);
+  }, [blogCategory, blogSearch, lang, favorites, blogPosts]);
 
   const selectedPost = useMemo(() => {
-    return selectedPostId ? allPosts.find(p => p.id === selectedPostId) : null;
-  }, [selectedPostId, allPosts]);
-
-  const handleEditClick = useCallback((post: BlogPost) => {
-    setEditForm(post);
-    setIsEditing(true);
-  }, []);
-
-  const handleSaveEdit = useCallback(async () => {
-    if (!editForm || !user) return;
-    try {
-      await setDoc(doc(db, 'blogPosts', editForm.id), {
-        ...editForm,
-        updatedAt: new Date().toISOString()
-      });
-      setIsEditing(false);
-      setEditForm(null);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `blogPosts/${editForm.id}`);
-    }
-  }, [editForm, user]);
+    return selectedPostId ? blogPosts.find(p => p.id === selectedPostId) : null;
+  }, [selectedPostId, blogPosts]);
 
   const handlePostClick = useCallback((id: string) => {
     setSelectedPostId(id);
@@ -143,81 +96,19 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           <h2 className="text-2xl sm:text-3xl font-bold text-white pr-4 sm:pr-8">
             {selectedPost.title[lang] || selectedPost.title['en']}
           </h2>
-          <div className="flex gap-2">
-            {user && !isEditing && (
-              <button 
-                onClick={() => handleEditClick(selectedPost)}
-                className="p-2 sm:p-3 rounded-full transition-colors shrink-0 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
-                title="Edit Post"
-              >
-                <Edit size={24} className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
-            )}
-            <button 
-              onClick={(e) => toggleFavorite(selectedPost.id, e)}
-              className={`p-2 sm:p-3 rounded-full transition-colors shrink-0 ${favorites.includes(selectedPost.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
-            >
-              <Star size={24} className="w-5 h-5 sm:w-6 sm:h-6" fill={favorites.includes(selectedPost.id) ? "currentColor" : "none"} />
-            </button>
-          </div>
+          <button 
+            onClick={(e) => toggleFavorite(selectedPost.id, e)}
+            className={`p-2 sm:p-3 rounded-full transition-colors shrink-0 ${favorites.includes(selectedPost.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
+          >
+            <Star size={24} className="w-5 h-5 sm:w-6 sm:h-6" fill={favorites.includes(selectedPost.id) ? "currentColor" : "none"} />
+          </button>
         </div>
 
-        {isEditing && editForm ? (
-          <div className="mb-8 bg-[#2A2045] p-6 rounded-xl border border-[#5C4B8B]">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white">Edit Post ({lang.toUpperCase()})</h3>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setIsEditing(false)}
-                  className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-                <button 
-                  onClick={handleSaveEdit}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-                >
-                  <Save size={18} />
-                  Save
-                </button>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Title</label>
-                <input 
-                  type="text"
-                  value={editForm.title[lang] || ''}
-                  onChange={(e) => setEditForm({...editForm, title: {...editForm.title, [lang]: e.target.value}})}
-                  className="w-full bg-[#1A142A] border border-[#5C4B8B] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#C3A6E6]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Summary</label>
-                <textarea 
-                  value={editForm.summary[lang] || ''}
-                  onChange={(e) => setEditForm({...editForm, summary: {...editForm.summary, [lang]: e.target.value}})}
-                  className="w-full bg-[#1A142A] border border-[#5C4B8B] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#C3A6E6] min-h-[80px]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Content (HTML)</label>
-                <textarea 
-                  value={editForm.content[lang] || ''}
-                  onChange={(e) => setEditForm({...editForm, content: {...editForm.content, [lang]: e.target.value}})}
-                  className="w-full bg-[#1A142A] border border-[#5C4B8B] rounded-lg px-4 py-2 text-white focus:outline-none focus:border-[#C3A6E6] min-h-[200px] font-mono text-sm"
-                />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div 
-            ref={contentRef}
-            className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8 text-sm sm:text-base"
-            dangerouslySetInnerHTML={{ __html: selectedPost.content[lang] || selectedPost.content['en'] }}
-          />
-        )}
+        <div 
+          ref={contentRef}
+          className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8 text-sm sm:text-base"
+          dangerouslySetInnerHTML={{ __html: selectedPost.content[lang] || selectedPost.content['en'] }}
+        />
 
         <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} />
       </motion.div>
@@ -276,11 +167,6 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               isFavorite={favorites.includes(post.id)}
               onClick={() => handlePostClick(post.id)}
               onToggleFavorite={(e) => handleToggleFavorite(post.id, e)}
-              onEdit={(e) => {
-                e.stopPropagation();
-                handlePostClick(post.id);
-                handleEditClick(post);
-              }}
             />
           ))}
         </div>

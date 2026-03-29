@@ -20,14 +20,14 @@ export function useContent() {
       // Firestore theories don't have LocalizedString, they just have a string.
       // We will map them to look like local theories for the UI.
       const mappedFirestoreTheories = firestoreTheories.map(t => {
-        const title = typeof t.title === 'string' ? t.title : (t.title?.en || '');
-        const summary = typeof t.summary === 'string' ? t.summary : (t.summary?.en || '');
-        const content = typeof t.content === 'string' ? t.content : (t.content?.en || '');
+        const title = typeof t.title === 'string' ? { ru: t.title, en: t.title, by: t.title, jp: t.title, de: t.title, fr: t.title, zh: t.title } : t.title;
+        const summary = typeof t.summary === 'string' ? { ru: t.summary, en: t.summary, by: t.summary, jp: t.summary, de: t.summary, fr: t.summary, zh: t.summary } : t.summary;
+        const content = typeof t.content === 'string' ? { ru: t.content, en: t.content, by: t.content, jp: t.content, de: t.content, fr: t.content, zh: t.content } : t.content;
         return {
           ...t,
-          title: { ru: title, en: title, by: title, jp: title, de: title, fr: title, zh: title },
-          summary: { ru: summary, en: summary, by: summary, jp: summary, de: summary, fr: summary, zh: summary },
-          content: { ru: content, en: content, by: content, jp: content, de: content, fr: content, zh: content }
+          title: title || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' },
+          summary: summary || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' },
+          content: content || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' }
         };
       });
       
@@ -45,14 +45,14 @@ export function useContent() {
         ...doc.data()
       }));
       const mappedFirestoreBlogPosts = firestoreBlogPosts.map(p => {
-        const title = typeof p.title === 'string' ? p.title : (p.title?.en || '');
-        const summary = typeof p.summary === 'string' ? p.summary : (p.summary?.en || '');
-        const content = typeof p.content === 'string' ? p.content : (p.content?.en || '');
+        const title = typeof p.title === 'string' ? { ru: p.title, en: p.title, by: p.title, jp: p.title, de: p.title, fr: p.title, zh: p.title } : p.title;
+        const summary = typeof p.summary === 'string' ? { ru: p.summary, en: p.summary, by: p.summary, jp: p.summary, de: p.summary, fr: p.summary, zh: p.summary } : p.summary;
+        const content = typeof p.content === 'string' ? { ru: p.content, en: p.content, by: p.content, jp: p.content, de: p.content, fr: p.content, zh: p.content } : p.content;
         return {
           ...p,
-          title: { ru: title, en: title, by: title, jp: title, de: title, fr: title, zh: title },
-          summary: { ru: summary, en: summary, by: summary, jp: summary, de: summary, fr: summary, zh: summary },
-          content: { ru: content, en: content, by: content, jp: content, de: content, fr: content, zh: content }
+          title: title || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' },
+          summary: summary || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' },
+          content: content || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' }
         };
       });
       const firestorePostIds = new Set(mappedFirestoreBlogPosts.map(p => p.id));
@@ -69,12 +69,12 @@ export function useContent() {
         ...doc.data()
       }));
       const mappedFirestoreEvents = firestoreEvents.map(e => {
-        const title = typeof e.title === 'string' ? e.title : (e.title?.en || '');
-        const description = typeof e.description === 'string' ? e.description : (e.description?.en || '');
+        const title = typeof e.title === 'string' ? { ru: e.title, en: e.title, by: e.title, jp: e.title, de: e.title, fr: e.title, zh: e.title } : e.title;
+        const description = typeof e.description === 'string' ? { ru: e.description, en: e.description, by: e.description, jp: e.description, de: e.description, fr: e.description, zh: e.description } : e.description;
         return {
           ...e,
-          title: { ru: title, en: title, by: title, jp: title, de: title, fr: title, zh: title },
-          description: { ru: description, en: description, by: description, jp: description, de: description, fr: description, zh: description }
+          title: title || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' },
+          description: description || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' }
         };
       });
       const firestoreEventIds = new Set(mappedFirestoreEvents.map(e => e.id));

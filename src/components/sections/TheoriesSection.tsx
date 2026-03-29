@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Star, Search, ArrowLeft } from 'lucide-react';
+import { Star, Search, ArrowLeft, Share2, Check } from 'lucide-react';
 import { theoriesData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
@@ -16,6 +16,9 @@ interface TheoriesSectionProps {
   favorites: string[];
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
   lowPerfMode?: boolean;
+  theories?: any[];
+  onEdit?: (theory: any) => void;
+  onCreate?: () => void;
 }
 
 export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
@@ -26,15 +29,43 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   setTheorySearch,
   favorites,
   toggleFavorite,
-  lowPerfMode
+  lowPerfMode,
+  theories = theoriesData,
+  onEdit,
+  onCreate
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('TheoriesSection');
   const [selectedTheoryId, setSelectedTheoryId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   trackRender();
 
+  const handleShare = useCallback((id: string, title: string, summary: string) => {
+    const url = `${window.location.origin}${window.location.pathname}?theory=${id}`;
+    if (navigator.share) {
+      navigator.share({
+        title: title,
+        text: summary,
+        url: url,
+      }).catch((err) => {
+        if (err.name !== 'AbortError') {
+          copyToClipboard(url);
+        }
+      });
+    } else {
+      copyToClipboard(url);
+    }
+  }, []);
+
+  const copyToClipboard = (url: string) => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   const filteredTheories = useMemo(() => {
-    return theoriesData.filter(theory => {
+    return theories.filter(theory => {
       const matchesCat = theoryCategory === 'all' || 
                          (theoryCategory === 'favorites' ? favorites.includes(theory.id) : theory.category === theoryCategory);
       const search = theorySearch.toLowerCase();
@@ -42,11 +73,11 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                             (theory.summary[lang] || theory.summary['en']).toLowerCase().includes(search);
       return matchesCat && matchesSearch;
     });
-  }, [theoryCategory, theorySearch, lang, favorites]);
+  }, [theoryCategory, theorySearch, lang, favorites, theories]);
 
   const selectedTheory = useMemo(() => {
-    return selectedTheoryId ? theoriesData.find(t => t.id === selectedTheoryId) : null;
-  }, [selectedTheoryId]);
+    return selectedTheoryId ? theories.find(t => t.id === selectedTheoryId) : null;
+  }, [selectedTheoryId, theories]);
 
   const handleTheoryClick = useCallback((id: string) => {
     setSelectedTheoryId(id);
@@ -90,12 +121,25 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
           <h2 className="text-2xl sm:text-3xl font-bold text-white pr-4 sm:pr-8">
             {selectedTheory.title[lang] || selectedTheory.title['en']}
           </h2>
-          <button 
-            onClick={(e) => toggleFavorite(selectedTheory.id, e)}
-            className={`p-2 sm:p-3 rounded-full transition-colors shrink-0 ${favorites.includes(selectedTheory.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
-          >
-            <Star size={24} className="w-5 h-5 sm:w-6 sm:h-6" fill={favorites.includes(selectedTheory.id) ? "currentColor" : "none"} />
-          </button>
+          <div className="flex gap-2 shrink-0">
+            <button 
+              onClick={() => handleShare(
+                selectedTheory.id, 
+                selectedTheory.title[lang] || selectedTheory.title['en'], 
+                selectedTheory.summary[lang] || selectedTheory.summary['en']
+              )}
+              className={`p-2 sm:p-3 rounded-full transition-colors ${copied ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-[#C3A6E6] hover:bg-[#C3A6E6]/10'}`}
+              title="Share"
+            >
+              {copied ? <Check size={24} className="w-5 h-5 sm:w-6 sm:h-6" /> : <Share2 size={24} className="w-5 h-5 sm:w-6 sm:h-6" />}
+            </button>
+            <button 
+              onClick={(e) => toggleFavorite(selectedTheory.id, e)}
+              className={`p-2 sm:p-3 rounded-full transition-colors ${favorites.includes(selectedTheory.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
+            >
+              <Star size={24} className="w-5 h-5 sm:w-6 sm:h-6" fill={favorites.includes(selectedTheory.id) ? "currentColor" : "none"} />
+            </button>
+          </div>
         </div>
 
         <div 

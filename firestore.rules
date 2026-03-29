@@ -51,6 +51,12 @@ service cloud.firestore {
        return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "semegladysev527@gmail.com" && request.auth.token.email_verified == true));
+    }
+
     function hasOnlyAllowedFields(fields) {
       return request.resource.data.keys().hasOnly(fields);
     }
@@ -116,15 +122,56 @@ service cloud.firestore {
              data.createdAt is string;
     }
 
+    function isValidLocalizedString(field, maxLen) {
+      return (field is string && field.size() > 0 && field.size() <= maxLen) ||
+             (field is map && field.size() > 0 && field.size() <= 10 &&
+              (!('en' in field) || (field.en is string && field.en.size() <= maxLen)) &&
+              (!('ru' in field) || (field.ru is string && field.ru.size() <= maxLen)) &&
+              (!('by' in field) || (field.by is string && field.by.size() <= maxLen)) &&
+              (!('jp' in field) || (field.jp is string && field.jp.size() <= maxLen)) &&
+              (!('de' in field) || (field.de is string && field.de.size() <= maxLen)) &&
+              (!('fr' in field) || (field.fr is string && field.fr.size() <= maxLen)) &&
+              (!('zh' in field) || (field.zh is string && field.zh.size() <= maxLen)));
+    }
+
+    function isValidTheory(data) {
+      return hasRequiredFields(['category', 'title', 'summary', 'content', 'createdAt', 'authorUid']) &&
+             hasOnlyAllowedFields(['category', 'title', 'summary', 'content', 'createdAt', 'updatedAt', 'authorUid']) &&
+             data.category is string && data.category in ['lore', 'characters', 'gameplay'] &&
+             isValidLocalizedString(data.title, 200) &&
+             isValidLocalizedString(data.summary, 1000) &&
+             isValidLocalizedString(data.content, 50000) &&
+             data.createdAt is string &&
+             (!('updatedAt' in data) || data.updatedAt is string) &&
+             data.authorUid is string && data.authorUid == request.auth.uid;
+    }
+
     function isValidBlogPost(data) {
-      return hasRequiredFields(['title', 'summary', 'content', 'category']) &&
-             hasOnlyAllowedFields(['id', 'title', 'summary', 'content', 'category', 'updatedAt']) &&
-             (!('id' in data) || data.id is string) &&
-             data.title is map &&
-             data.summary is map &&
-             data.content is map &&
-             data.category is string && data.category.size() > 0 && data.category.size() <= 50 &&
-             (!('updatedAt' in data) || data.updatedAt is string);
+      return hasRequiredFields(['category', 'title', 'summary', 'content', 'createdAt', 'authorUid']) &&
+             hasOnlyAllowedFields(['category', 'title', 'summary', 'content', 'createdAt', 'updatedAt', 'authorUid']) &&
+             data.category is string && data.category in ['updates', 'personal'] &&
+             isValidLocalizedString(data.title, 200) &&
+             isValidLocalizedString(data.summary, 1000) &&
+             isValidLocalizedString(data.content, 50000) &&
+             data.createdAt is string &&
+             (!('updatedAt' in data) || data.updatedAt is string) &&
+             data.authorUid is string && data.authorUid == request.auth.uid;
+    }
+
+    function isValidEvent(data) {
+      return hasRequiredFields(['icon', 'title', 'description', 'type', 'createdAt', 'authorUid']) &&
+             hasOnlyAllowedFields(['icon', 'title', 'description', 'type', 'dayOfWeek', 'weekOffset', 'startDate', 'endDate', 'createdAt', 'updatedAt', 'authorUid']) &&
+             data.icon is string && data.icon.size() > 0 && data.icon.size() <= 50 &&
+             isValidLocalizedString(data.title, 200) &&
+             isValidLocalizedString(data.description, 1000) &&
+             data.type is string && data.type in ['daily', 'weekly', 'one-time'] &&
+             (!('dayOfWeek' in data) || (data.dayOfWeek is number && data.dayOfWeek >= 0 && data.dayOfWeek <= 6)) &&
+             (!('weekOffset' in data) || (data.weekOffset is number && data.weekOffset >= 0 && data.weekOffset <= 1)) &&
+             (!('startDate' in data) || data.startDate is string) &&
+             (!('endDate' in data) || data.endDate is string) &&
+             data.createdAt is string &&
+             (!('updatedAt' in data) || data.updatedAt is string) &&
+             data.authorUid is string && data.authorUid == request.auth.uid;
     }
 
     // ===============================================================
@@ -150,21 +197,41 @@ service cloud.firestore {
                         request.resource.data.createdAt == resource.data.createdAt) ||
                        isValidLikeUpdate() ||
                        (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
-      allow delete: if isOwner(resource.data.authorUid);
+      allow delete: if isOwner(resource.data.authorUid) || isAdmin();
     }
 
     match /feedback/{feedbackId} {
-      allow read: if false; // Only admins can read feedback (not implemented yet)
+      allow read: if isAdmin();
       allow create: if isValidFeedback(request.resource.data);
       allow update: if false;
-      allow delete: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /theories/{theoryId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidTheory(request.resource.data);
+      allow update: if isAdmin() && isValidTheory(request.resource.data) &&
+                    request.resource.data.createdAt == resource.data.createdAt &&
+                    request.resource.data.authorUid == resource.data.authorUid;
+      allow delete: if isAdmin();
     }
 
     match /blogPosts/{postId} {
       allow read: if true;
-      allow create: if isAuthenticated() && isValidBlogPost(request.resource.data);
-      allow update: if isAuthenticated() && isValidBlogPost(request.resource.data);
-      allow delete: if false;
+      allow create: if isAdmin() && isValidBlogPost(request.resource.data);
+      allow update: if isAdmin() && isValidBlogPost(request.resource.data) &&
+                    request.resource.data.createdAt == resource.data.createdAt &&
+                    request.resource.data.authorUid == resource.data.authorUid;
+      allow delete: if isAdmin();
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidEvent(request.resource.data);
+      allow update: if isAdmin() && isValidEvent(request.resource.data) &&
+                    request.resource.data.createdAt == resource.data.createdAt &&
+                    request.resource.data.authorUid == resource.data.authorUid;
+      allow delete: if isAdmin();
     }
   }
 }
