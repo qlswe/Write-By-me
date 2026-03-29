@@ -53,7 +53,7 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
       if (theory?.id) {
         await setDoc(doc(db, 'theories', theory.id), {
           ...theoryData,
-          createdAt: theory.createdAt
+          createdAt: theory.createdAt || new Date().toISOString()
         });
       } else {
         await addDoc(collection(db, 'theories'), {

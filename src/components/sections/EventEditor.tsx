@@ -72,7 +72,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
       if (event?.id) {
         await setDoc(doc(db, 'events', event.id), {
           ...eventData,
-          createdAt: event.createdAt
+          createdAt: event.createdAt || new Date().toISOString()
         });
       } else {
         await addDoc(collection(db, 'events'), {

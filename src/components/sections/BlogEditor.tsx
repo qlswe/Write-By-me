@@ -53,7 +53,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
       if (post?.id) {
         await setDoc(doc(db, 'blogPosts', post.id), {
           ...postData,
-          createdAt: post.createdAt
+          createdAt: post.createdAt || new Date().toISOString()
         });
       } else {
         await addDoc(collection(db, 'blogPosts'), {
