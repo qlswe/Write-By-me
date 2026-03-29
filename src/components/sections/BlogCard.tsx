@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Star, Edit } from 'lucide-react';
+import { Star, Edit, Trash2 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -12,6 +12,7 @@ interface BlogCardProps {
   onClick: () => void;
   onToggleFavorite: (e: React.MouseEvent) => void;
   onEdit?: (e: React.MouseEvent) => void;
+  onDelete?: (e: React.MouseEvent) => void;
 }
 
 export const BlogCard: React.FC<BlogCardProps> = React.memo(({
@@ -21,10 +22,12 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
   isFavorite,
   onClick,
   onToggleFavorite,
-  onEdit
+  onEdit,
+  onDelete
 }) => {
   const t = translations[lang];
   const { user } = useAuth();
+  const isAdmin = user?.email === 'semegladysev527@gmail.com';
   
   return (
     <motion.div 
@@ -41,14 +44,23 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
           {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
         </div>
         <div className="flex gap-1">
-          {user && onEdit && (
-            <button 
-              onClick={onEdit}
-              className="p-2 rounded-full transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
-              title="Edit Post"
-            >
-              <Edit size={20} />
-            </button>
+          {isAdmin && (
+            <>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
+                className="p-2 rounded-full transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
+                title="Edit Post"
+              >
+                <Edit size={20} />
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
+                className="p-2 rounded-full transition-colors text-gray-400 hover:text-red-400 hover:bg-red-400/10"
+                title="Delete Post"
+              >
+                <Trash2 size={20} />
+              </button>
+            </>
           )}
           <button 
             onClick={onToggleFavorite}

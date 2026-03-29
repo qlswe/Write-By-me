@@ -32,16 +32,6 @@ class Logger {
   private initSystemInfo() {
     if (typeof window === 'undefined') return;
     
-    // Print a cool ASCII art banner to the console
-    const banner = `
-%c  _      __    _ __        __           __  ___     
- | | /| / /___(_) /____   / /  __ __   /  |/  /___  
- | |/ |/ / __/ / __/ -_) / _ \\/ // /  / /|_/ / -_) 
- |__/|__/_/ /_/\\__/\\__/ /_.__/\\_, /  /_/  /_/\\__/  
-                             /___/                  
-    `;
-    console.log(banner, 'color: #C3A6E6; font-weight: bold; font-family: monospace;');
-    
     const systemInfo = {
       userAgent: navigator.userAgent,
       language: navigator.language,

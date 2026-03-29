@@ -6,9 +6,17 @@ const REFERENCE_DATE = new Date(2026, 2, 2, 0, 0, 0);
 export function getNextEventDate(event: GameEvent): Date | null {
   const now = new Date();
   
+  // Parse custom reset time or default to 03:00 UTC
+  let resetHour = 3;
+  let resetMinute = 0;
+  if (event.resetTime) {
+    const [h, m] = event.resetTime.split(':').map(Number);
+    if (!isNaN(h)) resetHour = h;
+    if (!isNaN(m)) resetMinute = m;
+  }
+
   if (event.type === 'daily') {
-    // All events reset at 03:00 UTC (06:00 MSK)
-    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0));
+    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), resetHour, resetMinute, 0));
     
     if (target <= now) {
       target.setUTCDate(target.getUTCDate() + 1);
@@ -17,7 +25,7 @@ export function getNextEventDate(event: GameEvent): Date | null {
   }
   
   if (event.type === 'weekly' && event.dayOfWeek !== undefined) {
-    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0));
+    const target = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), resetHour, resetMinute, 0));
     
     let daysUntilTarget = event.dayOfWeek - target.getUTCDay();
     if (daysUntilTarget < 0 || (daysUntilTarget === 0 && target <= now)) {

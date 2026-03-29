@@ -4,7 +4,6 @@ import { X, Save, Languages } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Language, translations } from '../../data/translations';
-import { GoogleGenAI } from '@google/genai';
 
 interface AdminTheoryModalProps {
   isOpen: boolean;
@@ -54,33 +53,19 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
     
     setIsTranslating(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
-      const prompt = `
-        Translate the following Russian text to English. 
-        Maintain the exact HTML formatting and structure.
-        
-        Title:
-        ${titleRu}
-        
-        Summary:
-        ${summaryRu}
-        
-        Content:
-        ${contentRu}
-        
-        Return the result as a JSON object with keys: "title", "summary", "content".
-      `;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-        }
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ titleRu, summaryRu, contentRu }),
       });
 
-      const result = JSON.parse(response.text || '{}');
+      if (!response.ok) {
+        throw new Error("Failed to translate text");
+      }
+
+      const result = await response.json();
       
       if (result.title) setTitleEn(result.title);
       if (result.summary) setSummaryEn(result.summary);

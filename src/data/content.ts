@@ -554,6 +554,7 @@ export interface GameEvent {
   weekOffset?: number; // 0 for even weeks, 1 for odd weeks
   startDate?: string; // ISO string
   endDate?: string; // ISO string
+  resetTime?: string; // HH:mm format
 }
 
 export const eventsData: GameEvent[] = [
@@ -578,7 +579,8 @@ export const eventsData: GameEvent[] = [
       fr: "Réinitialisation quotidienne a lieu tous les jours à 03:00 UTC. Réinitialise les missions quotidiennes, récompenses et limites.",
       zh: "每日刷新时间为 03:00 UTC。重置每日任务、奖励和限制。"
     },
-    type: 'daily'
+    type: 'daily',
+    resetTime: '03:00'
   },
   {
     id: 'event-2',
@@ -603,7 +605,8 @@ export const eventsData: GameEvent[] = [
     },
     type: 'weekly',
     dayOfWeek: 1,
-    weekOffset: 0
+    weekOffset: 0,
+    resetTime: '03:00'
   },
   {
     id: 'event-3',
@@ -628,6 +631,7 @@ export const eventsData: GameEvent[] = [
     },
     type: 'weekly',
     dayOfWeek: 1,
-    weekOffset: 1
+    weekOffset: 1,
+    resetTime: '03:00'
   }
 ];

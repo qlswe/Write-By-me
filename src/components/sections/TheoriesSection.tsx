@@ -1,11 +1,15 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Star, Search, ArrowLeft, Share2, Check } from 'lucide-react';
+import { Star, Search, ArrowLeft, Share2, Check, Plus, Edit } from 'lucide-react';
 import { theoriesData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { CommentsSection } from './CommentsSection';
 import { TheoryCard } from './TheoryCard';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
+import { useAuth } from '../../hooks/useAuth';
 
 interface TheoriesSectionProps {
   lang: Language;
@@ -38,7 +42,19 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   const { trackRender } = usePerfLogger('TheoriesSection');
   const [selectedTheoryId, setSelectedTheoryId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.email === 'semegladysev527@gmail.com';
   trackRender();
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this theory?')) {
+      try {
+        await deleteDoc(doc(db, 'theories', id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `theories/${id}`);
+      }
+    }
+  };
 
   const handleShare = useCallback((id: string, title: string, summary: string) => {
     const url = `${window.location.origin}${window.location.pathname}?theory=${id}`;
@@ -122,6 +138,15 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             {selectedTheory.title[lang] || selectedTheory.title['en']}
           </h2>
           <div className="flex gap-2 shrink-0">
+            {isAdmin && (
+              <button 
+                onClick={() => onEdit?.(selectedTheory)}
+                className="p-2 sm:p-3 rounded-full transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
+                title={t.editBtn}
+              >
+                <Edit size={24} className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            )}
             <button 
               onClick={() => handleShare(
                 selectedTheory.id, 
@@ -160,7 +185,18 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
       exit={{ opacity: 0 }}
       className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-4 sm:p-8 shadow-xl border border-[#5C4B8B]"
     >
-      <h2 className="text-2xl sm:text-3xl font-bold text-[#C3A6E6] mb-6 sm:mb-8">{t.navTheories}</h2>
+      <div className="flex justify-between items-center mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[#C3A6E6]">{t.navTheories}</h2>
+        {isAdmin && (
+          <button 
+            onClick={onCreate}
+            className="flex items-center gap-2 bg-[#C3A6E6] text-[#2F244F] px-4 py-2 rounded-xl font-bold hover:bg-white transition-colors"
+          >
+            <Plus size={20} />
+            {t.createTheory}
+          </button>
+        )}
+      </div>
       
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative">
@@ -206,6 +242,8 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               isFavorite={favorites.includes(theory.id)}
               onClick={() => handleTheoryClick(theory.id)}
               onToggleFavorite={(e) => handleToggleFavorite(theory.id, e)}
+              onEdit={(e) => { e.stopPropagation(); onEdit?.(theory); }}
+              onDelete={(e) => { e.stopPropagation(); handleDelete(theory.id); }}
             />
           ))}
         </div>

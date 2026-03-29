@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Star, Share2, Check } from 'lucide-react';
+import { Star, Share2, Check, Edit, Trash2 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
+import { useAuth } from '../../hooks/useAuth';
 
 interface TheoryCardProps {
   theory: any;
@@ -10,6 +11,8 @@ interface TheoryCardProps {
   isFavorite: boolean;
   onClick: () => void;
   onToggleFavorite: (e: React.MouseEvent) => void;
+  onEdit?: (e: React.MouseEvent) => void;
+  onDelete?: (e: React.MouseEvent) => void;
 }
 
 export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
@@ -18,10 +21,14 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
   lang,
   isFavorite,
   onClick,
-  onToggleFavorite
+  onToggleFavorite,
+  onEdit,
+  onDelete
 }) => {
   const t = translations[lang];
   const [copied, setCopied] = React.useState(false);
+  const { user } = useAuth();
+  const isAdmin = user?.email === 'semegladysev527@gmail.com';
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -62,7 +69,25 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
         <div className="text-xs font-bold uppercase tracking-wider text-[#C3A6E6] bg-[#C3A6E6]/10 inline-block px-3 py-1 rounded-full">
           {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1">
+          {isAdmin && (
+            <>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
+                className="p-2 rounded-full transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
+                title="Edit"
+              >
+                <Edit size={20} />
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
+                className="p-2 rounded-full transition-colors text-gray-400 hover:text-red-400 hover:bg-red-400/10"
+                title="Delete"
+              >
+                <Trash2 size={20} />
+              </button>
+            </>
+          )}
           <button 
             onClick={handleShare}
             className={`p-2 rounded-full transition-colors ${copied ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-[#C3A6E6] hover:bg-[#C3A6E6]/10'}`}

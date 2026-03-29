@@ -298,6 +298,7 @@ export default function App() {
               setIsCreatingTheory(false);
               setEditingTheory(null);
             }} 
+            lang={lang as Language}
           />
         )}
       </AnimatePresence>
@@ -310,6 +311,7 @@ export default function App() {
               setIsCreatingBlog(false);
               setEditingBlog(null);
             }} 
+            lang={lang as Language}
           />
         )}
       </AnimatePresence>
@@ -321,6 +323,7 @@ export default function App() {
               setIsCreatingEvent(false);
               setEditingEvent(null);
             }} 
+            lang={lang as Language}
           />
         )}
       </AnimatePresence>

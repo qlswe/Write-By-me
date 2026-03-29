@@ -160,13 +160,14 @@ service cloud.firestore {
 
     function isValidEvent(data) {
       return hasRequiredFields(['icon', 'title', 'description', 'type', 'createdAt', 'authorUid']) &&
-             hasOnlyAllowedFields(['icon', 'title', 'description', 'type', 'dayOfWeek', 'weekOffset', 'startDate', 'endDate', 'createdAt', 'updatedAt', 'authorUid']) &&
+             hasOnlyAllowedFields(['icon', 'title', 'description', 'type', 'dayOfWeek', 'weekOffset', 'startDate', 'endDate', 'resetTime', 'createdAt', 'updatedAt', 'authorUid']) &&
              data.icon is string && data.icon.size() > 0 && data.icon.size() <= 50 &&
              isValidLocalizedString(data.title, 200) &&
              isValidLocalizedString(data.description, 1000) &&
              data.type is string && data.type in ['daily', 'weekly', 'one-time'] &&
              (!('dayOfWeek' in data) || (data.dayOfWeek is number && data.dayOfWeek >= 0 && data.dayOfWeek <= 6)) &&
              (!('weekOffset' in data) || (data.weekOffset is number && data.weekOffset >= 0 && data.weekOffset <= 1)) &&
+             (!('resetTime' in data) || (data.resetTime is string && data.resetTime.matches("^\\d{2}:\\d{2}$"))) &&
              (!('startDate' in data) || data.startDate is string) &&
              (!('endDate' in data) || data.endDate is string) &&
              data.createdAt is string &&

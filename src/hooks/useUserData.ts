@@ -3,6 +3,7 @@ import { db, auth } from '../firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from './useAuth';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
+import { useTranslation } from 'react-i18next';
 
 interface UserData {
   favorites: string[];
@@ -17,6 +18,7 @@ interface UserData {
 
 export function useUserData(initialLang: string) {
   const { user } = useAuth();
+  const { i18n } = useTranslation();
   const [favorites, setFavorites] = useState<string[]>([]);
   const [lang, setLang] = useState<string>(initialLang);
   const [lowPerfMode, setLowPerfMode] = useState<boolean>(false);
@@ -26,6 +28,13 @@ export function useUserData(initialLang: string) {
   const [signature, setSignature] = useState<string>('');
   const [mainCharacter, setMainCharacter] = useState<string>('Stelle');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  // Sync i18n when lang state changes
+  useEffect(() => {
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang);
+    }
+  }, [lang, i18n]);
 
   // Load from local storage initially for fast render
   useEffect(() => {
@@ -38,6 +47,9 @@ export function useUserData(initialLang: string) {
       const localLang = localStorage.getItem('hsr_lang');
       if (localLang && !isDataLoaded) {
         setLang(localLang);
+      } else if (!isDataLoaded) {
+        // Use i18n detected language if no local storage
+        setLang(i18n.language.split('-')[0]);
       }
 
       const localPerf = localStorage.getItem('hsr_low_perf');
@@ -47,7 +59,7 @@ export function useUserData(initialLang: string) {
     } catch (e) {
       console.error("Error loading local data", e);
     }
-  }, [isDataLoaded]);
+  }, [isDataLoaded, i18n.language]);
 
   // Sync with Firestore when user logs in
   useEffect(() => {

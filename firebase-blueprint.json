@@ -137,8 +137,93 @@
         "updatedAt": {
           "type": "string",
           "description": "ISO timestamp of last update"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation"
         }
-      }
+      },
+      "required": ["title", "summary", "content", "category", "createdAt"]
+    },
+    "Theory": {
+      "title": "Theory",
+      "description": "A theory post",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "object",
+          "description": "Localized title"
+        },
+        "summary": {
+          "type": "object",
+          "description": "Localized summary"
+        },
+        "content": {
+          "type": "object",
+          "description": "Localized content"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the theory"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation"
+        }
+      },
+      "required": ["title", "summary", "content", "category", "createdAt"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "A game event",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "object",
+          "description": "Localized title"
+        },
+        "description": {
+          "type": "object",
+          "description": "Localized description"
+        },
+        "type": {
+          "type": "string",
+          "description": "Event type (daily, weekly, one-time)"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon name"
+        },
+        "dayOfWeek": {
+          "type": "number",
+          "description": "Day of week (0-6)"
+        },
+        "weekOffset": {
+          "type": "number",
+          "description": "Week offset (0-1)"
+        },
+        "resetTime": {
+          "type": "string",
+          "description": "Reset time (HH:mm)"
+        },
+        "startDate": {
+          "type": "string",
+          "description": "ISO timestamp of start"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "ISO timestamp of end"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation"
+        }
+      },
+      "required": ["title", "description", "type", "icon", "createdAt"]
     }
   },
   "firestore": {
@@ -165,6 +250,18 @@
         "$ref": "#/entities/BlogPost"
       },
       "description": "Blog posts"
+    },
+    "/theories/{theoryId}": {
+      "schema": {
+        "$ref": "#/entities/Theory"
+      },
+      "description": "Theory posts"
+    },
+    "/events/{eventId}": {
+      "schema": {
+        "$ref": "#/entities/Event"
+      },
+      "description": "Game events"
     }
   }
 }

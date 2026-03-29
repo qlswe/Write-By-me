@@ -1,11 +1,15 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Star, Search, ArrowLeft } from 'lucide-react';
+import { Star, Search, ArrowLeft, Plus, Edit } from 'lucide-react';
 import { blogPostsData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { CommentsSection } from './CommentsSection';
 import { BlogCard } from './BlogCard';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
+import { useAuth } from '../../hooks/useAuth';
 
 interface BlogSectionProps {
   lang: Language;
@@ -37,7 +41,19 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   const t = translations[lang];
   const { trackRender } = usePerfLogger('BlogSection');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const isAdmin = user?.email === 'semegladysev527@gmail.com';
   trackRender();
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this post?')) {
+      try {
+        await deleteDoc(doc(db, 'blogPosts', id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `blogPosts/${id}`);
+      }
+    }
+  };
 
   const filteredBlog = useMemo(() => {
     return blogPosts.filter(post => {
@@ -96,12 +112,23 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           <h2 className="text-2xl sm:text-3xl font-bold text-white pr-4 sm:pr-8">
             {selectedPost.title[lang] || selectedPost.title['en']}
           </h2>
-          <button 
-            onClick={(e) => toggleFavorite(selectedPost.id, e)}
-            className={`p-2 sm:p-3 rounded-full transition-colors shrink-0 ${favorites.includes(selectedPost.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
-          >
-            <Star size={24} className="w-5 h-5 sm:w-6 sm:h-6" fill={favorites.includes(selectedPost.id) ? "currentColor" : "none"} />
-          </button>
+          <div className="flex gap-2 shrink-0">
+            {isAdmin && (
+              <button 
+                onClick={() => onEdit?.(selectedPost)}
+                className="p-2 sm:p-3 rounded-full transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
+                title={t.editBtn}
+              >
+                <Edit size={24} className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            )}
+            <button 
+              onClick={(e) => toggleFavorite(selectedPost.id, e)}
+              className={`p-2 sm:p-3 rounded-full transition-colors ${favorites.includes(selectedPost.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
+            >
+              <Star size={24} className="w-5 h-5 sm:w-6 sm:h-6" fill={favorites.includes(selectedPost.id) ? "currentColor" : "none"} />
+            </button>
+          </div>
         </div>
 
         <div 
@@ -122,7 +149,18 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
       exit={{ opacity: 0 }}
       className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-4 sm:p-8 shadow-xl border border-[#5C4B8B]"
     >
-      <h2 className="text-2xl sm:text-3xl font-bold text-[#C3A6E6] mb-6 sm:mb-8">{t.navBlog}</h2>
+      <div className="flex justify-between items-center mb-6 sm:mb-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[#C3A6E6]">{t.navBlog}</h2>
+        {isAdmin && (
+          <button 
+            onClick={onCreate}
+            className="flex items-center gap-2 bg-[#C3A6E6] text-[#2F244F] px-4 py-2 rounded-xl font-bold hover:bg-white transition-colors"
+          >
+            <Plus size={20} />
+            {t.createBlog}
+          </button>
+        )}
+      </div>
       
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative">
@@ -167,6 +205,8 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               isFavorite={favorites.includes(post.id)}
               onClick={() => handlePostClick(post.id)}
               onToggleFavorite={(e) => handleToggleFavorite(post.id, e)}
+              onEdit={(e) => { e.stopPropagation(); onEdit?.(post); }}
+              onDelete={(e) => { e.stopPropagation(); handleDelete(post.id); }}
             />
           ))}
         </div>

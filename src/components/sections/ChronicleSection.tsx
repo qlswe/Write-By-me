@@ -50,7 +50,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
         {isAdmin && (
           <button onClick={onCreate} className="flex items-center gap-2 bg-[#C3A6E6] text-[#2F244F] px-4 py-2 rounded-xl font-bold hover:bg-white transition-colors">
             <Plus size={20} />
-            Create Event
+            {t.createEvent}
           </button>
         )}
       </div>
@@ -83,7 +83,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
                     </div>
                   </div>
                 </div>
-                {isAdmin && !event.id.startsWith('event-') && (
+                {isAdmin && (
                   <div className="flex gap-2">
                     <button onClick={() => onEdit?.(event)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors">
                       <Edit size={20} />

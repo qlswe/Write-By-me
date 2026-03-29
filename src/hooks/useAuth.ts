@@ -45,23 +45,12 @@ export function useAuth() {
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     
-    // Check if we are in a mobile environment or WebView
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const isWebView = /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(navigator.userAgent) || 
-                      /Android.*Version\/[0-9].[0-9]/.test(navigator.userAgent) ||
-                      navigator.userAgent.includes('wv');
-
     try {
-      if (isMobile || isWebView) {
-        // Force redirect for mobile and WebViews to avoid popup blockers and cross-origin issues
-        await signInWithRedirect(auth, provider);
-      } else {
-        // Use popup for desktop browsers
-        await signInWithPopup(auth, provider);
-      }
+      // Use popup as the primary method as requested ("normal methods")
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error("Error logging in", error);
-      // Fallback to redirect if popup fails on desktop
+      // Fallback to redirect if popup fails (e.g. blocked)
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
         try {
           await signInWithRedirect(auth, provider);
