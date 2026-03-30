@@ -1,267 +1,44 @@
 {
   "entities": {
-    "UserProfile": {
-      "title": "UserProfile",
-      "description": "User preferences and progress",
-      "type": "object",
-      "properties": {
-        "favorites": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of favorite item IDs"
-        },
-        "lang": {
-          "type": "string",
-          "description": "Preferred language"
-        },
-        "lowPerfMode": {
-          "type": "boolean",
-          "description": "Low performance mode flag"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "ISO timestamp of creation"
-        }
-      }
-    },
-    "Comment": {
-      "title": "Comment",
-      "description": "A user comment on a theory or post",
-      "type": "object",
-      "properties": {
-        "targetId": {
-          "type": "string",
-          "description": "ID of the theory or post"
-        },
-        "parentId": {
-          "type": "string",
-          "description": "ID of the parent comment, if this is a reply"
-        },
-        "authorUid": {
-          "type": "string",
-          "description": "UID of the author"
-        },
-        "authorName": {
-          "type": "string",
-          "description": "Display name of the author"
-        },
-        "authorPhoto": {
-          "type": "string",
-          "description": "Photo URL of the author"
-        },
-        "content": {
-          "type": "string",
-          "description": "The comment text"
-        },
-        "likesCount": {
-          "type": "number",
-          "description": "Number of likes"
-        },
-        "likedBy": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "List of UIDs who liked the comment"
-        },
-        "reactions": {
-          "type": "object",
-          "description": "Map of emoji to list of UIDs"
-        },
-        "isEdited": {
-          "type": "boolean",
-          "description": "Whether the comment has been edited"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "ISO timestamp of creation"
-        }
-      },
-      "required": ["targetId", "authorUid", "authorName", "content", "createdAt"]
-    },
-    "Feedback": {
-      "title": "Feedback",
-      "description": "User feedback submission",
+    "sdk_reports": {
+      "title": "SDK Reports",
+      "description": "User feedback and bug reports sent via the SDK.",
       "type": "object",
       "properties": {
         "type": {
           "type": "string",
-          "description": "Type of feedback (bug, suggestion)"
+          "enum": ["bug", "feedback", "system"],
+          "description": "The type of report."
         },
-        "text": {
-          "type": "string",
-          "description": "Feedback content"
+        "data": {
+          "type": "object",
+          "description": "The report data (e.g., message)."
         },
-        "image": {
+        "timestamp": {
           "type": "string",
-          "description": "Base64 encoded image or URL"
+          "format": "date-time",
+          "description": "When the report was sent."
         },
-        "logs": {
+        "version": {
           "type": "string",
-          "description": "Application logs"
+          "description": "The SDK version."
         },
-        "uid": {
+        "userAgent": {
           "type": "string",
-          "description": "User ID if logged in"
+          "description": "The user's browser agent."
         },
-        "createdAt": {
+        "url": {
           "type": "string",
-          "description": "ISO timestamp of creation"
+          "description": "The URL where the report was sent from."
         }
       },
-      "required": ["type", "text", "createdAt"]
-    },
-    "BlogPost": {
-      "title": "BlogPost",
-      "description": "A blog post",
-      "type": "object",
-      "properties": {
-        "title": {
-          "type": "object",
-          "description": "Localized title"
-        },
-        "summary": {
-          "type": "object",
-          "description": "Localized summary"
-        },
-        "content": {
-          "type": "object",
-          "description": "Localized content"
-        },
-        "category": {
-          "type": "string",
-          "description": "Category of the post"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "ISO timestamp of last update"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "ISO timestamp of creation"
-        }
-      },
-      "required": ["title", "summary", "content", "category", "createdAt"]
-    },
-    "Theory": {
-      "title": "Theory",
-      "description": "A theory post",
-      "type": "object",
-      "properties": {
-        "title": {
-          "type": "object",
-          "description": "Localized title"
-        },
-        "summary": {
-          "type": "object",
-          "description": "Localized summary"
-        },
-        "content": {
-          "type": "object",
-          "description": "Localized content"
-        },
-        "category": {
-          "type": "string",
-          "description": "Category of the theory"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "ISO timestamp of last update"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "ISO timestamp of creation"
-        }
-      },
-      "required": ["title", "summary", "content", "category", "createdAt"]
-    },
-    "Event": {
-      "title": "Event",
-      "description": "A game event",
-      "type": "object",
-      "properties": {
-        "title": {
-          "type": "object",
-          "description": "Localized title"
-        },
-        "description": {
-          "type": "object",
-          "description": "Localized description"
-        },
-        "type": {
-          "type": "string",
-          "description": "Event type (daily, weekly, one-time)"
-        },
-        "icon": {
-          "type": "string",
-          "description": "Icon name"
-        },
-        "dayOfWeek": {
-          "type": "number",
-          "description": "Day of week (0-6)"
-        },
-        "weekOffset": {
-          "type": "number",
-          "description": "Week offset (0-1)"
-        },
-        "resetTime": {
-          "type": "string",
-          "description": "Reset time (HH:mm)"
-        },
-        "startDate": {
-          "type": "string",
-          "description": "ISO timestamp of start"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "ISO timestamp of end"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "ISO timestamp of creation"
-        }
-      },
-      "required": ["title", "description", "type", "icon", "createdAt"]
+      "required": ["type", "data", "timestamp"]
     }
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": {
-        "$ref": "#/entities/UserProfile"
-      },
-      "description": "User profile data"
-    },
-    "/comments/{commentId}": {
-      "schema": {
-        "$ref": "#/entities/Comment"
-      },
-      "description": "Comments on theories and posts"
-    },
-    "/feedback/{feedbackId}": {
-      "schema": {
-        "$ref": "#/entities/Feedback"
-      },
-      "description": "User feedback submissions"
-    },
-    "/blogPosts/{postId}": {
-      "schema": {
-        "$ref": "#/entities/BlogPost"
-      },
-      "description": "Blog posts"
-    },
-    "/theories/{theoryId}": {
-      "schema": {
-        "$ref": "#/entities/Theory"
-      },
-      "description": "Theory posts"
-    },
-    "/events/{eventId}": {
-      "schema": {
-        "$ref": "#/entities/Event"
-      },
-      "description": "Game events"
+    "/sdk_reports/{reportId}": {
+      "schema": "sdk_reports",
+      "description": "Collection of SDK reports."
     }
   }
 }

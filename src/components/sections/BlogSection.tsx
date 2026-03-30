@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
-import { Star, Search, ArrowLeft, Plus, Edit } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Star, Search, ArrowLeft, Plus, Edit, Newspaper, Sparkles, Clock, User } from 'lucide-react';
 import { blogPostsData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
@@ -10,6 +10,7 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { useAuth } from '../../hooks/useAuth';
+import { sdk } from '../../sdk';
 
 interface BlogSectionProps {
   lang: Language;
@@ -91,126 +92,164 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
     }
   }, [selectedPostId, lang]);
 
-  if (selectedPost) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
-        className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-4 sm:p-8 shadow-xl border border-[#5C4B8B]"
-      >
-        <button 
-          onClick={() => setSelectedPostId(null)}
-          className="flex items-center gap-2 text-[#C3A6E6] hover:text-white transition-colors mb-6 font-bold"
-        >
-          <ArrowLeft size={20} />
-          {t.navBlog}
-        </button>
-        
-        <div className="flex justify-between items-start mb-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white pr-4 sm:pr-8">
-            {selectedPost.title[lang] || selectedPost.title['en']}
-          </h2>
-          <div className="flex gap-2 shrink-0">
-            {isAdmin && (
-              <button 
-                onClick={() => onEdit?.(selectedPost)}
-                className="p-2 sm:p-3 rounded-full transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
-                title={t.editBtn}
-              >
-                <Edit size={24} className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
-            )}
-            <button 
-              onClick={(e) => toggleFavorite(selectedPost.id, e)}
-              className={`p-2 sm:p-3 rounded-full transition-colors ${favorites.includes(selectedPost.id) ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
-            >
-              <Star size={24} className="w-5 h-5 sm:w-6 sm:h-6" fill={favorites.includes(selectedPost.id) ? "currentColor" : "none"} />
-            </button>
-          </div>
-        </div>
-
-        <div 
-          ref={contentRef}
-          className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8 text-sm sm:text-base"
-          dangerouslySetInnerHTML={{ __html: selectedPost.content[lang] || selectedPost.content['en'] }}
-        />
-
-        <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} />
-      </motion.div>
-    );
-  }
-
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-4 sm:p-8 shadow-xl border border-[#5C4B8B]"
-    >
-      <div className="flex justify-between items-center mb-6 sm:mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[#C3A6E6]">{t.navBlog}</h2>
-        {isAdmin && (
-          <button 
-            onClick={onCreate}
-            className="flex items-center gap-2 bg-[#C3A6E6] text-[#2F244F] px-4 py-2 rounded-xl font-bold hover:bg-white transition-colors"
+    <div className="relative min-h-[600px]">
+      <AnimatePresence mode="wait">
+        {selectedPost ? (
+          <motion.div 
+            key="blog-detail"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="bg-[#3E3160]/90 backdrop-blur-md rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#5C4B8B] relative overflow-hidden"
           >
-            <Plus size={20} />
-            {t.createBlog}
-          </button>
-        )}
-      </div>
-      
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <div className="relative">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-          </div>
-          <select 
-            value={blogCategory}
-            onChange={(e) => setBlogCategory(e.target.value)}
-            className="appearance-none bg-[#3E3160] border border-[#5C4B8B] rounded-xl pl-12 pr-4 py-3 text-gray-200 focus:outline-none focus:border-[#C3A6E6] cursor-pointer w-full sm:w-auto hover:border-[#C3A6E6] transition-colors"
-          >
-            <option value="all">{t.filterAll}</option>
-            <option value="updates">{t.filterUpdates}</option>
-            <option value="personal">{t.filterPersonal}</option>
-            <option value="favorites">{t.filterFavorites}</option>
-          </select>
-        </div>
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input 
-            type="text"
-            placeholder={t.searchPlaceholder}
-            value={blogSearch}
-            onChange={(e) => setBlogSearch(e.target.value)}
-            className="w-full bg-[#3E3160] border border-[#5C4B8B] rounded-xl pl-12 pr-4 py-3 text-gray-200 focus:outline-none focus:border-[#C3A6E6]"
-          />
-        </div>
-      </div>
+            {/* Background Decorative Element */}
+            <div className="absolute top-0 left-0 w-64 h-64 bg-[#C3A6E6]/5 rounded-full -translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
+            
+            <button 
+              onClick={() => setSelectedPostId(null)}
+              className="group flex items-center gap-3 text-[#C3A6E6] hover:text-white transition-all mb-8 font-black uppercase tracking-tighter"
+            >
+              <div className="p-2 rounded-full bg-[#5C4B8B]/30 group-hover:bg-[#C3A6E6] group-hover:text-[#2F244F] transition-all">
+                <ArrowLeft size={16} />
+              </div>
+              {t.navBlog}
+            </button>
+            
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-10">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="px-3 py-1 rounded-full bg-[#C3A6E6]/20 text-[#C3A6E6] text-xs font-black uppercase tracking-widest border border-[#C3A6E6]/30">
+                    {selectedPost.category}
+                  </span>
+                  <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                    <Clock size={12} />
+                    {sdk.data.formatDate(selectedPost.createdAt, lang)}
+                  </div>
+                </div>
+                <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight tracking-tighter">
+                  {selectedPost.title[lang] || selectedPost.title['en']}
+                </h2>
+              </div>
+              
+              <div className="flex flex-wrap gap-3 shrink-0 justify-end">
+                {isAdmin && (
+                  <button 
+                    onClick={() => onEdit?.(selectedPost)}
+                    className="p-4 rounded-2xl bg-[#5C4B8B]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
+                    title={t.editBtn}
+                  >
+                    <Edit size={18} />
+                  </button>
+                )}
+                <button 
+                  onClick={(e) => toggleFavorite(selectedPost.id, e)}
+                  className={`p-4 rounded-2xl bg-[#5C4B8B]/30 transition-all border border-transparent ${favorites.includes(selectedPost.id) ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+                >
+                  <Star size={18} fill={favorites.includes(selectedPost.id) ? "currentColor" : "none"} />
+                </button>
+              </div>
+            </div>
 
-      {filteredBlog.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 bg-[#3E3160]/50 rounded-2xl border border-dashed border-[#5C4B8B]">
-          {t.noResults}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredBlog.map((post, index) => (
-            <BlogCard
-              key={post.id}
-              post={post}
-              index={index}
-              lang={lang}
-              isFavorite={favorites.includes(post.id)}
-              onClick={() => handlePostClick(post.id)}
-              onToggleFavorite={(e) => handleToggleFavorite(post.id, e)}
-              onEdit={(e) => { e.stopPropagation(); onEdit?.(post); }}
-              onDelete={(e) => { e.stopPropagation(); handleDelete(post.id); }}
+            <div 
+              ref={contentRef}
+              className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-12 text-base sm:text-lg leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: selectedPost.content[lang] || selectedPost.content['en'] }}
             />
-          ))}
-        </div>
-      )}
-    </motion.div>
+
+            <div className="pt-10 border-t border-[#5C4B8B]">
+              <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} />
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="blog-list"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="bg-[#3E3160]/90 backdrop-blur-md rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#5C4B8B]"
+          >
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
+              <div>
+                <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tighter uppercase mb-2 flex items-center gap-4">
+                  <Newspaper className="text-[#C3A6E6]" size={32} />
+                  {t.navBlog}
+                </h2>
+                <p className="text-[#C3A6E6]/60 font-medium tracking-wide uppercase text-xs">
+                  {t.blogSubTitle}
+                </p>
+              </div>
+              {isAdmin && (
+                <button 
+                  onClick={onCreate}
+                  className="flex items-center gap-3 bg-[#C3A6E6] text-[#2F244F] px-6 py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-white hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#C3A6E6]/20"
+                >
+                  <Plus size={20} />
+                  {t.createBlog}
+                </button>
+              )}
+            </div>
+            
+            <div className="flex flex-col lg:flex-row gap-6 mb-10">
+              <div className="flex gap-2 p-1.5 bg-[#2F244F]/50 rounded-2xl border border-[#5C4B8B] overflow-x-auto no-scrollbar">
+                {['all', 'updates', 'personal', 'favorites'].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setBlogCategory(cat)}
+                    className={`px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                      blogCategory === cat 
+                        ? 'bg-[#C3A6E6] text-[#2F244F] shadow-lg shadow-[#C3A6E6]/20' 
+                        : 'text-gray-400 hover:text-white hover:bg-[#5C4B8B]/30'
+                    }`}
+                  >
+                    {cat === 'all' ? t.filterAll : 
+                     cat === 'updates' ? t.filterUpdates : 
+                     cat === 'personal' ? t.filterPersonal : t.filterFavorites}
+                  </button>
+                ))}
+              </div>
+              <div className="relative flex-1">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#C3A6E6]/50" size={22} />
+                <input 
+                  type="text"
+                  placeholder={t.searchPlaceholder}
+                  value={blogSearch}
+                  onChange={(e) => setBlogSearch(e.target.value)}
+                  className="w-full bg-[#2F244F]/50 border border-[#5C4B8B] rounded-2xl pl-14 pr-6 py-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-[#C3A6E6] focus:ring-4 focus:ring-[#C3A6E6]/10 transition-all"
+                />
+              </div>
+            </div>
+
+            {filteredBlog.length === 0 ? (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-24 text-gray-400 bg-[#2F244F]/30 rounded-3xl border-2 border-dashed border-[#5C4B8B]/50 flex flex-col items-center gap-4"
+              >
+                <Sparkles size={48} className="text-[#5C4B8B]" />
+                <p className="text-xl font-bold uppercase tracking-widest">{t.noResults}</p>
+              </motion.div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {filteredBlog.map((post, index) => (
+                  <BlogCard
+                    key={post.id}
+                    post={post}
+                    index={index}
+                    lang={lang}
+                    isFavorite={favorites.includes(post.id)}
+                    onClick={() => handlePostClick(post.id)}
+                    onToggleFavorite={(e) => handleToggleFavorite(post.id, e)}
+                    onEdit={(e) => { e.stopPropagation(); onEdit?.(post); }}
+                    onDelete={(e) => { e.stopPropagation(); handleDelete(post.id); }}
+                  />
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 };

@@ -4,6 +4,8 @@ import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from './useAuth';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 import { useTranslation } from 'react-i18next';
+import { sdk } from '../sdk';
+import { toast } from 'sonner';
 
 interface UserData {
   favorites: string[];
@@ -121,6 +123,12 @@ export function useUserData(initialLang: string) {
   const toggleFavorite = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
+    // SDK Security: Rate limit favorite toggles
+    if (!sdk.security.rateLimit('toggle_favorite', 10, 60000)) {
+      toast.error("Action too fast. Please wait.");
+      return;
+    }
+
     const newFavorites = favorites.includes(id) 
       ? favorites.filter(favId => favId !== id) 
       : [...favorites, id];

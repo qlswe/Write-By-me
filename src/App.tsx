@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -10,6 +10,7 @@ import { Language, translations } from './data/translations';
 import { useAuth } from './hooks/useAuth';
 import { useUserData } from './hooks/useUserData';
 import { useContent } from './hooks/useContent';
+import { sdk } from './sdk';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -21,6 +22,7 @@ import { FeedbackModal } from './components/ui/FeedbackModal';
 import { TheoryEditor } from './components/sections/TheoryEditor';
 import { BlogEditor } from './components/sections/BlogEditor';
 import { EventEditor } from './components/sections/EventEditor';
+
 // Lazy load sections for better performance
 const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
 const BlogSection = lazy(() => import('./components/sections/BlogSection').then(m => ({ default: m.BlogSection })));
@@ -38,6 +40,10 @@ export default function App() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [section, setSection] = useState<Section>('home');
+  
+  useEffect(() => {
+    sdk.logging.action('Section Change', { section });
+  }, [section]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [modalContent, setModalContent] = useState<{id?: string, title: string, content: string} | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -46,6 +52,17 @@ export default function App() {
   // User Data (Syncs with Firebase)
   const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded } = useUserData('ru');
   const { theories, blogPosts, events } = useContent();
+
+  // Production Mode (High Fidelity)
+  const [productionMode, setProductionMode] = useState(() => localStorage.getItem('productionMode') === 'true');
+
+  const toggleProductionMode = () => {
+    const newVal = !productionMode;
+    setProductionMode(newVal);
+    localStorage.setItem('productionMode', String(newVal));
+    setToast(newVal ? t.sdkModeProduction : t.sdkModeMain);
+    sdk.logging.action('Toggle Production Mode', { enabled: newVal });
+  };
 
   // Feedback state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -77,6 +94,12 @@ export default function App() {
     } else {
       document.body.classList.remove('low-perf-mode');
     }
+
+    if (productionMode) {
+      document.body.classList.add('production-mode');
+    } else {
+      document.body.classList.remove('production-mode');
+    }
     
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
     const isDismissed = localStorage.getItem('hideInstallBanner') === 'true';
@@ -85,14 +108,14 @@ export default function App() {
     }
 
     // Hide loader after auth and data are loaded, or after a timeout
-    const loaderTimer = setTimeout(() => setIsLoading(false), 2000);
+    const loaderTimer = setTimeout(() => setIsLoading(false), 2500);
     if (!authLoading && isDataLoaded) {
       setIsLoading(false);
       clearTimeout(loaderTimer);
     }
     
     return () => clearTimeout(loaderTimer);
-  }, [authLoading, isDataLoaded, lowPerfMode]);
+  }, [authLoading, isDataLoaded, lowPerfMode, productionMode]);
 
   useEffect(() => {
     if (toast) {
@@ -172,9 +195,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0]">
+    <div className={`min-h-screen flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0] ${productionMode ? 'production-visuals' : ''}`}>
       <LoadingScreen isLoading={isLoading} />
-      <Starfield lowPerfMode={lowPerfMode} />
+      <Starfield lowPerfMode={lowPerfMode || !productionMode} />
       
       <Header 
         lang={lang as Language} 
@@ -190,23 +213,37 @@ export default function App() {
         toggleLowPerfMode={toggleLowPerfMode}
       />
 
+      {/* Mode Toggle Button (Floating) */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        onClick={toggleProductionMode}
+        className={`fixed bottom-24 right-6 z-40 p-3 rounded-full shadow-2xl border transition-all duration-500 ${productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'}`}
+        title={productionMode ? t.sdkModeMain : t.sdkModeProduction}
+      >
+        <Sparkles size={24} className={productionMode ? 'animate-pulse' : ''} />
+      </motion.button>
+
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 relative z-10">
         <PromoBanner showBanner={showBanner} lang={lang as Language} setModalContent={setModalContent} onClose={handleCloseBanner} />
 
         <AnimatePresence mode="wait">
           <motion.div
             key={section}
-            initial={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
-            transition={lowPerfMode ? { duration: 0 } : { duration: 0.3 }}
+            initial={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: -20, scale: 0.98 }}
+            transition={lowPerfMode ? { duration: 0 } : { duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
           >
-            <Suspense fallback={<div className="flex justify-center p-12"><div className="w-8 h-8 border-4 border-[#C3A6E6] border-t-transparent rounded-full animate-spin"></div></div>}>
+            <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#C3A6E6] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(195,166,230,0.3)]"></div></div>}>
               {section === 'home' && (
                 <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
                   <h2 className="text-3xl font-bold text-[#C3A6E6] mb-4">{t.homeTitle}</h2>
-                  <p className="text-lg text-gray-300 mb-6" dangerouslySetInnerHTML={{ __html: t.homeDesc }} />
-                  <div className="text-sm text-gray-400 italic">{t.lastUpdate}</div>
+                  <p className="text-gray-300 mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: t.homeDesc }} />
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <RefreshCw size={14} />
+                    {t.lastUpdate}
+                  </div>
                 </div>
               )}
 
@@ -283,7 +320,7 @@ export default function App() {
             initial={{ opacity: 0, y: 50, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
             exit={{ opacity: 0, y: 50, x: '-50%' }}
-            className="fixed bottom-8 left-1/2 z-50 bg-[#C3A6E6] text-[#2F244F] px-6 py-3 rounded-full font-bold shadow-lg border border-[#B094EB]"
+            className="fixed bottom-8 left-1/2 z-50 bg-[#C3A6E6] text-[#2F244F] px-8 py-4 rounded-2xl font-black shadow-2xl border-2 border-white/20 uppercase tracking-widest text-sm"
           >
             {toast}
           </motion.div>

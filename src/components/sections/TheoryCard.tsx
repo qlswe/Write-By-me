@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Star, Share2, Check, Edit, Trash2 } from 'lucide-react';
+import { Star, Share2, Check, Edit, Trash2, ArrowRight } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -58,57 +58,66 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
   return (
     <motion.div 
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.4, delay: index * 0.05, type: "spring", damping: 20 }}
       onClick={onClick}
-      className="bg-[#3E3160] p-6 rounded-2xl shadow-lg border border-[#5C4B8B] cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all group relative"
+      className="group relative bg-[#2F244F]/40 hover:bg-[#3E3160]/60 p-6 sm:p-8 rounded-[2rem] border border-[#5C4B8B]/40 hover:border-[#C3A6E6]/40 transition-all cursor-pointer overflow-hidden hsr-card-hover"
     >
-      <div className="flex justify-between items-start mb-2">
-        <div className="text-xs font-bold uppercase tracking-wider text-[#C3A6E6] bg-[#C3A6E6]/10 inline-block px-3 py-1 rounded-full">
+      {/* Decorative background element */}
+      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[#C3A6E6]/5 rounded-full blur-2xl group-hover:bg-[#C3A6E6]/10 transition-all" />
+      
+      <div className="flex justify-between items-start mb-6">
+        <div className="px-4 py-1.5 rounded-full bg-[#C3A6E6]/10 text-[#C3A6E6] text-[10px] font-black uppercase tracking-[0.2em] border border-[#C3A6E6]/20">
           {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 justify-end">
           {isAdmin && (
             <>
               <button 
                 onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
-                className="p-2 rounded-full transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-400/10"
+                className="p-2.5 rounded-xl bg-[#2F244F]/80 text-gray-400 hover:text-blue-400 hover:bg-blue-400/20 transition-all border border-transparent hover:border-blue-400/30"
                 title="Edit"
               >
-                <Edit size={20} />
+                <Edit size={18} />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
-                className="p-2 rounded-full transition-colors text-gray-400 hover:text-red-400 hover:bg-red-400/10"
+                className="p-2.5 rounded-xl bg-[#2F244F]/80 text-gray-400 hover:text-red-400 hover:bg-red-400/20 transition-all border border-transparent hover:border-red-400/30"
                 title="Delete"
               >
-                <Trash2 size={20} />
+                <Trash2 size={18} />
               </button>
             </>
           )}
           <button 
             onClick={handleShare}
-            className={`p-2 rounded-full transition-colors ${copied ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-[#C3A6E6] hover:bg-[#C3A6E6]/10'}`}
+            className={`p-2.5 rounded-xl bg-[#2F244F]/80 transition-all border border-transparent ${copied ? 'text-green-400 border-green-400/30 bg-green-400/20' : 'text-gray-400 hover:text-[#C3A6E6] hover:border-[#C3A6E6]/30 hover:bg-[#C3A6E6]/20'}`}
             title="Share"
           >
-            {copied ? <Check size={20} /> : <Share2 size={20} />}
+            {copied ? <Check size={18} /> : <Share2 size={18} />}
           </button>
           <button 
-            onClick={onToggleFavorite}
-            className={`p-2 rounded-full transition-colors ${isFavorite ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10'}`}
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(e); }}
+            className={`p-2.5 rounded-xl bg-[#2F244F]/80 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/20' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/20'}`}
           >
-            <Star size={20} fill={isFavorite ? "currentColor" : "none"} />
+            <Star size={18} fill={isFavorite ? "currentColor" : "none"} />
           </button>
         </div>
       </div>
-      <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#C3A6E6] transition-colors pr-8">
+
+      <h3 className="text-2xl sm:text-3xl font-black text-white mb-4 leading-tight tracking-tighter group-hover:text-[#C3A6E6] transition-colors">
         {theory.title[lang] || theory.title['en']}
       </h3>
-      <p className="text-gray-300 line-clamp-3">
+      
+      <p className="text-gray-400 text-sm sm:text-base line-clamp-3 mb-6 font-medium leading-relaxed group-hover:text-gray-300 transition-colors">
         {theory.summary[lang] || theory.summary['en']}
       </p>
+
+      <div className="flex items-center gap-2 text-[#C3A6E6] text-xs font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">
+        {t.readArchive} <ArrowRight size={14} />
+      </div>
     </motion.div>
   );
 });
