@@ -9,7 +9,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
  */
 export class MinistrySDK {
   private static instance: MinistrySDK;
-  private version: string = '1.3.0-pro';
+  private version: string = '1.3.0-beta';
   private logSubscribers: ((level: string, message: string, data?: any) => void)[] = [];
   private ready: boolean = false;
   private sdkConfig = {
@@ -26,7 +26,7 @@ export class MinistrySDK {
     
     // Stylized terminal message
     console.log(
-      `%c ⚡ MINISTRY SDK %c v${this.version} %c PRO EDITION %c`,
+      `%c ⚡ MINISTRY SDK %c v${this.version} %c BETA %c`,
       'background: #C3A6E6; color: #2F244F; font-weight: bold; padding: 4px 8px; border-radius: 4px 0 0 4px;',
       'background: #3E3160; color: #C3A6E6; font-weight: bold; padding: 4px 8px;',
       'background: #F8E71C; color: #2F244F; font-weight: bold; padding: 4px 8px; border-radius: 0 4px 4px 0;',
