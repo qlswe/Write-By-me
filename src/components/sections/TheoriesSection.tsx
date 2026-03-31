@@ -24,6 +24,7 @@ interface TheoriesSectionProps {
   theories?: any[];
   onEdit?: (theory: any) => void;
   onCreate?: () => void;
+  role?: 'admin' | 'moderator' | 'user';
 }
 
 export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
@@ -37,14 +38,16 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   lowPerfMode,
   theories = theoriesData,
   onEdit,
-  onCreate
+  onCreate,
+  role
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('TheoriesSection');
   const [selectedTheoryId, setSelectedTheoryId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { user } = useAuth();
-  const isAdmin = user?.email === 'semegladysev527@gmail.com';
+  const isAdmin = role === 'admin';
+  const isModerator = role === 'admin' || role === 'moderator';
   trackRender();
 
   const handleDelete = async (id: string) => {
@@ -159,7 +162,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               </div>
               
               <div className="flex flex-wrap gap-3 shrink-0 justify-end">
-                {isAdmin && (
+                {isModerator && (
                   <button 
                     onClick={() => onEdit?.(selectedTheory)}
                     className="p-4 rounded-2xl bg-[#5C4B8B]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
@@ -195,7 +198,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             />
 
             <div className="pt-10 border-t border-[#5C4B8B]">
-              <CommentsSection targetId={selectedTheory.id} lang={lang} lowPerfMode={lowPerfMode} />
+              <CommentsSection targetId={selectedTheory.id} lang={lang} lowPerfMode={lowPerfMode} role={role} />
             </div>
           </motion.div>
         ) : (
@@ -216,7 +219,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                   {t.theoriesSubTitle}
                 </p>
               </div>
-              {isAdmin && (
+              {isModerator && (
                 <button 
                   onClick={onCreate}
                   className="flex items-center gap-3 bg-[#C3A6E6] text-[#2F244F] px-6 py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-white hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#C3A6E6]/20"

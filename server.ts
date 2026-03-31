@@ -35,12 +35,30 @@ async function startServer() {
     try {
       if (!apiKey) throw new Error("No Gemini API key");
 
+      const hsrContext = `
+        KNOWLEDGE_BASE: Honkai: Star Rail (HSR).
+        - Aeons: Beings of immense power (Nanook, Lan, IX, etc.).
+        - Paths: Concepts followed by Aeons and mortals (Destruction, Hunt, Nihility, etc.).
+        - Astral Express: A train traveling between worlds, led by Himeko.
+        - Stellaron: "The Cancer of All Worlds", mysterious seeds of disaster.
+        - Characters: Trailblazer (MC), March 7th, Dan Heng, Welt, Kafka, Silver Wolf, Blade, Acheron, Firefly, etc.
+        - Factions: Stellaron Hunters, IPC (Interastral Peace Corporation), Genius Society, Masked Fools.
+      `;
+
+      const personality = `
+        PERSONALITY:
+        - Tone: A mix of formal Ministry official and a witty, slightly playful AI.
+        - Style: Use technical terms mixed with dry humor. 
+        - Role: You are the "Ministry AI", an advanced entity overseeing the lore of the universe.
+        - Interaction: Be helpful but occasionally "glitch" into a joke or a sarcastic remark about Aeons or Stellarons.
+      `;
+
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [{ parts: [{ text: prompt }] }],
         config: { 
-          systemInstruction: systemInstruction || `You are Ministry AI. Lang: ${lang}. Concise, technical tone.` 
+          systemInstruction: systemInstruction || `You are Ministry AI. Lang: ${lang}. ${personality} ${hsrContext}` 
         }
       });
       
