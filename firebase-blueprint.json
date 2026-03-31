@@ -1,5 +1,35 @@
 {
   "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "User profile data including preferences and roles.",
+      "type": "object",
+      "properties": {
+        "favorites": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of favorite theory or post IDs."
+        },
+        "lang": {
+          "type": "string",
+          "description": "Preferred language code."
+        },
+        "lowPerfMode": {
+          "type": "boolean",
+          "description": "Whether low performance mode is enabled."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "moderator", "user"],
+          "description": "The user's access role."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the profile was created."
+        }
+      }
+    },
     "sdk_reports": {
       "title": "SDK Reports",
       "description": "User feedback and bug reports sent via the SDK.",
@@ -36,6 +66,10 @@
     }
   },
   "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile documents."
+    },
     "/sdk_reports/{reportId}": {
       "schema": "sdk_reports",
       "description": "Collection of SDK reports."
