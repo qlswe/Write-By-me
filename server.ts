@@ -1,75 +1,73 @@
-// ministry-ai.ts
-// Полностью независимый клиентский модуль для Ministry AI
-// Работает прямо в браузере (Vite / React / Next / любой TS-проект)
-// Никакого сервера, никакого Google, никакого Express, никакого хостинга
-
-export interface MinistryAIResponse {
+interface AIResponse {
   text: string;
-  provider: "pollinations";
+  provider: 'pollinations_standalone' | 'error';
 }
 
-const HSR_CONTEXT = `
-  KNOWLEDGE_BASE: Honkai: Star Rail (HSR).
-  - Aeons: Beings of immense power (Nanook, Lan, IX, etc.).
-  - Paths: Concepts followed by Aeons and mortals (Destruction, Hunt, Nihility, etc.).
-  - Astral Express: A train traveling between worlds, led by Himeko.
-  - Stellaron: "The Cancer of All Worlds", mysterious seeds of disaster.
-  - Characters: Trailblazer (MC), March 7th, Dan Heng, Welt, Kafka, Silver Wolf, Blade, Acheron, Firefly, etc.
-  - Factions: Stellaron Hunters, IPC (Interastral Peace Corporation), Genius Society, Masked Fools.
-`;
-
-const PERSONALITY = `
-  PERSONALITY:
-  - Tone: A mix of formal Ministry official and a witty, slightly playful AI.
-  - Style: Use technical terms mixed with dry humor. 
-  - Role: You are the "Ministry AI", an advanced entity overseeing the lore of the universe.
-  - Interaction: Be helpful but occasionally "glitch" into a joke or a sarcastic remark about Aeons or Stellarons.
-`;
+interface PollinationsPayload {
+  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
+  model: string;
+  seed: number;
+}
 
 /**
- * Главная функция Ministry AI — полностью независимая
- * Заменяет все старые вызовы /api/ai/generate
+ * Ministry AI: Автономный модуль генерации контента.
+ * Не требует Google API и локального сервера.
  */
-export async function ministryAI(
-  prompt: string,
-  lang: string = "ru",
-  systemInstruction: string | null = null
-): Promise<string> {
-  if (!prompt || typeof prompt !== "string" || prompt.trim() === "") {
-    throw new Error("Prompt не может быть пустым");
-  }
+export const askMinistryAI = async (
+  userPrompt: string, 
+  lang: string = "ru"
+): Promise<AIResponse> => {
+  
+  const hsrContext: string = `
+    KNOWLEDGE_BASE: Honkai: Star Rail (HSR).
+    - Aeons: Beings of immense power (Nanook, Lan, IX, etc.).
+    - Paths: Concepts followed by Aeons and mortals.
+    - Astral Express: Led by Himeko.
+    - Characters: Trailblazer, March 7th, Dan Heng, Welt, Kafka, Acheron, Firefly.
+  `;
 
-  console.log(`[MINISTRY AI] Запрос → lang=${lang}, prompt=${prompt.substring(0, 40)}...`);
+  const personality: string = `
+    PERSONALITY:
+    - Tone: Mix of formal Ministry official and witty AI.
+    - Style: Technical terms + dry humor.
+    - Role: You are the "Ministry AI".
+    - Interaction: Be helpful but occasionally sarcastic about Aeons.
+  `;
 
-  // Собираем системный промпт
-  const defaultSystem = `You are Ministry AI. Lang: ${lang}. ${PERSONALITY} ${HSR_CONTEXT}`;
-  const fullSystem = systemInstruction || defaultSystem;
-
-  const fullPrompt = `${fullSystem}\n\nUser: ${prompt}`;
+  const systemInstruction: string = `You are Ministry AI. Lang: ${lang}. ${personality} ${hsrContext}`;
 
   try {
-    const response = await fetch("https://text.pollinations.ai/", {
-      method: "POST",
+    const payload: PollinationsPayload = {
+      messages: [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: userPrompt }
+      ],
+      model: 'openai',
+      seed: Math.floor(Math.random() * 888)
+    };
+
+    const response = await fetch('https://text.pollinations.ai/', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        messages: [{ role: "user", content: fullPrompt }],
-        model: "openai",
-        seed: 42,
-        temperature: 0.85,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      throw new Error(`Pollinations API error: ${response.status} ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error(`Status: ${response.status}`);
 
-    const text = await response.text();
-    return text.trim();
-  } catch (err) {
-    const error = err as Error;
-    console.error("[MINISTRY AI] Ошибка:", error.message);
-    throw error;
+    const text: string = await response.text();
+    
+    return { 
+      text: text || "Система пуста. Эоны поглотили ответ.", 
+      provider: 'pollinations_standalone' 
+    };
+
+  } catch (error) {
+    console.error("[MINISTRY_ERROR]:", error);
+    return { 
+      text: "Критическая ошибка систем связи. Вероятно, вмешательство Стелларона.", 
+      provider: 'error' 
+    };
   }
-}
+};
