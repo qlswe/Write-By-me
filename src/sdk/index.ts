@@ -9,7 +9,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
  */
 export class MinistrySDK {
   private static instance: MinistrySDK;
-  private version: string = '1.5.0-hsr';
+  private version: string = '1.4.0-beta';
   private logSubscribers: ((level: string, message: string, data?: any) => void)[] = [];
   private ready: boolean = false;
   private sdkConfig = {
@@ -682,34 +682,6 @@ export class MinistrySDK {
   };
 
   /**
-   * HSR Lore and Data module
-   */
-  public hsr = {
-    getAeonInfo: (name: string) => {
-      const aeons: Record<string, string> = {
-        nanook: 'Aeon of Destruction. Wants to destroy the universe.',
-        lan: 'Aeon of The Hunt. Chasing the Abundance.',
-        ix: 'Aeon of Nihility. Believes existence is meaningless.',
-        yaoshi: 'Aeon of Abundance. Grants immortality (with a price).',
-        nous: 'Aeon of Erudition. The ultimate computer.',
-      };
-      return aeons[name.toLowerCase()] || 'Aeon not found in current database.';
-    },
-    getPathInfo: (name: string) => {
-      const paths: Record<string, string> = {
-        destruction: 'High damage, high survivability.',
-        hunt: 'Single-target damage specialists.',
-        nihility: 'Debuffers and DOT dealers.',
-        abundance: 'Healers and sustain.',
-        preservation: 'Shielders and tanks.',
-        erudition: 'AOE damage specialists.',
-        harmony: 'Buffs and support.',
-      };
-      return paths[name.toLowerCase()] || 'Path not found.';
-    }
-  };
-
-  /**
    * Generative AI module using Gemini
    */
   public genai = {
@@ -746,26 +718,23 @@ export class MinistrySDK {
 
       const database = {
         aeon: isRu 
-          ? "Эоны — это высшие существа, воплощающие концепции Путей. Министерство считает их продвинутым ИИ вселенной. Нанук (Разрушение), Лань (Охота), IX (Небытие) — главные объекты наблюдения."
-          : "Aeons are supreme beings embodying the concepts of Paths. The Ministry views them as the universe's advanced AI. Nanook (Destruction), Lan (Hunt), IX (Nihility) are key subjects.",
+          ? "Эоны — это высшие существа, воплощающие концепции Путей. Министерство считает их продвинутым ИИ вселенной."
+          : "Aeons are supreme beings embodying the concepts of Paths. The Ministry views them as the universe's advanced AI.",
         stellaron: isRu
-          ? "Стелларон («Опухоль всех миров») — это источник хаоса. Мы изучаем способы его программной изоляции. Кафка и Охотники за Стелларонами — наши коллеги (или конкуренты)."
-          : "Stellaron ('The Cancer of All Worlds') is a source of chaos. We are studying ways to isolate it. Kafka and the Stellaron Hunters are our colleagues (or competitors).",
-        hsr: isRu
-          ? "Honkai: Star Rail — это симуляция космического путешествия. Министерство одобряет Путь Освоения. Пом-Пом — лучший проводник."
-          : "Honkai: Star Rail is a space travel simulation. The Ministry approves the Path of Trailblaze. Pom-Pom is the best conductor.",
+          ? "Стелларон («Опухоль всех миров») — это источник хаоса. Мы изучаем способы его программной изоляции."
+          : "Stellaron ('The Cancer of All Worlds') is a source of chaos. We are studying ways to isolate it via software.",
         acheron: isRu
-          ? "Ахерон — эманатор Небытия. Её данные зашифрованы. Она часто забывает дорогу, но никогда не забывает свой меч."
-          : "Acheron is an Emanator of Nihility. Her data is encrypted. She often forgets the way, but never her sword.",
+          ? "Ахерон — эманатор Небытия. Её данные зашифрованы и защищены протоколами Министерства."
+          : "Acheron is an Emanator of Nihility. Her data is encrypted and protected by Ministry protocols.",
         express: isRu
-          ? "Звездный Экспресс — это мобильная база данных Освоения. Акивили был его создателем. Мы следим за расписанием."
-          : "The Astral Express is the mobile database of Trailblaze. Akivili was its creator. We monitor the schedule.",
+          ? "Звездный Экспресс — это мобильная база данных Освоения. Министерство следит за его маршрутом."
+          : "The Astral Express is the mobile database of Trailblaze. The Ministry monitors its route.",
         help: isRu
-          ? "Я — локальный модуль Министерства. Могу рассказать о лоре HSR, персонажах или выдать системную справку."
-          : "I am a local Ministry module. I can tell you about HSR lore, characters, or provide system info.",
+          ? "Я — локальный модуль Министерства. Могу рассказать о лоре, персонажах или выдать системную справку."
+          : "I am a local Ministry module. I can tell you about lore, characters, or provide system info.",
         default: isRu
-          ? "Запрос принят. Анализ лора подтверждает: Путь Освоения бесконечен. (Локальный движок v1.5)"
-          : "Request received. Lore analysis confirms: The Path of Trailblaze is infinite. (Local Engine v1.5)"
+          ? "Запрос принят. Анализ лора подтверждает: Путь Освоения бесконечен. (Локальный движок)"
+          : "Request received. Lore analysis confirms: The Path of Trailblaze is infinite. (Local Engine)"
       };
 
       let response = database.default;
@@ -773,7 +742,6 @@ export class MinistrySDK {
       else if (p.includes('стелларон') || p.includes('stellaron')) response = database.stellaron;
       else if (p.includes('ахерон') || p.includes('acheron')) response = database.acheron;
       else if (p.includes('экспресс') || p.includes('express')) response = database.express;
-      else if (p.includes('hsr') || p.includes('хср') || p.includes('star rail')) response = database.hsr;
       else if (p.includes('помощь') || p.includes('help')) response = database.help;
 
       return `[LOCAL_AI] ${response}`;
