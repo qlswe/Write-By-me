@@ -715,7 +715,7 @@ export class MinistrySDK {
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string) => {
       try {
-        const response = await fetch('/api/ai/generate', {
+        const response = await fetch('https://ais-dev-g6mk2usjcbx5fep6hun7ul-492067002163.europe-west2.run.app/api/ai/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt, lang, systemInstruction })
