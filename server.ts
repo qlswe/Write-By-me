@@ -12,7 +12,7 @@ async function startServer() {
   app.use(express.json());
 
   // --- УНИВЕРСАЛЬНЫЙ ОБРАБОТЧИК POLLINATIONS ---
-  app.post("/api/ai/generate", async (req, res) => {
+  app.post("https://ais-dev-g6mk2usjcbx5fep6hun7ul-492067002163.europe-west2.run.app/api/ai/generate", async (req, res) => {
     const { 
       prompt, 
       lang = "ru", 
