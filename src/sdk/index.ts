@@ -1,6 +1,5 @@
-import { Language } from '../data/translations';
-import { Theory, BlogPost, GameEvent, PromoCode } from '../data/content';
-import { db } from '../firebase';
+type Language = "ru" | "en" | "by" | "jp" | "de" | "fr" | "zh";
+import { db } from './firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 /**
@@ -713,24 +712,35 @@ export class MinistrySDK {
    * Generative AI module using Gemini
    */
   public genai = {
-    generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string) => {
+    generate: async (prompt: string, lang: Language = "ru", systemInstruction?: string) => {
       try {
-        const response = await fetch('/api/ai/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, lang, systemInstruction })
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) throw new Error("API key missing");
+        
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: systemInstruction || `You are an AI assistant. Respond in ${lang}.` }]
+            },
+            contents: [{
+              parts: [{ text: prompt }]
+            }]
+          })
         });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'API Error');
+        
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error?.message || "API Error");
         }
-
-        const data = await response.json();
-        return data.text;
-      } catch (error) {
-        // Silence the error in console to avoid user panic, just log a system warning
-        this.logging.system('Switching to Local Lore Engine due to API restriction.');
+        
+        const data = await res.json();
+        return data.candidates[0].content.parts[0].text;
+      } catch (e) {
+        this.logging.system("Switching to Local Lore Engine due to API restriction.");
         return this.localAi.generate(prompt, lang);
       }
     }
@@ -799,7 +809,7 @@ export class MinistrySDK {
       if (cmd === 'regim') {
         if (args[0] === 'ai') {
           this.terminalMode = 'ai';
-          return lang === 'ru' ? 'РЕЖИМ ИИ АКТИВИРОВАН (Gemini Flash - Бесплатно).' : 'AI MODE ACTIVATED (Gemini Flash - Free).';
+          return lang === 'ru' ? 'РЕЖИМ ИИ АКТИВИРОВАН (Бесплатный REST API).' : 'AI MODE ACTIVATED (Free REST API).';
         }
         if (args[0] === 'local') {
           this.terminalMode = 'local';
@@ -858,7 +868,7 @@ export class MinistrySDK {
           description: "Комплексный набор инструментов для разработчиков и системных администраторов в экосистеме Ахахи.",
           useCases: [
             "Синхронизация данных: Синхронизация состояния игры между клиентами через Firebase.",
-            "Интеграция ИИ: Использование Gemini AI для динамических диалогов и анализа контента.",
+            "Интеграция ИИ: Использование бесплатных REST API для динамических диалогов и анализа контента.",
             "Логирование и Мониторинг: Отслеживание производительности и взаимодействий в реальном времени.",
             "Безопасность: Валидация ввода и ограничение частоты запросов.",
             "Доступ к оборудованию: Управление вибрацией, буфером обмена и функциями обмена."
@@ -871,7 +881,7 @@ export class MinistrySDK {
         description: "A comprehensive toolkit for game developers and system administrators within the Ahahi ecosystem.",
         useCases: [
           "Data Synchronization: Sync game state across multiple clients using Firebase.",
-          "AI Integration: Leverage Gemini AI for dynamic dialogue, theory generation, and content analysis.",
+          "AI Integration: Leverage free REST APIs for dynamic dialogue, theory generation, and content analysis.",
           "Logging & Monitoring: Track performance and user interactions in real-time.",
           "Security: Validate user input and enforce rate limits on critical actions.",
           "Hardware Access: Control device vibration, clipboard, and sharing features."
