@@ -24,7 +24,6 @@ interface BlogSectionProps {
   blogPosts?: any[];
   onEdit?: (post: any) => void;
   onCreate?: () => void;
-  role?: 'admin' | 'moderator' | 'user';
 }
 
 export const BlogSection: React.FC<BlogSectionProps> = ({
@@ -38,15 +37,13 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   lowPerfMode,
   blogPosts = blogPostsData,
   onEdit,
-  onCreate,
-  role
+  onCreate
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('BlogSection');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const { user } = useAuth();
-  const isAdmin = role === 'admin';
-  const isModerator = role === 'admin' || role === 'moderator';
+  const isAdmin = user?.email === 'semegladysev527@gmail.com';
   trackRender();
 
   const handleDelete = async (id: string) => {
@@ -137,7 +134,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               </div>
               
               <div className="flex flex-wrap gap-3 shrink-0 justify-end">
-                {isModerator && (
+                {isAdmin && (
                   <button 
                     onClick={() => onEdit?.(selectedPost)}
                     className="p-4 rounded-2xl bg-[#5C4B8B]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
@@ -162,7 +159,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             />
 
             <div className="pt-10 border-t border-[#5C4B8B]">
-              <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} role={role} />
+              <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} />
             </div>
           </motion.div>
         ) : (
@@ -183,7 +180,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                   {t.blogSubTitle}
                 </p>
               </div>
-              {isModerator && (
+              {isAdmin && (
                 <button 
                   onClick={onCreate}
                   className="flex items-center gap-3 bg-[#C3A6E6] text-[#2F244F] px-6 py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-white hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#C3A6E6]/20"

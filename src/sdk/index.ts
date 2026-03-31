@@ -710,7 +710,7 @@ export class MinistrySDK {
   };
 
   /**
-   * Generative AI module
+   * Generative AI module using Gemini
    */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string) => {
@@ -799,7 +799,7 @@ export class MinistrySDK {
       if (cmd === 'regim') {
         if (args[0] === 'ai') {
           this.terminalMode = 'ai';
-          return lang === 'ru' ? 'РЕЖИМ ИИ АКТИВИРОВАН (Ministry AI).' : 'AI MODE ACTIVATED (Ministry AI).';
+          return lang === 'ru' ? 'РЕЖИМ ИИ АКТИВИРОВАН (Gemini Flash - Бесплатно).' : 'AI MODE ACTIVATED (Gemini Flash - Free).';
         }
         if (args[0] === 'local') {
           this.terminalMode = 'local';
@@ -858,7 +858,7 @@ export class MinistrySDK {
           description: "Комплексный набор инструментов для разработчиков и системных администраторов в экосистеме Ахахи.",
           useCases: [
             "Синхронизация данных: Синхронизация состояния игры между клиентами через Firebase.",
-            "Интеграция ИИ: Использование Ministry AI для динамических диалогов и анализа контента.",
+            "Интеграция ИИ: Использование Gemini AI для динамических диалогов и анализа контента.",
             "Логирование и Мониторинг: Отслеживание производительности и взаимодействий в реальном времени.",
             "Безопасность: Валидация ввода и ограничение частоты запросов.",
             "Доступ к оборудованию: Управление вибрацией, буфером обмена и функциями обмена."
@@ -871,7 +871,7 @@ export class MinistrySDK {
         description: "A comprehensive toolkit for game developers and system administrators within the Ahahi ecosystem.",
         useCases: [
           "Data Synchronization: Sync game state across multiple clients using Firebase.",
-          "AI Integration: Leverage Ministry AI for dynamic dialogue, theory generation, and content analysis.",
+          "AI Integration: Leverage Gemini AI for dynamic dialogue, theory generation, and content analysis.",
           "Logging & Monitoring: Track performance and user interactions in real-time.",
           "Security: Validate user input and enforce rate limits on critical actions.",
           "Hardware Access: Control device vibration, clipboard, and sharing features."

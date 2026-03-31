@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -19,10 +20,21 @@ async function startServer() {
   app.post("/api/ai/generate", async (req, res) => {
     const { prompt, lang, systemInstruction } = req.body;
     
+    // Try Gemini first
+    const keysToTry = [
+      process.env.GEMINI_API_KEY,
+      process.env.GOOGLE_API_KEY,
+      process.env.API_KEY,
+      'AIzaSyAR9BUXDrXdzwYvFbihIKqNVicbFGZ6pVQ'
+    ];
+    
+    const apiKey = keysToTry.find(k => k && typeof k === 'string' && k.trim() !== '' && k !== 'undefined')?.trim();
+
     console.log(`[SERVER] AI Request: lang=${lang}, promptPrefix=${prompt.substring(0, 20)}...`);
 
     try {
-      // Use Pollinations.ai (Free, No Key Required)
+      if (!apiKey) throw new Error("No Gemini API key");
+
       const hsrContext = `
         KNOWLEDGE_BASE: Honkai: Star Rail (HSR).
         - Aeons: Beings of immense power (Nanook, Lan, IX, etc.).
@@ -41,30 +53,48 @@ async function startServer() {
         - Interaction: Be helpful but occasionally "glitch" into a joke or a sarcastic remark about Aeons or Stellarons.
       `;
 
-      const systemPrompt = systemInstruction || `You are Ministry AI. Lang: ${lang}. ${personality} ${hsrContext}`;
-      const fullPrompt = `${systemPrompt}\n\nUser: ${prompt}`;
-      
-      const response = await fetch(`https://text.pollinations.ai/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: fullPrompt }],
-          model: 'openai', 
-          seed: 42
-        })
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ parts: [{ text: prompt }] }],
+        config: { 
+          systemInstruction: systemInstruction || `You are Ministry AI. Lang: ${lang}. ${personality} ${hsrContext}` 
+        }
       });
-
-      if (!response.ok) throw new Error(`Pollinations API error: ${response.statusText}`);
       
-      const text = await response.text();
-      return res.json({ text, provider: 'pollinations' });
+      if (!response.text) throw new Error("Empty Gemini response");
+      return res.json({ text: response.text, provider: 'gemini' });
 
-    } catch (error: any) {
-      console.error("[SERVER] AI generation failed:", error);
-      res.status(500).json({ 
-        error: "AI generation failed",
-        details: error.message 
-      });
+    } catch (geminiError: any) {
+      console.warn("[SERVER] Gemini failed, switching to Free AI (Pollinations):", geminiError.message);
+      
+      try {
+        // Fallback to Pollinations.ai (Free, No Key Required)
+        const systemPrompt = systemInstruction || `You are Ministry AI. Lang: ${lang}. Concise, technical tone.`;
+        const fullPrompt = `${systemPrompt}\n\nUser: ${prompt}`;
+        
+        const response = await fetch(`https://text.pollinations.ai/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [{ role: 'user', content: fullPrompt }],
+            model: 'openai', // This maps to a high-quality open-source model on their end
+            seed: 42
+          })
+        });
+
+        if (!response.ok) throw new Error(`Pollinations API error: ${response.statusText}`);
+        
+        const text = await response.text();
+        return res.json({ text, provider: 'pollinations' });
+
+      } catch (freeError: any) {
+        console.error("[SERVER] All AI providers failed:", freeError);
+        res.status(500).json({ 
+          error: "All AI providers failed",
+          details: freeError.message 
+        });
+      }
     }
   });
 

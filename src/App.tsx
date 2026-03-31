@@ -51,7 +51,7 @@ export default function App() {
   const [showBanner, setShowBanner] = useState(false);
 
   // User Data (Syncs with Firebase)
-  const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role } = useUserData('ru');
+  const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded } = useUserData('ru');
   const { theories, blogPosts, events } = useContent();
 
   // Production Mode (High Fidelity)
@@ -220,7 +220,6 @@ export default function App() {
         clearFavorites={clearFavorites}
         lowPerfMode={lowPerfMode}
         toggleLowPerfMode={toggleLowPerfMode}
-        role={role}
       />
 
       {/* Mode Toggle Button (Floating) */}
@@ -302,7 +301,6 @@ export default function App() {
                   theories={theories}
                   onEdit={setEditingTheory}
                   onCreate={() => setIsCreatingTheory(true)}
-                  role={role}
                 />
               )}
 
@@ -319,7 +317,6 @@ export default function App() {
                   blogPosts={blogPosts}
                   onEdit={setEditingBlog}
                   onCreate={() => setIsCreatingBlog(true)}
-                  role={role}
                 />
               )}
 
@@ -330,7 +327,6 @@ export default function App() {
                   events={events}
                   onEdit={setEditingEvent}
                   onCreate={() => setIsCreatingEvent(true)}
-                  role={role}
                 />
               )}
               {section === 'tierlist' && <TierListSection lang={lang as Language} lowPerfMode={lowPerfMode} />}

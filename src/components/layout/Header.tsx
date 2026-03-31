@@ -19,7 +19,6 @@ interface HeaderProps {
   clearFavorites: () => void;
   lowPerfMode?: boolean;
   toggleLowPerfMode?: () => void;
-  role?: 'admin' | 'moderator' | 'user';
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,8 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   favorites,
   clearFavorites,
   lowPerfMode,
-  toggleLowPerfMode,
-  role
+  toggleLowPerfMode
 }) => {
   const t = translations[lang];
   const { user, loginWithGoogle, logout } = useAuth();
@@ -140,13 +138,6 @@ export const Header: React.FC<HeaderProps> = ({
                             <div>
                               <div className="font-bold text-white truncate">{user.displayName}</div>
                               <div className="text-xs text-gray-400 truncate">{user.email}</div>
-                              {role && role !== 'user' && (
-                                <div className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                  role === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                }`}>
-                                  {role}
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -253,13 +244,6 @@ export const Header: React.FC<HeaderProps> = ({
                     <div>
                       <div className="text-white font-bold">{user.displayName}</div>
                       <div className="text-xs text-gray-400">{user.email}</div>
-                      {role && role !== 'user' && (
-                        <div className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                          role === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                        }`}>
-                          {role}
-                        </div>
-                      )}
                     </div>
                   </div>
                   <div className="text-sm text-gray-300 bg-[#3E3160]/50 p-3 rounded-xl border border-[#5C4B8B]/50">

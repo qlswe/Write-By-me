@@ -16,7 +16,6 @@ interface UserData {
   trailblazerLevel?: number;
   signature?: string;
   mainCharacter?: string;
-  role?: 'admin' | 'moderator' | 'user';
 }
 
 export function useUserData(initialLang: string) {
@@ -30,7 +29,6 @@ export function useUserData(initialLang: string) {
   const [trailblazerLevel, setTrailblazerLevel] = useState<number>(1);
   const [signature, setSignature] = useState<string>('');
   const [mainCharacter, setMainCharacter] = useState<string>('Stelle');
-  const [role, setRole] = useState<'admin' | 'moderator' | 'user'>('user');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // Sync i18n when lang state changes
@@ -94,7 +92,6 @@ export function useUserData(initialLang: string) {
         if (data.trailblazerLevel !== undefined) setTrailblazerLevel(data.trailblazerLevel);
         if (data.signature !== undefined) setSignature(data.signature);
         if (data.mainCharacter !== undefined) setMainCharacter(data.mainCharacter);
-        if (data.role !== undefined) setRole(data.role);
       } else {
         // Create initial document if it doesn't exist
         setDoc(userRef, {
@@ -106,7 +103,6 @@ export function useUserData(initialLang: string) {
           trailblazerLevel: trailblazerLevel,
           signature: signature,
           mainCharacter: mainCharacter,
-          role: 'user',
           createdAt: new Date().toISOString()
         }, { merge: true }).catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
       }
@@ -216,5 +212,5 @@ export function useUserData(initialLang: string) {
     }
   }, [user]);
 
-  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, hsrUid, hsrServer, trailblazerLevel, signature, mainCharacter, role, updateProfile, isDataLoaded };
+  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, hsrUid, hsrServer, trailblazerLevel, signature, mainCharacter, updateProfile, isDataLoaded };
 }

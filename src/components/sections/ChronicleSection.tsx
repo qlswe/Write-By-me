@@ -15,18 +15,16 @@ interface ChronicleSectionProps {
   events: any[];
   onEdit?: (event: any) => void;
   onCreate?: () => void;
-  role?: 'admin' | 'moderator' | 'user';
 }
 
-export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPerfMode, events, onEdit, onCreate, role }) => {
+export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPerfMode, events, onEdit, onCreate }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('ChronicleSection');
   trackRender();
 
   const [now, setNow] = useState(new Date());
   const { user } = useAuth();
-  const isAdmin = role === 'admin' || user?.email === 'semegladysev527@gmail.com';
-  const isModerator = role === 'admin' || role === 'moderator' || isAdmin;
+  const isAdmin = user?.email === 'semegladysev527@gmail.com';
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -55,7 +53,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
           </h2>
           <p className="text-gray-400 text-sm mt-1">{t.chronicleDesc}</p>
         </div>
-        {isModerator && (
+        {isAdmin && (
           <button onClick={onCreate} className="flex items-center gap-2 bg-[#C3A6E6] text-[#2F244F] px-5 py-2.5 rounded-xl font-bold hover:bg-white transition-all shadow-lg hover:shadow-[#C3A6E6]/20">
             <Plus size={20} />
             {t.createEvent}
@@ -117,16 +115,14 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
                     </div>
                   </div>
                   
-                  {isModerator && (
+                  {isAdmin && (
                     <div className="flex gap-2 self-end sm:self-start">
                       <button onClick={() => onEdit?.(event)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-xl transition-colors border border-transparent hover:border-blue-400/30">
                         <Edit size={18} />
                       </button>
-                      {isAdmin && (
-                        <button onClick={() => handleDelete(event.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors border border-transparent hover:border-red-400/30">
-                          <Trash2 size={18} />
-                        </button>
-                      )}
+                      <button onClick={() => handleDelete(event.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-xl transition-colors border border-transparent hover:border-red-400/30">
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   )}
                 </div>

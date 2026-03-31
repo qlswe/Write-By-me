@@ -12,7 +12,6 @@ service cloud.firestore {
     //   - favorites: list of strings (optional) - List of favorite item IDs
     //   - lang: string (optional) - Preferred language
     //   - lowPerfMode: boolean (optional) - Low performance mode flag
-    //   - role: string (required) - User role: 'admin', 'moderator', 'user'
     //   - createdAt: string (optional) - ISO timestamp of creation
     //
     // Collection: comments
@@ -58,11 +57,6 @@ service cloud.firestore {
           (request.auth.token.email == "semegladysev527@gmail.com" && request.auth.token.email_verified == true));
     }
 
-    function isModerator() {
-      return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'moderator' || isAdmin());
-    }
-
     function hasOnlyAllowedFields(fields) {
       return request.resource.data.keys().hasOnly(fields);
     }
@@ -72,11 +66,10 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['favorites', 'lang', 'lowPerfMode', 'role', 'createdAt']) &&
+      return hasOnlyAllowedFields(['favorites', 'lang', 'lowPerfMode', 'createdAt']) &&
              (!('favorites' in data) || (data.favorites is list && data.favorites.size() <= 1000)) &&
              (!('lang' in data) || (data.lang is string && data.lang.size() <= 10)) &&
              (!('lowPerfMode' in data) || data.lowPerfMode is bool) &&
-             (!('role' in data) || (data.role is string && data.role in ['admin', 'moderator', 'user'])) &&
              (!('createdAt' in data) || data.createdAt is string);
     }
 
@@ -187,16 +180,13 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isModerator();
-      allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
-                    (request.resource.data.role == 'user' || isAdmin());
-      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
-                        request.resource.data.role == resource.data.role &&
-                        (!('createdAt' in request.resource.data) || 
-                         !('createdAt' in resource.data) || 
-                         request.resource.data.createdAt == resource.data.createdAt)) ||
-                       (isAdmin() && isValidUser(request.resource.data));
-      allow delete: if isAdmin();
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && 
+                    (!('createdAt' in request.resource.data) || 
+                     !('createdAt' in resource.data) || 
+                     request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if isOwner(userId);
     }
 
     match /comments/{commentId} {
@@ -208,7 +198,7 @@ service cloud.firestore {
                         request.resource.data.createdAt == resource.data.createdAt) ||
                        isValidLikeUpdate() ||
                        (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
-      allow delete: if isOwner(resource.data.authorUid) || isModerator();
+      allow delete: if isOwner(resource.data.authorUid) || isAdmin();
     }
 
     match /feedback/{feedbackId} {

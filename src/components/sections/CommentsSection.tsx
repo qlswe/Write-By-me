@@ -29,7 +29,6 @@ interface CommentsSectionProps {
   targetId: string;
   lang: Language;
   lowPerfMode?: boolean;
-  role?: 'admin' | 'moderator' | 'user';
 }
 
 const locales = {
@@ -42,12 +41,11 @@ const locales = {
   zh: zhCN
 };
 
-export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang, lowPerfMode, role }) => {
+export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang, lowPerfMode }) => {
   const { trackRender } = usePerfLogger('CommentsSection');
   trackRender();
   
   const { user, loginWithGoogle } = useAuth();
-  const isModerator = role === 'admin' || role === 'moderator';
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -239,17 +237,15 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
                 </span>
               </div>
               <div className="flex items-center gap-1 sm:gap-2 ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                {user && (user.uid === comment.authorUid || isModerator) && (
+                {user && user.uid === comment.authorUid && (
                 <>
-                  {user.uid === comment.authorUid && (
-                    <button
-                      onClick={() => handleEdit(comment)}
-                      className="text-gray-400 hover:text-[#C3A6E6] transition-colors p-1"
-                      title="Редактировать"
-                    >
-                      <Edit2 size={14} className="sm:w-4 sm:h-4" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleEdit(comment)}
+                    className="text-gray-400 hover:text-[#C3A6E6] transition-colors p-1"
+                    title="Редактировать"
+                  >
+                    <Edit2 size={14} className="sm:w-4 sm:h-4" />
+                  </button>
                   <button
                     onClick={() => setCommentToDelete(comment.id)}
                     className="text-gray-400 hover:text-red-400 transition-colors p-1"
