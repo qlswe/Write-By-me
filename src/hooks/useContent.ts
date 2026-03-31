@@ -1,25 +1,25 @@
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
-import { miscellanyData as localMiscellany, blogPostsData as localBlogPosts, eventsData as localEvents } from '../data/content';
+import { theoriesData as localTheories, blogPostsData as localBlogPosts, eventsData as localEvents } from '../data/content';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 
 export function useContent() {
-  const [miscellanies, setMiscellanies] = useState<any[]>(localMiscellany);
+  const [theories, setTheories] = useState<any[]>(localTheories);
   const [blogPosts, setBlogPosts] = useState<any[]>(localBlogPosts);
   const [events, setEvents] = useState<any[]>(localEvents);
 
   useEffect(() => {
-    const qMiscellanies = query(collection(db, 'miscellanies'), orderBy('createdAt', 'desc'));
-    const unsubscribeMiscellanies = onSnapshot(qMiscellanies, (snapshot) => {
-      const firestoreMiscellanies = snapshot.docs.map(doc => ({
+    const qTheories = query(collection(db, 'theories'), orderBy('createdAt', 'desc'));
+    const unsubscribeTheories = onSnapshot(qTheories, (snapshot) => {
+      const firestoreTheories = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      // Merge local and firestore miscellanies
-      // Firestore miscellanies don't have LocalizedString, they just have a string.
-      // We will map them to look like local miscellanies for the UI.
-      const mappedFirestoreMiscellanies = firestoreMiscellanies.map((t: any) => {
+      // Merge local and firestore theories
+      // Firestore theories don't have LocalizedString, they just have a string.
+      // We will map them to look like local theories for the UI.
+      const mappedFirestoreTheories = firestoreTheories.map((t: any) => {
         const title = typeof t.title === 'string' ? { ru: t.title, en: t.title, by: t.title, jp: t.title, de: t.title, fr: t.title, zh: t.title } : t.title;
         const summary = typeof t.summary === 'string' ? { ru: t.summary, en: t.summary, by: t.summary, jp: t.summary, de: t.summary, fr: t.summary, zh: t.summary } : t.summary;
         const content = typeof t.content === 'string' ? { ru: t.content, en: t.content, by: t.content, jp: t.content, de: t.content, fr: t.content, zh: t.content } : t.content;
@@ -31,11 +31,11 @@ export function useContent() {
         };
       });
       
-      const firestoreIds = new Set(mappedFirestoreMiscellanies.map(t => t.id));
-      const filteredLocalMiscellany = localMiscellany.filter(t => !firestoreIds.has(t.id));
-      setMiscellanies([...mappedFirestoreMiscellanies, ...filteredLocalMiscellany]);
+      const firestoreIds = new Set(mappedFirestoreTheories.map(t => t.id));
+      const filteredLocalTheories = localTheories.filter(t => !firestoreIds.has(t.id));
+      setTheories([...mappedFirestoreTheories, ...filteredLocalTheories]);
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'miscellanies');
+      handleFirestoreError(error, OperationType.GET, 'theories');
     });
 
     const qBlogPosts = query(collection(db, 'blogPosts'), orderBy('createdAt', 'desc'));
@@ -85,11 +85,11 @@ export function useContent() {
     });
 
     return () => {
-      unsubscribeMiscellanies();
+      unsubscribeTheories();
       unsubscribeBlogPosts();
       unsubscribeEvents();
     };
   }, []);
 
-  return { miscellanies, blogPosts, events };
+  return { theories, blogPosts, events };
 }

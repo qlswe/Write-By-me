@@ -1,5 +1,5 @@
 import { Language } from '../data/translations';
-import { Miscellany, BlogPost, GameEvent, PromoCode } from '../data/content';
+import { Theory, BlogPost, GameEvent, PromoCode } from '../data/content';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -710,11 +710,82 @@ export class MinistrySDK {
   };
 
   /**
+   * Generative AI module
+   */
+  public genai = {
+    generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string) => {
+      try {
+        const response = await fetch('/api/ai/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, lang, systemInstruction })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'API Error');
+        }
+
+        const data = await response.json();
+        return data.text;
+      } catch (error) {
+        // Silence the error in console to avoid user panic, just log a system warning
+        this.logging.system('Switching to Local Lore Engine due to API restriction.');
+        return this.localAi.generate(prompt, lang);
+      }
+    }
+  };
+
+  /**
+   * Local Lore Engine (Enhanced with Keyword Matching)
+   */
+  public localAi = {
+    generate: (prompt: string, lang: Language = 'ru') => {
+      const p = prompt.toLowerCase();
+      const isRu = lang === 'ru';
+
+      const database = {
+        aeon: isRu 
+          ? "Эоны — это высшие существа, воплощающие концепции Путей. Министерство считает их продвинутым ИИ вселенной. Нанук (Разрушение), Лань (Охота), IX (Небытие) — главные объекты наблюдения."
+          : "Aeons are supreme beings embodying the concepts of Paths. The Ministry views them as the universe's advanced AI. Nanook (Destruction), Lan (Hunt), IX (Nihility) are key subjects.",
+        stellaron: isRu
+          ? "Стелларон («Опухоль всех миров») — это источник хаоса. Мы изучаем способы его программной изоляции. Кафка и Охотники за Стелларонами — наши коллеги (или конкуренты)."
+          : "Stellaron ('The Cancer of All Worlds') is a source of chaos. We are studying ways to isolate it. Kafka and the Stellaron Hunters are our colleagues (or competitors).",
+        hsr: isRu
+          ? "Honkai: Star Rail — это симуляция космического путешествия. Министерство одобряет Путь Освоения. Пом-Пом — лучший проводник."
+          : "Honkai: Star Rail is a space travel simulation. The Ministry approves the Path of Trailblaze. Pom-Pom is the best conductor.",
+        acheron: isRu
+          ? "Ахерон — эманатор Небытия. Её данные зашифрованы. Она часто забывает дорогу, но никогда не забывает свой меч."
+          : "Acheron is an Emanator of Nihility. Her data is encrypted. She often forgets the way, but never her sword.",
+        express: isRu
+          ? "Звездный Экспресс — это мобильная база данных Освоения. Акивили был его создателем. Мы следим за расписанием."
+          : "The Astral Express is the mobile database of Trailblaze. Akivili was its creator. We monitor the schedule.",
+        help: isRu
+          ? "Я — локальный модуль Министерства. Могу рассказать о лоре HSR, персонажах или выдать системную справку."
+          : "I am a local Ministry module. I can tell you about HSR lore, characters, or provide system info.",
+        default: isRu
+          ? "Запрос принят. Анализ лора подтверждает: Путь Освоения бесконечен. (Локальный движок v1.5)"
+          : "Request received. Lore analysis confirms: The Path of Trailblaze is infinite. (Local Engine v1.5)"
+      };
+
+      let response = database.default;
+      if (p.includes('эон') || p.includes('aeon')) response = database.aeon;
+      else if (p.includes('стелларон') || p.includes('stellaron')) response = database.stellaron;
+      else if (p.includes('ахерон') || p.includes('acheron')) response = database.acheron;
+      else if (p.includes('экспресс') || p.includes('express')) response = database.express;
+      else if (p.includes('hsr') || p.includes('хср') || p.includes('star rail')) response = database.hsr;
+      else if (p.includes('помощь') || p.includes('help')) response = database.help;
+
+      return `[LOCAL_AI] ${response}`;
+    }
+  };
+
+  /**
    * Terminal simulation module
    */
-  private terminalMode: 'normal' = 'normal';
+  private terminalMode: 'normal' | 'ai' | 'local' = 'normal';
   public terminal = {
-    setMode: (mode: 'normal') => {
+    setMode: (mode: 'normal' | 'ai' | 'local') => {
       this.terminalMode = mode;
       this.logging.system(`Terminal mode changed to: ${mode}`);
     },
@@ -724,11 +795,36 @@ export class MinistrySDK {
       const cmd = parts[0].toLowerCase();
       const args = parts.slice(1);
 
+      // Handle mode switching
+      if (cmd === 'regim') {
+        if (args[0] === 'ai') {
+          this.terminalMode = 'ai';
+          return lang === 'ru' ? 'РЕЖИМ ИИ АКТИВИРОВАН (Ministry AI).' : 'AI MODE ACTIVATED (Ministry AI).';
+        }
+        if (args[0] === 'local') {
+          this.terminalMode = 'local';
+          return lang === 'ru' ? 'ЛОКАЛЬНЫЙ РЕЖИМ АКТИВИРОВАН (Без API).' : 'LOCAL MODE ACTIVATED (No API).';
+        }
+      }
+      
+      if (cmd === 'exit') {
+        this.terminalMode = 'normal';
+        return lang === 'ru' ? 'РЕЖИМ ДЕАКТИВИРОВАН.' : 'MODE DEACTIVATED.';
+      }
+
+      // Execution logic
+      if (this.terminalMode === 'ai') {
+        return await this.genai.generate(command, lang);
+      }
+      if (this.terminalMode === 'local') {
+        return this.localAi.generate(command, lang);
+      }
+
       switch (cmd) {
         case 'help':
           return lang === 'ru' 
-            ? 'Доступные команды: help, version, status, echo [текст], clear, ping'
-            : 'Available commands: help, version, status, echo [text], clear, ping';
+            ? 'Доступные команды: help, version, status, echo [текст], gen [запрос], regim ai, exit ai, clear, ping'
+            : 'Available commands: help, version, status, echo [text], gen [prompt], regim ai, exit ai, clear, ping';
         case 'version':
           return `Ministry SDK v${this.version} (BETA EDITION)`;
         case 'status':
@@ -736,15 +832,17 @@ export class MinistrySDK {
           return statusRes;
         case 'echo':
           return args.join(' ');
-        case 'clear':
-          this.events.emit('terminal_clear');
-          return '';
+        case 'gen':
+          if (args.length === 0) return lang === 'ru' ? 'Использование: gen [запрос]' : 'Usage: gen [prompt]';
+          return await this.genai.generate(args.join(' '), lang);
         case 'ping':
-          return 'Pong! Connection stable.';
+          return 'pong';
+        case 'clear':
+          return 'CLEAR_TERMINAL';
         default:
           return lang === 'ru' 
-            ? `Команда не распознана: ${cmd}. Введите 'help' для списка команд.`
-            : `Command not recognized: ${cmd}. Type 'help' for available commands.`;
+            ? `Неизвестная команда: ${cmd}. Введите 'help' для списка команд.`
+            : `Unknown command: ${cmd}. Type 'help' for available commands.`;
       }
     }
   };
@@ -760,6 +858,7 @@ export class MinistrySDK {
           description: "Комплексный набор инструментов для разработчиков и системных администраторов в экосистеме Ахахи.",
           useCases: [
             "Синхронизация данных: Синхронизация состояния игры между клиентами через Firebase.",
+            "Интеграция ИИ: Использование Ministry AI для динамических диалогов и анализа контента.",
             "Логирование и Мониторинг: Отслеживание производительности и взаимодействий в реальном времени.",
             "Безопасность: Валидация ввода и ограничение частоты запросов.",
             "Доступ к оборудованию: Управление вибрацией, буфером обмена и функциями обмена."
@@ -772,6 +871,7 @@ export class MinistrySDK {
         description: "A comprehensive toolkit for game developers and system administrators within the Ahahi ecosystem.",
         useCases: [
           "Data Synchronization: Sync game state across multiple clients using Firebase.",
+          "AI Integration: Leverage Ministry AI for dynamic dialogue, theory generation, and content analysis.",
           "Logging & Monitoring: Track performance and user interactions in real-time.",
           "Security: Validate user input and enforce rate limits on critical actions.",
           "Hardware Access: Control device vibration, clipboard, and sharing features."

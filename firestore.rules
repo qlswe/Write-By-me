@@ -141,10 +141,10 @@ service cloud.firestore {
               (!('zh' in field) || (field.zh is string && field.zh.size() <= maxLen)));
     }
 
-    function isValidMiscellany(data) {
+    function isValidTheory(data) {
       return hasRequiredFields(['category', 'title', 'summary', 'content', 'createdAt', 'authorUid']) &&
              hasOnlyAllowedFields(['category', 'title', 'summary', 'content', 'createdAt', 'updatedAt', 'authorUid']) &&
-             data.category is string && data.category in ['lore', 'characters', 'gameplay', 'mechanics', 'secrets', 'other'] &&
+             data.category is string && data.category in ['lore', 'characters', 'gameplay'] &&
              isValidLocalizedString(data.title, 200) &&
              isValidLocalizedString(data.summary, 1000) &&
              isValidLocalizedString(data.content, 50000) &&
@@ -218,10 +218,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    match /miscellanies/{itemId} {
+    match /theories/{theoryId} {
       allow read: if true;
-      allow create: if isAdmin() && isValidMiscellany(request.resource.data);
-      allow update: if isAdmin() && isValidMiscellany(request.resource.data) &&
+      allow create: if isAdmin() && isValidTheory(request.resource.data);
+      allow update: if isAdmin() && isValidTheory(request.resource.data) &&
                     request.resource.data.createdAt == resource.data.createdAt &&
                     request.resource.data.authorUid == resource.data.authorUid;
       allow delete: if isAdmin();

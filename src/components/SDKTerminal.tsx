@@ -11,6 +11,8 @@ interface SDKTerminalProps {
 export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAiMode, setIsAiMode] = useState(false);
+  const [isLocalMode, setIsLocalMode] = useState(false);
   const [history, setHistory] = useState<{ type: 'cmd' | 'res' | 'info', text: string }[]>([
     { type: 'info', text: lang === 'ru' ? 'Министерство Ахахи SDK v1.4.0-beta (Терминальный Интерфейс)' : 'Ministry of Ahahi SDK v1.4.0-beta (Terminal Interface)' },
     { type: 'info', text: lang === 'ru' ? 'Введите "help" для списка доступных команд.' : 'Type "help" for a list of available commands.' }
@@ -44,6 +46,11 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
     try {
       const response = await sdk.terminal.execute(cmd, lang);
       
+      // Update local state if mode changed in SDK
+      const currentMode = sdk.terminal.getMode();
+      setIsAiMode(currentMode === 'ai');
+      setIsLocalMode(currentMode === 'local');
+
       if (response === 'CLEAR_TERMINAL') {
         setHistory([]);
       } else {
@@ -80,14 +87,34 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
             isExpanded 
               ? 'inset-4 md:inset-10' 
               : 'bottom-20 left-6 w-[90vw] md:w-[700px] h-[60vh]'
-          } border-[#5C4B8B]`}
+          } ${
+            isAiMode ? 'border-yellow-500/50' : 
+            isLocalMode ? 'border-blue-500/50' : 
+            'border-[#5C4B8B]'
+          }`}
         >
           {/* Header */}
-          <div className="px-4 py-2 flex items-center justify-between border-b transition-colors duration-300 bg-[#2F244F] border-[#5C4B8B]">
+          <div className={`px-4 py-2 flex items-center justify-between border-b transition-colors duration-300 ${
+            isAiMode ? 'bg-yellow-500/10 border-yellow-500/30' : 
+            isLocalMode ? 'bg-blue-500/10 border-blue-500/30' : 
+            'bg-[#2F244F] border-[#5C4B8B]'
+          }`}>
             <div className="flex items-center gap-2">
-              <Terminal size={16} className="text-[#C3A6E6]" />
-              <span className="text-xs font-mono font-bold uppercase tracking-widest text-[#C3A6E6]">
-                {lang === 'ru' ? 'ТЕРМИНАЛ SDK' : 'SDK TERMINAL'} 
+              {isAiMode ? (
+                <Sparkles size={16} className="text-yellow-400 animate-pulse" />
+              ) : isLocalMode ? (
+                <Cpu size={16} className="text-blue-400" />
+              ) : (
+                <Terminal size={16} className="text-[#C3A6E6]" />
+              )}
+              <span className={`text-xs font-mono font-bold uppercase tracking-widest ${
+                isAiMode ? 'text-yellow-400' : 
+                isLocalMode ? 'text-blue-400' : 
+                'text-[#C3A6E6]'
+              }`}>
+                {isAiMode ? (lang === 'ru' ? 'ИИ РЕЖИМ' : 'AI MODE') : 
+                 isLocalMode ? (lang === 'ru' ? 'ЛОКАЛЬНЫЙ РЕЖИМ' : 'LOCAL MODE') : 
+                 (lang === 'ru' ? 'ТЕРМИНАЛ SDK' : 'SDK TERMINAL')} 
                 <span className="text-[10px] opacity-60 ml-1">BETA</span>
               </span>
             </div>
@@ -120,7 +147,7 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
                     {item.type === 'cmd' && (
                       <div className="flex items-start gap-2 text-[#C3A6E6]">
                         <ChevronRight size={14} className="mt-1 flex-shrink-0" />
-                        <span>{item.text}</span>
+                        <span className={isAiMode ? "text-yellow-400/80" : ""}>{item.text}</span>
                       </div>
                     )}
                     {item.type === 'res' && (
@@ -142,15 +169,15 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
                 )}
               </div>
 
-              <form onSubmit={handleExecute} className="flex items-center gap-2 p-2 rounded border transition-colors bg-[#2F244F]/50 border-[#5C4B8B]/30">
-                <ChevronRight size={16} className="text-[#C3A6E6]" />
+              <form onSubmit={handleExecute} className={`flex items-center gap-2 p-2 rounded border transition-colors ${isAiMode ? 'bg-yellow-500/5 border-yellow-500/30' : 'bg-[#2F244F]/50 border-[#5C4B8B]/30'}`}>
+                {isAiMode ? <Sparkles size={16} className="text-yellow-400" /> : <ChevronRight size={16} className="text-[#C3A6E6]" />}
                 <input
                   ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder={lang === 'ru' ? 'Введите команду...' : 'Enter command...'}
-                  className="flex-1 bg-transparent border-none outline-none placeholder-[#5C4B8B]/50 text-[#C3A6E6]"
+                  placeholder={isAiMode ? (lang === 'ru' ? 'Спросите что-нибудь у ИИ...' : 'Ask AI anything...') : (lang === 'ru' ? 'Введите команду...' : 'Enter command...')}
+                  className={`flex-1 bg-transparent border-none outline-none placeholder-[#5C4B8B]/50 ${isAiMode ? 'text-yellow-100' : 'text-[#C3A6E6]'}`}
                   autoFocus
                 />
               </form>
@@ -171,6 +198,7 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
                 <ul className="space-y-3 mb-6">
                   {(lang === 'ru' ? [
                     "Синхронизация данных: Синхронизация состояния игры между клиентами через Firebase.",
+                    "Интеграция ИИ: Использование Ministry AI для динамических диалогов и анализа контента.",
                     "Логирование и Мониторинг: Отслеживание производительности и взаимодействий в реальном времени.",
                     "Безопасность: Валидация ввода и ограничение частоты запросов.",
                     "Доступ к оборудованию: Управление вибрацией, буфером обмена и функциями обмена."

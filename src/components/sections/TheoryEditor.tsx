@@ -7,28 +7,28 @@ import { useAuth } from '../../hooks/useAuth';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
 
-interface MiscellanyEditorProps {
-  item?: any;
+interface TheoryEditorProps {
+  theory?: any;
   onClose: () => void;
   lang: Language;
 }
 
 const LANGUAGES = ['ru', 'en', 'by', 'jp', 'de', 'fr', 'zh'];
 
-export const MiscellanyEditor: React.FC<MiscellanyEditorProps> = ({ item, onClose, lang }) => {
+export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lang }) => {
   const { user } = useAuth();
   const t = translations[lang];
   const [currentLang, setCurrentLang] = useState(lang);
-  const [category, setCategory] = useState(item?.category || 'lore');
+  const [category, setCategory] = useState(theory?.category || 'lore');
   
   const [title, setTitle] = useState<Record<string, string>>(
-    typeof item?.title === 'object' ? item.title : LANGUAGES.reduce((acc, l) => ({ ...acc, [l]: item?.title || '' }), {})
+    typeof theory?.title === 'object' ? theory.title : LANGUAGES.reduce((acc, l) => ({ ...acc, [l]: theory?.title || '' }), {})
   );
   const [summary, setSummary] = useState<Record<string, string>>(
-    typeof item?.summary === 'object' ? item.summary : LANGUAGES.reduce((acc, l) => ({ ...acc, [l]: item?.summary || '' }), {})
+    typeof theory?.summary === 'object' ? theory.summary : LANGUAGES.reduce((acc, l) => ({ ...acc, [l]: theory?.summary || '' }), {})
   );
   const [content, setContent] = useState<Record<string, string>>(
-    typeof item?.content === 'object' ? item.content : LANGUAGES.reduce((acc, l) => ({ ...acc, [l]: item?.content || '' }), {})
+    typeof theory?.content === 'object' ? theory.content : LANGUAGES.reduce((acc, l) => ({ ...acc, [l]: theory?.content || '' }), {})
   );
   
   const [isSaving, setIsSaving] = useState(false);
@@ -41,7 +41,7 @@ export const MiscellanyEditor: React.FC<MiscellanyEditorProps> = ({ item, onClos
 
     setIsSaving(true);
     try {
-      const itemData = {
+      const theoryData = {
         category,
         title,
         summary,
@@ -50,20 +50,20 @@ export const MiscellanyEditor: React.FC<MiscellanyEditorProps> = ({ item, onClos
         updatedAt: new Date().toISOString()
       };
 
-      if (item?.id) {
-        await setDoc(doc(db, 'miscellanies', item.id), {
-          ...itemData,
-          createdAt: item.createdAt || new Date().toISOString()
+      if (theory?.id) {
+        await setDoc(doc(db, 'theories', theory.id), {
+          ...theoryData,
+          createdAt: theory.createdAt || new Date().toISOString()
         });
       } else {
-        await addDoc(collection(db, 'miscellanies'), {
-          ...itemData,
+        await addDoc(collection(db, 'theories'), {
+          ...theoryData,
           createdAt: new Date().toISOString()
         });
       }
       onClose();
     } catch (error) {
-      handleFirestoreError(error, item?.id ? OperationType.UPDATE : OperationType.CREATE, 'miscellanies');
+      handleFirestoreError(error, theory?.id ? OperationType.UPDATE : OperationType.CREATE, 'theories');
     } finally {
       setIsSaving(false);
     }
@@ -78,7 +78,7 @@ export const MiscellanyEditor: React.FC<MiscellanyEditorProps> = ({ item, onClos
         className="bg-[#2F244F] rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-[#5C4B8B] shadow-2xl flex flex-col"
       >
         <div className="sticky top-0 bg-[#2F244F] z-10 flex justify-between items-center p-6 border-b border-[#5C4B8B]">
-          <h2 className="text-2xl font-bold text-white">{item ? t.editMiscellany : t.createMiscellany}</h2>
+          <h2 className="text-2xl font-bold text-white">{theory ? t.editTheory : t.createTheory}</h2>
           <div className="flex items-center gap-4">
             <select 
               value={currentLang}

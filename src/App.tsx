@@ -19,19 +19,19 @@ import { LoadingScreen } from './components/ui/LoadingScreen';
 import { PromoBanner } from './components/ui/PromoBanner';
 import { ContentModal } from './components/ui/ContentModal';
 import { FeedbackModal } from './components/ui/FeedbackModal';
-import { MiscellanyEditor } from './components/sections/MiscellanyEditor';
+import { TheoryEditor } from './components/sections/TheoryEditor';
 import { BlogEditor } from './components/sections/BlogEditor';
 import { EventEditor } from './components/sections/EventEditor';
 import { SDKTerminal } from './components/SDKTerminal';
 
 // Lazy load sections for better performance
-const MiscellanySection = lazy(() => import('./components/sections/MiscellanySection').then(m => ({ default: m.MiscellanySection })));
+const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
 const BlogSection = lazy(() => import('./components/sections/BlogSection').then(m => ({ default: m.BlogSection })));
 const ChronicleSection = lazy(() => import('./components/sections/ChronicleSection').then(m => ({ default: m.ChronicleSection })));
 const TierListSection = lazy(() => import('./components/sections/TierListSection').then(m => ({ default: m.TierListSection })));
 const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
 
-type Section = 'home' | 'miscellany' | 'blog' | 'chronicle' | 'promo' | 'tierlist';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'tierlist';
 
 export default function App() {
   const { trackRender } = usePerfLogger('App');
@@ -52,7 +52,7 @@ export default function App() {
 
   // User Data (Syncs with Firebase)
   const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role } = useUserData('ru');
-  const { miscellanies, blogPosts, events } = useContent();
+  const { theories, blogPosts, events } = useContent();
 
   // Production Mode (High Fidelity)
   const [productionMode, setProductionMode] = useState(() => localStorage.getItem('productionMode') === 'true');
@@ -72,14 +72,14 @@ export default function App() {
   const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
 
   // Filters
-  const [miscellanyCategory, setMiscellanyCategory] = useState('all');
-  const [miscellanySearch, setMiscellanySearch] = useState('');
+  const [theoryCategory, setTheoryCategory] = useState('all');
+  const [theorySearch, setTheorySearch] = useState('');
   const [blogCategory, setBlogCategory] = useState('all');
   const [blogSearch, setBlogSearch] = useState('');
 
   // Editor state
-  const [editingMiscellany, setEditingMiscellany] = useState<any | null>(null);
-  const [isCreatingMiscellany, setIsCreatingMiscellany] = useState(false);
+  const [editingTheory, setEditingTheory] = useState<any | null>(null);
+  const [isCreatingTheory, setIsCreatingTheory] = useState(false);
   const [editingBlog, setEditingBlog] = useState<any | null>(null);
   const [isCreatingBlog, setIsCreatingBlog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
@@ -134,7 +134,7 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
-    { id: 'miscellany', label: t.navMiscellany, icon: Book },
+    { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
     { id: 'chronicle', label: t.navChronicle, icon: RefreshCw },
     { id: 'promo', label: t.navPromo, icon: Ticket },
@@ -271,7 +271,8 @@ export default function App() {
                       <div className="space-y-2">
                         <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">Где использовать?</h4>
                         <ul className="text-xs text-gray-500 space-y-1 list-disc pl-4">
-                          <li>Автоматизация сбора контента</li>
+                          <li>Автоматизация сбора теорий</li>
+                          <li>Интеграция AI-помощников</li>
                           <li>Создание кастомных виджетов</li>
                           <li>Аналитика игровых событий</li>
                         </ul>
@@ -288,19 +289,19 @@ export default function App() {
                 </div>
               )}
 
-              {section === 'miscellany' && (
-                <MiscellanySection 
+              {section === 'theories' && (
+                <TheoriesSection 
                   lang={lang as Language}
-                  miscellanyCategory={miscellanyCategory}
-                  setMiscellanyCategory={setMiscellanyCategory}
-                  miscellanySearch={miscellanySearch}
-                  setMiscellanySearch={setMiscellanySearch}
+                  theoryCategory={theoryCategory}
+                  setTheoryCategory={setTheoryCategory}
+                  theorySearch={theorySearch}
+                  setTheorySearch={setTheorySearch}
                   favorites={favorites}
                   toggleFavorite={toggleFavorite}
                   lowPerfMode={lowPerfMode}
-                  miscellanies={miscellanies}
-                  onEdit={setEditingMiscellany}
-                  onCreate={() => setIsCreatingMiscellany(true)}
+                  theories={theories}
+                  onEdit={setEditingTheory}
+                  onCreate={() => setIsCreatingTheory(true)}
                   role={role}
                 />
               )}
@@ -372,12 +373,12 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {(isCreatingMiscellany || editingMiscellany) && (
-          <MiscellanyEditor 
-            item={editingMiscellany} 
+        {(isCreatingTheory || editingTheory) && (
+          <TheoryEditor 
+            theory={editingTheory} 
             onClose={() => {
-              setIsCreatingMiscellany(false);
-              setEditingMiscellany(null);
+              setIsCreatingTheory(false);
+              setEditingTheory(null);
             }} 
             lang={lang as Language}
           />

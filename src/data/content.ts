@@ -11,17 +11,17 @@ export interface LocalizedString {
   [key: string]: string;
 }
 
-export interface Miscellany {
+export interface Theory {
   id: string;
-  category: 'lore' | 'characters' | 'gameplay' | 'mechanics' | 'secrets' | 'other';
+  category: 'lore' | 'characters' | 'gameplay';
   title: LocalizedString;
   summary: LocalizedString;
   content: LocalizedString;
 }
 
-export const miscellanyData: Miscellany[] = [
+export const theoriesData: Theory[] = [
   {
-    id: 'miscellany-1',
+    id: 'theory-1',
     category: 'lore',
     title: {
       ru: "Эоны: Кто они такие и чего хотят?",
@@ -52,7 +52,7 @@ export const miscellanyData: Miscellany[] = [
     }
   },
   {
-    id: 'miscellany-2',
+    id: 'theory-2',
     category: 'characters',
     title: {
       ru: "Истинная личность Кафки: Кто она на самом деле?",
@@ -83,7 +83,7 @@ export const miscellanyData: Miscellany[] = [
     }
   },
   {
-    id: 'miscellany-3',
+    id: 'theory-3',
     category: 'gameplay',
     title: {
       ru: "Оптимальные сборки для Вельта",
@@ -114,7 +114,7 @@ export const miscellanyData: Miscellany[] = [
     }
   },
   {
-    id: 'miscellany-4',
+    id: 'theory-4',
     category: 'lore',
     title: {
       ru: "Судьба Ярило-VI после Заморозки",
@@ -145,7 +145,7 @@ export const miscellanyData: Miscellany[] = [
     }
   },
   {
-    id: 'miscellany-5',
+    id: 'theory-5',
     category: 'characters',
     title: {
       ru: "Загадка Блэйда: Бессмертие и его цена",
@@ -176,7 +176,7 @@ export const miscellanyData: Miscellany[] = [
     }
   },
   {
-    id: 'miscellany-6',
+    id: 'theory-6',
     category: 'gameplay',
     title: {
       ru: "Стратегии для нового режима: Чистый Вымысел",
@@ -207,7 +207,7 @@ export const miscellanyData: Miscellany[] = [
     }
   },
   {
-    id: 'miscellany-7',
+    id: 'theory-7',
     category: 'lore',
     title: {
       ru: "Загадка Звездного Экспресса: История путешествий",
@@ -238,7 +238,7 @@ export const miscellanyData: Miscellany[] = [
     }
   },
   {
-    id: 'miscellany-8',
+    id: 'theory-8',
     category: 'gameplay',
     title: {
       ru: "Сборка Спаркси (Искорка) для патча 4.0",
@@ -269,7 +269,7 @@ export const miscellanyData: Miscellany[] = [
     }
   },
   {
-    id: 'miscellany-9',
+    id: 'theory-9',
     category: 'gameplay',
     title: {
       ru: "Механика ДоТов (Урон с течением времени) в 4.0",
@@ -300,7 +300,7 @@ export const miscellanyData: Miscellany[] = [
     }
   },
   {
-    id: 'miscellany-10',
+    id: 'theory-10',
     category: 'gameplay',
     title: {
       ru: "Сборка Яогуан: Лучший билд и команды",

@@ -4,8 +4,8 @@ import { Star, Share2, Check, Edit, Trash2, ArrowRight } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 
-interface MiscellanyCardProps {
-  item: any;
+interface TheoryCardProps {
+  theory: any;
   index: number;
   lang: Language;
   isFavorite: boolean;
@@ -15,8 +15,8 @@ interface MiscellanyCardProps {
   onDelete?: (e: React.MouseEvent) => void;
 }
 
-export const MiscellanyCard: React.FC<MiscellanyCardProps> = React.memo(({
-  item,
+export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
+  theory,
   index,
   lang,
   isFavorite,
@@ -32,11 +32,11 @@ export const MiscellanyCard: React.FC<MiscellanyCardProps> = React.memo(({
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}${window.location.pathname}?miscellany=${item.id}`;
+    const url = `${window.location.origin}${window.location.pathname}?theory=${theory.id}`;
     if (navigator.share) {
       navigator.share({
-        title: item.title[lang] || item.title['en'],
-        text: item.summary[lang] || item.summary['en'],
+        title: theory.title[lang] || theory.title['en'],
+        text: theory.summary[lang] || theory.summary['en'],
         url: url,
       }).catch((err) => {
         if (err.name !== 'AbortError') {
@@ -70,7 +70,7 @@ export const MiscellanyCard: React.FC<MiscellanyCardProps> = React.memo(({
       
       <div className="flex justify-between items-start mb-6">
         <div className="px-4 py-1.5 rounded-full bg-[#C3A6E6]/10 text-[#C3A6E6] text-[10px] font-black uppercase tracking-[0.2em] border border-[#C3A6E6]/20">
-          {t[`filter${item.category.charAt(0).toUpperCase() + item.category.slice(1)}` as keyof typeof t] || item.category}
+          {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
         </div>
         <div className="flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 justify-end">
           {isAdmin && (
@@ -100,7 +100,7 @@ export const MiscellanyCard: React.FC<MiscellanyCardProps> = React.memo(({
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(e); }}
-            className={`p-2.5 rounded-xl bg-[#2F244F]/80 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/20' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+            className={`p-2.5 rounded-xl bg-[#2F244F]/80 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/20' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/20'}`}
           >
             <Star size={18} fill={isFavorite ? "currentColor" : "none"} />
           </button>
@@ -108,11 +108,11 @@ export const MiscellanyCard: React.FC<MiscellanyCardProps> = React.memo(({
       </div>
 
       <h3 className="text-2xl sm:text-3xl font-black text-white mb-4 leading-tight tracking-tighter group-hover:text-[#C3A6E6] transition-colors">
-        {item.title[lang] || item.title['en']}
+        {theory.title[lang] || theory.title['en']}
       </h3>
       
       <p className="text-gray-400 text-sm sm:text-base line-clamp-3 mb-6 font-medium leading-relaxed group-hover:text-gray-300 transition-colors">
-        {item.summary[lang] || item.summary['en']}
+        {theory.summary[lang] || theory.summary['en']}
       </p>
 
       <div className="flex items-center gap-2 text-[#C3A6E6] text-xs font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">
