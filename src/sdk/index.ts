@@ -709,23 +709,21 @@ export class MinistrySDK {
     }
   };
 
-  /**
-   * Generative AI module using Gemini
-   */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string) => {
       try {
-        const response = await fetch('https://ais-dev-g6mk2usjcbx5fep6hun7ul-492067002163.europe-west2.run.app/api/ai/generate', {
+        // Добавлен слеш в конец URL: /api/ai/generate/
+        const response = await fetch('https://ais-dev-g6mk2usjcbx5fep6hun7ul-492067002163.europe-west2.run.app/api/ai/generate/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt, lang, systemInstruction })
         });
-
+        
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'API Error');
         }
-
+        
         const data = await response.json();
         return data.text;
       } catch (error) {
@@ -736,9 +734,6 @@ export class MinistrySDK {
     }
   };
 
-  /**
-   * Local Lore Engine (Enhanced with Keyword Matching)
-   */
   public localAi = {
     generate: (prompt: string, lang: Language = 'ru') => {
       const p = prompt.toLowerCase();
