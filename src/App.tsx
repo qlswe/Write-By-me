@@ -19,18 +19,19 @@ import { LoadingScreen } from './components/ui/LoadingScreen';
 import { PromoBanner } from './components/ui/PromoBanner';
 import { ContentModal } from './components/ui/ContentModal';
 import { FeedbackModal } from './components/ui/FeedbackModal';
-import { TheoryEditor } from './components/sections/TheoryEditor';
+import { MiscellanyEditor } from './components/sections/MiscellanyEditor';
 import { BlogEditor } from './components/sections/BlogEditor';
 import { EventEditor } from './components/sections/EventEditor';
+import { SDKTerminal } from './components/SDKTerminal';
 
 // Lazy load sections for better performance
-const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
+const MiscellanySection = lazy(() => import('./components/sections/MiscellanySection').then(m => ({ default: m.MiscellanySection })));
 const BlogSection = lazy(() => import('./components/sections/BlogSection').then(m => ({ default: m.BlogSection })));
 const ChronicleSection = lazy(() => import('./components/sections/ChronicleSection').then(m => ({ default: m.ChronicleSection })));
 const TierListSection = lazy(() => import('./components/sections/TierListSection').then(m => ({ default: m.TierListSection })));
 const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'tierlist';
+type Section = 'home' | 'miscellany' | 'blog' | 'chronicle' | 'promo' | 'tierlist';
 
 export default function App() {
   const { trackRender } = usePerfLogger('App');
@@ -50,8 +51,8 @@ export default function App() {
   const [showBanner, setShowBanner] = useState(false);
 
   // User Data (Syncs with Firebase)
-  const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded } = useUserData('ru');
-  const { theories, blogPosts, events } = useContent();
+  const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role } = useUserData('ru');
+  const { miscellanies, blogPosts, events } = useContent();
 
   // Production Mode (High Fidelity)
   const [productionMode, setProductionMode] = useState(() => localStorage.getItem('productionMode') === 'true');
@@ -71,14 +72,14 @@ export default function App() {
   const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
 
   // Filters
-  const [theoryCategory, setTheoryCategory] = useState('all');
-  const [theorySearch, setTheorySearch] = useState('');
+  const [miscellanyCategory, setMiscellanyCategory] = useState('all');
+  const [miscellanySearch, setMiscellanySearch] = useState('');
   const [blogCategory, setBlogCategory] = useState('all');
   const [blogSearch, setBlogSearch] = useState('');
 
   // Editor state
-  const [editingTheory, setEditingTheory] = useState<any | null>(null);
-  const [isCreatingTheory, setIsCreatingTheory] = useState(false);
+  const [editingMiscellany, setEditingMiscellany] = useState<any | null>(null);
+  const [isCreatingMiscellany, setIsCreatingMiscellany] = useState(false);
   const [editingBlog, setEditingBlog] = useState<any | null>(null);
   const [isCreatingBlog, setIsCreatingBlog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
@@ -89,6 +90,13 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.add('dark');
     
+    // Console Warning
+    console.log(
+      "%cОСТАНОВИТЕСЬ! %cНе используйте консоль не по назначению. Незнание может привести к непредсказуемым последствиям.",
+      "color: red; font-size: 40px; font-weight: bold; text-shadow: 2px 2px black;",
+      "color: white; font-size: 20px; font-weight: bold;"
+    );
+
     if (lowPerfMode) {
       document.body.classList.add('low-perf-mode');
     } else {
@@ -126,7 +134,7 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
-    { id: 'theories', label: t.navTheories, icon: Book },
+    { id: 'miscellany', label: t.navMiscellany, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
     { id: 'chronicle', label: t.navChronicle, icon: RefreshCw },
     { id: 'promo', label: t.navPromo, icon: Ticket },
@@ -197,6 +205,7 @@ export default function App() {
   return (
     <div className={`min-h-screen flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0] ${productionMode ? 'production-visuals' : ''}`}>
       <LoadingScreen isLoading={isLoading} />
+      <SDKTerminal lang={lang as Language} />
       <Starfield lowPerfMode={lowPerfMode || !productionMode} />
       
       <Header 
@@ -211,6 +220,7 @@ export default function App() {
         clearFavorites={clearFavorites}
         lowPerfMode={lowPerfMode}
         toggleLowPerfMode={toggleLowPerfMode}
+        role={role}
       />
 
       {/* Mode Toggle Button (Floating) */}
@@ -218,7 +228,7 @@ export default function App() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={toggleProductionMode}
-        className={`fixed bottom-24 right-6 z-40 p-3 rounded-full shadow-2xl border transition-all duration-500 ${productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'}`}
+        className={`fixed bottom-6 right-6 z-40 p-3 rounded-full shadow-2xl border transition-all duration-500 ${productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'}`}
         title={productionMode ? t.sdkModeMain : t.sdkModeProduction}
       >
         <Sparkles size={24} className={productionMode ? 'animate-pulse' : ''} />
@@ -240,26 +250,58 @@ export default function App() {
                 <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
                   <h2 className="text-3xl font-bold text-[#C3A6E6] mb-4">{t.homeTitle}</h2>
                   <p className="text-gray-300 mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: t.homeDesc }} />
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-8">
                     <RefreshCw size={14} />
                     {t.lastUpdate}
+                  </div>
+
+                  {/* SDK Info Section */}
+                  <div className="mt-12 p-6 rounded-xl bg-black/20 border border-[#C3A6E6]/20">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 rounded-lg bg-[#C3A6E6]/10 text-[#C3A6E6]">
+                        <Sparkles size={20} />
+                      </div>
+                      <h3 className="text-xl font-bold text-[#C3A6E6]">Ministry SDK v1.4.0-beta</h3>
+                    </div>
+                    <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+                      Наша новая SDK (Software Development Kit) теперь доступна в режиме бета-тестирования. 
+                      Она предоставляет разработчикам и энтузиастам мощные инструменты для расширения возможностей Ahahi.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">Где использовать?</h4>
+                        <ul className="text-xs text-gray-500 space-y-1 list-disc pl-4">
+                          <li>Автоматизация сбора контента</li>
+                          <li>Создание кастомных виджетов</li>
+                          <li>Аналитика игровых событий</li>
+                        </ul>
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">Как начать?</h4>
+                        <p className="text-[10px] font-mono text-gray-500">
+                          Используйте терминал в левом нижнем углу для тестирования команд в реальном времени. 
+                          Полная документация доступна в расширенном режиме терминала.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {section === 'theories' && (
-                <TheoriesSection 
+              {section === 'miscellany' && (
+                <MiscellanySection 
                   lang={lang as Language}
-                  theoryCategory={theoryCategory}
-                  setTheoryCategory={setTheoryCategory}
-                  theorySearch={theorySearch}
-                  setTheorySearch={setTheorySearch}
+                  miscellanyCategory={miscellanyCategory}
+                  setMiscellanyCategory={setMiscellanyCategory}
+                  miscellanySearch={miscellanySearch}
+                  setMiscellanySearch={setMiscellanySearch}
                   favorites={favorites}
                   toggleFavorite={toggleFavorite}
                   lowPerfMode={lowPerfMode}
-                  theories={theories}
-                  onEdit={setEditingTheory}
-                  onCreate={() => setIsCreatingTheory(true)}
+                  miscellanies={miscellanies}
+                  onEdit={setEditingMiscellany}
+                  onCreate={() => setIsCreatingMiscellany(true)}
+                  role={role}
                 />
               )}
 
@@ -276,6 +318,7 @@ export default function App() {
                   blogPosts={blogPosts}
                   onEdit={setEditingBlog}
                   onCreate={() => setIsCreatingBlog(true)}
+                  role={role}
                 />
               )}
 
@@ -286,6 +329,7 @@ export default function App() {
                   events={events}
                   onEdit={setEditingEvent}
                   onCreate={() => setIsCreatingEvent(true)}
+                  role={role}
                 />
               )}
               {section === 'tierlist' && <TierListSection lang={lang as Language} lowPerfMode={lowPerfMode} />}
@@ -328,12 +372,12 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {(isCreatingTheory || editingTheory) && (
-          <TheoryEditor 
-            theory={editingTheory} 
+        {(isCreatingMiscellany || editingMiscellany) && (
+          <MiscellanyEditor 
+            item={editingMiscellany} 
             onClose={() => {
-              setIsCreatingTheory(false);
-              setEditingTheory(null);
+              setIsCreatingMiscellany(false);
+              setEditingMiscellany(null);
             }} 
             lang={lang as Language}
           />

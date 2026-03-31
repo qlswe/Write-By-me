@@ -19,6 +19,7 @@ interface HeaderProps {
   clearFavorites: () => void;
   lowPerfMode?: boolean;
   toggleLowPerfMode?: () => void;
+  role?: 'admin' | 'moderator' | 'user';
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -32,7 +33,8 @@ export const Header: React.FC<HeaderProps> = ({
   favorites,
   clearFavorites,
   lowPerfMode,
-  toggleLowPerfMode
+  toggleLowPerfMode,
+  role
 }) => {
   const t = translations[lang];
   const { user, loginWithGoogle, logout } = useAuth();
@@ -138,6 +140,13 @@ export const Header: React.FC<HeaderProps> = ({
                             <div>
                               <div className="font-bold text-white truncate">{user.displayName}</div>
                               <div className="text-xs text-gray-400 truncate">{user.email}</div>
+                              {role && role !== 'user' && (
+                                <div className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                  role === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                }`}>
+                                  {role}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -152,16 +161,6 @@ export const Header: React.FC<HeaderProps> = ({
                             </div>
                           </div>
                           
-                          <div className="flex items-center justify-between bg-[#2F244F] border border-[#5C4B8B] rounded-lg p-3 mb-4">
-                            <div className="flex items-center gap-2">
-                              <Bookmark size={16} className="text-[#C3A6E6]" />
-                              <span className="text-sm font-bold text-white">{t.savedArticles || "Saved Articles"}</span>
-                            </div>
-                            <span className="bg-[#C3A6E6] text-[#2F244F] text-xs font-bold px-2 py-0.5 rounded-full">
-                              {favorites.length}
-                            </span>
-                          </div>
-
                           <button 
                             onClick={() => { setProfileModalOpen(true); setProfileOpen(false); }}
                             className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-[#5C4B8B] text-white border border-[#5C4B8B] hover:border-[#C3A6E6] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
@@ -169,16 +168,6 @@ export const Header: React.FC<HeaderProps> = ({
                             <UserIcon size={16} />
                             {lang === 'ru' ? 'Настройки профиля' : 'Profile Settings'}
                           </button>
-
-                          {favorites.length > 0 && (
-                            <button 
-                              onClick={() => { clearFavorites(); setProfileOpen(false); }}
-                              className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-orange-500/20 text-orange-400 hover:text-orange-300 border border-[#5C4B8B] hover:border-orange-500/50 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
-                            >
-                              <Trash2 size={16} />
-                              {t.clearFavorites || "Clear Favorites"}
-                            </button>
-                          )}
 
                           <button 
                             onClick={() => { setLogoutConfirmOpen(true); setProfileOpen(false); }}
@@ -264,6 +253,13 @@ export const Header: React.FC<HeaderProps> = ({
                     <div>
                       <div className="text-white font-bold">{user.displayName}</div>
                       <div className="text-xs text-gray-400">{user.email}</div>
+                      {role && role !== 'user' && (
+                        <div className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          role === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                        }`}>
+                          {role}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="text-sm text-gray-300 bg-[#3E3160]/50 p-3 rounded-xl border border-[#5C4B8B]/50">
@@ -271,16 +267,6 @@ export const Header: React.FC<HeaderProps> = ({
                     <p className="text-xs opacity-80">{t.profileDesc || "Your language preferences and favorite articles are stored here. They sync across your devices."}</p>
                   </div>
                   
-                  <div className="flex items-center justify-between bg-[#3E3160] p-3 rounded-xl border border-[#5C4B8B]">
-                    <div className="flex items-center gap-2">
-                      <Bookmark size={20} className="text-[#C3A6E6]" />
-                      <span className="font-bold text-white">{t.savedArticles || "Saved Articles"}</span>
-                    </div>
-                    <span className="bg-[#C3A6E6] text-[#2F244F] font-bold px-3 py-1 rounded-full">
-                      {favorites.length}
-                    </span>
-                  </div>
-
                   <button 
                     onClick={() => { setProfileModalOpen(true); setMobileMenuOpen(false); }}
                     className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-[#5C4B8B] text-white border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"
@@ -288,16 +274,6 @@ export const Header: React.FC<HeaderProps> = ({
                     <UserIcon size={20} />
                     {lang === 'ru' ? 'Настройки профиля' : 'Profile Settings'}
                   </button>
-
-                  {favorites.length > 0 && (
-                    <button 
-                      onClick={() => { clearFavorites(); setMobileMenuOpen(false); }}
-                      className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-orange-500/20 text-orange-400 border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"
-                    >
-                      <Trash2 size={20} />
-                      {t.clearFavorites || "Clear Favorites"}
-                    </button>
-                  )}
 
                   <button 
                     onClick={() => { setLogoutConfirmOpen(true); setMobileMenuOpen(false); }}

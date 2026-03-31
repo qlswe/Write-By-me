@@ -1,5 +1,5 @@
 import { Language } from '../data/translations';
-import { Theory, BlogPost, GameEvent, PromoCode } from '../data/content';
+import { Miscellany, BlogPost, GameEvent, PromoCode } from '../data/content';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -9,7 +9,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
  */
 export class MinistrySDK {
   private static instance: MinistrySDK;
-  private version: string = '1.3.0-beta';
+  private version: string = '1.5.0-hsr';
   private logSubscribers: ((level: string, message: string, data?: any) => void)[] = [];
   private ready: boolean = false;
   private sdkConfig = {
@@ -26,10 +26,10 @@ export class MinistrySDK {
     
     // Stylized terminal message
     console.log(
-      `%c ⚡ MINISTRY SDK %c v${this.version} %c BETA %c`,
+      `%c ⚡ MINISTRY SDK %c v${this.version} %c BETA EDITION %c`,
       'background: #C3A6E6; color: #2F244F; font-weight: bold; padding: 4px 8px; border-radius: 4px 0 0 4px;',
       'background: #3E3160; color: #C3A6E6; font-weight: bold; padding: 4px 8px;',
-      'background: #F8E71C; color: #2F244F; font-weight: bold; padding: 4px 8px; border-radius: 0 4px 4px 0;',
+      'background: #F27D26; color: #FFFFFF; font-weight: bold; padding: 4px 8px; border-radius: 0 4px 4px 0;',
       'background: transparent;'
     );
     
@@ -677,6 +677,106 @@ export class MinistrySDK {
         const result = fn(...args);
         cache.set(key, result);
         return result;
+      };
+    }
+  };
+
+  /**
+   * HSR Lore and Data module
+   */
+  public hsr = {
+    getAeonInfo: (name: string) => {
+      const aeons: Record<string, string> = {
+        nanook: 'Aeon of Destruction. Wants to destroy the universe.',
+        lan: 'Aeon of The Hunt. Chasing the Abundance.',
+        ix: 'Aeon of Nihility. Believes existence is meaningless.',
+        yaoshi: 'Aeon of Abundance. Grants immortality (with a price).',
+        nous: 'Aeon of Erudition. The ultimate computer.',
+      };
+      return aeons[name.toLowerCase()] || 'Aeon not found in current database.';
+    },
+    getPathInfo: (name: string) => {
+      const paths: Record<string, string> = {
+        destruction: 'High damage, high survivability.',
+        hunt: 'Single-target damage specialists.',
+        nihility: 'Debuffers and DOT dealers.',
+        abundance: 'Healers and sustain.',
+        preservation: 'Shielders and tanks.',
+        erudition: 'AOE damage specialists.',
+        harmony: 'Buffs and support.',
+      };
+      return paths[name.toLowerCase()] || 'Path not found.';
+    }
+  };
+
+  /**
+   * Terminal simulation module
+   */
+  private terminalMode: 'normal' = 'normal';
+  public terminal = {
+    setMode: (mode: 'normal') => {
+      this.terminalMode = mode;
+      this.logging.system(`Terminal mode changed to: ${mode}`);
+    },
+    getMode: () => this.terminalMode,
+    execute: async (command: string, lang: Language = 'ru'): Promise<string> => {
+      const parts = command.trim().split(' ');
+      const cmd = parts[0].toLowerCase();
+      const args = parts.slice(1);
+
+      switch (cmd) {
+        case 'help':
+          return lang === 'ru' 
+            ? 'Доступные команды: help, version, status, echo [текст], clear, ping'
+            : 'Available commands: help, version, status, echo [text], clear, ping';
+        case 'version':
+          return `Ministry SDK v${this.version} (BETA EDITION)`;
+        case 'status':
+          const statusRes = `SDK Status: ${this.ready ? 'READY' : 'INITIALIZING'}\nEnvironment: ${process.env.NODE_ENV}\nMode: ${this.terminalMode.toUpperCase()}`;
+          return statusRes;
+        case 'echo':
+          return args.join(' ');
+        case 'clear':
+          this.events.emit('terminal_clear');
+          return '';
+        case 'ping':
+          return 'Pong! Connection stable.';
+        default:
+          return lang === 'ru' 
+            ? `Команда не распознана: ${cmd}. Введите 'help' для списка команд.`
+            : `Command not recognized: ${cmd}. Type 'help' for available commands.`;
+      }
+    }
+  };
+
+  /**
+   * SDK Usage Explanation
+   */
+  public help = {
+    getUsage: (lang: Language = 'ru') => {
+      if (lang === 'ru') {
+        return {
+          title: "Министерство Ахахи SDK (BETA)",
+          description: "Комплексный набор инструментов для разработчиков и системных администраторов в экосистеме Ахахи.",
+          useCases: [
+            "Синхронизация данных: Синхронизация состояния игры между клиентами через Firebase.",
+            "Логирование и Мониторинг: Отслеживание производительности и взаимодействий в реальном времени.",
+            "Безопасность: Валидация ввода и ограничение частоты запросов.",
+            "Доступ к оборудованию: Управление вибрацией, буфером обмена и функциями обмена."
+          ],
+          gettingStarted: "Импортируйте экземпляр 'sdk' из '@sdk' и вызывайте методы модулей, например: sdk.logging.info('Hello')."
+        };
+      }
+      return {
+        title: "Ministry of Ahahi SDK (BETA)",
+        description: "A comprehensive toolkit for game developers and system administrators within the Ahahi ecosystem.",
+        useCases: [
+          "Data Synchronization: Sync game state across multiple clients using Firebase.",
+          "Logging & Monitoring: Track performance and user interactions in real-time.",
+          "Security: Validate user input and enforce rate limits on critical actions.",
+          "Hardware Access: Control device vibration, clipboard, and sharing features."
+        ],
+        gettingStarted: "Import the 'sdk' instance from '@sdk' and call any module method, e.g., sdk.logging.info('Hello')."
       };
     }
   };
