@@ -712,7 +712,7 @@ export class MinistrySDK {
   /**
    * Generative AI module using Pollinations
    */
-type Message = {
+  type Message = {
   role: "user" | "assistant";
   content: string;
 };
