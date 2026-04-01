@@ -20,30 +20,21 @@ IMPORTANT: Return ONLY valid JSON. No markdown formatting, no backticks, no expl
 
     const systemContent = "You are a precise translation AI. You output only valid JSON without any markdown formatting.";
     const seed = Math.floor(Math.random() * 1000000);
-    let response;
 
-    try {
-      response = await fetch("https://text.pollinations.ai/", {
-        method: "POST",
-        body: JSON.stringify({
-          messages: [
-            { role: "system", content: systemContent },
-            { role: "user", content: prompt }
-          ],
-          model: "openai",
-          jsonMode: true,
-          seed
-        })
-      });
-      if (!response.ok) throw new Error("POST failed");
-    } catch (e) {
-      const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
-      url.searchParams.append('system', systemContent);
-      url.searchParams.append('model', 'openai');
-      url.searchParams.append('jsonMode', 'true');
-      url.searchParams.append('seed', seed.toString());
-      response = await fetch(url.toString());
-    }
+    const response = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "omit",
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: systemContent },
+          { role: "user", content: prompt }
+        ],
+        model: "openai",
+        jsonMode: true,
+        seed
+      })
+    });
 
     if (!response.ok) {
       throw new Error(`Pollinations API error: ${response.statusText}`);
@@ -78,30 +69,21 @@ Each of these keys must contain an object where keys are language codes and valu
 
     const systemContent = "You are a precise translation AI. You output only valid JSON without any markdown formatting.";
     const seed = Math.floor(Math.random() * 1000000);
-    let response;
 
-    try {
-      response = await fetch("https://text.pollinations.ai/", {
-        method: "POST",
-        body: JSON.stringify({
-          messages: [
-            { role: "system", content: systemContent },
-            { role: "user", content: prompt }
-          ],
-          model: "openai",
-          jsonMode: true,
-          seed
-        })
-      });
-      if (!response.ok) throw new Error("POST failed");
-    } catch (e) {
-      const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
-      url.searchParams.append('system', systemContent);
-      url.searchParams.append('model', 'openai');
-      url.searchParams.append('jsonMode', 'true');
-      url.searchParams.append('seed', seed.toString());
-      response = await fetch(url.toString());
-    }
+    const response = await fetch("https://text.pollinations.ai/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "omit",
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: systemContent },
+          { role: "user", content: prompt }
+        ],
+        model: "openai",
+        jsonMode: true,
+        seed
+      })
+    });
 
     if (!response.ok) {
       throw new Error(`Pollinations API error: ${response.statusText}`);

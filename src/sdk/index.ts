@@ -723,31 +723,19 @@ export class MinistrySDK {
         const finalSystemPrompt = systemInstruction || defaultSystem;
         const seed = Math.floor(Math.random() * 1000000);
 
-        let response;
-        const messages = [
-          { role: "system", content: finalSystemPrompt },
-          { role: "user", content: prompt }
-        ];
-
-        try {
-          // Attempt POST without Content-Type to bypass CORS preflight
-          response = await fetch("https://text.pollinations.ai/", {
-            method: "POST",
-            body: JSON.stringify({
-              messages,
-              model: "openai",
-              seed: seed
-            })
-          });
-          if (!response.ok) throw new Error("POST failed");
-        } catch (e) {
-          // Fallback to GET
-          const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
-          url.searchParams.append('system', finalSystemPrompt);
-          url.searchParams.append('model', 'openai');
-          url.searchParams.append('seed', seed.toString());
-          response = await fetch(url.toString());
-        }
+        const response = await fetch("https://text.pollinations.ai/openai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "omit",
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: finalSystemPrompt },
+              { role: "user", content: prompt }
+            ],
+            model: "openai",
+            seed: seed
+          })
+        });
 
         if (!response.ok) {
           throw new Error(`Pollinations Link Broken: ${response.statusText}`);
