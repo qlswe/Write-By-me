@@ -1,7 +1,3 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 export async function translateContent(
   text: string,
   targetLanguages: string[] = ['ru', 'by', 'jp', 'de', 'fr', 'zh']
@@ -15,26 +11,33 @@ export async function translateContent(
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Translate the following text into the following languages: ${targetLanguages.join(', ')}. 
+    const prompt = `Translate the following text into the following languages: ${targetLanguages.join(', ')}. 
 Keep HTML tags intact if there are any.
 Text to translate:
-${text}`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: targetLanguages.reduce((acc, lang) => {
-            acc[lang] = { type: Type.STRING };
-            return acc;
-          }, {} as Record<string, any>),
-          required: targetLanguages,
-        },
-      },
+${text}
+
+IMPORTANT: Return ONLY valid JSON. No markdown formatting, no backticks, no explanations. Just the JSON object where keys are language codes and values are the translated text.`;
+
+    const response = await fetch("https://text.pollinations.ai/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "You are a precise translation AI. You output only valid JSON without any markdown formatting." },
+          { role: "user", content: prompt }
+        ],
+        model: "openai",
+        jsonMode: true,
+        seed: Math.floor(Math.random() * 1000000)
+      })
     });
 
-    const jsonStr = response.text?.trim() || '{}';
+    if (!response.ok) {
+      throw new Error(`Pollinations API error: ${response.statusText}`);
+    }
+
+    const textResponse = await response.text();
+    const jsonStr = textResponse.replace(/^```json\n/, '').replace(/\n```$/, '').trim();
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Translation error:", error);
@@ -49,50 +52,37 @@ export async function translatePostFields(
   targetLanguages: string[] = ['ru', 'by', 'jp', 'de', 'fr', 'zh']
 ): Promise<{ title: Record<string, string>, summary: Record<string, string>, content: Record<string, string> }> {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Translate the following title, summary, and content into these languages: ${targetLanguages.join(', ')}.
+    const prompt = `Translate the following title, summary, and content into these languages: ${targetLanguages.join(', ')}.
 Keep HTML tags intact in the content. If a field is empty, return empty strings for it.
 
 Title: ${title || ' '}
 Summary: ${summary || ' '}
-Content: ${content || ' '}`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: {
-              type: Type.OBJECT,
-              properties: targetLanguages.reduce((acc, lang) => {
-                acc[lang] = { type: Type.STRING };
-                return acc;
-              }, {} as Record<string, any>),
-              required: targetLanguages,
-            },
-            summary: {
-              type: Type.OBJECT,
-              properties: targetLanguages.reduce((acc, lang) => {
-                acc[lang] = { type: Type.STRING };
-                return acc;
-              }, {} as Record<string, any>),
-              required: targetLanguages,
-            },
-            content: {
-              type: Type.OBJECT,
-              properties: targetLanguages.reduce((acc, lang) => {
-                acc[lang] = { type: Type.STRING };
-                return acc;
-              }, {} as Record<string, any>),
-              required: targetLanguages,
-            }
-          },
-          required: ['title', 'summary', 'content'],
-        },
-      },
+Content: ${content || ' '}
+
+IMPORTANT: Return ONLY valid JSON. No markdown formatting, no backticks, no explanations. 
+The JSON object must have three top-level keys: "title", "summary", and "content".
+Each of these keys must contain an object where keys are language codes and values are the translated text.`;
+
+    const response = await fetch("https://text.pollinations.ai/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "You are a precise translation AI. You output only valid JSON without any markdown formatting." },
+          { role: "user", content: prompt }
+        ],
+        model: "openai",
+        jsonMode: true,
+        seed: Math.floor(Math.random() * 1000000)
+      })
     });
 
-    const jsonStr = response.text?.trim() || '{}';
+    if (!response.ok) {
+      throw new Error(`Pollinations API error: ${response.statusText}`);
+    }
+
+    const textResponse = await response.text();
+    const jsonStr = textResponse.replace(/^```json\n/, '').replace(/\n```$/, '').trim();
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Translation error:", error);

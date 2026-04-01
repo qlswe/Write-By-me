@@ -1,7 +1,3 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 export async function translateContent(text: string): Promise<Record<string, string>> {
   if (!text) return { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' };
 
@@ -13,31 +9,31 @@ ${text}
 Return a JSON object where keys are language codes ('ru', 'en', 'by', 'jp', 'de', 'fr', 'zh') and values are the translated text.
 For 'by', use Belarusian.
 For 'zh', use Simplified Chinese.
-If the original text is already in one of these languages, just copy it to the corresponding key.`;
+If the original text is already in one of these languages, just copy it to the corresponding key.
+IMPORTANT: Return ONLY valid JSON. No markdown formatting, no backticks, no explanations. Just the JSON object.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            ru: { type: Type.STRING },
-            en: { type: Type.STRING },
-            by: { type: Type.STRING },
-            jp: { type: Type.STRING },
-            de: { type: Type.STRING },
-            fr: { type: Type.STRING },
-            zh: { type: Type.STRING },
-          },
-          required: ["ru", "en", "by", "jp", "de", "fr", "zh"],
-        },
-      },
+    const response = await fetch("https://text.pollinations.ai/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "You are a precise translation AI. You output only valid JSON without any markdown formatting." },
+          { role: "user", content: prompt }
+        ],
+        model: "openai",
+        jsonMode: true,
+        seed: Math.floor(Math.random() * 1000000)
+      })
     });
 
-    const jsonStr = response.text?.trim() || "{}";
+    if (!response.ok) {
+      throw new Error(`Pollinations API error: ${response.statusText}`);
+    }
+
+    const textResponse = await response.text();
+    // Try to parse the response, handling potential markdown formatting if the model ignored instructions
+    const jsonStr = textResponse.replace(/^```json\n/, '').replace(/\n```$/, '').trim();
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Translation error:", error);
