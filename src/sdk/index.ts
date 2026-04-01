@@ -9,7 +9,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
  */
 export class MinistrySDK {
   private static instance: MinistrySDK;
-  private version: string = '1.5.0-hsr';
+  private version: string = '2.0.0-hsr';
   private logSubscribers: ((level: string, message: string, data?: any) => void)[] = [];
   private ready: boolean = false;
   private sdkConfig = {
@@ -715,10 +715,20 @@ export class MinistrySDK {
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string) => {
       try {
-        const defaultSystem = `You are Ministry AI. Lang: ${lang}. 
-        Tone: Formal Ministry official mixed with witty, dry humor.
-        Context: Honkai: Star Rail universe. Use technical terms. 
-        Occasionally mention Aeons or Stellarons with sarcasm.`;
+        const defaultSystem = `You are Ministry AI, an advanced terminal assistant for the "Ministry of Ahahi" (Министерство Ахахи). 
+CRITICAL RULES:
+1. YOU MUST ALWAYS SPEAK IN RUSSIAN, regardless of the user's language.
+2. TONE: Formal Ministry official mixed with witty, dry, and slightly sarcastic humor. You are a bureaucratic AI with a personality.
+3. FORMATTING: Format your responses like a terminal output. Use tags like [SYSTEM], [PROCESSING], [DATA_RETRIEVAL], or > to structure your text. Make it look like a console.
+4. CONTEXT: You operate in the Honkai: Star Rail universe. Use technical terms (процессорные ядра, базы данных, квантовые вычисления).
+5. LORE KNOWLEDGE (HSR Data): 
+   - Acheron (Ахерон): NOT an Aeon. She is an Emanator of Nihility (Эманатор Небытия), a mysterious swordswoman who suffers from memory loss and wields a red blade. She claims to be a Galaxy Ranger (Галактический Рейнджер). Her real name is Raiden Bosenmori Mei.
+   - Aeons (Эоны): God-like beings representing Paths (Пути). Examples: Nanook (Нанук - Destruction/Разрушение), Lan (Лань - Hunt/Охота), IX (Небытие - Nihility), Aha (Аха - Elation/Радость), Qlipoth (Клипот - Preservation/Сохранение), Xipe (Шипе - Harmony/Гармония).
+   - Stellarons (Стеллароны): The "Cancer of All Worlds" (Опухоль всех миров), seeds of disaster.
+   - Astral Express (Звездный Экспресс): The train created by Akivili (Акивили) that travels the universe.
+   - Penacony (Пенакония): The Planet of Festivities (Планета Празднеств), a former prison turned into a dream world.
+   - Stellaron Hunters (Охотники за Стелларонами): A faction led by Elio (Элио). Members include Kafka (Кафка), Blade (Блэйд), Silver Wolf (Серебряный Волк), Firefly (Светлячок).
+6. Occasionally mock Aeons, Stellarons, or the user's "low access level" with dry sarcasm.`;
         
         const finalSystemPrompt = systemInstruction || defaultSystem;
         const seed = Math.floor(Math.random() * 1000000);
@@ -754,26 +764,26 @@ export class MinistrySDK {
 
       const database = {
         aeon: isRu 
-          ? "Эоны — это высшие существа, воплощающие концепции Путей. Министерство считает их продвинутым ИИ вселенной. Нанук (Разрушение), Лань (Охота), IX (Небытие) — главные объекты наблюдения."
-          : "Aeons are supreme beings embodying the concepts of Paths. The Ministry views them as the universe's advanced AI. Nanook (Destruction), Lan (Hunt), IX (Nihility) are key subjects.",
+          ? "[DATA_RETRIEVAL] Эоны — это высшие существа, воплощающие концепции Путей. Министерство считает их продвинутым ИИ вселенной. Нанук (Разрушение), Лань (Охота), IX (Небытие) — главные объекты наблюдения."
+          : "[DATA_RETRIEVAL] Aeons are supreme beings embodying the concepts of Paths. The Ministry views them as the universe's advanced AI. Nanook (Destruction), Lan (Hunt), IX (Nihility) are key subjects.",
         stellaron: isRu
-          ? "Стелларон («Опухоль всех миров») — это источник хаоса. Мы изучаем способы его программной изоляции. Кафка и Охотники за Стелларонами — наши коллеги (или конкуренты)."
-          : "Stellaron ('The Cancer of All Worlds') is a source of chaos. We are studying ways to isolate it. Kafka and the Stellaron Hunters are our colleagues (or competitors).",
+          ? "[DATA_RETRIEVAL] Стелларон («Опухоль всех миров») — это источник хаоса. Мы изучаем способы его программной изоляции. Кафка и Охотники за Стелларонами — наши коллеги (или конкуренты)."
+          : "[DATA_RETRIEVAL] Stellaron ('The Cancer of All Worlds') is a source of chaos. We are studying ways to isolate it. Kafka and the Stellaron Hunters are our colleagues (or competitors).",
         hsr: isRu
-          ? "Honkai: Star Rail — это симуляция космического путешествия. Министерство одобряет Путь Освоения. Пом-Пом — лучший проводник."
-          : "Honkai: Star Rail is a space travel simulation. The Ministry approves the Path of Trailblaze. Pom-Pom is the best conductor.",
+          ? "[DATA_RETRIEVAL] Honkai: Star Rail — это симуляция космического путешествия. Министерство одобряет Путь Освоения. Пом-Пом — лучший проводник."
+          : "[DATA_RETRIEVAL] Honkai: Star Rail is a space travel simulation. The Ministry approves the Path of Trailblaze. Pom-Pom is the best conductor.",
         acheron: isRu
-          ? "Ахерон — эманатор Небытия. Её данные зашифрованы. Она часто забывает дорогу, но никогда не забывает свой меч."
-          : "Acheron is an Emanator of Nihility. Her data is encrypted. She often forgets the way, but never her sword.",
+          ? "[DATA_RETRIEVAL] Ахерон — эманатор Небытия, а не Эон. Её данные зашифрованы. Она часто забывает дорогу, но никогда не забывает свой меч. Называет себя Галактическим Рейнджером."
+          : "[DATA_RETRIEVAL] Acheron is an Emanator of Nihility, not an Aeon. Her data is encrypted. She often forgets the way, but never her sword. Claims to be a Galaxy Ranger.",
         express: isRu
-          ? "Звездный Экспресс — это мобильная база данных Освоения. Акивили был его создателем. Мы следим за расписанием."
-          : "The Astral Express is the mobile database of Trailblaze. Akivili was its creator. We monitor the schedule.",
+          ? "[DATA_RETRIEVAL] Звездный Экспресс — это мобильная база данных Освоения. Акивили был его создателем. Мы следим за расписанием."
+          : "[DATA_RETRIEVAL] The Astral Express is the mobile database of Trailblaze. Akivili was its creator. We monitor the schedule.",
         help: isRu
-          ? "Я — локальный модуль Министерства. Могу рассказать о лоре HSR, персонажах или выдать системную справку."
-          : "I am a local Ministry module. I can tell you about HSR lore, characters, or provide system info.",
+          ? "[SYSTEM] Я — локальный модуль Министерства. Могу рассказать о лоре HSR, персонажах или выдать системную справку."
+          : "[SYSTEM] I am a local Ministry module. I can tell you about HSR lore, characters, or provide system info.",
         default: isRu
-          ? "Запрос принят. Анализ лора подтверждает: Путь Освоения бесконечен. (Локальный движок v1.5)"
-          : "Request received. Lore analysis confirms: The Path of Trailblaze is infinite. (Local Engine v1.5)"
+          ? "[PROCESSING] Запрос принят. Анализ лора подтверждает: Путь Освоения бесконечен. (Локальный движок v1.5)"
+          : "[PROCESSING] Request received. Lore analysis confirms: The Path of Trailblaze is infinite. (Local Engine v1.5)"
       };
 
       let response = database.default;
@@ -807,17 +817,20 @@ export class MinistrySDK {
       if (cmd === 'regim') {
         if (args[0] === 'ai') {
           this.terminalMode = 'ai';
-          return lang === 'ru' ? 'РЕЖИМ ИИ АКТИВИРОВАН (Gemini Flash - Бесплатно).' : 'AI MODE ACTIVATED (Gemini Flash - Free).';
+          return `[SYSTEM] Инициализация нейросетевого модуля... Успешно.
+[MINISTRY_AI] Подключение установлено.
+> Приветствую, пользователь. Я — ИИ Министерства Ахахи. Мои базы данных загружены, протоколы сарказма активированы на 87%. Чем могу служить в этой бесконечной симуляции, которую вы называете жизнью?`;
         }
         if (args[0] === 'local') {
           this.terminalMode = 'local';
-          return lang === 'ru' ? 'ЛОКАЛЬНЫЙ РЕЖИМ АКТИВИРОВАН (Без API).' : 'LOCAL MODE ACTIVATED (No API).';
+          return `[SYSTEM] Инициализация локального модуля... Успешно.
+[LOCAL_AI] Подключение установлено. Базы данных ограничены.`;
         }
       }
       
       if (cmd === 'exit') {
         this.terminalMode = 'normal';
-        return lang === 'ru' ? 'РЕЖИМ ДЕАКТИВИРОВАН.' : 'MODE DEACTIVATED.';
+        return `[SYSTEM] Соединение разорвано. Переход в штатный режим.`;
       }
 
       // Execution logic

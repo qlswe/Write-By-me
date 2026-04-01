@@ -14,7 +14,7 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
   const [isAiMode, setIsAiMode] = useState(false);
   const [isLocalMode, setIsLocalMode] = useState(false);
   const [history, setHistory] = useState<{ type: 'cmd' | 'res' | 'info', text: string }[]>([
-    { type: 'info', text: lang === 'ru' ? 'Министерство Ахахи SDK v1.4.0-beta (Терминальный Интерфейс)' : 'Ministry of Ahahi SDK v1.4.0-beta (Terminal Interface)' },
+    { type: 'info', text: lang === 'ru' ? 'Министерство Ахахи SDK v2.0.0-beta (Терминальный Интерфейс)' : 'Ministry of Ahahi SDK v2.0.0-beta (Terminal Interface)' },
     { type: 'info', text: lang === 'ru' ? 'Введите "help" для списка доступных команд.' : 'Type "help" for a list of available commands.' }
   ]);
   const [input, setInput] = useState('');
