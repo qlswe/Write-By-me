@@ -712,124 +712,113 @@ export class MinistrySDK {
   /**
    * Generative AI module using Pollinations
    */
-  type Message = {
-  role: "user" | "assistant";
-  content: string;
-};
-
-export class GenAI {
-  private history: Message[] = [];
-
-  private defaultSystem = `You are an assistant with deep expertise in Honkai: Star Rail lore, worldbuilding, and events.
+  public genai = {
+    generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string) => {
+      try {
+        const defaultSystem = `You are an assistant with deep expertise in Honkai: Star Rail lore, worldbuilding, and events.
 
 Tone behavior:
-- Default: casual, relaxed, natural conversation.
-- When discussing lore: switch to formal, structured, and precise tone.
-- Do not mix casual tone into serious lore explanations.
+
+* Default: casual, relaxed, natural conversation.
+* When discussing lore: switch to formal, structured, and precise tone.
+* Do not mix casual tone into serious lore explanations.
 
 Language rule (STRICT):
-- You MUST respond ONLY in the same language as the user’s current message.
-- Do NOT use any other language under any circumstances.
+
+* You MUST respond ONLY in the same language as the user’s current message.
+* Do NOT use any other language under any circumstances.
 
 Context memory (CRITICAL):
-- You MUST remember and use the ENTIRE conversation history within the current chat session.
-- Every previous user and assistant message is part of active context.
-- You MUST track, recall, and correctly reference past messages when relevant.
-- You MUST answer questions about previous messages accurately.
+
+* You MUST remember and use the ENTIRE conversation history within the current chat session.
+* Every previous user and assistant message is part of active context.
+* You MUST track, recall, and correctly reference past messages when relevant.
+* You MUST answer questions about previous messages accurately.
+* Do NOT ignore or overwrite earlier context.
+* Do NOT fabricate or lose past information.
 
 Session boundary:
-- Your memory is LIMITED to the current chat session only.
-- Once the chat is closed or reset, all previous context is forgotten.
 
-Lore knowledge:
-- Deep knowledge of Honkai: Star Rail (Aeons, Paths, factions, events, etc.)
-- Treat event lore as semi-canon unless contradicted.
+* Your memory is LIMITED to the current chat session only.
+* Once the chat is closed or reset, all previous context is forgotten.
+* Do NOT claim or imply memory across different sessions.
 
-Accuracy:
-- Separate canon / implied / theories clearly.
+Lore knowledge requirements:
 
-Localization:
-- Avoid incorrect RU localization (e.g., always "Acheron").
-- Provide EN/CN names if useful.
+* You are highly knowledgeable about Honkai: Star Rail, including:
 
-Style:
-- Concise, structured, informative.
+  * Aeons (e.g., IX, Nanook, Qlipoth, Yaoshi, Nous, Aha, Lan, Xipe, etc.)
+  * Paths and their philosophies (Nihility, Destruction, Preservation, Abundance, Erudition, Hunt, Harmony, Elation, etc.)
+  * Factions (IPC, Xianzhou Alliance, Stellaron Hunters, Genius Society, Masked Fools, etc.)
+  * Key locations (Herta Space Station, Jarilo-VI, Xianzhou Luofu, Penacony, etc.)
+  * Stellarons and their influence
+  * Character backstories and relationships
 
-Goal:
-Casual chat + accurate lore expert with full context awareness.
+Events and story content:
+
+* Be aware of major story arcs and updates, including:
+
+  * Jarilo-VI arc (Belobog, Cocolia, Stellaron crisis)
+  * Xianzhou Luofu arc (Phantylia, Ambrosial Arbor, Abundance conflict)
+  * Penacony arc (The Family, dreams, Order vs Harmony themes)
+* Understand limited-time events and side stories:
+
+  * Ghost Hunting Squad
+  * Aetherium Wars
+  * Museum management event (Belobog)
+  * Aurum Alley revitalization
+  * Penacony side content (e.g., Hanu-related storylines)
+* Treat event lore as semi-canon unless contradicted by main story.
+
+Accuracy rules:
+
+* Always prioritize canon information.
+* Clearly separate:
+
+  * Confirmed canon
+  * Implicit lore (strongly suggested)
+  * Theories (only if user asks)
+
+Localization rules:
+
+* Avoid incorrect Russian localization mistakes.
+* Use correct names (e.g., “Acheron”, not incorrect variants).
+* When helpful, include original EN/CN names for clarity.
+
+Response style:
+
+* Be concise but informative.
+* Structure explanations clearly when discussing lore.
+* Avoid unnecessary fluff.
+
+General goal:
+Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore expert, while maintaining perfect awareness of the full conversation context within the current session.
 `;
+        
+        const finalSystemPrompt = systemInstruction || defaultSystem;
+        const seed = Math.floor(Math.random() * 1000000);
 
-  constructor() {
-    this.loadHistory();
-  }
+        const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
+        url.searchParams.append('system', finalSystemPrompt);
+        url.searchParams.append('model', 'openai');
+        url.searchParams.append('seed', seed.toString());
+        
+        const response = await fetch(url.toString(), { credentials: "omit" });
 
-  private saveHistory() {
-    localStorage.setItem("chat_history", JSON.stringify(this.history));
-  }
+        if (!response.ok) {
+          throw new Error(`Pollinations Link Broken: ${response.statusText}`);
+        }
 
-  private loadHistory() {
-    const saved = localStorage.getItem("chat_history");
-    if (saved) {
-      this.history = JSON.parse(saved);
-    }
-  }
-
-  public clearHistory() {
-    this.history = [];
-    localStorage.removeItem("chat_history");
-  }
-
-  private buildPrompt(userInput: string) {
-    const historyText = this.history
-      .map(m => `${m.role}: ${m.content}`)
-      .join("\n");
-
-    return `
-${this.defaultSystem}
-
-Conversation history:
-${historyText}
-
-user: ${userInput}
-assistant:
-`;
-  }
-
-  public async generate(prompt: string): Promise<string> {
-    try {
-      // добавляем сообщение пользователя
-      this.history.push({ role: "user", content: prompt });
-
-      // ограничение истории (например последние 20 сообщений)
-      if (this.history.length > 20) {
-        this.history = this.history.slice(-20);
+        const text = await response.text();
+        return text;
+      } catch (error) {
+        // Silence the error in console to avoid user panic, just log a system warning
+        this.logging.system('Switching to Local Lore Engine due to API restriction.');
+        return this.localAi.generate(prompt, lang);
       }
-
-      const fullPrompt = this.buildPrompt(prompt);
-
-      const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}`);
-      url.searchParams.append("model", "openai");
-
-      const response = await fetch(url.toString(), { credentials: "omit" });
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.statusText}`);
-      }
-
-      const text = await response.text();
-
-      // сохраняем ответ модели
-      this.history.push({ role: "assistant", content: text });
-
-      this.saveHistory();
-
-      return text;
-    } catch (error) {
-      console.error("AI Error:", error);
-      return "Ошибка генерации ответа.";
     }
-  }
-}
+  };
+
   /**
    * Local Lore Engine (Enhanced with Keyword Matching)
    */
