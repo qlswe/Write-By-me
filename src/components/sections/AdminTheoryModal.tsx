@@ -53,23 +53,12 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
     
     setIsTranslating(true);
     try {
-      const response = await fetch("/api/translate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ titleRu, summaryRu, contentRu }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to translate text");
-      }
-
-      const result = await response.json();
+      const { translatePostFields } = await import('../../services/translationService');
+      const result = await translatePostFields(titleRu, summaryRu, contentRu, ['en']);
       
-      if (result.title) setTitleEn(result.title);
-      if (result.summary) setSummaryEn(result.summary);
-      if (result.content) setContentEn(result.content);
+      if (result.title?.en) setTitleEn(result.title.en);
+      if (result.summary?.en) setSummaryEn(result.summary.en);
+      if (result.content?.en) setContentEn(result.content.en);
       
     } catch (error) {
       console.error("Translation error:", error);
