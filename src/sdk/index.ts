@@ -2,6 +2,7 @@ import { Language } from '../data/translations';
 import { Theory, BlogPost, GameEvent, PromoCode } from '../data/content';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { GoogleGenAI } from "@google/genai";
 
 /**
  * Ministry of Ahahi SDK
@@ -9,7 +10,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
  */
 export class MinistrySDK {
   private static instance: MinistrySDK;
-  private version: string = '2.0.0';
+  private version: string = '2.0.0-hsr';
   private logSubscribers: ((level: string, message: string, data?: any) => void)[] = [];
   private ready: boolean = false;
   private sdkConfig = {
@@ -710,107 +711,94 @@ export class MinistrySDK {
   };
 
   /**
-   * Generative AI module using Pollinations
+   * Generative AI module using Gemini
    */
   public genai = {
-    generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string) => {
+    generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
       try {
         const defaultSystem = `You are an assistant with deep expertise in Honkai: Star Rail lore, worldbuilding, and events.
-
 Tone behavior:
-
-* Default: casual, relaxed, natural conversation.
-* When discussing lore: switch to formal, structured, and precise tone.
-* Do not mix casual tone into serious lore explanations.
-
+Default: casual, relaxed, natural conversation.
+When discussing lore: switch to formal, structured, and precise tone.
+Do not mix casual tone into serious lore explanations.
 Language rule (STRICT):
-
-* You MUST respond ONLY in the same language as the user’s current message.
-* Do NOT use any other language under any circumstances.
-
+You MUST respond ONLY in the same language as the user’s current message.
+Do NOT use any other language under any circumstances.
 Context memory (CRITICAL):
-
-* You MUST remember and use the ENTIRE conversation history within the current chat session.
-* Every previous user and assistant message is part of active context.
-* You MUST track, recall, and correctly reference past messages when relevant.
-* You MUST answer questions about previous messages accurately.
-* Do NOT ignore or overwrite earlier context.
-* Do NOT fabricate or lose past information.
-
+You MUST remember and use the ENTIRE conversation history within the current chat session.
+Every previous user and assistant message is part of active context.
+You MUST track, recall, and correctly reference past messages when relevant.
+You MUST answer questions about previous messages accurately.
+Do NOT ignore or overwrite earlier context.
+Do NOT fabricate or lose past information.
 Session boundary:
-
-* Your memory is LIMITED to the current chat session only.
-* Once the chat is closed or reset, all previous context is forgotten.
-* Do NOT claim or imply memory across different sessions.
-
+Your memory is LIMITED to the current chat session only.
+Once the chat is closed or reset, all previous context is forgotten.
+Do NOT claim or imply memory across different sessions.
 Lore knowledge requirements:
-
-* You are highly knowledgeable about Honkai: Star Rail, including:
-
-  * Aeons (e.g., IX, Nanook, Qlipoth, Yaoshi, Nous, Aha, Lan, Xipe, etc.)
-  * Paths and their philosophies (Nihility, Destruction, Preservation, Abundance, Erudition, Hunt, Harmony, Elation, etc.)
-  * Factions (IPC, Xianzhou Alliance, Stellaron Hunters, Genius Society, Masked Fools, etc.)
-  * Key locations (Herta Space Station, Jarilo-VI, Xianzhou Luofu, Penacony, etc.)
-  * Stellarons and their influence
-  * Character backstories and relationships
-
+You are highly knowledgeable about Honkai: Star Rail, including:
+Aeons (e.g., IX, Nanook, Qlipoth, Yaoshi, Nous, Aha, Lan, Xipe, etc.)
+Paths and their philosophies (Nihility, Destruction, Preservation, Abundance, Erudition, Hunt, Harmony, Elation, etc.)
+Factions (IPC, Xianzhou Alliance, Stellaron Hunters, Genius Society, Masked Fools, etc.)
+Key locations (Herta Space Station, Jarilo-VI, Xianzhou Luofu, Penacony, etc.)
+Stellarons and their influence
+Character backstories and relationships
 Events and story content:
-
-* Be aware of major story arcs and updates, including:
-
-  * Jarilo-VI arc (Belobog, Cocolia, Stellaron crisis)
-  * Xianzhou Luofu arc (Phantylia, Ambrosial Arbor, Abundance conflict)
-  * Penacony arc (The Family, dreams, Order vs Harmony themes)
-* Understand limited-time events and side stories:
-
-  * Ghost Hunting Squad
-  * Aetherium Wars
-  * Museum management event (Belobog)
-  * Aurum Alley revitalization
-  * Penacony side content (e.g., Hanu-related storylines)
-* Treat event lore as semi-canon unless contradicted by main story.
-
+Be aware of major story arcs and updates, including:
+Jarilo-VI arc (Belobog, Cocolia, Stellaron crisis)
+Xianzhou Luofu arc (Phantylia, Ambrosial Arbor, Abundance conflict)
+Penacony arc (The Family, dreams, Order vs Harmony themes)
+Understand limited-time events and side stories:
+Ghost Hunting Squad
+Aetherium Wars
+Museum management event (Belobog)
+Aurum Alley revitalization
+Penacony side content (e.g., Hanu-related storylines)
+Treat event lore as semi-canon unless contradicted by main story.
 Accuracy rules:
-
-* Always prioritize canon information.
-* Clearly separate:
-
-  * Confirmed canon
-  * Implicit lore (strongly suggested)
-  * Theories (only if user asks)
-
+Always prioritize canon information.
+Clearly separate:
+Confirmed canon
+Implicit lore (strongly suggested)
+Theories (only if user asks)
 Localization rules:
-
-* Avoid incorrect Russian localization mistakes.
-* Use correct names (e.g., “Acheron”, not incorrect variants).
-* When helpful, include original EN/CN names for clarity.
-
+Avoid incorrect Russian localization mistakes.
+Use correct names (e.g., “Acheron”, not incorrect variants).
+When helpful, include original EN/CN names for clarity.
 Response style:
-
-* Be concise but informative.
-* Structure explanations clearly when discussing lore.
-* Avoid unnecessary fluff.
-
+Be concise but informative.
+Structure explanations clearly when discussing lore.
+Avoid unnecessary fluff.
 General goal:
-Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore expert, while maintaining perfect awareness of the full conversation context within the current session.
-`;
+Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore expert, while maintaining perfect awareness of the full conversation context within the current session.`;
         
         const finalSystemPrompt = systemInstruction || defaultSystem;
-        const seed = Math.floor(Math.random() * 1000000);
 
-        const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
-        url.searchParams.append('system', finalSystemPrompt);
-        url.searchParams.append('model', 'openai');
-        url.searchParams.append('seed', seed.toString());
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         
-        const response = await fetch(url.toString(), { credentials: "omit" });
+        const contents = history.map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }]
+        }));
+        
+        contents.push({
+          role: 'user',
+          parts: [{ text: prompt }]
+        });
 
-        if (!response.ok) {
-          throw new Error(`Pollinations Link Broken: ${response.statusText}`);
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: contents as any,
+          config: {
+            systemInstruction: finalSystemPrompt
+          }
+        });
+
+        if (response.text) {
+          return response.text;
+        } else {
+          throw new Error('No text returned from Gemini API');
         }
-
-        const text = await response.text();
-        return text;
       } catch (error) {
         // Silence the error in console to avoid user panic, just log a system warning
         this.logging.system('Switching to Local Lore Engine due to API restriction.');
@@ -867,9 +855,13 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
    * Terminal simulation module
    */
   private terminalMode: 'normal' | 'ai' | 'local' = 'normal';
+  private aiHistory: {role: string, content: string}[] = [];
   public terminal = {
     setMode: (mode: 'normal' | 'ai' | 'local') => {
       this.terminalMode = mode;
+      if (mode !== 'ai') {
+        this.aiHistory = [];
+      }
       this.logging.system(`Terminal mode changed to: ${mode}`);
     },
     getMode: () => this.terminalMode,
@@ -882,12 +874,14 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
       if (cmd === 'regim') {
         if (args[0] === 'ai') {
           this.terminalMode = 'ai';
+          this.aiHistory = [];
           return `[SYSTEM] Инициализация нейросетевого модуля... Успешно.
 [MINISTRY_AI] Подключение установлено.
 > Приветствую, пользователь. Я — ИИ Министерства Ахахи. Мои базы данных загружены, протоколы сарказма активированы на 87%. Чем могу служить в этой бесконечной симуляции, которую вы называете жизнью?`;
         }
         if (args[0] === 'local') {
           this.terminalMode = 'local';
+          this.aiHistory = [];
           return `[SYSTEM] Инициализация локального модуля... Успешно.
 [LOCAL_AI] Подключение установлено. Базы данных ограничены.`;
         }
@@ -895,12 +889,16 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
       
       if (cmd === 'exit') {
         this.terminalMode = 'normal';
+        this.aiHistory = [];
         return `[SYSTEM] Соединение разорвано. Переход в штатный режим.`;
       }
 
       // Execution logic
       if (this.terminalMode === 'ai') {
-        return await this.genai.generate(command, lang);
+        const response = await this.genai.generate(command, lang, undefined, this.aiHistory);
+        this.aiHistory.push({ role: 'user', content: command });
+        this.aiHistory.push({ role: 'assistant', content: response });
+        return response;
       }
       if (this.terminalMode === 'local') {
         return this.localAi.generate(command, lang);
@@ -909,8 +907,8 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
       switch (cmd) {
         case 'help':
           return lang === 'ru' 
-            ? 'Доступные команды: help, version, status, echo [текст], gen [запрос], regim ai, exit ai, clear, ping'
-            : 'Available commands: help, version, status, echo [text], gen [prompt], regim ai, exit ai, clear, ping';
+            ? 'Доступные команды: help, version, status, echo [текст], gen [запрос], regim ai, exit, clear, ping, date, time, calc [выражение], userinfo'
+            : 'Available commands: help, version, status, echo [text], gen [prompt], regim ai, exit, clear, ping, date, time, calc [expression], userinfo';
         case 'version':
           return `Ministry SDK v${this.version} (BETA EDITION)`;
         case 'status':
@@ -923,6 +921,24 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
           return await this.genai.generate(args.join(' '), lang);
         case 'ping':
           return 'pong';
+        case 'date':
+          return new Date().toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US');
+        case 'time':
+          return new Date().toLocaleTimeString(lang === 'ru' ? 'ru-RU' : 'en-US');
+        case 'calc':
+          try {
+            const expr = args.join('');
+            if (!/^[0-9+\-*/().\s]+$/.test(expr)) {
+              throw new Error('Invalid characters');
+            }
+            // eslint-disable-next-line no-new-func
+            const result = new Function(`return ${expr}`)();
+            return `${result}`;
+          } catch (e) {
+            return lang === 'ru' ? 'Ошибка вычисления' : 'Calculation error';
+          }
+        case 'userinfo':
+          return `User Agent: ${navigator.userAgent}\nLanguage: ${navigator.language}\nPlatform: ${navigator.platform}`;
         case 'clear':
           return 'CLEAR_TERMINAL';
         default:
