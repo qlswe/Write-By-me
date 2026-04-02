@@ -774,21 +774,20 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
         
         const finalSystemPrompt = systemInstruction || defaultSystem;
 
+        console.log('API Key defined:', !!process.env.GEMINI_API_KEY);
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         
-        const contents = history.map(msg => ({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }]
-        }));
-        
-        contents.push({
-          role: 'user',
-          parts: [{ text: prompt }]
-        });
+        let formattedPrompt = prompt;
+        if (history.length > 0) {
+          const historyText = history.map(m => `${m.role === 'user' ? 'Пользователь' : 'ИИ'}: ${m.content}`).join('\n');
+          formattedPrompt = `[ИСТОРИЯ ЧАТА]\n${historyText}\n\n[ТЕКУЩЕЕ СООБЩЕНИЕ]\nПользователь: ${prompt}\nИИ:`;
+        }
+
+        console.log('Sending to Gemini:', { formattedPrompt, systemInstruction: finalSystemPrompt });
 
         const response = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
-          contents: contents as any,
+          contents: formattedPrompt,
           config: {
             systemInstruction: finalSystemPrompt
           }
@@ -800,6 +799,7 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
           throw new Error('No text returned from Gemini API');
         }
       } catch (error) {
+        console.error('Gemini API Error:', error);
         // Silence the error in console to avoid user panic, just log a system warning
         this.logging.system('Switching to Local Lore Engine due to API restriction.');
         return this.localAi.generate(prompt, lang);
