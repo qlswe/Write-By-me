@@ -711,7 +711,7 @@ export class MinistrySDK {
   };
 
   /**
-   * Generative AI module using Gemini
+   * Generative AI module using Pollinations (Free, works in RU, no CORS preflight)
    */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
@@ -773,9 +773,6 @@ General goal:
 Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore expert, while maintaining perfect awareness of the full conversation context within the current session.`;
         
         const finalSystemPrompt = systemInstruction || defaultSystem;
-
-        console.log('API Key defined:', !!process.env.GEMINI_API_KEY);
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         
         let formattedPrompt = prompt;
         if (history.length > 0) {
@@ -783,23 +780,29 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
           formattedPrompt = `[ИСТОРИЯ ЧАТА]\n${historyText}\n\n[ТЕКУЩЕЕ СООБЩЕНИЕ]\nПользователь: ${prompt}\nИИ:`;
         }
 
-        console.log('Sending to Gemini:', { formattedPrompt, systemInstruction: finalSystemPrompt });
+        const url = new URL('https://text.pollinations.ai/');
+        url.searchParams.append('system', finalSystemPrompt);
+        url.searchParams.append('model', 'openai');
+        url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: formattedPrompt,
-          config: {
-            systemInstruction: finalSystemPrompt
-          }
+        // Using POST with text/plain body avoids CORS preflight (OPTIONS) request
+        // and avoids URL length limits that cause 500 errors.
+        const response = await fetch(url.toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain',
+          },
+          body: formattedPrompt
         });
 
-        if (response.text) {
-          return response.text;
-        } else {
-          throw new Error('No text returned from Gemini API');
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.statusText}`);
         }
+
+        const text = await response.text();
+        return text;
       } catch (error) {
-        console.error('Gemini API Error:', error);
+        console.error('AI API Error:', error);
         // Silence the error in console to avoid user panic, just log a system warning
         this.logging.system('Switching to Local Lore Engine due to API restriction.');
         return this.localAi.generate(prompt, lang);
