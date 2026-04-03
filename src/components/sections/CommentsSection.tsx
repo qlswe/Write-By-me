@@ -30,6 +30,7 @@ interface CommentsSectionProps {
   lang: Language;
   lowPerfMode?: boolean;
   role?: 'admin' | 'moderator' | 'user';
+  onOpenChat?: (uid: string, name: string) => void;
 }
 
 const locales = {
@@ -42,7 +43,7 @@ const locales = {
   zh: zhCN
 };
 
-export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang, lowPerfMode, role }) => {
+export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang, lowPerfMode, role, onOpenChat }) => {
   const { trackRender } = usePerfLogger('CommentsSection');
   trackRender();
   
@@ -68,7 +69,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   const userCommentCount = user ? comments.filter(c => c.authorUid === user.uid).length : 0;
   const hasReachedLimit = userCommentCount >= MAX_COMMENTS_PER_POST;
 
-  const EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
+  const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '✨'];
 
   useEffect(() => {
     if (!targetId) return;
@@ -218,44 +219,53 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     const isLong = comment.content.length > 250;
 
     return (
-      <div key={comment.id} className={`flex gap-3 sm:gap-4 group ${isReply ? 'mt-4' : 'mt-6'}`}>
+      <div key={comment.id} className={`flex gap-2 sm:gap-4 group ${isReply ? 'mt-4' : 'mt-8'}`}>
         <img
-          src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=5C4B8B&color=fff&size=${lowPerfMode ? '32' : '64'}`}
+          src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=3E3160&color=fff&size=${lowPerfMode ? '32' : '64'}`}
           alt={comment.authorName}
           loading="lazy"
-          className={`${isReply ? 'w-6 h-6 sm:w-8 sm:h-8' : 'w-8 h-8 sm:w-10 sm:h-10'} rounded-full border border-[#5C4B8B] shrink-0 mt-1 shadow-sm`}
+          className={`${isReply ? 'w-8 h-8' : 'w-10 h-10'} rounded-2xl border-2 border-[#5C4B8B]/50 shrink-0 mt-1 shadow-lg group-hover:border-[#8B5CF6] transition-colors object-cover`}
         />
         <div className="flex-1 min-w-0">
-          <div className={`bg-[#2F244F] rounded-2xl ${isReply ? 'rounded-tl-xl' : 'rounded-tl-none'} p-3 sm:p-4 border border-[#5C4B8B] shadow-sm transition-colors group-hover:border-[#C3A6E6]/50`}>
-            <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
-              <div className="flex items-center flex-wrap gap-2">
-                <span className="font-bold text-white text-sm sm:text-base">{comment.authorName}</span>
-                <span className="text-xs text-gray-400">
+          <div className={`bg-[#2F244F]/30 backdrop-blur-xl rounded-[1.5rem] ${isReply ? 'rounded-tl-none' : 'rounded-tl-none'} p-4 sm:p-5 border border-[#5C4B8B]/20 shadow-xl transition-all group-hover:border-[#8B5CF6]/30 group-hover:bg-[#2F244F]/50`}>
+            <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
+              <div className="flex items-center flex-wrap gap-3">
+                <span className="font-black text-white text-sm uppercase tracking-wider">{comment.authorName}</span>
+                {user && user.uid !== comment.authorUid && onOpenChat && (
+                  <button
+                    onClick={() => onOpenChat(comment.authorUid, comment.authorName)}
+                    className="p-1.5 bg-[#1A1625] text-[#8B5CF6] hover:text-white hover:bg-[#8B5CF6] rounded-lg transition-all active:scale-90 border border-[#5C4B8B]/30"
+                    title={t.sendMessage}
+                  >
+                    <MessageCircle size={12} />
+                  </button>
+                )}
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
                   {formatDistanceToNow(new Date(comment.createdAt), {
                     addSuffix: true,
                     locale: locales[lang] || locales.en
                   })}
-                  {comment.isEdited && <span className="ml-1 italic opacity-70">(изменено)</span>}
+                  {comment.isEdited && <span className="ml-1 italic opacity-70">(изм.)</span>}
                 </span>
               </div>
-              <div className="flex items-center gap-1 sm:gap-2 ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 {user && (user.uid === comment.authorUid || isModerator) && (
                 <>
                   {user.uid === comment.authorUid && (
                     <button
                       onClick={() => handleEdit(comment)}
-                      className="text-gray-400 hover:text-[#C3A6E6] transition-colors p-1"
-                      title="Редактировать"
+                      className="p-1.5 bg-[#1A1625] text-gray-400 hover:text-white hover:bg-[#8B5CF6] rounded-lg transition-all border border-[#5C4B8B]/30"
+                      title="Ред."
                     >
-                      <Edit2 size={14} className="sm:w-4 sm:h-4" />
+                      <Edit2 size={12} />
                     </button>
                   )}
                   <button
                     onClick={() => setCommentToDelete(comment.id)}
-                    className="text-gray-400 hover:text-red-400 transition-colors p-1"
-                    title={t.delete || "Удалить"}
+                    className="p-1.5 bg-[#1A1625] text-gray-400 hover:text-white hover:bg-red-500 rounded-lg transition-all border border-[#5C4B8B]/30"
+                    title={t.delete || "Удал."}
                   >
-                    <Trash2 size={14} className="sm:w-4 sm:h-4" />
+                    <Trash2 size={12} />
                   </button>
                 </>
               )}
@@ -267,42 +277,42 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="w-full bg-[#3E3160] border border-[#5C4B8B] rounded-xl p-2 sm:p-3 text-sm sm:text-base text-gray-200 focus:outline-none focus:border-[#C3A6E6] resize-none min-h-[80px]"
+                className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-2xl p-4 text-sm text-gray-200 focus:outline-none focus:border-[#8B5CF6]/50 resize-none min-h-[100px] font-medium"
               />
-              <div className="flex justify-end gap-2 mt-2">
+              <div className="flex justify-end gap-2 mt-3">
                 <button
                   onClick={() => setEditingCommentId(null)}
-                  className="p-1 sm:p-2 text-gray-400 hover:text-white transition-colors"
+                  className="px-4 py-2 bg-[#2F244F] text-gray-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#5C4B8B]/30 transition-all"
                 >
-                  <X size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  {t.cancelBtn}
                 </button>
                 <button
                   onClick={() => handleUpdate(comment.id)}
-                  className="p-1 sm:p-2 text-[#C3A6E6] hover:text-white transition-colors"
+                  className="px-4 py-2 bg-[#8B5CF6] text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/20 transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)]"
                 >
-                  <Check size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  {t.saveBtn || "Save"}
                 </button>
               </div>
             </div>
           ) : (
             <div>
-              <p className={`text-sm sm:text-base text-gray-200 whitespace-pre-wrap break-words leading-relaxed ${!isExpanded && isLong ? 'line-clamp-4' : ''}`}>
+              <p className={`text-sm text-gray-200 whitespace-pre-wrap break-words leading-relaxed font-medium ${!isExpanded && isLong ? 'line-clamp-4' : ''}`}>
                 {comment.content}
               </p>
               {isLong && (
                 <button
                   onClick={() => toggleExpand(comment.id)}
-                  className="text-[#C3A6E6] text-xs sm:text-sm mt-2 hover:underline focus:outline-none font-medium flex items-center gap-1"
+                  className="text-[#8B5CF6] text-[10px] mt-2 hover:text-white focus:outline-none font-black uppercase tracking-widest flex items-center gap-1 transition-colors"
                 >
                   {isExpanded ? (
                     <>
                       {t.showLess || "Свернуть"}
-                      <ChevronUp size={14} />
+                      <ChevronUp size={12} />
                     </>
                   ) : (
                     <>
                       {t.showMore || "Читать далее"}
-                      <ChevronDown size={14} />
+                      <ChevronDown size={12} />
                     </>
                   )}
                 </button>
@@ -310,54 +320,39 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
             </div>
           )}
 
-          <div className="mt-3 pt-3 border-t border-[#5C4B8B]/30 flex flex-wrap items-center gap-2 relative">
-            {/* Render existing reactions */}
-            {comment.reactions && Object.entries(comment.reactions).map(([emoji, users]) => {
-              if (users.length === 0) return null;
+          <div className="mt-4 pt-4 border-t border-[#5C4B8B]/10 flex flex-wrap items-center gap-2 relative">
+            {/* Render reactions as direct buttons */}
+            {EMOJIS.map(emoji => {
+              const users = (comment.reactions && comment.reactions[emoji]) || [];
+              const count = users.length;
               const hasReacted = user && users.includes(user.uid);
+              
+              if (count === 0 && !user) return null;
+
               return (
                 <button
                   key={emoji}
                   onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs transition-all ${hasReacted ? 'bg-[#C3A6E6]/20 border border-[#C3A6E6]/50 text-[#C3A6E6]' : 'bg-[#3E3160] border border-transparent hover:border-[#5C4B8B] text-gray-300'}`}
+                  disabled={!user}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] transition-all border ${
+                    hasReacted 
+                      ? 'bg-[#8B5CF6]/20 border-[#8B5CF6]/50 text-[#8B5CF6]' 
+                      : count > 0
+                        ? 'bg-[#1A1625] border-[#5C4B8B]/30 text-gray-400'
+                        : 'bg-transparent border-transparent text-gray-500 opacity-0 group-hover:opacity-100 hover:border-[#5C4B8B]/30'
+                  } ${!user ? 'cursor-not-allowed' : 'hover:scale-110 active:scale-95'}`}
                 >
-                  <span className="text-sm leading-none">{emoji}</span>
-                  <span className="font-medium">{users.length}</span>
+                  <span className={`text-sm leading-none ${count === 0 && !hasReacted ? 'grayscale opacity-50' : ''}`}>{emoji}</span>
+                  {count > 0 && <span className="font-black">{count}</span>}
                 </button>
               );
             })}
-
-            {/* Add reaction button */}
-            {user && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowReactionsFor(showReactionsFor === comment.id ? null : comment.id)}
-                  className="p-1.5 rounded-full bg-[#3E3160] text-gray-400 hover:text-[#C3A6E6] hover:bg-[#5C4B8B]/50 transition-colors"
-                >
-                  <Heart size={14} />
-                </button>
-                
-                {showReactionsFor === comment.id && (
-                  <div className="absolute bottom-full left-0 mb-2 bg-[#3E3160] border border-[#5C4B8B] rounded-full p-1.5 flex gap-1 shadow-xl z-50">
-                    {EMOJIS.map(emoji => (
-                      <button
-                        key={emoji}
-                        onClick={() => handleReaction(comment.id, emoji, comment.reactions)}
-                        className="p-2 hover:bg-[#5C4B8B] rounded-full transition-transform hover:scale-110"
-                      >
-                        <span className="text-xl leading-none">{emoji}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Reply button */}
             {!isReply && user && (
               <button
                 onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                className="ml-auto flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-[#C3A6E6] transition-colors px-2 py-1 rounded-md hover:bg-[#3E3160]"
+                className="ml-auto flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-[#8B5CF6] transition-all px-4 py-2 rounded-xl hover:bg-[#8B5CF6]/10 border border-transparent hover:border-[#8B5CF6]/30"
               >
                 <MessageCircle size={14} />
                 {t.reply || "Ответить"}
@@ -371,80 +366,82 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   };
 
   return (
-    <div className="mt-8 pt-8 border-t border-[#5C4B8B]">
-      <h3 className="text-xl font-bold text-[#C3A6E6] mb-6">
-        {t.comments || "Комментарии"} ({comments.length})
+    <div className="mt-12 pt-12 border-t border-[#2F244F]">
+      <h3 className="text-3xl font-black text-white mb-10 tracking-tighter uppercase flex items-center gap-4">
+        <MessageCircle className="text-[#8B5CF6]" size={32} />
+        {t.comments || "Комментарии"} <span className="text-gray-500 text-xl">({comments.length})</span>
       </h3>
 
       {user ? (
-        <div className="mb-8">
-          <form onSubmit={handleSubmit} className="relative">
+        <div className="mb-12">
+          <form onSubmit={handleSubmit} className="relative group">
             <textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={hasReachedLimit ? (t.commentLimitReached || "You have reached the comment limit") : (t.writeComment || "Написать комментарий... (Enter для отправки)")}
-              className={`w-full bg-[#2F244F] border border-[#5C4B8B] rounded-xl p-3 sm:p-4 pr-12 text-gray-200 focus:outline-none focus:border-[#C3A6E6] resize-none min-h-[100px] text-sm sm:text-base ${hasReachedLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full bg-[#2F244F]/30 border border-[#5C4B8B]/20 rounded-[2rem] p-6 pr-16 text-gray-200 focus:outline-none focus:border-[#8B5CF6]/50 focus:bg-[#2F244F]/50 transition-all resize-none min-h-[150px] text-base font-medium ${hasReachedLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
               maxLength={2000}
               disabled={hasReachedLimit}
             />
             <button
               type="submit"
               disabled={!newComment.trim() || isSubmitting || hasReachedLimit}
-              className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 p-2 bg-[#C3A6E6] text-[#2F244F] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B094EB] transition-colors"
+              className="absolute bottom-6 right-6 p-4 bg-[#8B5CF6] text-white rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#7C3AED] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] border border-white/20"
             >
-              <Send size={18} />
+              <Send size={20} />
             </button>
           </form>
           {hasReachedLimit && (
-            <p className="text-red-400 text-sm mt-2">{t.commentLimitReached || "You have reached the comment limit (max 5) for this post."}</p>
+            <p className="text-red-400 text-[10px] mt-3 font-black uppercase tracking-widest">{t.commentLimitReached || "You have reached the comment limit (max 5) for this post."}</p>
           )}
         </div>
       ) : (
-        <div className="bg-[#2F244F] border border-[#5C4B8B] rounded-xl p-6 text-center mb-8">
-          <p className="text-gray-300 mb-4">{t.loginToComment || "Войдите, чтобы оставить комментарий"}</p>
+        <div className="bg-[#2F244F]/20 border border-[#5C4B8B]/20 rounded-[2.5rem] p-12 text-center mb-12 backdrop-blur-xl">
+          <MessageCircle size={48} className="mx-auto text-gray-600 mb-6" />
+          <p className="text-gray-400 mb-8 font-black uppercase tracking-widest text-sm">{t.loginToComment || "Войдите, чтобы оставить комментарий"}</p>
           <button
             onClick={loginWithGoogle}
-            className="inline-flex items-center gap-2 bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-4 py-2 rounded-lg font-bold transition-colors"
+            className="inline-flex items-center gap-4 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:scale-105 active:scale-95 border border-white/20"
           >
             {t.loginWithGoogle || "Войти через Google"}
           </button>
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-10">
         {topLevelComments.map((comment) => {
           const replies = repliesMap[comment.id] || [];
           
           return (
-            <div key={comment.id} className="space-y-2">
+            <div key={comment.id} className="space-y-4">
               {renderCommentContent(comment, false)}
               
               {/* Replies */}
               {replies.length > 0 && (
-                <div className="ml-4 sm:ml-12 mt-2 space-y-0 border-l-2 border-[#5C4B8B]/30 pl-3 sm:pl-5">
+                <div className="ml-6 sm:ml-16 mt-4 space-y-0 border-l-2 border-[#2F244F] pl-4 sm:pl-8">
                   {replies.map(reply => renderCommentContent(reply, true))}
                 </div>
               )}
 
               {/* Reply Input */}
               {replyingTo === comment.id && (
-                <div className="ml-4 sm:ml-12 mt-3 pl-3 sm:pl-5 border-l-2 border-transparent">
-                  <form onSubmit={(e) => handleSubmit(e, comment.id)} className="relative">
+                <div className="ml-6 sm:ml-16 mt-6 pl-4 sm:pl-8 border-l-2 border-transparent">
+                  <form onSubmit={(e) => handleSubmit(e, comment.id)} className="relative group">
                     <textarea
                       value={replyContent}
                       onChange={(e) => setReplyContent(e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, comment.id)}
                       placeholder={t.writeReply || "Написать ответ..."}
-                      className="w-full bg-[#2F244F] border border-[#5C4B8B] rounded-xl p-3 pr-12 text-gray-200 focus:outline-none focus:border-[#C3A6E6] resize-none min-h-[80px] text-sm"
+                      className="w-full bg-[#2F244F]/30 border border-[#5C4B8B]/20 rounded-2xl p-4 pr-14 text-gray-200 focus:outline-none focus:border-[#8B5CF6]/50 focus:bg-[#2F244F]/50 transition-all resize-none min-h-[100px] text-sm font-medium"
                       maxLength={1000}
                     />
                     <button
                       type="submit"
                       disabled={!replyContent.trim() || isSubmitting}
-                      className="absolute bottom-3 right-3 p-1.5 bg-[#C3A6E6] text-[#2F244F] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B094EB] transition-colors"
+                      className="absolute bottom-4 right-4 p-3 bg-[#8B5CF6] text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#7C3AED] hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] border border-white/20"
                     >
-                      <Send size={14} />
+                      <Send size={16} />
                     </button>
                   </form>
                 </div>

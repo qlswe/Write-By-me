@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
@@ -39,10 +39,26 @@ export const Header: React.FC<HeaderProps> = ({
   const t = translations[lang];
   const { user, loginWithGoogle, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { trackRender } = usePerfLogger('Header');
   trackRender();
+
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (navRef.current) {
+      const activeItem = navRef.current.querySelector(`[data-active="true"]`);
+      if (activeItem) {
+        activeItem.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center'
+        });
+      }
+    }
+  }, [section]);
 
   useEffect(() => {
     if (mobileMenuOpen) {
@@ -57,21 +73,28 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-[#3E3160]/90 backdrop-blur-md border-b border-[#5C4B8B] shadow-sm">
+      <header className="sticky top-0 z-50 bg-[#2F244F]/80 backdrop-blur-xl border-b border-[#3E3160] shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <h1 className="text-lg md:text-xl font-bold text-[#C3A6E6] tracking-tight shrink-0">
-            {t.siteName}
+          <h1 className="text-xl md:text-2xl font-black text-white tracking-tighter shrink-0 flex items-center gap-2">
+            <Zap className="text-[#C3A6E6] fill-[#C3A6E6]" size={24} />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+              {t.siteName}
+            </span>
           </h1>
           
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1 bg-[#2F244F]/80 backdrop-blur-md p-1.5 rounded-2xl border border-[#5C4B8B]/50 overflow-x-auto no-scrollbar">
+          <nav 
+            ref={navRef}
+            className="hidden lg:flex items-center gap-1 bg-[#3E3160]/40 backdrop-blur-md p-1 rounded-2xl border border-[#5C4B8B]/30 overflow-x-auto no-scrollbar scroll-smooth"
+          >
             {navItems.map(item => (
               <button
                 key={item.id}
+                data-active={section === item.id}
                 onClick={() => setSection(item.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                   section === item.id 
-                    ? 'text-white bg-[#5C4B8B] shadow-md' 
+                    ? 'text-[#2F244F] bg-[#C3A6E6] shadow-[0_0_20px_rgba(195,166,230,0.3)]' 
                     : 'text-gray-400 hover:text-gray-200 hover:bg-[#3E3160]/50'
                 }`}
               >
@@ -82,23 +105,40 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           <div className="flex items-center gap-3 shrink-0">
+            {/* Custom Language Selector */}
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#C3A6E6]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-              </div>
-              <select 
-                value={lang} 
-                onChange={(e) => setLang(e.target.value as Language)}
-                className="appearance-none bg-[#2F244F] border border-[#5C4B8B] rounded-lg pl-9 pr-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C3A6E6] text-gray-200 cursor-pointer hover:border-[#C3A6E6] transition-colors"
+              <button 
+                onClick={() => setLangOpen(!langOpen)}
+                className="flex items-center gap-2 bg-[#3E3160]/60 border border-[#5C4B8B]/50 hover:border-[#C3A6E6] text-gray-200 px-3 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest group"
               >
-                <option value="ru">RU</option>
-                <option value="en">EN</option>
-                <option value="by">BY</option>
-                <option value="jp">JP</option>
-                <option value="de">DE</option>
-                <option value="fr">FR</option>
-                <option value="zh">ZH</option>
-              </select>
+                <Globe size={14} className="text-[#C3A6E6] group-hover:rotate-12 transition-transform" />
+                {lang}
+              </button>
+              
+              <AnimatePresence>
+                {langOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    className="absolute right-0 mt-3 w-40 bg-[#2F244F] border border-[#3E3160] rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5"
+                  >
+                    {(['ru', 'en', 'by', 'jp', 'de', 'fr', 'zh'] as Language[]).map(l => (
+                      <button
+                        key={l}
+                        onClick={() => { setLang(l); setLangOpen(false); }}
+                        className={`w-full text-left px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                          lang === l 
+                            ? 'bg-[#C3A6E6] text-[#2F244F] shadow-lg shadow-[#C3A6E6]/20' 
+                            : 'text-gray-400 hover:bg-[#3E3160] hover:text-white'
+                        }`}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {toggleLowPerfMode && (
@@ -182,13 +222,20 @@ export const Header: React.FC<HeaderProps> = ({
                   </AnimatePresence>
                 </div>
               ) : (
-                <button 
-                  onClick={loginWithGoogle}
-                  className="flex items-center gap-2 bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-3 py-1.5 rounded-lg text-sm font-bold transition-colors whitespace-nowrap"
-                >
-                  <LogIn size={14} />
-                  {t.login || "Login"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={loginWithGoogle}
+                    className="group relative flex items-center gap-2 bg-white hover:bg-gray-100 text-[#2F244F] px-4 py-1.5 rounded-lg text-sm font-black transition-all shadow-lg hover:shadow-white/10 active:scale-95"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span className="hidden sm:inline">{t.login || "Login"}</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -284,13 +331,28 @@ export const Header: React.FC<HeaderProps> = ({
                   </button>
                 </>
               ) : (
-                <button 
-                  onClick={() => { loginWithGoogle(); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center justify-center gap-2 bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-4 py-3 rounded-xl font-bold transition-colors"
-                >
-                  <LogIn size={20} />
-                  {t.loginWithGoogle || "Login with Google"}
-                </button>
+                <>
+                  <button 
+                    onClick={() => { loginWithGoogle(); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-3 bg-white text-[#2F244F] px-4 py-4 rounded-xl font-black transition-all active:scale-95 shadow-xl"
+                  >
+                    <svg className="w-6 h-6" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    {t.loginWithGoogle || "Login with Google"}
+                  </button>
+                  
+                  <button 
+                    onClick={() => { /* Open email login */ setMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-3 bg-[#2F244F] border border-[#5C4B8B] text-white px-4 py-4 rounded-xl font-black transition-all active:scale-95"
+                  >
+                    <Mail size={24} className="text-[#C3A6E6]" />
+                    {lang === 'ru' ? 'Вход через почту' : 'Login with Email'}
+                  </button>
+                </>
               )}
             </div>
           </motion.div>
@@ -306,7 +368,11 @@ export const Header: React.FC<HeaderProps> = ({
         cancelText={t.cancelBtn || "Cancel"}
         isDestructive={true}
       />
-      <ProfileModal isOpen={profileModalOpen} onClose={() => setProfileModalOpen(false)} lang={lang} />
+      <ProfileModal 
+        isOpen={profileModalOpen} 
+        onClose={() => setProfileModalOpen(false)} 
+        lang={lang} 
+      />
     </>
   );
 };

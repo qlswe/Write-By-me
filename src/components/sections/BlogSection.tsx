@@ -6,11 +6,14 @@ import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { CommentsSection } from './CommentsSection';
 import { BlogCard } from './BlogCard';
+import { ReactionsBar } from '../ui/ReactionsBar';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { useAuth } from '../../hooks/useAuth';
 import { sdk } from '../../sdk';
+
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface BlogSectionProps {
   lang: Language;
@@ -24,6 +27,7 @@ interface BlogSectionProps {
   blogPosts?: any[];
   onEdit?: (post: any) => void;
   onCreate?: () => void;
+  onOpenChat?: (uid: string, name: string) => void;
   role?: 'admin' | 'moderator' | 'user';
 }
 
@@ -39,23 +43,25 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   blogPosts = blogPostsData,
   onEdit,
   onCreate,
+  onOpenChat,
   role
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('BlogSection');
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const { user } = useAuth();
   const isAdmin = role === 'admin';
   const isModerator = role === 'admin' || role === 'moderator';
   trackRender();
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      try {
-        await deleteDoc(doc(db, 'blogPosts', id));
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `blogPosts/${id}`);
-      }
+  const handleDelete = async () => {
+    if (!postToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'blogPosts', postToDelete));
+      setPostToDelete(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `blogPosts/${postToDelete}`);
     }
   };
 
@@ -157,12 +163,16 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
 
             <div 
               ref={contentRef}
-              className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-12 text-base sm:text-lg leading-relaxed"
+              className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8 text-base sm:text-lg leading-relaxed"
               dangerouslySetInnerHTML={{ __html: selectedPost.content[lang] || selectedPost.content['en'] }}
             />
 
+            <div className="mb-12">
+              <ReactionsBar targetId={selectedPost.id} />
+            </div>
+
             <div className="pt-10 border-t border-[#5C4B8B]">
-              <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} role={role} />
+              <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} role={role} onOpenChat={onOpenChat} />
             </div>
           </motion.div>
         ) : (
@@ -195,7 +205,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             </div>
             
             <div className="flex flex-col lg:flex-row gap-6 mb-10">
-              <div className="flex gap-2 p-1.5 bg-[#2F244F]/50 rounded-2xl border border-[#5C4B8B] overflow-x-auto no-scrollbar">
+              <div className="flex gap-2 p-1.5 bg-[#2F244F]/50 rounded-2xl border border-[#5C4B8B] overflow-x-auto no-scrollbar ml-6">
                 {['all', 'updates', 'personal', 'favorites'].map((cat) => (
                   <button
                     key={cat}
@@ -245,7 +255,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                     onClick={() => handlePostClick(post.id)}
                     onToggleFavorite={(e) => handleToggleFavorite(post.id, e)}
                     onEdit={(e) => { e.stopPropagation(); onEdit?.(post); }}
-                    onDelete={(e) => { e.stopPropagation(); handleDelete(post.id); }}
+                    onDelete={(e) => { e.stopPropagation(); setPostToDelete(post.id); }}
                   />
                 ))}
               </div>
@@ -253,6 +263,17 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={!!postToDelete}
+        onClose={() => setPostToDelete(null)}
+        onConfirm={handleDelete}
+        title={t.confirmDeleteTitle || "Delete Post"}
+        message={t.confirmDeleteMessage || "Are you sure you want to delete this post? This action cannot be undone."}
+        confirmText={t.delete || "Delete"}
+        cancelText={t.cancelBtn || "Cancel"}
+        isDestructive={true}
+      />
     </div>
   );
 };

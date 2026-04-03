@@ -6,11 +6,14 @@ import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { CommentsSection } from './CommentsSection';
 import { TheoryCard } from './TheoryCard';
+import { ReactionsBar } from '../ui/ReactionsBar';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { useAuth } from '../../hooks/useAuth';
 import { sdk } from '../../sdk';
+
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface TheoriesSectionProps {
   lang: Language;
@@ -24,6 +27,7 @@ interface TheoriesSectionProps {
   theories?: any[];
   onEdit?: (theory: any) => void;
   onCreate?: () => void;
+  onOpenChat?: (uid: string, name: string) => void;
   role?: 'admin' | 'moderator' | 'user';
 }
 
@@ -39,24 +43,26 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   theories = theoriesData,
   onEdit,
   onCreate,
+  onOpenChat,
   role
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('TheoriesSection');
   const [selectedTheoryId, setSelectedTheoryId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [theoryToDelete, setTheoryToDelete] = useState<string | null>(null);
   const { user } = useAuth();
   const isAdmin = role === 'admin';
   const isModerator = role === 'admin' || role === 'moderator';
   trackRender();
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this theory?')) {
-      try {
-        await deleteDoc(doc(db, 'theories', id));
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `theories/${id}`);
-      }
+  const handleDelete = async () => {
+    if (!theoryToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'theories', theoryToDelete));
+      setTheoryToDelete(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `theories/${theoryToDelete}`);
     }
   };
 
@@ -193,12 +199,16 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
 
             <div 
               ref={contentRef}
-              className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-12 text-base sm:text-lg leading-relaxed"
+              className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#C3A6E6] max-w-none mb-8 text-base sm:text-lg leading-relaxed"
               dangerouslySetInnerHTML={{ __html: selectedTheory.content[lang] || selectedTheory.content['en'] }}
             />
 
+            <div className="mb-12">
+              <ReactionsBar targetId={selectedTheory.id} />
+            </div>
+
             <div className="pt-10 border-t border-[#5C4B8B]">
-              <CommentsSection targetId={selectedTheory.id} lang={lang} lowPerfMode={lowPerfMode} role={role} />
+              <CommentsSection targetId={selectedTheory.id} lang={lang} lowPerfMode={lowPerfMode} role={role} onOpenChat={onOpenChat} />
             </div>
           </motion.div>
         ) : (
@@ -282,7 +292,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                     onClick={() => handleTheoryClick(theory.id)}
                     onToggleFavorite={(e) => handleToggleFavorite(theory.id, e)}
                     onEdit={(e) => { e.stopPropagation(); onEdit?.(theory); }}
-                    onDelete={(e) => { e.stopPropagation(); handleDelete(theory.id); }}
+                    onDelete={(e) => { e.stopPropagation(); setTheoryToDelete(theory.id); }}
                   />
                 ))}
               </div>
@@ -290,6 +300,17 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={!!theoryToDelete}
+        onClose={() => setTheoryToDelete(null)}
+        onConfirm={handleDelete}
+        title={t.confirmDeleteTitle || "Delete Theory"}
+        message={t.confirmDeleteMessage || "Are you sure you want to delete this theory? This action cannot be undone."}
+        confirmText={t.delete || "Delete"}
+        cancelText={t.cancelBtn || "Cancel"}
+        isDestructive={true}
+      />
     </div>
   );
 };

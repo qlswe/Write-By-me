@@ -33,33 +33,33 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className={`fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm ${fullScreen ? (isDestructive ? 'bg-red-950/90' : 'bg-[#2F244F]/95') : 'bg-black/60'}`}
+        className={`fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-xl ${fullScreen ? (isDestructive ? 'bg-red-950/90' : 'bg-[#1A1625]/95') : 'bg-black/80'}`}
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: 20 }}
           onClick={(e) => e.stopPropagation()}
           className={fullScreen 
             ? "flex flex-col items-center justify-center text-center w-full h-full max-w-4xl mx-auto p-8" 
-            : "bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-6 max-w-sm w-full shadow-2xl"}
+            : "bg-[#1A1625] border border-[#2F244F] rounded-[2.5rem] p-8 max-w-md w-full shadow-[0_0_50px_rgba(0,0,0,0.5)]"}
         >
-          <div className={`flex items-center gap-3 mb-4 ${fullScreen ? 'flex-col mb-8' : ''}`}>
-            <div className={`p-2 rounded-full ${isDestructive ? 'bg-red-500/20 text-red-400' : 'bg-[#C3A6E6]/20 text-[#C3A6E6]'} ${fullScreen ? 'p-6 mb-4' : ''}`}>
-              <AlertTriangle size={fullScreen ? 80 : 24} />
+          <div className={`flex items-center gap-4 mb-6 ${fullScreen ? 'flex-col mb-10' : ''}`}>
+            <div className={`p-4 rounded-2xl ${isDestructive ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20'} ${fullScreen ? 'p-8 mb-6' : ''}`}>
+              <AlertTriangle size={fullScreen ? 80 : 32} />
             </div>
-            <h3 className={`font-bold text-white ${fullScreen ? 'text-4xl md:text-6xl uppercase tracking-wider' : 'text-xl'}`}>{title}</h3>
+            <h3 className={`font-black text-white uppercase tracking-tighter ${fullScreen ? 'text-5xl md:text-7xl' : 'text-2xl'}`}>{title}</h3>
           </div>
           
-          <p className={`text-gray-300 leading-relaxed ${fullScreen ? 'text-xl md:text-3xl mb-12 max-w-2xl' : 'mb-6'}`}>
+          <p className={`text-gray-400 font-medium leading-relaxed ${fullScreen ? 'text-xl md:text-3xl mb-16 max-w-2xl' : 'mb-8 text-sm'}`}>
             {message}
           </p>
           
-          <div className={`flex gap-3 justify-end ${fullScreen ? 'w-full max-w-md flex-col-reverse sm:flex-row sm:justify-center gap-6' : ''}`}>
+          <div className={`flex gap-4 justify-end ${fullScreen ? 'w-full max-w-md flex-col-reverse sm:flex-row sm:justify-center gap-6' : ''}`}>
             <button
               onClick={onClose}
-              className={`rounded-xl font-bold text-gray-300 bg-[#3E3160] hover:bg-[#5C4B8B] transition-colors ${fullScreen ? 'px-8 py-4 text-xl flex-1' : 'px-4 py-2'}`}
+              className={`rounded-2xl font-black uppercase tracking-widest text-gray-500 bg-[#2F244F]/50 hover:bg-[#2F244F] hover:text-white transition-all border border-[#5C4B8B]/20 ${fullScreen ? 'px-10 py-5 text-xl flex-1' : 'px-6 py-3 text-[10px]'}`}
             >
               {cancelText}
             </button>
@@ -68,11 +68,11 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 onConfirm();
                 onClose();
               }}
-              className={`rounded-xl font-bold transition-colors ${
+              className={`rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg ${
                 isDestructive 
-                  ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50' 
-                  : 'bg-[#C3A6E6] text-[#2F244F] hover:bg-[#B094EB]'
-              } ${fullScreen ? 'px-8 py-4 text-xl flex-1 border-2' : 'px-4 py-2'}`}
+                  ? 'bg-red-500 text-white hover:bg-red-600 shadow-red-500/20' 
+                  : 'bg-[#8B5CF6] text-white hover:bg-[#7C3AED] shadow-[#8B5CF6]/20'
+              } ${fullScreen ? 'px-10 py-5 text-xl flex-1 border-2 border-white/20' : 'px-6 py-3 text-[10px] border border-white/10'}`}
             >
               {confirmText}
             </button>

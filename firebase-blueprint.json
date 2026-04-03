@@ -63,16 +63,45 @@
         }
       },
       "required": ["type", "data", "timestamp"]
+    },
+    "public_profiles": {
+      "title": "Public Profile",
+      "description": "Publicly visible user information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["uid", "displayName"]
+    },
+    "user_posts": {
+      "title": "User Post",
+      "description": "User-created post or note (Юзы).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "text", "createdAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "users",
-      "description": "User profile documents."
+      "description": "Private user profile documents."
+    },
+    "/public_profiles/{userId}": {
+      "schema": "public_profiles",
+      "description": "Public user profile documents."
+    },
+    "/user_posts/{postId}": {
+      "schema": "user_posts",
+      "description": "Collection of user-created posts (Юзы)."
     },
     "/sdk_reports/{reportId}": {
-      "schema": "sdk_reports",
-      "description": "Collection of SDK reports."
-    }
-  }
-}

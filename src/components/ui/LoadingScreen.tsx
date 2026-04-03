@@ -77,14 +77,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
                 Министерство Ахахи
               </motion.h2>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 1, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="text-[10px] font-mono text-[#C3A6E6]/60 tracking-[0.5em] mb-8 uppercase"
-              >
-                НА ЭКРАНЕ ЗАГРУЗКИ ЧУТЬ В ЦЕНТРЕ ДОЛЖНО БЫТЬ
-              </motion.div>
+
               
               <div className="flex items-center justify-center gap-2">
                 <motion.div 

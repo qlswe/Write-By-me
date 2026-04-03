@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -17,12 +17,17 @@ import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { PromoBanner } from './components/ui/PromoBanner';
+import { ProfileModal } from './components/ui/ProfileModal';
 import { ContentModal } from './components/ui/ContentModal';
 import { FeedbackModal } from './components/ui/FeedbackModal';
 import { TheoryEditor } from './components/sections/TheoryEditor';
 import { BlogEditor } from './components/sections/BlogEditor';
 import { EventEditor } from './components/sections/EventEditor';
 import { SDKTerminal } from './components/SDKTerminal';
+import { UsersList } from './components/admin/UsersList';
+import { ChatsList } from './components/chat/ChatsList';
+import { ChatWindow } from './components/chat/ChatWindow';
+import { UserData } from './hooks/useUsers';
 
 // Lazy load sections for better performance
 const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
@@ -31,17 +36,23 @@ const ChronicleSection = lazy(() => import('./components/sections/ChronicleSecti
 const TierListSection = lazy(() => import('./components/sections/TierListSection').then(m => ({ default: m.TierListSection })));
 const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'tierlist';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'tierlist' | 'users' | 'chats';
 
 export default function App() {
   const { trackRender } = usePerfLogger('App');
   trackRender();
 
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, error: authError } = useAuth();
   
   const [isLoading, setIsLoading] = useState(true);
   const [section, setSection] = useState<Section>('home');
   
+  useEffect(() => {
+    if (authError) {
+      setToast(authError);
+    }
+  }, [authError]);
+
   useEffect(() => {
     sdk.logging.action('Section Change', { section });
   }, [section]);
@@ -85,6 +96,13 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
+  // Profile state
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [viewingUser, setViewingUser] = useState<UserData | null>(null);
+
+  // Chat state
+  const [activeChat, setActiveChat] = useState<{ uid: string, displayName: string, photoURL?: string } | null>(null);
+
   const t = translations[lang as Language];
 
   useEffect(() => {
@@ -108,6 +126,18 @@ export default function App() {
     } else {
       document.body.classList.remove('production-mode');
     }
+
+    const handleOpenChatEvent = (e: any) => {
+      setActiveChat(e.detail);
+    };
+
+    const handleOpenProfileEvent = (e: any) => {
+      setViewingUser(e.detail);
+      setProfileOpen(true);
+    };
+
+    window.addEventListener('openChat', handleOpenChatEvent);
+    window.addEventListener('openProfile', handleOpenProfileEvent);
     
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
     const isDismissed = localStorage.getItem('hideInstallBanner') === 'true';
@@ -122,7 +152,11 @@ export default function App() {
       clearTimeout(loaderTimer);
     }
     
-    return () => clearTimeout(loaderTimer);
+    return () => {
+      clearTimeout(loaderTimer);
+      window.removeEventListener('openChat', handleOpenChatEvent);
+      window.removeEventListener('openProfile', handleOpenProfileEvent);
+    };
   }, [authLoading, isDataLoaded, lowPerfMode, productionMode]);
 
   useEffect(() => {
@@ -139,6 +173,8 @@ export default function App() {
     { id: 'chronicle', label: t.navChronicle, icon: RefreshCw },
     { id: 'promo', label: t.navPromo, icon: Ticket },
     { id: 'tierlist', label: t.navTierList, icon: ListOrdered },
+    { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
+    { id: 'users' as const, label: t.navUsers, icon: User },
   ] as const;
 
   const handleCopy = (text: string) => {
@@ -261,27 +297,24 @@ export default function App() {
                       <div className="p-2 rounded-lg bg-[#C3A6E6]/10 text-[#C3A6E6]">
                         <Sparkles size={20} />
                       </div>
-                      <h3 className="text-xl font-bold text-[#C3A6E6]">Ministry SDK v1.4.0-beta</h3>
+                      <h3 className="text-xl font-bold text-[#C3A6E6]">{sdk.help.getUsage(lang as Language).title}</h3>
                     </div>
                     <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-                      Наша новая SDK (Software Development Kit) теперь доступна в режиме бета-тестирования. 
-                      Она предоставляет разработчикам и энтузиастам мощные инструменты для расширения возможностей Ahahi.
+                      {sdk.help.getUsage(lang as Language).description}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">Где использовать?</h4>
+                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{lang === 'ru' ? 'Возможности' : 'Features'}</h4>
                         <ul className="text-xs text-gray-500 space-y-1 list-disc pl-4">
-                          <li>Автоматизация сбора теорий</li>
-                          <li>Интеграция AI-помощников</li>
-                          <li>Создание кастомных виджетов</li>
-                          <li>Аналитика игровых событий</li>
+                          {sdk.help.getUsage(lang as Language).useCases.slice(0, 4).map((useCase, i) => (
+                            <li key={i}>{useCase.split(':')[0]}</li>
+                          ))}
                         </ul>
                       </div>
                       <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">Как начать?</h4>
+                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{lang === 'ru' ? 'Как начать?' : 'How to start?'}</h4>
                         <p className="text-[10px] font-mono text-gray-500">
-                          Используйте терминал в левом нижнем углу для тестирования команд в реальном времени. 
-                          Полная документация доступна в расширенном режиме терминала.
+                          {sdk.help.getUsage(lang as Language).gettingStarted}
                         </p>
                       </div>
                     </div>
@@ -302,6 +335,7 @@ export default function App() {
                   theories={theories}
                   onEdit={setEditingTheory}
                   onCreate={() => setIsCreatingTheory(true)}
+                  onOpenChat={(uid, name) => setActiveChat({ uid, displayName: name })}
                   role={role}
                 />
               )}
@@ -319,6 +353,7 @@ export default function App() {
                   blogPosts={blogPosts}
                   onEdit={setEditingBlog}
                   onCreate={() => setIsCreatingBlog(true)}
+                  onOpenChat={(uid, name) => setActiveChat({ uid, displayName: name })}
                   role={role}
                 />
               )}
@@ -335,6 +370,30 @@ export default function App() {
               )}
               {section === 'tierlist' && <TierListSection lang={lang as Language} lowPerfMode={lowPerfMode} />}
               {section === 'promo' && <PromoSection lang={lang as Language} handleCopy={handleCopy} />}
+              {section === 'users' && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-[#C3A6E6] mb-6">{t.navUsers}</h2>
+                  <UsersList 
+                    lang={lang as Language} 
+                    onOpenChat={(uid, name) => setActiveChat({ uid, displayName: name })} 
+                    onViewProfile={(user) => {
+                      setViewingUser(user);
+                      setProfileOpen(true);
+                    }}
+                  />
+                </div>
+              )}
+              {section === 'chats' && (
+                <div className="max-w-2xl mx-auto">
+                  <h2 className="text-3xl font-black text-[#C3A6E6] uppercase tracking-widest mb-8 flex items-center gap-3">
+                    <MessageSquare size={32} />
+                    {t.navChats}
+                  </h2>
+                  <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-3xl p-6 border border-[#5C4B8B] shadow-2xl">
+                    <ChatsList lang={lang as Language} onSelectChat={(id, name) => setActiveChat({ uid: id, displayName: name })} />
+                  </div>
+                </div>
+              )}
             </Suspense>
           </motion.div>
         </AnimatePresence>
@@ -358,6 +417,29 @@ export default function App() {
 
       <ContentModal modalContent={modalContent} setModalContent={setModalContent} lang={lang as Language} />
       
+      <ProfileModal
+        isOpen={profileOpen}
+        onClose={() => {
+          setProfileOpen(false);
+          setViewingUser(null);
+        }}
+        lang={lang as Language}
+        viewUser={viewingUser}
+      />
+      
+      {/* Active Chat Window */}
+      <AnimatePresence>
+        {activeChat && (
+          <ChatWindow
+            recipientId={activeChat.uid}
+            recipientName={activeChat.displayName}
+            recipientPhoto={activeChat.photoURL}
+            lang={lang as Language}
+            onClose={() => setActiveChat(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Toast Notification */}
       <AnimatePresence>
         {toast && (

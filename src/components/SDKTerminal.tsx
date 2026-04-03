@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, useDragControls } from 'motion/react';
 import { Terminal, X, Maximize2, Minimize2, ChevronRight, Info, Sparkles, Cpu } from 'lucide-react';
 import { sdk } from '../sdk';
 import { Language } from '../data/translations';
@@ -21,6 +21,7 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragControls = useDragControls();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -81,33 +82,39 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
       {/* Terminal Modal */}
       {isOpen && (
         <motion.div
+          drag={!isExpanded}
+          dragMomentum={true}
+          dragElastic={0.02}
+          dragTransition={{ power: 0.1, timeConstant: 100 }}
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          className={`fixed z-50 bg-[#1a142e] border shadow-2xl rounded-xl overflow-hidden flex flex-col transition-all duration-300 ${
+          style={{ resize: isExpanded ? 'none' : 'both', overflow: 'hidden' }}
+          className={`fixed z-[60] bg-[#1a142e]/95 backdrop-blur-xl border shadow-2xl rounded-2xl flex flex-col transition-all duration-300 ${
             isExpanded 
-              ? 'inset-4 md:inset-10' 
-              : 'bottom-20 left-6 w-[90vw] md:w-[700px] h-[60vh]'
+              ? 'inset-2 md:inset-6 !w-auto !h-auto' 
+              : 'bottom-20 left-4 w-[92vw] md:w-[600px] h-[50vh] min-w-[280px] min-h-[180px]'
           } ${
-            isAiMode ? 'border-yellow-500/50' : 
-            isLocalMode ? 'border-blue-500/50' : 
-            'border-[#5C4B8B]'
+            isAiMode ? 'border-yellow-500/40 shadow-yellow-500/10' : 
+            isLocalMode ? 'border-blue-500/40 shadow-blue-500/10' : 
+            'border-[#5C4B8B]/50 shadow-black/40'
           }`}
         >
           {/* Header */}
-          <div className={`px-4 py-2 flex items-center justify-between border-b transition-colors duration-300 ${
-            isAiMode ? 'bg-yellow-500/10 border-yellow-500/30' : 
-            isLocalMode ? 'bg-blue-500/10 border-blue-500/30' : 
-            'bg-[#2F244F] border-[#5C4B8B]'
+          <div 
+            className={`px-3 py-1.5 flex items-center justify-between border-b transition-colors duration-300 cursor-grab active:cursor-grabbing ${
+            isAiMode ? 'bg-yellow-500/10 border-yellow-500/20' : 
+            isLocalMode ? 'bg-blue-500/10 border-blue-500/20' : 
+            'bg-[#2F244F]/80 border-[#5C4B8B]/30'
           }`}>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 select-none">
               {isAiMode ? (
-                <Sparkles size={16} className="text-yellow-400 animate-pulse" />
+                <Sparkles size={14} className="text-yellow-400 animate-pulse" />
               ) : isLocalMode ? (
-                <Cpu size={16} className="text-blue-400" />
+                <Cpu size={14} className="text-blue-400" />
               ) : (
-                <Terminal size={16} className="text-[#C3A6E6]" />
+                <Terminal size={14} className="text-[#C3A6E6]" />
               )}
-              <span className={`text-xs font-mono font-bold uppercase tracking-widest ${
+              <span className={`text-[10px] font-mono font-black uppercase tracking-widest ${
                 isAiMode ? 'text-yellow-400' : 
                 isLocalMode ? 'text-blue-400' : 
                 'text-[#C3A6E6]'
@@ -115,21 +122,20 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
                 {isAiMode ? (lang === 'ru' ? 'ИИ РЕЖИМ' : 'AI MODE') : 
                  isLocalMode ? (lang === 'ru' ? 'ЛОКАЛЬНЫЙ РЕЖИМ' : 'LOCAL MODE') : 
                  (lang === 'ru' ? 'ТЕРМИНАЛ SDK' : 'SDK TERMINAL')} 
-                <span className="text-[10px] opacity-60 ml-1">BETA</span>
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()}>
               <button 
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1 hover:bg-white/10 rounded transition-colors text-gray-400"
+                className="p-1 hover:bg-white/10 rounded-lg transition-colors text-gray-400"
               >
-                {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                {isExpanded ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
               </button>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-colors text-gray-400"
+                className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors text-gray-400"
               >
-                <X size={14} />
+                <X size={12} />
               </button>
             </div>
           </div>
@@ -137,7 +143,16 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
           {/* Content Area */}
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Main Terminal */}
-            <div className="flex-1 flex flex-col bg-black/40 p-4 font-mono text-sm overflow-hidden">
+            <div 
+              className="flex-1 flex flex-col bg-black/40 p-4 font-mono text-sm overflow-hidden"
+              onPointerDown={(e) => {
+                // Only stop propagation if clicking on something interactive or if we want to select text
+                // For now, let's allow dragging from the background of the terminal
+                if ((e.target as HTMLElement).closest('button, input, textarea, .no-drag')) {
+                  e.stopPropagation();
+                }
+              }}
+            >
               <div 
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto space-y-2 mb-4 scrollbar-thin scrollbar-thumb-[#5C4B8B] scrollbar-track-transparent"
@@ -185,7 +200,14 @@ export const SDKTerminal: React.FC<SDKTerminalProps> = ({ lang = 'ru' }) => {
 
             {/* Info Sidebar (Visible when expanded) */}
             {isExpanded && (
-              <div className="w-full md:w-72 bg-[#2F244F]/30 border-l border-[#5C4B8B] p-6 overflow-y-auto">
+              <div 
+                className="w-full md:w-72 bg-[#2F244F]/30 border-l border-[#5C4B8B] p-6 overflow-y-auto"
+                onPointerDown={(e) => {
+                  if ((e.target as HTMLElement).closest('button, input, textarea, .no-drag')) {
+                    e.stopPropagation();
+                  }
+                }}
+              >
                 <div className="flex items-center gap-2 mb-4 text-[#C3A6E6]">
                   <Info size={18} />
                   <h3 className="font-bold uppercase tracking-wider text-sm">{lang === 'ru' ? 'Информация о SDK' : usage.title}</h3>

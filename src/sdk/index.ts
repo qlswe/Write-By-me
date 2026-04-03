@@ -27,10 +27,9 @@ export class MinistrySDK {
     
     // Stylized terminal message
     console.log(
-      `%c ⚡ MINISTRY SDK %c v${this.version} %c BETA EDITION %c`,
+      `%c ⚡ MINISTRY SDK %c v${this.version} %c`,
       'background: #C3A6E6; color: #2F244F; font-weight: bold; padding: 4px 8px; border-radius: 4px 0 0 4px;',
-      'background: #3E3160; color: #C3A6E6; font-weight: bold; padding: 4px 8px;',
-      'background: #F27D26; color: #FFFFFF; font-weight: bold; padding: 4px 8px; border-radius: 0 4px 4px 0;',
+      'background: #3E3160; color: #C3A6E6; font-weight: bold; padding: 4px 8px; border-radius: 0 4px 4px 0;',
       'background: transparent;'
     );
     
@@ -780,20 +779,12 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
           formattedPrompt = `[ИСТОРИЯ ЧАТА]\n${historyText}\n\n[ТЕКУЩЕЕ СООБЩЕНИЕ]\nПользователь: ${prompt}\nИИ:`;
         }
 
-        const url = new URL('https://text.pollinations.ai/');
+        const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(formattedPrompt)}`);
         url.searchParams.append('system', finalSystemPrompt);
         url.searchParams.append('model', 'openai');
         url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
 
-        // Using POST with text/plain body avoids CORS preflight (OPTIONS) request
-        // and avoids URL length limits that cause 500 errors.
-        const response = await fetch(url.toString(), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain',
-          },
-          body: formattedPrompt
-        });
+        const response = await fetch(url.toString(), { credentials: "omit" });
 
         if (!response.ok) {
           throw new Error(`API Error: ${response.statusText}`);
@@ -913,7 +904,7 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
             ? 'Доступные команды: help, version, status, echo [текст], gen [запрос], regim ai, exit, clear, ping, date, time, calc [выражение], userinfo'
             : 'Available commands: help, version, status, echo [text], gen [prompt], regim ai, exit, clear, ping, date, time, calc [expression], userinfo';
         case 'version':
-          return `Ministry SDK v${this.version} (BETA EDITION)`;
+          return `Ministry SDK v${this.version}`;
         case 'status':
           const statusRes = `SDK Status: ${this.ready ? 'READY' : 'INITIALIZING'}\nEnvironment: ${process.env.NODE_ENV}\nMode: ${this.terminalMode.toUpperCase()}`;
           return statusRes;
@@ -962,11 +953,11 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
           title: "Министерство Ахахи SDK (BETA)",
           description: "Комплексный набор инструментов для разработчиков и системных администраторов в экосистеме Ахахи.",
           useCases: [
-            "Синхронизация данных: Синхронизация состояния игры между клиентами через Firebase.",
-            "Интеграция ИИ: Использование Gemini AI для динамических диалогов и анализа контента.",
+            "Интеграция ИИ: Использование Pollinations AI для динамических диалогов и анализа лора Honkai: Star Rail.",
+            "Локальный движок лора: Резервная система ответов на основе ключевых слов по вселенной HSR.",
+            "Терминал: Симуляция командной строки для взаимодействия с ИИ и системой.",
             "Логирование и Мониторинг: Отслеживание производительности и взаимодействий в реальном времени.",
-            "Безопасность: Валидация ввода и ограничение частоты запросов.",
-            "Доступ к оборудованию: Управление вибрацией, буфером обмена и функциями обмена."
+            "Доступ к оборудованию: Управление буфером обмена и функциями обмена."
           ],
           gettingStarted: "Импортируйте экземпляр 'sdk' из '@sdk' и вызывайте методы модулей, например: sdk.logging.info('Hello')."
         };
@@ -975,11 +966,11 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
         title: "Ministry of Ahahi SDK (BETA)",
         description: "A comprehensive toolkit for game developers and system administrators within the Ahahi ecosystem.",
         useCases: [
-          "Data Synchronization: Sync game state across multiple clients using Firebase.",
-          "AI Integration: Leverage Gemini AI for dynamic dialogue, theory generation, and content analysis.",
+          "AI Integration: Leverage Pollinations AI for dynamic dialogue and Honkai: Star Rail lore analysis.",
+          "Local Lore Engine: Fallback keyword-based response system for HSR universe.",
+          "Terminal: Command-line simulation for interacting with AI and the system.",
           "Logging & Monitoring: Track performance and user interactions in real-time.",
-          "Security: Validate user input and enforce rate limits on critical actions.",
-          "Hardware Access: Control device vibration, clipboard, and sharing features."
+          "Hardware Access: Control clipboard and sharing features."
         ],
         gettingStarted: "Import the 'sdk' instance from '@sdk' and call any module method, e.g., sdk.logging.info('Hello')."
       };
