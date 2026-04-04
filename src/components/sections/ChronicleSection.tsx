@@ -8,6 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface ChronicleSectionProps {
   lang: Language;
@@ -24,6 +25,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
   trackRender();
 
   const [now, setNow] = useState(new Date());
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const { user } = useAuth();
   const isAdmin = role === 'admin' || user?.email === 'semegladysev527@gmail.com';
   const isModerator = role === 'admin' || role === 'moderator' || isAdmin;
@@ -35,13 +37,13 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
     return () => clearInterval(timer);
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this event?')) {
-      try {
-        await deleteDoc(doc(db, 'events', id));
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `events/${id}`);
-      }
+  const handleDelete = async () => {
+    if (!eventToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'events', eventToDelete));
+      setEventToDelete(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `events/${eventToDelete}`);
     }
   };
 
@@ -87,7 +89,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
               {/* Timeline Dot */}
               <div className="absolute left-6 top-10 w-4 h-4 rounded-full bg-[#2F244F] border-2 border-[#C3A6E6] z-10 hidden md:block shadow-[0_0_15px_rgba(195,166,230,0.5)]" />
 
-              <div className="bg-[#1A1528]/40 rounded-[2.5rem] p-8 border border-[#5C4B8B]/20 relative overflow-hidden group hover:border-[#C3A6E6]/40 transition-all duration-500 shadow-2xl">
+              <div className="bg-[#1A1528]/40 rounded-[2.5rem] p-6 sm:p-8 relative overflow-hidden group transition-all duration-500 shadow-2xl">
                 {/* Progress Bar Background */}
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-[#2F244F]/50">
                   <motion.div 
@@ -100,8 +102,8 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
                 
                 <div className="flex flex-col sm:flex-row items-start justify-between gap-6 mb-8 mt-4">
                   <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 bg-[#2F244F] border-2 border-[#5C4B8B]/30 rounded-3xl flex items-center justify-center shadow-2xl group-hover:border-[#C3A6E6]/50 transition-all duration-500 relative">
-                      <div className="absolute inset-0 bg-[#C3A6E6]/5 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="w-20 h-20 bg-[#2F244F] rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-500 relative">
+                      <div className="absolute inset-0 bg-[#C3A6E6]/5 rounded-3xl blur-xl opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
                       {event.icon === 'refresh-cw' ? <RefreshCw size={36} className="text-[#C3A6E6] relative z-10" /> : 
                        event.icon === 'swords' ? <Swords size={36} className="text-[#C3A6E6] relative z-10" /> : <Globe size={36} className="text-[#C3A6E6] relative z-10" />}
                       
@@ -112,11 +114,11 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
                       <h3 className="text-2xl font-black text-white group-hover:text-[#C3A6E6] transition-colors tracking-tight">
                         {event.title[lang] || event.title['en']}
                       </h3>
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="px-3 py-1 bg-[#C3A6E6]/10 text-[10px] font-black text-[#C3A6E6] rounded-lg border border-[#C3A6E6]/20 uppercase tracking-widest">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2">
+                        <span className="px-3 py-1 bg-[#C3A6E6]/10 text-[10px] font-black text-[#C3A6E6] rounded-lg uppercase tracking-widest whitespace-nowrap">
                           {event.type === 'daily' ? t.daily : t.weekly}
                         </span>
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap">
                           {event.type === 'daily' ? t.cycle24h : (event.weekOffset !== undefined ? t.cycle14d : t.cycle7d)}
                         </span>
                       </div>
@@ -133,7 +135,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
                       </button>
                       {isAdmin && (
                         <button 
-                          onClick={() => handleDelete(event.id)} 
+                          onClick={() => setEventToDelete(event.id)} 
                           className="w-12 h-12 rounded-xl bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-500 flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-red-500/20"
                         >
                           <Trash2 size={20} />
@@ -144,19 +146,19 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                  <div className="lg:col-span-2 bg-[#2F244F]/60 rounded-3xl p-6 border border-[#5C4B8B]/30 flex items-center gap-6 shadow-inner">
+                  <div className="lg:col-span-2 bg-[#2F244F]/60 rounded-3xl p-6 flex items-center gap-6 shadow-inner">
                     <div className="w-16 h-16 rounded-2xl bg-[#C3A6E6]/10 flex items-center justify-center shrink-0">
                       <Clock size={28} className="text-[#C3A6E6]" />
                     </div>
                     <div>
                       <div className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-black mb-1">{t.timeRemaining || "Time Remaining"}</div>
-                      <div className="text-2xl font-black text-[#C3A6E6] tracking-tighter italic">
+                      <div className="text-lg sm:text-xl md:text-2xl font-black text-[#C3A6E6] tracking-tighter italic">
                         {countdown}
                       </div>
                     </div>
                   </div>
 
-                  <div className="lg:col-span-3 bg-[#2F244F]/30 rounded-3xl p-6 border border-[#5C4B8B]/20 flex items-center">
+                  <div className="lg:col-span-3 bg-[#2F244F]/30 rounded-3xl p-6 flex items-center">
                     <p className="text-gray-400 text-sm leading-relaxed font-medium">
                       {event.description[lang] || event.description['en']}
                     </p>
@@ -167,6 +169,17 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
           );
         })}
       </div>
+
+      <ConfirmModal
+        isOpen={!!eventToDelete}
+        onClose={() => setEventToDelete(null)}
+        onConfirm={handleDelete}
+        title={t.confirmDeleteEventTitle || "Delete Event"}
+        message={t.confirmDeleteEventMessage || "Are you sure you want to delete this event? This action cannot be undone."}
+        confirmText={t.delete || "Delete"}
+        cancelText={t.cancelBtn || "Cancel"}
+        isDestructive={true}
+      />
     </div>
   );
 };

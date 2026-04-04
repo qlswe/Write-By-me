@@ -6,6 +6,7 @@ import { usePerfLogger } from '../../utils/logger';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface PromoSectionProps {
   lang: Language;
@@ -19,23 +20,24 @@ interface PromoSectionProps {
 export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, promoCodes, role, onOpenEditor, onEdit }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('PromoSection');
+  const [promoToDelete, setPromoToDelete] = React.useState<string | null>(null);
   trackRender();
 
   const isAdmin = role === 'admin';
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm(t.deletePromoConfirm)) return;
+  const handleDelete = async () => {
+    if (!promoToDelete) return;
     try {
-      await deleteDoc(doc(db, 'promo_codes', id));
+      await deleteDoc(doc(db, 'promo_codes', promoToDelete));
+      setPromoToDelete(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `promo_codes/${id}`);
+      handleFirestoreError(error, OperationType.DELETE, `promo_codes/${promoToDelete}`);
     }
   };
 
   return (
     <div className="relative">
-      <div className="flex items-center justify-between mb-10">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -60,7 +62,7 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
             className="flex items-center gap-3 bg-[#C3A6E6]/10 hover:bg-[#C3A6E6]/20 text-[#C3A6E6] px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-[#C3A6E6]/30 transition-all"
           >
             <Settings size={16} />
-            Management
+            {t.manageBtn || 'Management'}
           </motion.button>
         )}
       </div>
@@ -93,7 +95,7 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
               
               <div className="flex items-center gap-4 shrink-0">
                 {isAdmin ? (
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0">
                     <button 
                       onClick={() => onEdit?.(promo)}
                       className="p-2.5 rounded-xl bg-[#2F244F] text-gray-400 hover:text-[#C3A6E6] hover:bg-[#C3A6E6]/10 transition-all border border-[#5C4B8B] hover:border-[#C3A6E6]/30"
@@ -102,9 +104,9 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
                       <Edit2 size={18} />
                     </button>
                     <button 
-                      onClick={(e) => handleDelete(promo.id, e)}
+                      onClick={(e) => { e.stopPropagation(); setPromoToDelete(promo.id); }}
                       className="p-2.5 rounded-xl bg-[#2F244F] text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-[#5C4B8B] hover:border-red-400/30"
-                      title={t.delete}
+                      title={t.deleteBtn}
                     >
                       <Trash2 size={18} />
                     </button>
@@ -114,7 +116,7 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
                         navigator.clipboard.writeText(text);
                       }}
                       className="p-2.5 rounded-xl bg-[#2F244F] text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-[#5C4B8B] hover:border-blue-400/30"
-                      title={t.share}
+                      title={t.shareBtn}
                     >
                       <Share2 size={18} />
                     </button>
@@ -177,6 +179,17 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
           </motion.div>
         ))}
       </div>
+
+      <ConfirmModal
+        isOpen={!!promoToDelete}
+        onClose={() => setPromoToDelete(null)}
+        onConfirm={handleDelete}
+        title={t.confirmDeletePromoTitle || "Delete Promo Code"}
+        message={t.confirmDeletePromoMessage || "Are you sure you want to delete this promo code? This action cannot be undone."}
+        confirmText={t.delete || "Delete"}
+        cancelText={t.cancelBtn || "Cancel"}
+        isDestructive={true}
+      />
     </div>
   );
 };

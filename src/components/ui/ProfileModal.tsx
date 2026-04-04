@@ -195,7 +195,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                   {isOwnProfile && (
                     <button 
                       onClick={() => setIsEditingPhoto(true)}
-                      className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-[3rem] text-white"
+                      className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity rounded-[3rem] text-white"
                     >
                       <Camera size={40} />
                     </button>
@@ -262,7 +262,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       {isOwnProfile && (
                         <button
                           onClick={() => setIsEditingName(true)}
-                          className="p-1.5 text-gray-400 hover:text-[#C3A6E6] opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-[#2F244F]"
+                          className="p-1.5 text-gray-400 hover:text-[#C3A6E6] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded-lg hover:bg-[#2F244F]"
                         >
                           <Edit2 size={18} />
                         </button>
@@ -412,7 +412,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                                     {new Date(post.createdAt).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                                   </span>
                                   {isOwnProfile && (
-                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                       <button onClick={() => setEditingPostId(post.id)} className="text-gray-500 hover:text-[#C3A6E6]"><Edit2 size={14} /></button>
                                       <button onClick={() => deletePost(post.id)} className="text-gray-500 hover:text-red-400"><X size={14} /></button>
                                     </div>

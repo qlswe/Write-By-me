@@ -305,8 +305,8 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
         isOpen={!!theoryToDelete}
         onClose={() => setTheoryToDelete(null)}
         onConfirm={handleDelete}
-        title={t.confirmDeleteTitle || "Delete Theory"}
-        message={t.confirmDeleteMessage || "Are you sure you want to delete this theory? This action cannot be undone."}
+        title={t.confirmDeletePostTitle || "Delete Theory"}
+        message={t.confirmDeletePostMessage || "Are you sure you want to delete this theory? This action cannot be undone."}
         confirmText={t.delete || "Delete"}
         cancelText={t.cancelBtn || "Cancel"}
         isDestructive={true}

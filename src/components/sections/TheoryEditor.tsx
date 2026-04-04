@@ -78,25 +78,33 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
         className="bg-[#2F244F]/90 backdrop-blur-2xl rounded-[1.5rem] sm:rounded-[3rem] w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden border border-[#5C4B8B]/30 shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col"
       >
         {/* Header */}
-        <div className="bg-[#3E3160]/50 p-4 sm:p-8 border-b border-[#5C4B8B]/30 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#C3A6E6]/10 flex items-center justify-center border border-[#C3A6E6]/20">
-              <Save className="text-[#C3A6E6] w-5 h-5 sm:w-6 sm:h-6" />
+        <div className="bg-[#3E3160]/50 p-4 sm:p-8 border-b border-[#5C4B8B]/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#C3A6E6]/10 flex items-center justify-center border border-[#C3A6E6]/20">
+                <Save className="text-[#C3A6E6] w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
+                  {theory ? t.editTheory : t.createTheory}
+                </h2>
+                <p className="text-[8px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{t.archiveProtocol}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl sm:text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
-                {theory ? t.editTheory : t.createTheory}
-              </h2>
-              <p className="text-[8px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{t.archiveProtocol}</p>
-            </div>
+            <button 
+              onClick={onClose} 
+              className="sm:hidden w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
+            >
+              <X className="w-4.5 h-4.5" />
+            </button>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4 max-w-[40%] sm:max-w-none">
-            <div className="flex bg-[#1A1528] rounded-lg sm:rounded-xl p-0.5 sm:p-1 border border-[#5C4B8B]/30 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <div className="flex bg-[#1A1528] rounded-lg sm:rounded-xl p-0.5 sm:p-1 border border-[#5C4B8B]/30 overflow-x-auto no-scrollbar flex-1 sm:flex-none">
               {LANGUAGES.map(l => (
                 <button
                   key={l}
                   onClick={() => setCurrentLang(l as Language)}
-                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 ${
+                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 flex-1 sm:flex-none ${
                     currentLang === l ? 'bg-[#C3A6E6] text-[#2F244F]' : 'text-gray-500 hover:text-white'
                   }`}
                 >
@@ -106,9 +114,9 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
             </div>
             <button 
               onClick={onClose} 
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
+              className="hidden sm:flex w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
             >
-              <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -166,25 +174,22 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
                 className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-[2rem] px-6 py-6 text-white font-mono text-sm leading-relaxed focus:outline-none focus:border-[#C3A6E6] transition-all min-h-[350px] placeholder:text-gray-700"
                 placeholder={t.placeholderContent}
               />
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <span className="text-[10px] text-[#C3A6E6]/50 font-black uppercase tracking-widest">{t.htmlAllowed}</span>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-8 bg-[#3E3160]/50 border-t border-[#5C4B8B]/30 flex justify-end items-center gap-4 sm:gap-6 shrink-0">
+        <div className="p-4 sm:p-8 bg-[#3E3160]/50 border-t border-[#5C4B8B]/30 flex flex-col sm:flex-row justify-end items-center gap-4 sm:gap-6 shrink-0">
           <button 
             onClick={onClose}
-            className="text-[10px] sm:text-xs font-black text-gray-400 hover:text-white uppercase tracking-[0.2em] transition-colors"
+            className="w-full sm:w-auto text-[10px] sm:text-xs font-black text-gray-400 hover:text-white uppercase tracking-[0.2em] transition-colors py-2"
           >
             {t.cancel}
           </button>
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 sm:gap-3 bg-[#C3A6E6] text-[#2F244F] px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs hover:bg-white hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shadow-[0_0_30px_rgba(195,166,230,0.3)]"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 sm:gap-3 bg-[#C3A6E6] text-[#2F244F] px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs hover:bg-white hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shadow-[0_0_30px_rgba(195,166,230,0.3)]"
           >
             {isSaving ? (
               <div className="w-5 h-5 border-2 border-[#2F244F] border-t-transparent rounded-full animate-spin" />

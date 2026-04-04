@@ -268,8 +268,8 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
         isOpen={!!postToDelete}
         onClose={() => setPostToDelete(null)}
         onConfirm={handleDelete}
-        title={t.confirmDeleteTitle || "Delete Post"}
-        message={t.confirmDeleteMessage || "Are you sure you want to delete this post? This action cannot be undone."}
+        title={t.confirmDeletePostTitle || "Delete Post"}
+        message={t.confirmDeletePostMessage || "Are you sure you want to delete this post? This action cannot be undone."}
         confirmText={t.delete || "Delete"}
         cancelText={t.cancelBtn || "Cancel"}
         isDestructive={true}

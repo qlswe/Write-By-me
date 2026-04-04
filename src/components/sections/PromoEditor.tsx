@@ -4,6 +4,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { Plus, Trash2, Edit2, X, Check, Gift, Calendar, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -27,6 +28,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
   const { user, loginWithGoogle } = useAuth();
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [isAdding, setIsAdding] = useState(!!initialPromo);
+  const [promoToDelete, setPromoToDelete] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(initialPromo?.id || null);
   const [formData, setFormData] = useState({
     code: initialPromo?.code || '',
@@ -83,13 +85,13 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!isAdmin) return;
-    if (!window.confirm('Are you sure you want to delete this promo code?')) return;
+  const handleDelete = async () => {
+    if (!isAdmin || !promoToDelete) return;
     try {
-      await deleteDoc(doc(db, 'promo_codes', id));
+      await deleteDoc(doc(db, 'promo_codes', promoToDelete));
+      setPromoToDelete(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `promo_codes/${id}`);
+      handleFirestoreError(error, OperationType.DELETE, `promo_codes/${promoToDelete}`);
     }
   };
 
@@ -116,23 +118,31 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
         className="bg-[#2F244F]/90 backdrop-blur-2xl rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-hidden border border-[#5C4B8B]/30 shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col"
       >
         {/* Header */}
-        <div className="bg-[#3E3160]/50 p-8 border-b border-[#5C4B8B]/30 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#C3A6E6]/10 flex items-center justify-center border border-[#C3A6E6]/20">
-              <Tag className="text-[#C3A6E6]" size={24} />
+        <div className="bg-[#3E3160]/50 p-4 sm:p-8 border-b border-[#5C4B8B]/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+          <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#C3A6E6]/10 flex items-center justify-center border border-[#C3A6E6]/20">
+                <Tag className="text-[#C3A6E6] w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
+                  {t.promoEditorTitle}
+                </h2>
+                <p className="text-[8px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{t.promoProtocol}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-3xl font-black text-white uppercase tracking-tighter italic">
-                {t.promoEditorTitle}
-              </h2>
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{t.promoProtocol}</p>
-            </div>
+            <button 
+              onClick={onClose} 
+              className="sm:hidden w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <div className="flex items-center gap-4 max-w-[50%] sm:max-w-none">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
             {!isAdding && (
               <button
                 onClick={() => setIsAdding(true)}
-                className="flex items-center gap-2 sm:gap-3 bg-[#C3A6E6] text-[#2F244F] px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-black uppercase tracking-widest text-[8px] sm:text-[10px] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] border border-white/20 shrink-0"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 sm:gap-3 bg-[#C3A6E6] text-[#2F244F] px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-black uppercase tracking-widest text-[8px] sm:text-[10px] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] border border-white/20 shrink-0"
               >
                 <Plus size={16} />
                 {t.addPromoBtn}
@@ -140,7 +150,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
             )}
             <button 
               onClick={onClose} 
-              className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
+              className="hidden sm:flex w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
             >
               <X size={20} />
             </button>
@@ -213,17 +223,17 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-6 pt-4">
+                <div className="flex flex-col sm:flex-row justify-end items-center gap-4 sm:gap-6 pt-4">
                   <button
                     type="button"
                     onClick={() => { setIsAdding(false); setEditingId(null); }}
-                    className="text-xs font-black text-gray-500 hover:text-white uppercase tracking-widest transition-colors"
+                    className="w-full sm:w-auto text-xs font-black text-gray-400 hover:text-white uppercase tracking-widest transition-colors py-2"
                   >
                     {t.cancel}
                   </button>
                   <button
                     type="submit"
-                    className="bg-[#C3A6E6] text-[#2F244F] px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] border border-white/20"
+                    className="w-full sm:w-auto bg-[#C3A6E6] text-[#2F244F] px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] border border-white/20"
                   >
                     {editingId ? t.updatePromoBtn : t.addPromoBtn}
                   </button>
@@ -265,7 +275,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+                <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0">
                   <button
                     onClick={() => startEdit(promo)}
                     className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-[#C3A6E6] hover:bg-[#C3A6E6]/10 transition-all border border-transparent hover:border-[#C3A6E6]/20"
@@ -274,7 +284,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                     <Edit2 size={18} />
                   </button>
                   <button
-                    onClick={() => handleDelete(promo.id)}
+                    onClick={() => setPromoToDelete(promo.id)}
                     className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-500/20"
                     title={t.delete}
                   >
@@ -305,6 +315,17 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
           </div>
         </div>
       </motion.div>
+
+      <ConfirmModal
+        isOpen={!!promoToDelete}
+        onClose={() => setPromoToDelete(null)}
+        onConfirm={handleDelete}
+        title={t.confirmDeleteTitle || "Delete Promo Code"}
+        message={t.deletePromoConfirm || "Are you sure you want to delete this promo code? This action cannot be undone."}
+        confirmText={t.delete || "Delete"}
+        cancelText={t.cancelBtn || "Cancel"}
+        isDestructive={true}
+      />
     </div>
   );
 };

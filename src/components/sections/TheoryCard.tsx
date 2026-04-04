@@ -73,7 +73,7 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
         <div className="px-4 py-1.5 rounded-full bg-[#C3A6E6]/10 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest border border-[#C3A6E6]/20">
           {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
         </div>
-        <div className="grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 justify-end">
+        <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0 justify-end">
           {isAdmin && (
             <>
               <button 
@@ -121,7 +121,7 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
         <div className="flex items-center justify-between">
           <ReactionsBar targetId={theory.id} lang={lang} />
           
-          <div className="flex items-center gap-2 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">
+          <div className="flex items-center gap-2 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-x-0 sm:translate-x-[-10px] sm:group-hover:translate-x-0">
             {t.readArchive} <ArrowRight size={12} />
           </div>
         </div>

@@ -69,9 +69,9 @@ export const TierListSection: React.FC<TierListSectionProps> = ({ lang, lowPerfM
                 loading="lazy"
                 referrerPolicy="no-referrer"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
             </div>
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-[#2F244F] border border-[#C3A6E6]/30 rounded-full opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 z-10 whitespace-nowrap">
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-[#2F244F] border border-[#C3A6E6]/30 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all scale-100 sm:scale-75 sm:group-hover:scale-100 z-10 whitespace-nowrap">
               <span className="text-[8px] font-black text-[#C3A6E6] uppercase tracking-widest">
                 {char}
               </span>
