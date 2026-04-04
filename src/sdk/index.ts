@@ -13,6 +13,7 @@ export class MinistrySDK {
   private version: string = '2.0.0-hsr';
   private logSubscribers: ((level: string, message: string, data?: any) => void)[] = [];
   private ready: boolean = false;
+  private hasWarned: boolean = false;
   private sdkConfig = {
     debug: process.env.NODE_ENV !== 'production',
     apiBase: '',
@@ -20,18 +21,26 @@ export class MinistrySDK {
   };
 
   private constructor() {
+    // Stylized terminal message - Large and detailed
+    console.log(
+      `%c ⚡ MINISTRY SDK INITIALIZED %c\n\n` +
+      `%c Version: %c v${this.version}\n` +
+      `%c Status:  %c Online & Ready\n` +
+      `%c Modules: %c Security, Data, UI, Analytics, Terminal\n` +
+      `%c Mode:    %c ${this.sdkConfig.debug ? 'Development' : 'Production'}\n\n` +
+      `%c "May the Aeons guide your path." %c`,
+      'background: #C3A6E6; color: #2F244F; font-size: 20px; font-weight: 900; padding: 8px 16px; border-radius: 8px;', '',
+      'color: #888; font-weight: bold; font-size: 14px;', 'color: #C3A6E6; font-size: 14px;',
+      'color: #888; font-weight: bold; font-size: 14px;', 'color: #00FF00; font-size: 14px;',
+      'color: #888; font-weight: bold; font-size: 14px;', 'color: #4A90E2; font-size: 14px;',
+      'color: #888; font-weight: bold; font-size: 14px;', 'color: #F8E71C; font-size: 14px;',
+      'color: #C3A6E6; font-style: italic; font-size: 12px;', ''
+    );
+
     this.logging.system(`Ministry of Ahahi SDK v${this.version} initialized.`, {
       timestamp: new Date().toISOString(),
       config: this.sdkConfig
     });
-    
-    // Stylized terminal message
-    console.log(
-      `%c ⚡ MINISTRY SDK %c v${this.version} %c`,
-      'background: #C3A6E6; color: #2F244F; font-weight: bold; padding: 4px 8px; border-radius: 4px 0 0 4px;',
-      'background: #3E3160; color: #C3A6E6; font-weight: bold; padding: 4px 8px; border-radius: 0 4px 4px 0;',
-      'background: transparent;'
-    );
     
     this.ready = true;
     this.events.emit('ready');
@@ -510,11 +519,14 @@ export class MinistrySDK {
    */
   public logging = {
     info: (message: string, data?: any) => {
-      console.log(`%c[MINISTRY_INFO] %c${message}`, 'color: #C3A6E6; font-weight: bold;', 'color: white;', data || '');
+      // console.log(`%c[MINISTRY_INFO] %c${message}`, 'color: #C3A6E6; font-weight: bold;', 'color: white;', data || '');
       this.notifyLogSubscribers('info', message, data);
     },
     warn: (message: string, data?: any) => {
-      console.warn(`%c[MINISTRY_WARN] %c${message}`, 'color: #F27D26; font-weight: bold;', 'color: white;', data || '');
+      if (!this.hasWarned) {
+        console.warn(`%c[MINISTRY_WARN] %c${message}`, 'color: #F27D26; font-weight: bold;', 'color: white;', data || '');
+        this.hasWarned = true;
+      }
       this.notifyLogSubscribers('warn', message, data);
     },
     error: (message: string, data?: any) => {
@@ -522,15 +534,15 @@ export class MinistrySDK {
       this.notifyLogSubscribers('error', message, data);
     },
     perf: (label: string, duration: number) => {
-      console.log(`%c[MINISTRY_PERF] %c${label}: %c${duration.toFixed(2)}ms`, 'color: #00FF00; font-weight: bold;', 'color: white;', 'color: #00FF00;', '');
+      // console.log(`%c[MINISTRY_PERF] %c${label}: %c${duration.toFixed(2)}ms`, 'color: #00FF00; font-weight: bold;', 'color: white;', 'color: #00FF00;', '');
       this.notifyLogSubscribers('perf', label, { duration });
     },
     system: (message: string, data?: any) => {
-      console.log(`%c[MINISTRY_SYSTEM] %c${message}`, 'color: #4A90E2; font-weight: bold;', 'color: white;', data || '');
+      // console.log(`%c[MINISTRY_SYSTEM] %c${message}`, 'color: #4A90E2; font-weight: bold;', 'color: white;', data || '');
       this.notifyLogSubscribers('system', message, data);
     },
     action: (action: string, details?: any) => {
-      console.log(`%c[MINISTRY_ACTION] %c${action}`, 'color: #F8E71C; font-weight: bold;', 'color: white;', details || '');
+      // console.log(`%c[MINISTRY_ACTION] %c${action}`, 'color: #F8E71C; font-weight: bold;', 'color: white;', details || '');
       this.notifyLogSubscribers('action', action, details);
     },
     trackEvent: (eventName: string, properties?: any) => {

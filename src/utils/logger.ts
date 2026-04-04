@@ -17,6 +17,7 @@ class Logger {
   private isEnabled = true;
   private sessionStart = performance.now();
   private listeners: ((log: LogEntry) => void)[] = [];
+  private hasWarned = false;
 
   constructor() {
     this.initSystemInfo();
@@ -83,22 +84,26 @@ class Logger {
       this.listeners.forEach(listener => listener(entry));
     }, 0);
 
-    // Always log to console with beautiful styling
-    const style = this.getStyles(level);
-    const componentStyle = 'color: #8BE9FD; font-style: italic; font-family: "JetBrains Mono", monospace; padding-left: 4px; font-size: 11px;';
-    const timeStyle = 'color: #6272A4; font-family: "JetBrains Mono", monospace; font-size: 10px; margin-left: 8px;';
-    const msgStyle = 'color: #E0E0E0; font-family: "Inter", sans-serif; font-size: 12px; margin-left: 6px;';
-    
-    const prefix = `%c${level.toUpperCase()}%c${component ? `[${component}]` : ''}`;
-    
-    if (data) {
-      console.groupCollapsed(`${prefix}%c${message}%c+${uptime}`, style, componentStyle, msgStyle, timeStyle);
-      console.log('%cTimestamp:', 'color: #C3A6E6; font-weight: bold;', timestamp);
-      if (component) console.log('%cComponent:', 'color: #C3A6E6; font-weight: bold;', component);
-      console.log('%cPayload:', 'color: #C3A6E6; font-weight: bold;', data);
-      console.groupEnd();
-    } else {
-      console.log(`${prefix}%c${message}%c+${uptime}`, style, componentStyle, msgStyle, timeStyle);
+    // Only log errors and ONE warning to console to prevent spam
+    if (level === 'error' || (level === 'warn' && !this.hasWarned)) {
+      if (level === 'warn') this.hasWarned = true;
+      
+      const style = this.getStyles(level);
+      const componentStyle = 'color: #8BE9FD; font-style: italic; font-family: "JetBrains Mono", monospace; padding-left: 4px; font-size: 11px;';
+      const timeStyle = 'color: #6272A4; font-family: "JetBrains Mono", monospace; font-size: 10px; margin-left: 8px;';
+      const msgStyle = 'color: #E0E0E0; font-family: "Inter", sans-serif; font-size: 12px; margin-left: 6px;';
+      
+      const prefix = `%c${level.toUpperCase()}%c${component ? `[${component}]` : ''}`;
+      
+      if (data) {
+        console.groupCollapsed(`${prefix}%c${message}%c+${uptime}`, style, componentStyle, msgStyle, timeStyle);
+        console.log('%cTimestamp:', 'color: #C3A6E6; font-weight: bold;', timestamp);
+        if (component) console.log('%cComponent:', 'color: #C3A6E6; font-weight: bold;', component);
+        console.log('%cPayload:', 'color: #C3A6E6; font-weight: bold;', data);
+        console.groupEnd();
+      } else {
+        console.log(`${prefix}%c${message}%c+${uptime}`, style, componentStyle, msgStyle, timeStyle);
+      }
     }
   }
 

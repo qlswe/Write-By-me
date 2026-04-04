@@ -39,6 +39,8 @@ const PromoSection = lazy(() => import('./components/sections/PromoSection').the
 
 type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'tierlist' | 'users' | 'chats';
 
+let hasPrintedStopWarning = false;
+
 export default function App() {
   const { trackRender } = usePerfLogger('App');
   trackRender();
@@ -111,11 +113,14 @@ export default function App() {
     document.documentElement.classList.add('dark');
     
     // Console Warning
-    console.log(
-      "%cОСТАНОВИТЕСЬ! %cНе используйте консоль не по назначению. Незнание может привести к непредсказуемым последствиям.",
-      "color: red; font-size: 40px; font-weight: bold; text-shadow: 2px 2px black;",
-      "color: white; font-size: 20px; font-weight: bold;"
-    );
+    if (!hasPrintedStopWarning) {
+      console.log(
+        "%cОСТАНОВИТЕСЬ! %cНе используйте консоль не по назначению. Незнание может привести к непредсказуемым последствиям.",
+        "color: red; font-size: 40px; font-weight: bold; text-shadow: 2px 2px black;",
+        "color: white; font-size: 20px; font-weight: bold;"
+      );
+      hasPrintedStopWarning = true;
+    }
 
     if (lowPerfMode) {
       document.body.classList.add('low-perf-mode');
