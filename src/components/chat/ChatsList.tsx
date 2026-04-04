@@ -77,9 +77,26 @@ const ChatItem: React.FC<{
 };
 
 export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
-  const { user } = useAuth();
+  const { user, loginWithGoogle } = useAuth();
   const { chats, loading } = useChat();
   const t = translations[lang];
+
+  if (!user) {
+    return (
+      <div className="text-center py-16 bg-[#2F244F]/20 rounded-3xl border border-[#5C4B8B]/20 backdrop-blur-xl">
+        <User className="mx-auto mb-6 text-gray-600" size={48} />
+        <p className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">
+          {lang === 'ru' ? "Войдите, чтобы просматривать сообщения" : "Log in to view your chats"}
+        </p>
+        <button
+          onClick={loginWithGoogle}
+          className="inline-flex items-center gap-4 bg-[#C3A6E6] hover:bg-[#B396D6] text-[#2F244F] px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] hover:scale-105 active:scale-95 border border-white/20"
+        >
+          {t.loginWithGoogle || "Login with Google"}
+        </button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

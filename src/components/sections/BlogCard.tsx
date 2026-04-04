@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Star, Edit, Trash2, ArrowRight, Calendar } from 'lucide-react';
+import { Star, Edit, Trash2, ArrowRight, Calendar, Share2 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { sdk } from '../../sdk';
@@ -54,28 +54,40 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
             {sdk.data.formatDate(post.createdAt, lang)}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 justify-end">
+        <div className="grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 justify-end">
           {isAdmin && (
             <>
               <button 
                 onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
                 className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
-                title="Edit Post"
+                title={t.editBtn}
               >
                 <Edit size={16} />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
                 className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-400/30"
-                title="Delete Post"
+                title={t.deleteBtn}
               >
                 <Trash2 size={16} />
               </button>
             </>
           )}
           <button 
+            className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-[#C3A6E6] hover:border-[#C3A6E6]/30 hover:bg-[#C3A6E6]/10 transition-all border border-transparent"
+            title={t.shareBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              const url = `${window.location.origin}${window.location.pathname}?post=${post.id}`;
+              navigator.clipboard.writeText(url);
+            }}
+          >
+            <Share2 size={16} />
+          </button>
+          <button 
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(e); }}
             className={`p-2.5 rounded-xl bg-[#5C4B8B]/30 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+            title={t.favoriteBtn}
           >
             <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
           </button>
@@ -92,7 +104,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
 
       <div className="flex flex-col gap-4 mt-auto">
         <div className="flex items-center justify-between">
-          <ReactionsBar targetId={post.id} />
+          <ReactionsBar targetId={post.id} lang={lang} />
           
           <div className="flex items-center gap-2 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">
             {t.readArticle} <ArrowRight size={12} />

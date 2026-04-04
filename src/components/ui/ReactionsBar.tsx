@@ -4,27 +4,30 @@ import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { Heart, ThumbsUp, Laugh, MessageCircle, Flame, Sparkles, Ghost } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
+import { Language, translations } from '../../data/translations';
 
 interface ReactionsBarProps {
   targetId: string;
+  lang: Language;
   collectionName?: string; // 'postReactions' by default
 }
 
-const REACTION_ICONS: Record<string, { icon: any, color: string, label: string }> = {
-  'like': { icon: ThumbsUp, color: 'text-blue-400', label: 'Like' },
-  'love': { icon: Heart, color: 'text-red-400', label: 'Love' },
-  'haha': { icon: Laugh, color: 'text-yellow-400', label: 'Haha' },
-  'wow': { icon: Ghost, color: 'text-purple-400', label: 'Wow' },
-  'fire': { icon: Flame, color: 'text-orange-500', label: 'Fire' },
-  'sparkle': { icon: Sparkles, color: 'text-yellow-300', label: 'Sparkle' },
-};
-
-const REACTION_KEYS = Object.keys(REACTION_ICONS);
-
-export const ReactionsBar: React.FC<ReactionsBarProps> = ({ targetId, collectionName = 'postReactions' }) => {
+export const ReactionsBar: React.FC<ReactionsBarProps> = ({ targetId, lang, collectionName = 'postReactions' }) => {
   const { user } = useAuth();
+  const t = translations[lang];
   const [reactions, setReactions] = useState<Record<string, string[]>>({});
   const [showPicker, setShowPicker] = useState(false);
+
+  const REACTION_ICONS: Record<string, { icon: any, color: string, label: string }> = {
+    'like': { icon: ThumbsUp, color: 'text-blue-400', label: t.reactionLike },
+    'love': { icon: Heart, color: 'text-red-400', label: t.reactionLove },
+    'haha': { icon: Laugh, color: 'text-yellow-400', label: t.reactionHaha },
+    'wow': { icon: Ghost, color: 'text-purple-400', label: t.reactionWow },
+    'fire': { icon: Flame, color: 'text-orange-500', label: t.reactionFire },
+    'sparkle': { icon: Sparkles, color: 'text-yellow-300', label: t.reactionSparkle },
+  };
+
+  const REACTION_KEYS = Object.keys(REACTION_ICONS);
 
   useEffect(() => {
     if (!targetId) return;

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
-import { theoriesData as localTheories, blogPostsData as localBlogPosts, eventsData as localEvents } from '../data/content';
+import { theoriesData as localTheories, blogPostsData as localBlogPosts, eventsData as localEvents, promoCodesData as localPromoCodes } from '../data/content';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 
 export function useContent() {
   const [theories, setTheories] = useState<any[]>(localTheories);
   const [blogPosts, setBlogPosts] = useState<any[]>(localBlogPosts);
   const [events, setEvents] = useState<any[]>(localEvents);
+  const [promoCodes, setPromoCodes] = useState<any[]>(localPromoCodes);
 
   useEffect(() => {
     const qTheories = query(collection(db, 'theories'), orderBy('createdAt', 'desc'));
@@ -16,9 +17,6 @@ export function useContent() {
         id: doc.id,
         ...doc.data()
       }));
-      // Merge local and firestore theories
-      // Firestore theories don't have LocalizedString, they just have a string.
-      // We will map them to look like local theories for the UI.
       const mappedFirestoreTheories = firestoreTheories.map((t: any) => {
         const title = typeof t.title === 'string' ? { ru: t.title, en: t.title, by: t.title, jp: t.title, de: t.title, fr: t.title, zh: t.title } : t.title;
         const summary = typeof t.summary === 'string' ? { ru: t.summary, en: t.summary, by: t.summary, jp: t.summary, de: t.summary, fr: t.summary, zh: t.summary } : t.summary;
@@ -30,7 +28,6 @@ export function useContent() {
           content: content || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' }
         };
       });
-      
       const firestoreIds = new Set(mappedFirestoreTheories.map(t => t.id));
       const filteredLocalTheories = localTheories.filter(t => !firestoreIds.has(t.id));
       setTheories([...mappedFirestoreTheories, ...filteredLocalTheories]);
@@ -84,12 +81,33 @@ export function useContent() {
       handleFirestoreError(error, OperationType.GET, 'events');
     });
 
+    const qPromoCodes = query(collection(db, 'promo_codes'), orderBy('createdAt', 'desc'));
+    const unsubscribePromoCodes = onSnapshot(qPromoCodes, (snapshot) => {
+      const firestorePromoCodes = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      const mappedFirestorePromoCodes = firestorePromoCodes.map((p: any) => {
+        const reward = typeof p.reward === 'string' ? { ru: p.reward, en: p.reward, by: p.reward, jp: p.reward, de: p.reward, fr: p.reward, zh: p.reward } : p.reward;
+        return {
+          ...p,
+          rewards: reward || { ru: '', en: '', by: '', jp: '', de: '', fr: '', zh: '' }
+        };
+      });
+      const firestorePromoIds = new Set(mappedFirestorePromoCodes.map(p => p.id));
+      const filteredLocalPromoCodes = localPromoCodes.filter(p => !firestorePromoIds.has((p as any).id || (p as any).code));
+      setPromoCodes([...mappedFirestorePromoCodes, ...filteredLocalPromoCodes]);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'promo_codes');
+    });
+
     return () => {
       unsubscribeTheories();
       unsubscribeBlogPosts();
       unsubscribeEvents();
+      unsubscribePromoCodes();
     };
   }, []);
 
-  return { theories, blogPosts, events };
+  return { theories, blogPosts, events, promoCodes };
 }

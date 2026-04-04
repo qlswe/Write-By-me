@@ -73,20 +73,20 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
         <div className="px-4 py-1.5 rounded-full bg-[#C3A6E6]/10 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest border border-[#C3A6E6]/20">
           {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
         </div>
-        <div className="flex flex-wrap gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 justify-end">
+        <div className="grid grid-cols-2 gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 justify-end">
           {isAdmin && (
             <>
               <button 
                 onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
                 className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
-                title="Edit"
+                title={t.editBtn}
               >
                 <Edit size={18} />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
                 className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-400/30"
-                title="Delete"
+                title={t.deleteBtn}
               >
                 <Trash2 size={18} />
               </button>
@@ -95,13 +95,14 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
           <button 
             onClick={handleShare}
             className={`p-2.5 rounded-xl bg-[#5C4B8B]/30 transition-all border border-transparent ${copied ? 'text-green-400 bg-green-400/10 border-green-400/30' : 'text-gray-400 hover:text-[#C3A6E6] hover:border-[#C3A6E6]/30 hover:bg-[#C3A6E6]/10'}`}
-            title="Share"
+            title={t.shareBtn}
           >
             {copied ? <Check size={18} /> : <Share2 size={18} />}
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(e); }}
             className={`p-2.5 rounded-xl bg-[#5C4B8B]/30 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+            title={t.favoriteBtn}
           >
             <Star size={18} fill={isFavorite ? "currentColor" : "none"} />
           </button>
@@ -118,7 +119,7 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
 
       <div className="flex flex-col gap-4 mt-auto">
         <div className="flex items-center justify-between">
-          <ReactionsBar targetId={theory.id} />
+          <ReactionsBar targetId={theory.id} lang={lang} />
           
           <div className="flex items-center gap-2 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0">
             {t.readArchive} <ArrowRight size={12} />

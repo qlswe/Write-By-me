@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare } from 'lucide-react';
+import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile as updateAuthProfile } from 'firebase/auth';
 import { ChatsList } from '../chat/ChatsList';
 import { UserData } from '../../hooks/useUsers';
 import { useUserPosts } from '../../hooks/useUserPosts';
+import { useUserData } from '../../hooks/useUserData';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
@@ -20,12 +21,21 @@ interface ProfileModalProps {
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lang, viewUser }) => {
   const t = translations[lang];
   const { user: currentUser, logout, isAdmin, role: currentUserRole } = useAuth();
+  const { xp: currentXp, reputation: currentRep, role: currentRole, photoURL: currentPhoto, updateProfile: updateUserData } = useUserData(lang);
+  
   const isOwnProfile = !viewUser || viewUser.uid === currentUser?.uid;
   const user = viewUser || currentUser;
-  const userRole = viewUser ? viewUser.role : currentUserRole;
   
+  // Use real data if it's the current user's profile, otherwise use viewUser data
+  const xp = isOwnProfile ? currentXp : (viewUser as any)?.xp || 0;
+  const reputation = isOwnProfile ? currentRep : (viewUser as any)?.reputation || 0;
+  const userRole = isOwnProfile ? currentRole : (viewUser?.role || 'user');
+  const photoURL = isOwnProfile ? (currentPhoto || user?.photoURL) : (viewUser?.photoURL || user?.photoURL);
+
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.displayName || '');
+  const [isEditingPhoto, setIsEditingPhoto] = useState(false);
+  const [newPhotoURL, setNewPhotoURL] = useState(photoURL || '');
   const [isUpdating, setIsUpdating] = useState(false);
   const [showChats, setShowChats] = useState(false);
   const [showPosts, setShowPosts] = useState(false);
@@ -34,6 +44,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const { posts, createPost, updatePost, deletePost, loading: postsLoading } = useUserPosts(user?.uid);
   const [newPostText, setNewPostText] = useState('');
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
+
+  // Level calculation: 1000 XP per level
+  const level = Math.floor(xp / 1000) + 1;
+  const xpInLevel = xp % 1000;
+  const xpNeeded = 1000;
 
   if (!isOpen || !user) return null;
 
@@ -46,7 +61,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
     setIsUpdating(true);
     try {
       if (currentUser) {
-        await updateProfile(currentUser, { displayName: newName.trim() });
+        await updateAuthProfile(currentUser, { displayName: newName.trim() });
         // Also update public profile
         await setDoc(doc(db, 'public_profiles', currentUser.uid), {
           displayName: newName.trim()
@@ -59,6 +74,37 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
     } catch (error) {
       console.error('Error updating profile:', error);
       setToast(lang === 'ru' ? 'Ошибка при обновлении имени' : 'Error updating name');
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleUpdatePhoto = async () => {
+    if (!newPhotoURL.trim() || newPhotoURL === photoURL) {
+      setIsEditingPhoto(false);
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      if (currentUser) {
+        await updateAuthProfile(currentUser, { photoURL: newPhotoURL.trim() });
+        // Update via useUserData hook
+        await updateUserData('', '', 0, '', '', newPhotoURL.trim());
+        
+        // Also update public profile
+        await setDoc(doc(db, 'public_profiles', currentUser.uid), {
+          photoURL: newPhotoURL.trim()
+        }, { merge: true });
+        
+        setIsEditingPhoto(false);
+        setToast(lang === 'ru' ? 'Фото успешно обновлено!' : 'Photo updated successfully!');
+        setTimeout(() => setToast(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error updating photo:', error);
+      setToast(lang === 'ru' ? 'Ошибка при обновлении фото' : 'Error updating photo');
       setTimeout(() => setToast(null), 3000);
     } finally {
       setIsUpdating(false);
@@ -97,12 +143,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
         })
       : (lang === 'ru' ? 'Неизвестно' : 'Unknown');
 
-  // Mock stats for interactivity
   const stats = [
-    { label: lang === 'ru' ? 'Уровень' : 'Level', value: '12', icon: Zap, color: 'text-yellow-400' },
-    { label: lang === 'ru' ? 'Опыт' : 'EXP', value: '240/500', icon: Star, color: 'text-[#C3A6E6]' },
-    { label: lang === 'ru' ? 'Ранг' : 'Rank', value: 'Trailblazer', icon: Shield, color: 'text-blue-400' },
+    { label: lang === 'ru' ? 'Уровень' : 'Level', value: level.toString(), icon: Zap, color: 'text-yellow-400' },
+    { label: lang === 'ru' ? 'Опыт' : 'EXP', value: `${xpInLevel}/${xpNeeded}`, icon: Star, color: 'text-[#C3A6E6]' },
+    { label: lang === 'ru' ? 'Репутация' : 'Reputation', value: reputation.toString(), icon: Award, color: 'text-green-400' },
   ];
+
+  const getRoleDisplay = () => {
+    if (userRole === 'admin') return lang === 'ru' ? 'Администратор' : 'Administrator';
+    if (userRole === 'moderator') return lang === 'ru' ? 'Модератор' : 'Moderator';
+    return lang === 'ru' ? 'Активный Путешественник' : 'Active Trailblazer';
+  };
 
   const canSeeEmail = isOwnProfile || isAdmin;
 
@@ -129,24 +180,61 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                   <X size={20} />
                 </button>
               </div>
-
-              {/* Avatar - Positioned absolutely relative to the header section */}
-              <div className="absolute -bottom-16 left-8 z-10">
-                <div className="relative group">
-                  <img 
-                    src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=3E3160&color=fff`} 
-                    alt="Avatar" 
-                    className="w-32 h-32 rounded-[2.5rem] border-[10px] border-[#2F244F] bg-[#3E3160] object-cover shadow-2xl transition-transform group-hover:scale-105"
-                  />
-                  <div className="absolute -bottom-2 -right-2 p-2.5 bg-[#C3A6E6] rounded-2xl shadow-xl border-4 border-[#2F244F] text-[#2F244F]">
-                    <Award size={20} />
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Scrollable Content */}
-            <div className="px-8 pt-20 pb-8 flex-1 overflow-y-auto custom-scrollbar">
+            <div className="px-8 pt-6 pb-8 flex-1 overflow-y-auto custom-scrollbar">
+              {/* Avatar - Now part of the content flow as requested */}
+              <div className="flex justify-center mb-8">
+                <div className="relative group">
+                  <img 
+                    src={photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=3E3160&color=fff`} 
+                    alt="Avatar" 
+                    className="w-40 h-40 rounded-[3rem] border-[8px] border-[#3E3160]/30 bg-[#3E3160] object-cover shadow-2xl transition-transform group-hover:scale-105"
+                  />
+                  {isOwnProfile && (
+                    <button 
+                      onClick={() => setIsEditingPhoto(true)}
+                      className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-[3rem] text-white"
+                    >
+                      <Camera size={40} />
+                    </button>
+                  )}
+                  <div className="absolute -bottom-2 -right-2 p-3 bg-[#C3A6E6] rounded-2xl shadow-xl border-4 border-[#2F244F] text-[#2F244F]">
+                    <Award size={24} />
+                  </div>
+                </div>
+              </div>
+              {isEditingPhoto && isOwnProfile && (
+                <div className="mb-6 p-4 bg-[#3E3160]/50 rounded-2xl border border-[#C3A6E6]/30">
+                  <div className="text-[10px] font-black text-[#C3A6E6] uppercase tracking-widest mb-2">
+                    {lang === 'ru' ? 'Ссылка на фото' : 'Photo URL'}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newPhotoURL}
+                      onChange={(e) => setNewPhotoURL(e.target.value)}
+                      className="flex-1 bg-[#2F244F] border border-[#5C4B8B] rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#C3A6E6]"
+                      placeholder="https://..."
+                    />
+                    <button
+                      onClick={handleUpdatePhoto}
+                      disabled={isUpdating}
+                      className="p-2.5 bg-[#C3A6E6] text-[#2F244F] rounded-xl hover:bg-[#B094EB] transition-colors disabled:opacity-50"
+                    >
+                      <Check size={20} />
+                    </button>
+                    <button
+                      onClick={() => setIsEditingPhoto(false)}
+                      className="p-2.5 bg-[#2F244F] text-gray-400 rounded-xl hover:text-white transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                 <div>
                   {isEditingName && isOwnProfile ? (
@@ -183,7 +271,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                   )}
                   <div className="flex items-center gap-2 text-[#C3A6E6] text-sm font-black uppercase tracking-[0.2em] mt-1">
                     <Zap size={14} />
-                    {userRole === 'admin' ? (lang === 'ru' ? 'Администратор' : 'Administrator') : (lang === 'ru' ? 'Активный Путешественник' : 'Active Trailblazer')}
+                    {getRoleDisplay()}
                   </div>
                 </div>
               </div>

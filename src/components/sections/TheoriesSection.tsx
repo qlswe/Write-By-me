@@ -204,7 +204,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             />
 
             <div className="mb-12">
-              <ReactionsBar targetId={selectedTheory.id} />
+              <ReactionsBar targetId={selectedTheory.id} lang={lang} />
             </div>
 
             <div className="pt-10 border-t border-[#5C4B8B]">

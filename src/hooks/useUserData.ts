@@ -17,6 +17,9 @@ interface UserData {
   signature?: string;
   mainCharacter?: string;
   role?: 'admin' | 'moderator' | 'user';
+  reputation?: number;
+  xp?: number;
+  photoURL?: string;
 }
 
 export function useUserData(initialLang: string) {
@@ -31,6 +34,9 @@ export function useUserData(initialLang: string) {
   const [signature, setSignature] = useState<string>('');
   const [mainCharacter, setMainCharacter] = useState<string>('Stelle');
   const [role, setRole] = useState<'admin' | 'moderator' | 'user'>('user');
+  const [reputation, setReputation] = useState<number>(0);
+  const [xp, setXp] = useState<number>(0);
+  const [photoURL, setPhotoURL] = useState<string>('');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // Sync i18n when lang state changes
@@ -95,6 +101,13 @@ export function useUserData(initialLang: string) {
         if (data.signature !== undefined) setSignature(data.signature);
         if (data.mainCharacter !== undefined) setMainCharacter(data.mainCharacter);
         if (data.role !== undefined) setRole(data.role);
+        // Hardcoded admin check for the user's email
+        if (user.email === 'semegladysev527@gmail.com') {
+          setRole('admin');
+        }
+        if (data.reputation !== undefined) setReputation(data.reputation);
+        if (data.xp !== undefined) setXp(data.xp);
+        if (data.photoURL !== undefined) setPhotoURL(data.photoURL);
       } else {
         // Create initial document if it doesn't exist
         setDoc(userRef, {
@@ -107,6 +120,9 @@ export function useUserData(initialLang: string) {
           signature: signature,
           mainCharacter: mainCharacter,
           role: 'user',
+          reputation: 0,
+          xp: 0,
+          photoURL: user.photoURL || '',
           createdAt: new Date().toISOString()
         }, { merge: true }).catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
       }
@@ -193,28 +209,31 @@ export function useUserData(initialLang: string) {
     }
   }, [lowPerfMode, user]);
 
-  const updateProfile = useCallback(async (uid: string, server: string, level: number, sig: string, mainChar: string) => {
+  const updateProfile = useCallback(async (uid: string, server: string, level: number, sig: string, mainChar: string, newPhotoURL?: string) => {
     setHsrUid(uid);
     setHsrServer(server);
     setTrailblazerLevel(level);
     setSignature(sig);
     setMainCharacter(mainChar);
+    if (newPhotoURL) setPhotoURL(newPhotoURL);
 
     if (user) {
       try {
         const userRef = doc(db, 'users', user.uid);
-        await setDoc(userRef, { 
+        const updates: any = { 
           hsrUid: uid,
           hsrServer: server,
           trailblazerLevel: level,
           signature: sig,
           mainCharacter: mainChar
-        }, { merge: true });
+        };
+        if (newPhotoURL) updates.photoURL = newPhotoURL;
+        await setDoc(userRef, updates, { merge: true });
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
       }
     }
   }, [user]);
 
-  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, hsrUid, hsrServer, trailblazerLevel, signature, mainCharacter, role, updateProfile, isDataLoaded };
+  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, hsrUid, hsrServer, trailblazerLevel, signature, mainCharacter, role, reputation, xp, photoURL, updateProfile, isDataLoaded };
 }

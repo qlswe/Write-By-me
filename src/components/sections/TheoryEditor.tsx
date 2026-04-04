@@ -70,42 +70,58 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-[#1a142e]/90 rounded-3xl w-full max-w-4xl max-h-[95vh] overflow-hidden border border-[#C3A6E6]/20 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col backdrop-blur-xl"
+        className="bg-[#2F244F]/90 backdrop-blur-2xl rounded-[1.5rem] sm:rounded-[3rem] w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden border border-[#5C4B8B]/30 shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col"
       >
-        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-[#C3A6E6]/10 bg-[#2F244F]/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#C3A6E6]/10 rounded-xl">
-              <Save size={20} className="text-[#C3A6E6]" />
+        {/* Header */}
+        <div className="bg-[#3E3160]/50 p-4 sm:p-8 border-b border-[#5C4B8B]/30 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#C3A6E6]/10 flex items-center justify-center border border-[#C3A6E6]/20">
+              <Save className="text-[#C3A6E6] w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">{theory ? t.editTheory : t.createTheory}</h2>
+            <div>
+              <h2 className="text-xl sm:text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
+                {theory ? t.editTheory : t.createTheory}
+              </h2>
+              <p className="text-[8px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{t.archiveProtocol}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <select 
-              value={currentLang}
-              onChange={(e) => setCurrentLang(e.target.value as Language)}
-              className="bg-[#1A1528] border border-[#5C4B8B]/50 rounded-xl px-3 py-1.5 text-white text-xs sm:text-sm focus:outline-none focus:border-[#C3A6E6] transition-all"
+          <div className="flex items-center gap-2 sm:gap-4 max-w-[40%] sm:max-w-none">
+            <div className="flex bg-[#1A1528] rounded-lg sm:rounded-xl p-0.5 sm:p-1 border border-[#5C4B8B]/30 overflow-x-auto no-scrollbar">
+              {LANGUAGES.map(l => (
+                <button
+                  key={l}
+                  onClick={() => setCurrentLang(l as Language)}
+                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 ${
+                    currentLang === l ? 'bg-[#C3A6E6] text-[#2F244F]' : 'text-gray-500 hover:text-white'
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            <button 
+              onClick={onClose} 
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
             >
-              {LANGUAGES.map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}
-            </select>
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
-              <X size={24} />
+              <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
-        <div className="p-4 sm:p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Content */}
+        <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto custom-scrollbar flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <label className="text-xs font-black text-[#C3A6E6] uppercase tracking-widest ml-1">{t.categoryLabel}</label>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">{t.categoryLabel}</label>
               <select 
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/50 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6] focus:bg-[#1A1528] transition-all"
+                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all appearance-none cursor-pointer"
               >
                 <option value="lore">{t.filterLore}</option>
                 <option value="characters">{t.filterCharacters}</option>
@@ -114,59 +130,66 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black text-[#C3A6E6] uppercase tracking-widest ml-1">{t.titleLabel} ({currentLang.toUpperCase()})</label>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">
+                {t.titleLabel} <span className="text-[#C3A6E6]">[{currentLang.toUpperCase()}]</span>
+              </label>
               <input 
                 type="text"
                 value={title[currentLang] || ''}
                 onChange={(e) => setTitle(prev => ({ ...prev, [currentLang]: e.target.value }))}
-                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/50 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6] focus:bg-[#1A1528] transition-all"
+                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all placeholder:text-gray-700"
                 placeholder={t.placeholderTitle}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-black text-[#C3A6E6] uppercase tracking-widest ml-1">{t.summaryLabel} ({currentLang.toUpperCase()})</label>
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">
+              {t.summaryLabel} <span className="text-[#C3A6E6]">[{currentLang.toUpperCase()}]</span>
+            </label>
             <textarea 
               value={summary[currentLang] || ''}
               onChange={(e) => setSummary(prev => ({ ...prev, [currentLang]: e.target.value }))}
-              className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/50 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6] focus:bg-[#1A1528] transition-all min-h-[80px] resize-none"
+              className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-3xl px-6 py-4 text-white font-medium focus:outline-none focus:border-[#C3A6E6] transition-all min-h-[100px] resize-none placeholder:text-gray-700"
               placeholder={t.placeholderSummary}
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-black text-[#C3A6E6] uppercase tracking-widest ml-1">{t.contentLabel} ({currentLang.toUpperCase()})</label>
+            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">
+              {t.contentLabel} <span className="text-[#C3A6E6]">[{currentLang.toUpperCase()}]</span>
+            </label>
             <div className="relative group">
               <textarea 
                 value={content[currentLang] || ''}
                 onChange={(e) => setContent(prev => ({ ...prev, [currentLang]: e.target.value }))}
-                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/50 rounded-2xl px-4 py-4 text-white focus:outline-none focus:border-[#C3A6E6] focus:bg-[#1A1528] transition-all min-h-[350px] font-mono text-sm leading-relaxed"
+                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-[2rem] px-6 py-6 text-white font-mono text-sm leading-relaxed focus:outline-none focus:border-[#C3A6E6] transition-all min-h-[350px] placeholder:text-gray-700"
                 placeholder={t.placeholderContent}
               />
-              <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <span className="text-[10px] text-[#C3A6E6]/50 font-mono">HTML ALLOWED</span>
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <span className="text-[10px] text-[#C3A6E6]/50 font-black uppercase tracking-widest">{t.htmlAllowed}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 border-t border-[#C3A6E6]/10 bg-[#2F244F]/50 flex justify-end items-center gap-4">
+        {/* Footer */}
+        <div className="p-4 sm:p-8 bg-[#3E3160]/50 border-t border-[#5C4B8B]/30 flex justify-end items-center gap-4 sm:gap-6 shrink-0">
           <button 
             onClick={onClose}
-            className="px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+            className="text-[10px] sm:text-xs font-black text-gray-400 hover:text-white uppercase tracking-[0.2em] transition-colors"
           >
             {t.cancel}
           </button>
           <button 
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-3 bg-[#C3A6E6] text-[#2F244F] px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-lg shadow-[#C3A6E6]/20"
+            className="flex items-center gap-2 sm:gap-3 bg-[#C3A6E6] text-[#2F244F] px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs hover:bg-white hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shadow-[0_0_30px_rgba(195,166,230,0.3)]"
           >
             {isSaving ? (
-              <div className="w-4 h-4 border-2 border-[#2F244F]/30 border-t-[#2F244F] rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[#2F244F] border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Save size={18} />
+              <Save size={20} />
             )}
             {isSaving ? t.saving : t.saveBtn}
           </button>

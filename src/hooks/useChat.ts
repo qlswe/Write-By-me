@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, getDoc, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
+import { encrypt, decrypt } from '../utils/encryption';
 
 export interface Message {
   id: string;
@@ -34,10 +35,14 @@ export function useChat(otherUserId?: string) {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatsData = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id
-      } as Chat));
+      const chatsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          lastMessage: data.lastMessage ? decrypt(data.lastMessage) : undefined
+        } as Chat;
+      });
       
       // Sort client-side to avoid composite index requirement
       chatsData.sort((a, b) => {
@@ -68,10 +73,14 @@ export function useChat(otherUserId?: string) {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messagesData = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id
-      } as Message));
+      const messagesData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          text: decrypt(data.text)
+        } as Message;
+      });
       setMessages(messagesData);
     });
 
@@ -84,6 +93,8 @@ export function useChat(otherUserId?: string) {
     const chatId = [user.uid, recipientId].sort().join('_');
     const chatRef = doc(db, 'chats', chatId);
     const messagesRef = collection(db, 'chats', chatId, 'messages');
+
+    const encryptedText = encrypt(text.trim());
 
     try {
       // Ensure chat document exists
@@ -98,13 +109,13 @@ export function useChat(otherUserId?: string) {
       // Add message
       await addDoc(messagesRef, {
         senderId: user.uid,
-        text: text.trim(),
+        text: encryptedText,
         createdAt: serverTimestamp()
       });
 
       // Update chat metadata
       await setDoc(chatRef, {
-        lastMessage: text.trim(),
+        lastMessage: encryptedText,
         lastMessageAt: serverTimestamp(),
         participants: [user.uid, recipientId]
       }, { merge: true });

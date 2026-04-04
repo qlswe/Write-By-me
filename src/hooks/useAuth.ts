@@ -34,7 +34,7 @@ export function useAuth() {
             await setDoc(doc(db, 'public_profiles', user.uid), {
               uid: user.uid,
               displayName: user.displayName,
-              photoURL: user.photoURL,
+              photoURL: userData.photoURL || user.photoURL,
               role: userData.role || 'user'
             }, { merge: true });
           } else {

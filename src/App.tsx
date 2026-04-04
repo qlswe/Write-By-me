@@ -23,6 +23,7 @@ import { FeedbackModal } from './components/ui/FeedbackModal';
 import { TheoryEditor } from './components/sections/TheoryEditor';
 import { BlogEditor } from './components/sections/BlogEditor';
 import { EventEditor } from './components/sections/EventEditor';
+import { PromoEditor } from './components/sections/PromoEditor';
 import { SDKTerminal } from './components/SDKTerminal';
 import { UsersList } from './components/admin/UsersList';
 import { ChatsList } from './components/chat/ChatsList';
@@ -63,7 +64,7 @@ export default function App() {
 
   // User Data (Syncs with Firebase)
   const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role } = useUserData('ru');
-  const { theories, blogPosts, events } = useContent();
+  const { theories, blogPosts, events, promoCodes } = useContent();
 
   // Production Mode (High Fidelity)
   const [productionMode, setProductionMode] = useState(() => localStorage.getItem('productionMode') === 'true');
@@ -95,6 +96,7 @@ export default function App() {
   const [isCreatingBlog, setIsCreatingBlog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [isCreatingEvent, setIsCreatingEvent] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<any | null>(null);
 
   // Profile state
   const [profileOpen, setProfileOpen] = useState(false);
@@ -369,7 +371,16 @@ export default function App() {
                 />
               )}
               {section === 'tierlist' && <TierListSection lang={lang as Language} lowPerfMode={lowPerfMode} />}
-              {section === 'promo' && <PromoSection lang={lang as Language} handleCopy={handleCopy} />}
+              {section === 'promo' && (
+                <PromoSection 
+                  lang={lang as Language} 
+                  handleCopy={handleCopy} 
+                  promoCodes={promoCodes} 
+                  role={role} 
+                  onOpenEditor={() => setEditingPromo({})}
+                  onEdit={setEditingPromo}
+                />
+              )}
               {section === 'users' && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-bold text-[#C3A6E6] mb-6">{t.navUsers}</h2>
@@ -488,6 +499,16 @@ export default function App() {
               setEditingEvent(null);
             }} 
             lang={lang as Language}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {editingPromo && (
+          <PromoEditor 
+            lang={lang as Language} 
+            role={role} 
+            initialPromo={editingPromo.id ? editingPromo : null}
+            onClose={() => setEditingPromo(null)} 
           />
         )}
       </AnimatePresence>

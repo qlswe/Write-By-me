@@ -15,16 +15,16 @@ export const TierListSection: React.FC<TierListSectionProps> = ({ lang, lowPerfM
   trackRender();
 
   const tiers = [
-    { name: 'S+', color: 'bg-red-500', textColor: 'text-red-100', glow: 'shadow-[0_0_20px_rgba(239,68,68,0.4)]' },
-    { name: 'S', color: 'bg-orange-500', textColor: 'text-orange-100', glow: 'shadow-[0_0_15px_rgba(249,115,22,0.3)]' },
-    { name: 'A', color: 'bg-purple-500', textColor: 'text-purple-100', glow: 'shadow-[0_0_10px_rgba(168,85,247,0.2)]' },
-    { name: 'B', color: 'bg-blue-500', textColor: 'text-blue-100', glow: 'shadow-[0_0_5px_rgba(59,130,246,0.1)]' },
+    { name: 'S+', color: 'bg-red-500', textColor: 'text-red-100', glow: 'shadow-[0_0_30px_rgba(239,68,68,0.5)]', border: 'border-red-400/50' },
+    { name: 'S', color: 'bg-orange-500', textColor: 'text-orange-100', glow: 'shadow-[0_0_25px_rgba(249,115,22,0.4)]', border: 'border-orange-400/50' },
+    { name: 'A', color: 'bg-purple-500', textColor: 'text-purple-100', glow: 'shadow-[0_0_20px_rgba(168,85,247,0.3)]', border: 'border-purple-400/50' },
+    { name: 'B', color: 'bg-blue-500', textColor: 'text-blue-100', glow: 'shadow-[0_0_15px_rgba(59,130,246,0.2)]', border: 'border-blue-400/50' },
   ];
 
   const categories = [
-    { id: 'dd', label: lang === 'ru' ? 'ДД (Урон)' : 'Damage Dealers', icon: Swords, color: 'text-red-400' },
-    { id: 'support', label: lang === 'ru' ? 'Поддержка' : 'Amplifiers', icon: Sparkles, color: 'text-yellow-400' },
-    { id: 'sustain', label: lang === 'ru' ? 'Выживание' : 'Sustain', icon: Shield, color: 'text-blue-400' },
+    { id: 'dd', label: lang === 'ru' ? 'ДД (Урон)' : 'Damage Dealers', icon: Swords, color: 'text-red-400', bg: 'bg-red-400/5' },
+    { id: 'support', label: lang === 'ru' ? 'Поддержка' : 'Amplifiers', icon: Sparkles, color: 'text-yellow-400', bg: 'bg-yellow-400/5' },
+    { id: 'sustain', label: lang === 'ru' ? 'Выживание' : 'Sustain', icon: Shield, color: 'text-blue-400', bg: 'bg-blue-400/5' },
   ];
 
   const characters: Record<string, Record<string, string[]>> = {
@@ -53,25 +53,29 @@ export const TierListSection: React.FC<TierListSectionProps> = ({ lang, lowPerfM
   const renderCharList = (tier: string, catId: string) => {
     const list = characters[tier]?.[catId] || [];
     return (
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2 sm:gap-3">
         {list.map(char => (
           <motion.div 
             key={char}
-            whileHover={{ scale: 1.05, y: -2 }}
+            whileHover={{ scale: 1.1, y: -4, rotate: 2 }}
+            whileTap={{ scale: 0.95 }}
             className="group relative flex flex-col items-center"
           >
-            <div className="w-14 h-14 rounded-xl bg-[#2F244F] border border-[#5C4B8B] overflow-hidden shadow-md group-hover:border-[#C3A6E6] transition-all duration-300">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[#1A1528] border-2 border-[#5C4B8B]/50 overflow-hidden shadow-xl group-hover:border-[#C3A6E6] group-hover:shadow-[#C3A6E6]/20 transition-all duration-300">
               <img 
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(char)}&background=2F244F&color=C3A6E6&bold=true&size=${lowPerfMode ? 64 : 128}`} 
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(char)}&background=1A1528&color=C3A6E6&bold=true&size=${lowPerfMode ? 64 : 128}`} 
                 alt={char}
-                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
                 loading="lazy"
                 referrerPolicy="no-referrer"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="mt-1.5 text-[10px] font-medium text-gray-400 group-hover:text-[#C3A6E6] transition-colors text-center max-w-[60px] truncate">
-              {char}
-            </span>
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-[#2F244F] border border-[#C3A6E6]/30 rounded-full opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 z-10 whitespace-nowrap">
+              <span className="text-[8px] font-black text-[#C3A6E6] uppercase tracking-widest">
+                {char}
+              </span>
+            </div>
           </motion.div>
         ))}
       </div>
@@ -79,31 +83,46 @@ export const TierListSection: React.FC<TierListSectionProps> = ({ lang, lowPerfM
   };
 
   return (
-    <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-[#C3A6E6] mb-2">{t.navTierList}</h2>
-        <p className="text-gray-400 text-sm">
-          {lang === 'ru' ? 'Актуальный тир-лист персонажей версии 2.5+. Оценки основаны на эффективности в Чистом Вымысле и Иллюзии Конца.' : 
-           'Current character tier list for version 2.5+. Ratings are based on performance in Pure Fiction and Apocalyptic Shadow.'}
-        </p>
+    <div className="bg-[#2F244F]/40 backdrop-blur-2xl rounded-[3rem] p-6 sm:p-10 shadow-[0_0_50px_rgba(0,0,0,0.3)] border border-[#5C4B8B]/30">
+      <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#C3A6E6]/10 flex items-center justify-center border border-[#C3A6E6]/20">
+              <Star className="text-[#C3A6E6]" size={24} />
+            </div>
+            <h2 className="text-4xl font-black text-white uppercase tracking-tighter italic">{t.navTierList}</h2>
+          </div>
+          <p className="text-gray-400 text-sm max-w-2xl leading-relaxed font-medium">
+            {lang === 'ru' ? 'Актуальный тир-лист персонажей версии 2.5+. Оценки основаны на эффективности в Чистом Вымысле и Иллюзии Конца.' : 
+             'Current character tier list for version 2.5+. Ratings are based on performance in Pure Fiction and Apocalyptic Shadow.'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 bg-[#1A1528]/50 rounded-2xl border border-[#5C4B8B]/30">
+          <Zap size={14} className="text-[#C3A6E6]" />
+          <span className="text-[10px] font-black text-[#C3A6E6] uppercase tracking-widest">Version 2.5+</span>
+        </div>
       </div>
 
-      <div className="space-y-12">
+      <div className="space-y-16">
         {tiers.map(tier => (
           <div key={tier.name} className="relative">
-            <div className="flex items-center gap-4 mb-6">
-              <div className={`w-14 h-14 ${tier.color} ${tier.textColor} ${tier.glow} rounded-2xl flex items-center justify-center text-3xl font-black italic transform -skew-x-12 border-2 border-white/20 shadow-lg`}>
+            <div className="flex items-center gap-6 mb-8">
+              <div className={`w-16 h-16 sm:w-20 sm:h-20 ${tier.color} ${tier.textColor} ${tier.glow} ${tier.border} rounded-[2rem] flex items-center justify-center text-4xl sm:text-5xl font-black italic transform -skew-x-12 border-4 shadow-2xl relative z-10`}>
                 {tier.name}
               </div>
-              <div className="h-px flex-1 bg-gradient-to-r from-[#5C4B8B] via-[#5C4B8B]/50 to-transparent" />
+              <div className="flex-1 h-1 bg-gradient-to-r from-[#5C4B8B]/50 via-[#5C4B8B]/20 to-transparent rounded-full" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 ml-2 lg:ml-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-10">
               {categories.map(cat => (
-                <div key={cat.id} className="space-y-4">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-gray-500 border-l-2 border-[#C3A6E6]/30 pl-3">
-                    <cat.icon size={16} className={cat.color} />
-                    {cat.label}
+                <div key={cat.id} className={`p-6 rounded-[2.5rem] border border-[#5C4B8B]/20 ${cat.bg} backdrop-blur-sm transition-all hover:border-[#C3A6E6]/20`}>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className={`p-2 rounded-xl bg-[#2F244F] border border-[#5C4B8B]/30 ${cat.color}`}>
+                      <cat.icon size={18} />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-[0.3em] text-white/80">
+                      {cat.label}
+                    </span>
                   </div>
                   {renderCharList(tier.name, cat.id)}
                 </div>

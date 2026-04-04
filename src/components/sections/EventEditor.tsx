@@ -89,130 +89,166 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-[#2F244F] rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-[#5C4B8B] shadow-2xl flex flex-col"
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="bg-[#2F244F]/90 backdrop-blur-2xl rounded-[1.5rem] sm:rounded-[3rem] w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden border border-[#5C4B8B]/30 shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col"
       >
-        <div className="sticky top-0 bg-[#2F244F] z-10 flex justify-between items-center p-6 border-b border-[#5C4B8B]">
-          <h2 className="text-2xl font-bold text-white">{event ? t.editEvent : t.createEvent}</h2>
-          <div className="flex items-center gap-4">
-            <select 
-              value={currentLang}
-              onChange={(e) => setCurrentLang(e.target.value as Language)}
-              className="bg-[#1A1528] border border-[#5C4B8B] rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-[#C3A6E6]"
+        {/* Header */}
+        <div className="bg-[#3E3160]/50 p-4 sm:p-8 border-b border-[#5C4B8B]/30 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#C3A6E6]/10 flex items-center justify-center border border-[#C3A6E6]/20">
+              <Save className="text-[#C3A6E6] w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
+                {event ? t.editEvent : t.createEvent}
+              </h2>
+              <p className="text-[8px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{t.eventProtocol}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4 max-w-[40%] sm:max-w-none">
+            <div className="flex bg-[#1A1528] rounded-lg sm:rounded-xl p-0.5 sm:p-1 border border-[#5C4B8B]/30 overflow-x-auto no-scrollbar">
+              {LANGUAGES.map(l => (
+                <button
+                  key={l}
+                  onClick={() => setCurrentLang(l as Language)}
+                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 ${
+                    currentLang === l ? 'bg-[#C3A6E6] text-[#2F244F]' : 'text-gray-500 hover:text-white'
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            <button 
+              onClick={onClose} 
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
             >
-              {LANGUAGES.map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}
-            </select>
-            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-              <X size={24} />
+              <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>
 
-        <div className="p-6 space-y-6 flex-1">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">{t.typeLabel}</label>
+        {/* Content */}
+        <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto custom-scrollbar flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.typeLabel}</label>
               <select 
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full bg-[#1A1528] border border-[#5C4B8B] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6]"
+                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all appearance-none cursor-pointer"
               >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
+                <option value="daily">{t.dailyOption}</option>
+                <option value="weekly">{t.weeklyOption}</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">{t.iconLabel}</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.iconLabel}</label>
               <select 
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
-                className="w-full bg-[#1A1528] border border-[#5C4B8B] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6]"
+                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all appearance-none cursor-pointer"
               >
                 <option value="globe">Globe</option>
                 <option value="swords">Swords</option>
                 <option value="refresh-cw">Refresh</option>
+                <option value="star">Star</option>
+                <option value="zap">Zap</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Reset Time (UTC)</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.resetTimeLabel}</label>
               <input 
                 type="time"
                 value={resetTime}
                 onChange={(e) => setResetTime(e.target.value)}
-                className="w-full bg-[#1A1528] border border-[#5C4B8B] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6]"
+                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all"
               />
             </div>
           </div>
 
           {type === 'weekly' && (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Day of Week</label>
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-[#1A1528]/30 rounded-3xl border border-[#5C4B8B]/20"
+            >
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.dayOfWeekLabel}</label>
                 <select 
                   value={dayOfWeek}
                   onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                  className="w-full bg-[#1A1528] border border-[#5C4B8B] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6]"
+                  className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all appearance-none cursor-pointer"
                 >
                   {DAYS.map(day => <option key={day.value} value={day.value}>{day.label}</option>)}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">{t.weekOffsetLabel}</label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.weekOffsetLabel}</label>
                 <select 
                   value={weekOffset}
                   onChange={(e) => setWeekOffset(Number(e.target.value))}
-                  className="w-full bg-[#1A1528] border border-[#5C4B8B] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6]"
+                  className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all appearance-none cursor-pointer"
                 >
-                  <option value={0}>Week 1</option>
-                  <option value={1}>Week 2</option>
+                  <option value={0}>{t.week1}</option>
+                  <option value={1}>{t.week2}</option>
                 </select>
               </div>
-            </div>
+            </motion.div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">{t.titleLabel} ({currentLang.toUpperCase()})</label>
-            <input 
-              type="text"
-              value={title[currentLang] || ''}
-              onChange={(e) => setTitle(prev => ({ ...prev, [currentLang]: e.target.value }))}
-              className="w-full bg-[#1A1528] border border-[#5C4B8B] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6]"
-              placeholder={t.placeholderTitle}
-            />
-          </div>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">
+                {t.titleLabel} <span className="text-[#C3A6E6]">[{currentLang.toUpperCase()}]</span>
+              </label>
+              <input 
+                type="text"
+                value={title[currentLang] || ''}
+                onChange={(e) => setTitle(prev => ({ ...prev, [currentLang]: e.target.value }))}
+                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-2xl px-6 py-5 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all placeholder:text-gray-600"
+                placeholder={t.placeholderTitle}
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">{t.summaryLabel} ({currentLang.toUpperCase()})</label>
-            <textarea 
-              value={description[currentLang] || ''}
-              onChange={(e) => setDescription(prev => ({ ...prev, [currentLang]: e.target.value }))}
-              className="w-full bg-[#1A1528] border border-[#5C4B8B] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#C3A6E6] min-h-[100px]"
-              placeholder={t.placeholderDescription}
-            />
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">
+                {t.summaryLabel} <span className="text-[#C3A6E6]">[{currentLang.toUpperCase()}]</span>
+              </label>
+              <textarea 
+                value={description[currentLang] || ''}
+                onChange={(e) => setDescription(prev => ({ ...prev, [currentLang]: e.target.value }))}
+                className="w-full bg-[#1A1528]/50 border border-[#5C4B8B]/30 rounded-3xl px-6 py-5 text-white font-medium focus:outline-none focus:border-[#C3A6E6] transition-all min-h-[150px] resize-none placeholder:text-gray-600"
+                placeholder={t.placeholderDescription}
+              />
+            </div>
           </div>
         </div>
 
-        <div className="sticky bottom-0 bg-[#2F244F] z-10 flex justify-end items-center p-6 border-t border-[#5C4B8B]">
-          <div className="flex gap-4">
-            <button 
-              onClick={onClose}
-              className="px-6 py-2 rounded-xl font-bold text-gray-300 hover:text-white transition-colors"
-            >
-              {t.cancel}
-            </button>
-            <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 bg-[#C3A6E6] text-[#2F244F] px-6 py-2 rounded-xl font-bold hover:bg-white transition-colors disabled:opacity-50"
-            >
+        {/* Footer */}
+        <div className="p-4 sm:p-8 bg-[#3E3160]/50 border-t border-[#5C4B8B]/30 flex justify-end items-center gap-4 sm:gap-6 shrink-0">
+          <button 
+            onClick={onClose}
+            className="text-[10px] sm:text-xs font-black text-gray-400 hover:text-white uppercase tracking-[0.2em] transition-colors"
+          >
+            {t.cancel}
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex items-center gap-2 sm:gap-3 bg-[#C3A6E6] text-[#2F244F] px-6 sm:px-10 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs hover:bg-white hover:scale-105 active:scale-95 transition-all disabled:opacity-50 shadow-[0_0_30px_rgba(195,166,230,0.3)]"
+          >
+            {isSaving ? (
+              <div className="w-5 h-5 border-2 border-[#2F244F] border-t-transparent rounded-full animate-spin" />
+            ) : (
               <Save size={20} />
-              {isSaving ? t.saving : t.saveBtn}
-            </button>
-          </div>
+            )}
+            {isSaving ? t.saving : t.saveBtn}
+          </button>
         </div>
       </motion.div>
     </div>
