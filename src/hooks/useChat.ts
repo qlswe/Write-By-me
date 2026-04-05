@@ -9,6 +9,11 @@ export interface Message {
   senderId: string;
   text: string;
   createdAt: any;
+  type?: 'text' | 'sticker';
+  replyTo?: string; // ID of the message being replied to
+  reactions?: Record<string, string[]>; // emoji -> array of user IDs
+  isEdited?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface Chat {
@@ -17,6 +22,8 @@ export interface Chat {
   lastMessage?: string;
   lastMessageAt?: any;
   unreadCount?: Record<string, number>;
+  typing?: Record<string, boolean>;
+  lastReadAt?: Record<string, any>;
 }
 
 export function useChat(otherUserId?: string) {
@@ -87,8 +94,8 @@ export function useChat(otherUserId?: string) {
     return unsubscribe;
   }, [user, otherUserId]);
 
-  const sendMessage = async (text: string, recipientId: string) => {
-    if (!user || !text.trim()) return;
+  const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' = 'text', replyTo?: string) => {
+    if (!user || (!text.trim() && type === 'text')) return;
 
     const chatId = [user.uid, recipientId].sort().join('_');
     const chatRef = doc(db, 'chats', chatId);
@@ -107,15 +114,19 @@ export function useChat(otherUserId?: string) {
       }
 
       // Add message
-      await addDoc(messagesRef, {
+      const messageData: any = {
         senderId: user.uid,
         text: encryptedText,
-        createdAt: serverTimestamp()
-      });
+        createdAt: serverTimestamp(),
+        type
+      };
+      if (replyTo) messageData.replyTo = replyTo;
+
+      await addDoc(messagesRef, messageData);
 
       // Update chat metadata
       await setDoc(chatRef, {
-        lastMessage: encryptedText,
+        lastMessage: type === 'sticker' ? encrypt('Sticker') : encryptedText,
         lastMessageAt: serverTimestamp(),
         participants: [user.uid, recipientId]
       }, { merge: true });
@@ -124,5 +135,75 @@ export function useChat(otherUserId?: string) {
     }
   };
 
-  return { chats, messages, loading, sendMessage };
+  const toggleReaction = async (messageId: string, recipientId: string, emoji: string) => {
+    if (!user) return;
+    const chatId = [user.uid, recipientId].sort().join('_');
+    const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+    
+    try {
+      const msgDoc = await getDoc(messageRef);
+      if (msgDoc.exists()) {
+        const data = msgDoc.data();
+        const reactions = data.reactions || {};
+        const usersForEmoji = reactions[emoji] || [];
+        
+        if (usersForEmoji.includes(user.uid)) {
+          reactions[emoji] = usersForEmoji.filter((id: string) => id !== user.uid);
+          if (reactions[emoji].length === 0) delete reactions[emoji];
+        } else {
+          reactions[emoji] = [...usersForEmoji, user.uid];
+        }
+        
+        await setDoc(messageRef, { reactions }, { merge: true });
+      }
+    } catch (error) {
+      console.error('Error toggling reaction:', error);
+    }
+  };
+
+  const deleteMessage = async (messageId: string, recipientId: string) => {
+    if (!user) return;
+    const chatId = [user.uid, recipientId].sort().join('_');
+    const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+    try {
+      await setDoc(messageRef, { isDeleted: true, text: encrypt('Сообщение удалено') }, { merge: true });
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
+  };
+
+  const editMessage = async (messageId: string, recipientId: string, newText: string) => {
+    if (!user || !newText.trim()) return;
+    const chatId = [user.uid, recipientId].sort().join('_');
+    const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
+    try {
+      await setDoc(messageRef, { text: encrypt(newText.trim()), isEdited: true }, { merge: true });
+    } catch (error) {
+      console.error('Error editing message:', error);
+    }
+  };
+
+  const setTyping = async (recipientId: string, isTyping: boolean) => {
+    if (!user) return;
+    const chatId = [user.uid, recipientId].sort().join('_');
+    const chatRef = doc(db, 'chats', chatId);
+    try {
+      await setDoc(chatRef, { [`typing.${user.uid}`]: isTyping }, { merge: true });
+    } catch (error) {
+      console.error('Error setting typing status:', error);
+    }
+  };
+
+  const markChatAsRead = async (recipientId: string) => {
+    if (!user) return;
+    const chatId = [user.uid, recipientId].sort().join('_');
+    const chatRef = doc(db, 'chats', chatId);
+    try {
+      await setDoc(chatRef, { [`lastReadAt.${user.uid}`]: serverTimestamp() }, { merge: true });
+    } catch (error) {
+      console.error('Error marking chat as read:', error);
+    }
+  };
+
+  return { chats, messages, loading, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead };
 }

@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useUsers, UserData } from '../../hooks/useUsers';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
-import { Shield, User, UserCheck, MessageSquare } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Shield, User, UserCheck, MessageSquare, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface UsersListProps {
   lang: Language;
@@ -11,10 +11,82 @@ interface UsersListProps {
   onViewProfile?: (user: UserData) => void;
 }
 
+const RoleSelector: React.FC<{
+  user: UserData;
+  updateUserRole: (uid: string, role: 'admin' | 'user' | 'moderator') => void;
+  t: any;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+}> = ({ user, updateUserRole, t, isOpen, onToggle, onClose }) => {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onClose]);
+
+  const roles = [
+    { value: 'user', label: t.roleUser },
+    { value: 'moderator', label: t.roleModerator },
+    { value: 'admin', label: t.roleAdmin },
+  ];
+
+  const currentRole = roles.find(r => r.value === user.role) || roles[0];
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={onToggle}
+        className="bg-[#5C4B8B]/30 border border-[#5C4B8B]/50 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl px-4 py-3 outline-none focus:border-[#C3A6E6] transition-all cursor-pointer flex items-center gap-2 shadow-lg hover:bg-[#5C4B8B]/50"
+      >
+        {currentRole.label}
+        <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute right-0 mt-2 w-40 bg-[#2F244F] border border-[#5C4B8B] rounded-xl shadow-xl overflow-hidden z-50"
+          >
+            {roles.map((role) => (
+              <button
+                key={role.value}
+                onClick={() => {
+                  updateUserRole(user.uid, role.value as any);
+                  onClose();
+                }}
+                className={`w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                  user.role === role.value 
+                    ? 'bg-[#C3A6E6] text-[#2F244F]' 
+                    : 'text-white hover:bg-[#5C4B8B]/50'
+                }`}
+              >
+                {role.label}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewProfile }) => {
   const { users, loading, updateUserRole } = useUsers();
   const { isAdmin } = useAuth();
   const t = translations[lang];
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -31,7 +103,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
           key={user.uid}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#2F244F]/50 backdrop-blur-md border border-[#5C4B8B]/30 rounded-3xl p-5 flex items-center justify-between gap-4 group hover:border-[#C3A6E6]/30 transition-all hover:bg-[#3E3160]"
+          className={`bg-[#2F244F]/50 backdrop-blur-md border border-[#5C4B8B]/30 rounded-3xl p-5 flex items-center justify-between gap-4 group hover:border-[#C3A6E6]/30 transition-all hover:bg-[#3E3160] relative ${openDropdownId === user.uid ? 'z-50' : 'z-10'}`}
         >
           <div className="flex items-center gap-5 flex-1 min-w-0">
             <button 
@@ -74,20 +146,14 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
             </button>
             
             {isAdmin && (
-              <div className="relative">
-                <select
-                  value={user.role}
-                  onChange={(e) => updateUserRole(user.uid, e.target.value as any)}
-                  className="bg-[#5C4B8B]/30 border border-[#5C4B8B]/50 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl px-4 py-3 outline-none focus:border-[#C3A6E6] transition-all cursor-pointer appearance-none pr-10 shadow-lg"
-                >
-                  <option value="user">{t.roleUser}</option>
-                  <option value="moderator">{t.roleModerator}</option>
-                  <option value="admin">{t.roleAdmin}</option>
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                  <UserCheck size={12} />
-                </div>
-              </div>
+              <RoleSelector 
+                user={user} 
+                updateUserRole={updateUserRole} 
+                t={t} 
+                isOpen={openDropdownId === user.uid}
+                onToggle={() => setOpenDropdownId(openDropdownId === user.uid ? null : user.uid)}
+                onClose={() => setOpenDropdownId(null)}
+              />
             )}
           </div>
         </motion.div>

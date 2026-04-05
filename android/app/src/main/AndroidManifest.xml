@@ -2,14 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.aha.app">
 
-    <uses-feature
-        android:name="android.hardware.camera"
-        android:required="false" />
-
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:allowBackup="true"
@@ -18,7 +11,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AhaApp">
-
+        
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -33,7 +26,7 @@
             android:name=".MainActivity"
             android:exported="false"
             android:theme="@style/Theme.AhaApp.NoActionBar" />
-
+            
     </application>
 
 </manifest>
