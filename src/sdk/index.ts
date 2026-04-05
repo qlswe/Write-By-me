@@ -283,6 +283,20 @@ export class MinistrySDK {
         }
       }
       return false;
+    },
+    getDevicePerformanceScore: () => {
+      let score = 100;
+      if (typeof navigator !== 'undefined') {
+        // @ts-ignore
+        if (navigator.deviceMemory && navigator.deviceMemory < 4) score -= 30;
+        if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) score -= 20;
+        // @ts-ignore
+        if (navigator.connection && (navigator.connection.saveData || navigator.connection.effectiveType === '2g' || navigator.connection.effectiveType === '3g')) score -= 20;
+      }
+      return Math.max(0, score);
+    },
+    isLowEndDevice: () => {
+      return MinistrySDK.getInstance().hardware.getDevicePerformanceScore() < 60;
     }
   };
 
@@ -681,6 +695,16 @@ export class MinistrySDK {
         timeoutId = setTimeout(() => fn.apply(this, args), ms);
       };
     },
+    throttle: (fn: Function, limit: number) => {
+      let inThrottle: boolean;
+      return function(this: any, ...args: any[]) {
+        if (!inThrottle) {
+          fn.apply(this, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      };
+    },
     memoize: (fn: Function) => {
       const cache = new Map();
       return (...args: any[]) => {
@@ -690,6 +714,32 @@ export class MinistrySDK {
         cache.set(key, result);
         return result;
       };
+    },
+    idleCallback: (fn: Function) => {
+      if ('requestIdleCallback' in window) {
+        // @ts-ignore
+        return window.requestIdleCallback(fn);
+      } else {
+        return setTimeout(fn, 1);
+      }
+    },
+    measurePerformance: async (label: string, fn: () => Promise<any> | any) => {
+      const start = performance.now();
+      const result = await fn();
+      const end = performance.now();
+      MinistrySDK.getInstance().logging.perf(label, end - start);
+      return result;
+    },
+    preloadImage: (url: string): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = url;
+      });
+    },
+    raf: (fn: FrameRequestCallback) => {
+      return window.requestAnimationFrame(fn);
     }
   };
 

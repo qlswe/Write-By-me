@@ -29,7 +29,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -236,24 +236,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             <motion.div 
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className={`absolute -top-8 sm:-top-10 ${isMe ? 'right-0' : 'left-0'} bg-[#2F244F] border border-[#5C4B8B] rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex gap-0.5 sm:gap-1 shadow-xl z-10`}
+                              className={`absolute -top-7 sm:-top-10 ${isMe ? 'right-0' : 'left-0'} bg-[#2F244F] border border-[#5C4B8B] rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex gap-0.5 sm:gap-1 shadow-xl z-10`}
                             >
                               <button onClick={() => setReplyingTo(msg)} className="p-1 sm:p-1.5 hover:bg-[#C3A6E6]/20 rounded-md sm:rounded-lg text-gray-400 hover:text-[#C3A6E6] transition-colors" title="Ответить">
-                                <Reply className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <Reply className="w-3 h-3 sm:w-4 sm:h-4" />
                               </button>
                               {msg.type !== 'sticker' && (
                                 <button onClick={() => handleCopy(msg.text)} className="p-1 sm:p-1.5 hover:bg-[#C3A6E6]/20 rounded-md sm:rounded-lg text-gray-400 hover:text-[#C3A6E6] transition-colors" title="Копировать">
-                                  <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </button>
                               )}
                               {isMe && msg.type !== 'sticker' && (
                                 <button onClick={() => { setEditingMessage(msg); setInputText(msg.text); }} className="p-1 sm:p-1.5 hover:bg-[#C3A6E6]/20 rounded-md sm:rounded-lg text-gray-400 hover:text-[#C3A6E6] transition-colors" title="Редактировать">
-                                  <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </button>
                               )}
                               {isMe && (
                                 <button onClick={() => deleteMessage(msg.id, recipientId)} className="p-1 sm:p-1.5 hover:bg-red-500/20 rounded-md sm:rounded-lg text-gray-400 hover:text-red-400 transition-colors" title="Удалить">
-                                  <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </button>
                               )}
                               <div className="w-px bg-[#5C4B8B] mx-0.5 sm:mx-1" />
@@ -261,7 +261,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                 <button 
                                   key={emoji}
                                   onClick={() => toggleReaction(msg.id, recipientId, emoji)}
-                                  className="p-1 sm:p-1.5 hover:bg-[#C3A6E6]/20 rounded-md sm:rounded-lg text-xs sm:text-sm transition-transform hover:scale-125"
+                                  className="p-1 sm:p-1.5 hover:bg-[#C3A6E6]/20 rounded-md sm:rounded-lg text-[10px] sm:text-sm transition-transform hover:scale-125"
                                 >
                                   {emoji}
                                 </button>

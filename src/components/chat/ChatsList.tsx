@@ -16,13 +16,19 @@ interface ChatsListProps {
 
 const locales = { ru, en: enUS, by: be, jp: ja, de, fr, zh: zhCN };
 
-const ChatItem: React.FC<{ 
+const ChatItem = React.memo(({ 
+  chat, 
+  currentUserId, 
+  lang, 
+  profile, 
+  onSelect 
+}: { 
   chat: Chat, 
   currentUserId: string, 
   lang: Language, 
   profile: { name: string, photo?: string } | null,
   onSelect: (id: string, name: string, photo?: string) => void 
-}> = ({ chat, currentUserId, lang, profile, onSelect }) => {
+}) => {
   const recipientId = chat.participants.find(p => p !== currentUserId);
   const isTyping = chat.typing?.[recipientId || ''];
   
@@ -81,7 +87,7 @@ const ChatItem: React.FC<{
       </div>
     </motion.button>
   );
-};
+});
 
 export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
   const { user, loginWithGoogle } = useAuth();

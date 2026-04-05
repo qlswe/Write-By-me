@@ -24,9 +24,7 @@ import { TheoryEditor } from './components/sections/TheoryEditor';
 import { BlogEditor } from './components/sections/BlogEditor';
 import { EventEditor } from './components/sections/EventEditor';
 import { PromoEditor } from './components/sections/PromoEditor';
-import { SDKTerminal } from './components/SDKTerminal';
-import { UsersList } from './components/admin/UsersList';
-import { ChatsList } from './components/chat/ChatsList';
+import { SDKPanel } from './components/SDKPanel';
 import { ChatWindow } from './components/chat/ChatWindow';
 import { UserData } from './hooks/useUsers';
 
@@ -36,6 +34,8 @@ const BlogSection = lazy(() => import('./components/sections/BlogSection').then(
 const ChronicleSection = lazy(() => import('./components/sections/ChronicleSection').then(m => ({ default: m.ChronicleSection })));
 const TierListSection = lazy(() => import('./components/sections/TierListSection').then(m => ({ default: m.TierListSection })));
 const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
+const UsersList = lazy(() => import('./components/admin/UsersList').then(m => ({ default: m.UsersList })));
+const ChatsList = lazy(() => import('./components/chat/ChatsList').then(m => ({ default: m.ChatsList })));
 
 type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'tierlist' | 'users' | 'chats';
 
@@ -248,7 +248,13 @@ export default function App() {
   return (
     <div className={`min-h-screen flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0] ${productionMode ? 'production-visuals' : ''}`}>
       <LoadingScreen isLoading={isLoading} />
-      <SDKTerminal lang={lang as Language} />
+      <SDKPanel 
+        lang={lang as Language} 
+        productionMode={productionMode}
+        toggleProductionMode={toggleProductionMode}
+        lowPerfMode={lowPerfMode}
+        toggleLowPerfMode={toggleLowPerfMode}
+      />
       <Starfield lowPerfMode={lowPerfMode || !productionMode} />
       
       <Header 
@@ -265,17 +271,6 @@ export default function App() {
         toggleLowPerfMode={toggleLowPerfMode}
         role={role}
       />
-
-      {/* Mode Toggle Button (Floating) */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={toggleProductionMode}
-        className={`fixed bottom-6 right-6 z-40 p-3 rounded-full shadow-2xl border transition-all duration-500 ${productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'}`}
-        title={productionMode ? t.sdkModeMain : t.sdkModeProduction}
-      >
-        <Sparkles size={24} className={productionMode ? 'animate-pulse' : ''} />
-      </motion.button>
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 relative z-10">
         <PromoBanner showBanner={showBanner} lang={lang as Language} setModalContent={setModalContent} onClose={handleCloseBanner} />

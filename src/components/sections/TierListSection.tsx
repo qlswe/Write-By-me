@@ -9,6 +9,32 @@ interface TierListSectionProps {
   lowPerfMode?: boolean;
 }
 
+const CharacterAvatar = React.memo(({ char, lowPerfMode }: { char: string, lowPerfMode?: boolean }) => {
+  return (
+    <motion.div 
+      whileHover={{ scale: 1.1, y: -4, rotate: 2 }}
+      whileTap={{ scale: 0.95 }}
+      className="group relative flex flex-col items-center"
+    >
+      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[#1A1528] border-2 border-[#5C4B8B]/50 overflow-hidden shadow-xl group-hover:border-[#C3A6E6] group-hover:shadow-[#C3A6E6]/20 transition-all duration-300">
+        <img 
+          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(char)}&background=1A1528&color=C3A6E6&bold=true&size=${lowPerfMode ? 64 : 128}`} 
+          alt={char}
+          className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+      </div>
+      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-[#2F244F] border border-[#C3A6E6]/30 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all scale-100 sm:scale-75 sm:group-hover:scale-100 z-10 whitespace-nowrap">
+        <span className="text-[8px] font-black text-[#C3A6E6] uppercase tracking-widest">
+          {char}
+        </span>
+      </div>
+    </motion.div>
+  );
+});
+
 export const TierListSection: React.FC<TierListSectionProps> = ({ lang, lowPerfMode }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('TierListSection');
@@ -55,28 +81,7 @@ export const TierListSection: React.FC<TierListSectionProps> = ({ lang, lowPerfM
     return (
       <div className="flex flex-wrap gap-2 sm:gap-3">
         {list.map(char => (
-          <motion.div 
-            key={char}
-            whileHover={{ scale: 1.1, y: -4, rotate: 2 }}
-            whileTap={{ scale: 0.95 }}
-            className="group relative flex flex-col items-center"
-          >
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-[#1A1528] border-2 border-[#5C4B8B]/50 overflow-hidden shadow-xl group-hover:border-[#C3A6E6] group-hover:shadow-[#C3A6E6]/20 transition-all duration-300">
-              <img 
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(char)}&background=1A1528&color=C3A6E6&bold=true&size=${lowPerfMode ? 64 : 128}`} 
-                alt={char}
-                className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-[#2F244F] border border-[#C3A6E6]/30 rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all scale-100 sm:scale-75 sm:group-hover:scale-100 z-10 whitespace-nowrap">
-              <span className="text-[8px] font-black text-[#C3A6E6] uppercase tracking-widest">
-                {char}
-              </span>
-            </div>
-          </motion.div>
+          <CharacterAvatar key={char} char={char} lowPerfMode={lowPerfMode} />
         ))}
       </div>
     );

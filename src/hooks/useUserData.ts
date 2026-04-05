@@ -65,6 +65,13 @@ export function useUserData(initialLang: string) {
       const localPerf = localStorage.getItem('hsr_low_perf');
       if (localPerf === 'true' && !isDataLoaded) {
         setLowPerfMode(true);
+      } else if (localPerf === null && !isDataLoaded) {
+        // Auto-detect low-end device if no preference is set
+        const isLowEnd = sdk.hardware.isLowEndDevice();
+        if (isLowEnd) {
+          setLowPerfMode(true);
+          localStorage.setItem('hsr_low_perf', 'true');
+        }
       }
     } catch (e) {
       console.error("Error loading local data", e);
