@@ -74,7 +74,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
                 transition={{ delay: 0.3 }}
                 className="text-2xl font-bold text-[#C3A6E6] tracking-[0.3em] mb-4 uppercase"
               >
-                Министерство Ахахи
+                Радио Ахи
               </motion.h2>
 
 

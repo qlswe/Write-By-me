@@ -20,6 +20,7 @@ import { PromoBanner } from './components/ui/PromoBanner';
 import { ProfileModal } from './components/ui/ProfileModal';
 import { ContentModal } from './components/ui/ContentModal';
 import { FeedbackModal } from './components/ui/FeedbackModal';
+import { PerformanceWidget } from './components/ui/PerformanceWidget';
 import { TheoryEditor } from './components/sections/TheoryEditor';
 import { BlogEditor } from './components/sections/BlogEditor';
 import { EventEditor } from './components/sections/EventEditor';
@@ -256,6 +257,7 @@ export default function App() {
         toggleLowPerfMode={toggleLowPerfMode}
       />
       <Starfield lowPerfMode={lowPerfMode || !productionMode} />
+      <PerformanceWidget />
       
       <Header 
         lang={lang as Language} 

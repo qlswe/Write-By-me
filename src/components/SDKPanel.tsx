@@ -25,13 +25,21 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
   
   // Terminal/Chat state
   const [history, setHistory] = useState<{ type: 'cmd' | 'res' | 'info', text: string }[]>([
-    { type: 'info', text: lang === 'ru' ? 'Министерство Ахахи ИИ v2.0' : 'Ministry of Ahahi AI v2.0' },
+    { type: 'info', text: lang === 'ru' ? 'Радиостанция Ахи ИИ v2.0' : 'Aha Radio Station AI v2.0' },
     { type: 'info', text: lang === 'ru' ? 'Спросите меня о лоре HSR или используйте команды SDK (начните с /).' : 'Ask me about HSR lore or use SDK commands (start with /).' }
   ]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [localTime, setLocalTime] = useState(new Date().toLocaleTimeString());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLocalTime(new Date().toLocaleTimeString());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -113,7 +121,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-[#C3A6E6]" />
                 <span className="font-black text-sm tracking-widest text-[#C3A6E6] uppercase">
-                  {lang === 'ru' ? 'Министерство Ахахи' : 'Ministry of Ahahi'}
+                  {lang === 'ru' ? 'Радиостанция Ахи' : 'Aha Radio Station'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -272,7 +280,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Local Time:</span>
-                        <span>{new Date().toLocaleTimeString()}</span>
+                        <span>{localTime}</span>
                       </div>
                     </div>
                   </div>

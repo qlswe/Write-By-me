@@ -1,6 +1,6 @@
 export const translations = {
   ru: {
-    siteName: "Министерство Ахахи",
+    siteName: "Радиостанция Ахи",
     navHome: "Главная",
     navTheories: "Всячина",
     navBlog: "Блог",
@@ -9,7 +9,7 @@ export const translations = {
     navTierList: "Тир-лист",
     navUsers: "Пользователи",
     navChats: "Сообщения",
-    homeTitle: "Добро пожаловать в Министерство Ахахи!",
+    homeTitle: "Добро пожаловать на Радиостанцию Ахи!",
     homeDesc: "Это ваш персональный ресурс для глубокого погружения во вселенную Honkai: Star Rail. Здесь вы найдете теории, блог, а также актуальную хронику событий и баннеров.",
     lastUpdate: "Последнее обновление: Январь 2026",
     filterAll: "Все",
@@ -146,7 +146,7 @@ export const translations = {
     readArticle: "Читать Статью",
     readArchive: "Читать Архив",
     chronicleDesc: "Расписание активностей и событий",
-    theoriesSubTitle: "Архив Министерства Всячины",
+    theoriesSubTitle: "Архив Радиостанции Ахи",
     blogSubTitle: "Официальные хроники и личные заметки",
     daily: "Ежедневно",
     weekly: "Еженедельно",
@@ -237,7 +237,7 @@ export const translations = {
     }
   },
   en: {
-    siteName: "Ministry of Ahahi",
+    siteName: "Aha Radio Station",
     navHome: "Home",
     navTheories: "Stuff",
     navBlog: "Blog",
@@ -246,7 +246,7 @@ export const translations = {
     navTierList: "Tier List",
     navUsers: "Users",
     navChats: "Messages",
-    homeTitle: "Welcome to the Ministry of Ahahi!",
+    homeTitle: "Welcome to Aha Radio Station!",
     homeDesc: "This is your personal resource for a deep dive into the Honkai: Star Rail universe. Here you will find theories, a blog, and an up-to-date chronicle of events and banners.",
     lastUpdate: "Last update: January 2026",
     filterAll: "All",
@@ -383,7 +383,7 @@ export const translations = {
     readArticle: "Read Article",
     readArchive: "Read Archive",
     chronicleDesc: "Schedule of activities and events",
-    theoriesSubTitle: "Archive of the Ministry of Stuff",
+    theoriesSubTitle: "Archive of Aha Radio Station",
     blogSubTitle: "Official Chronicles & Personal Notes",
     daily: "Daily",
     weekly: "Weekly",
@@ -474,7 +474,7 @@ export const translations = {
     }
   },
   by: {
-    siteName: "Міністэрства Ахахі",
+    siteName: "Радыёстанцыя Ахі",
     navHome: "Галоўная",
     navTheories: "Усячына",
     navBlog: "Блог",
@@ -483,7 +483,7 @@ export const translations = {
     navTierList: "Тыр-ліст",
     navUsers: "Карыстальнікі",
     navChats: "Паведамленні",
-    homeTitle: "Сардэчна запрашаем у Міністэрства Ахахі!",
+    homeTitle: "Сардэчна запрашаем на Радыёстанцыю Ахі!",
     homeDesc: "Гэта ваш персанальны рэсурс для глыбокага пагружання ў сусвет Honkai: Star Rail.",
     lastUpdate: "Апошняе абнаўленне: Студзень 2026",
     filterAll: "Усё",
@@ -619,7 +619,7 @@ export const translations = {
     readArticle: "Чытаць Артыкул",
     readArchive: "Чытаць Архіў",
     chronicleDesc: "Расклад актыўнасцяў і падзей",
-    theoriesSubTitle: "Архіў Міністэрства Усячыны",
+    theoriesSubTitle: "Архіў Радыёстанцыі Ахі",
     blogSubTitle: "Афіцыйныя хронікі і асабістыя нататкі",
     daily: "Штодзённа",
     weekly: "Штотыднёва",
@@ -710,7 +710,7 @@ export const translations = {
     }
   },
   jp: {
-    siteName: "アハヒ省",
+    siteName: "アッハ放送局ほうそうきょく",
     navHome: "ホーム",
     navTheories: "雑多",
     navBlog: "ブログ",
@@ -719,7 +719,7 @@ export const translations = {
     navTierList: "ティアリスト",
     navUsers: "ユーザー",
     navChats: "メッセージ",
-    homeTitle: "アハヒ省へようこそ！",
+    homeTitle: "アッハ放送局ほうそうきょくへようこそ！",
     homeDesc: "ここはHonkai: Star Railの世界に深く没頭するためのあなたの個人的なリソースです。",
     lastUpdate: "最終更新: 2026年1月",
     filterAll: "すべて",

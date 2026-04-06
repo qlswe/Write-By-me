@@ -123,7 +123,17 @@ export const Header: React.FC<HeaderProps> = ({
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
                     className="absolute right-0 mt-3 w-40 bg-[#2F244F] border border-[#3E3160] rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5"
                   >
-                    {(['ru', 'en', 'by', 'jp', 'de', 'fr', 'zh'] as Language[]).map(l => (
+                    {(['ru', 'en', 'by', 'jp', 'de', 'fr', 'zh'] as Language[]).map(l => {
+                      const langNames: Record<Language, string> = {
+                        ru: 'Русский',
+                        en: 'English',
+                        by: 'Беларуская',
+                        jp: '日本語',
+                        de: 'Deutsch',
+                        fr: 'Français',
+                        zh: '中文'
+                      };
+                      return (
                       <button
                         key={l}
                         onClick={() => { setLang(l); setLangOpen(false); }}
@@ -133,9 +143,9 @@ export const Header: React.FC<HeaderProps> = ({
                             : 'text-gray-400 hover:bg-[#3E3160] hover:text-white'
                         }`}
                       >
-                        {l}
+                        {langNames[l]}
                       </button>
-                    ))}
+                    )})}
                   </motion.div>
                 )}
               </AnimatePresence>

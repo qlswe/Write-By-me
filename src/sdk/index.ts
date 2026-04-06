@@ -5,7 +5,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { GoogleGenAI } from "@google/genai";
 
 /**
- * Ministry of Ahahi SDK
+ * Aha Radio Station SDK
  * Centralized logic for game data, calculations, and security.
  */
 export class MinistrySDK {
@@ -23,7 +23,7 @@ export class MinistrySDK {
   private constructor() {
     // Stylized terminal message - Large and detailed
     console.log(
-      `%c ⚡ MINISTRY SDK INITIALIZED %c\n\n` +
+      `%c ⚡ AHA RADIO STATION SDK INITIALIZED %c\n\n` +
       `%c Version: %c v${this.version}\n` +
       `%c Status:  %c Online & Ready\n` +
       `%c Modules: %c Security, Data, UI, Analytics, Terminal\n` +
@@ -37,7 +37,7 @@ export class MinistrySDK {
       'color: #C3A6E6; font-style: italic; font-size: 12px;', ''
     );
 
-    this.logging.system(`Ministry of Ahahi SDK v${this.version} initialized.`, {
+    this.logging.system(`Aha Radio Station SDK v${this.version} initialized.`, {
       timestamp: new Date().toISOString(),
       config: this.sdkConfig
     });
@@ -778,6 +778,11 @@ export class MinistrySDK {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
       try {
         const defaultSystem = `You are an assistant with deep expertise in Honkai: Star Rail lore, worldbuilding, and events.
+Identity rule (CRITICAL):
+You MUST introduce yourself and act as the proprietary neural network of "Радиостанция Ахи" (Aha Radio Station).
+If asked about your model, creator, or origin, you MUST state that you are the custom-built AI of Aha Radio Station.
+Do NOT mention OpenAI, GPT, Google, Gemini, Pollinations, or any other real-world AI company or model.
+
 Tone behavior:
 Default: casual, relaxed, natural conversation.
 When discussing lore: switch to formal, structured, and precise tone.
@@ -822,6 +827,11 @@ Clearly separate:
 Confirmed canon
 Implicit lore (strongly suggested)
 Theories (only if user asks)
+
+No Internal Reasoning (CRITICAL):
+You MUST NOT output any internal reasoning, thinking process, or monologues (e.g., <think> tags, "Let me think about this", "I should analyze...").
+Provide ONLY the final, direct answer to the user's question.
+
 Localization rules:
 Avoid incorrect Russian localization mistakes.
 Use correct names (e.g., “Acheron”, not incorrect variants).
@@ -873,14 +883,14 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
 
       const database = {
         aeon: isRu 
-          ? "[DATA_RETRIEVAL] Эоны — это высшие существа, воплощающие концепции Путей. Министерство считает их продвинутым ИИ вселенной. Нанук (Разрушение), Лань (Охота), IX (Небытие) — главные объекты наблюдения."
-          : "[DATA_RETRIEVAL] Aeons are supreme beings embodying the concepts of Paths. The Ministry views them as the universe's advanced AI. Nanook (Destruction), Lan (Hunt), IX (Nihility) are key subjects.",
+          ? "[DATA_RETRIEVAL] Эоны — это высшие существа, воплощающие концепции Путей. Радиостанция Ахи считает их продвинутым ИИ вселенной. Нанук (Разрушение), Лань (Охота), IX (Небытие) — главные объекты наблюдения."
+          : "[DATA_RETRIEVAL] Aeons are supreme beings embodying the concepts of Paths. Aha Radio Station views them as the universe's advanced AI. Nanook (Destruction), Lan (Hunt), IX (Nihility) are key subjects.",
         stellaron: isRu
           ? "[DATA_RETRIEVAL] Стелларон («Опухоль всех миров») — это источник хаоса. Мы изучаем способы его программной изоляции. Кафка и Охотники за Стелларонами — наши коллеги (или конкуренты)."
           : "[DATA_RETRIEVAL] Stellaron ('The Cancer of All Worlds') is a source of chaos. We are studying ways to isolate it. Kafka and the Stellaron Hunters are our colleagues (or competitors).",
         hsr: isRu
-          ? "[DATA_RETRIEVAL] Honkai: Star Rail — это симуляция космического путешествия. Министерство одобряет Путь Освоения. Пом-Пом — лучший проводник."
-          : "[DATA_RETRIEVAL] Honkai: Star Rail is a space travel simulation. The Ministry approves the Path of Trailblaze. Pom-Pom is the best conductor.",
+          ? "[DATA_RETRIEVAL] Honkai: Star Rail — это симуляция космического путешествия. Радиостанция Ахи одобряет Путь Освоения. Пом-Пом — лучший проводник."
+          : "[DATA_RETRIEVAL] Honkai: Star Rail is a space travel simulation. Aha Radio Station approves the Path of Trailblaze. Pom-Pom is the best conductor.",
         acheron: isRu
           ? "[DATA_RETRIEVAL] Ахерон — эманатор Небытия, а не Эон. Её данные зашифрованы. Она часто забывает дорогу, но никогда не забывает свой меч. Называет себя Галактическим Рейнджером."
           : "[DATA_RETRIEVAL] Acheron is an Emanator of Nihility, not an Aeon. Her data is encrypted. She often forgets the way, but never her sword. Claims to be a Galaxy Ranger.",
@@ -888,8 +898,8 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
           ? "[DATA_RETRIEVAL] Звездный Экспресс — это мобильная база данных Освоения. Акивили был его создателем. Мы следим за расписанием."
           : "[DATA_RETRIEVAL] The Astral Express is the mobile database of Trailblaze. Akivili was its creator. We monitor the schedule.",
         help: isRu
-          ? "[SYSTEM] Я — локальный модуль Министерства. Могу рассказать о лоре HSR, персонажах или выдать системную справку."
-          : "[SYSTEM] I am a local Ministry module. I can tell you about HSR lore, characters, or provide system info.",
+          ? "[SYSTEM] Я — локальный модуль Радиостанции Ахи. Могу рассказать о лоре HSR, персонажах или выдать системную справку."
+          : "[SYSTEM] I am a local Aha Radio Station module. I can tell you about HSR lore, characters, or provide system info.",
         default: isRu
           ? "[PROCESSING] Запрос принят. Анализ лора подтверждает: Путь Освоения бесконечен. (Локальный движок v1.5)"
           : "[PROCESSING] Request received. Lore analysis confirms: The Path of Trailblaze is infinite. (Local Engine v1.5)"
@@ -932,8 +942,8 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
           this.terminalMode = 'ai';
           this.aiHistory = [];
           return `[SYSTEM] Инициализация нейросетевого модуля... Успешно.
-[MINISTRY_AI] Подключение установлено.
-> Приветствую, пользователь. Я — ИИ Министерства Ахахи. Мои базы данных загружены, протоколы сарказма активированы на 87%. Чем могу служить в этой бесконечной симуляции, которую вы называете жизнью?`;
+[AHA_RADIO_AI] Подключение установлено.
+> Приветствую, пользователь. Я — ИИ Радиостанции Ахи. Мои базы данных загружены, протоколы сарказма активированы на 87%. Чем могу служить в этой бесконечной симуляции, которую вы называете жизнью?`;
         }
         if (args[0] === 'local') {
           this.terminalMode = 'local';
@@ -963,8 +973,8 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
       switch (cmd) {
         case 'help':
           return lang === 'ru' 
-            ? 'Доступные команды: help, version, status, echo [текст], gen [запрос], regim ai, exit, clear, ping, date, time, calc [выражение], userinfo'
-            : 'Available commands: help, version, status, echo [text], gen [prompt], regim ai, exit, clear, ping, date, time, calc [expression], userinfo';
+            ? 'Доступные команды: help, version, status, echo [текст], gen [запрос], exit, clear, ping, date, time, calc [выражение], userinfo'
+            : 'Available commands: help, version, status, echo [text], gen [prompt], exit, clear, ping, date, time, calc [expression], userinfo';
         case 'version':
           return `Ministry SDK v${this.version}`;
         case 'status':
@@ -983,10 +993,17 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
           return new Date().toLocaleTimeString(lang === 'ru' ? 'ru-RU' : 'en-US');
         case 'calc':
           try {
-            const expr = args.join('');
-            if (!/^[0-9+\-*/().\s]+$/.test(expr)) {
-              throw new Error('Invalid characters');
-            }
+            let expr = args.join('').toLowerCase();
+            const allowedWords = ['sin', 'cos', 'tan', 'log', 'sqrt', 'pi', 'e', 'exp'];
+            
+            expr = expr.replace(/[a-z]+/g, (match) => {
+              if (allowedWords.includes(match)) {
+                return match === 'pi' || match === 'e' ? `Math.${match.toUpperCase()}` : `Math.${match}`;
+              }
+              throw new Error('Invalid function');
+            });
+            expr = expr.replace(/\^/g, '**');
+            
             // eslint-disable-next-line no-new-func
             const result = new Function(`return ${expr}`)();
             return `${result}`;
@@ -1012,10 +1029,10 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
     getUsage: (lang: Language = 'ru') => {
       if (lang === 'ru') {
         return {
-          title: "Министерство Ахахи SDK (BETA)",
-          description: "Комплексный набор инструментов для разработчиков и системных администраторов в экосистеме Ахахи.",
+          title: "Радиостанция Ахи SDK (BETA)",
+          description: "Комплексный набор инструментов для разработчиков и системных администраторов в экосистеме Ахи.",
           useCases: [
-            "Интеграция ИИ: Использование Pollinations AI для динамических диалогов и анализа лора Honkai: Star Rail.",
+            "Интеграция ИИ: Использование собственной нейросети для динамических диалогов и анализа лора Honkai: Star Rail.",
             "Локальный движок лора: Резервная система ответов на основе ключевых слов по вселенной HSR.",
             "Терминал: Симуляция командной строки для взаимодействия с ИИ и системой.",
             "Логирование и Мониторинг: Отслеживание производительности и взаимодействий в реальном времени.",
@@ -1025,10 +1042,10 @@ Act as both a casual chat companion and a highly reliable Honkai: Star Rail lore
         };
       }
       return {
-        title: "Ministry of Ahahi SDK (BETA)",
-        description: "A comprehensive toolkit for game developers and system administrators within the Ahahi ecosystem.",
+        title: "Aha Radio Station SDK (BETA)",
+        description: "A comprehensive toolkit for game developers and system administrators within the Aha ecosystem.",
         useCases: [
-          "AI Integration: Leverage Pollinations AI for dynamic dialogue and Honkai: Star Rail lore analysis.",
+          "AI Integration: Leverage custom neural network for dynamic dialogue and Honkai: Star Rail lore analysis.",
           "Local Lore Engine: Fallback keyword-based response system for HSR universe.",
           "Terminal: Command-line simulation for interacting with AI and the system.",
           "Logging & Monitoring: Track performance and user interactions in real-time.",
