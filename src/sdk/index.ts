@@ -773,10 +773,11 @@ export class MinistrySDK {
 
   /**
    * Generative AI module using Pollinations (Free, works in RU, no CORS preflight)
-   * ИСПРАВЛЕННАЯ ВЕРСИЯ 2026:
-   * - Модель: openai-fast (GPT-OSS 20B Reasoning LLM) — максимальная точность
-   * - Температура 0.0 = почти нулевые галлюцинации
-   * - Жёсткий формальный стиль + строгие правила по HSR
+   * ИСПРАВЛЕННАЯ ВЕРСИЯ 2026 (фикс reasoning leak + циклов):
+   * - reasoning_effort=minimal — подавляет внутренние мысли
+   * - Жёсткая очистка ответа от reasoning_content
+   * - Модель openai-fast (единственная доступная для анонимных запросов)
+   * - Температура 0.0 = почти нулевые галлюцинации и циклы
    */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
@@ -787,7 +788,7 @@ export class MinistrySDK {
 Если спросят о происхождении — отвечай строго: «Я — кастомный ИИ Радиостанции Ахи».
 
 Тон:
-Всегда формальный, уважительный и точный. Никакого сленга, шуток, сарказма и неформальности.
+Всегда формальный, уважительный и точный. Никакого сленга, шуток, сарказма.
 
 Язык:
 Отвечай строго на языке запроса пользователя.
@@ -796,19 +797,18 @@ export class MinistrySDK {
 Используй только контекст текущего чата.
 
 Знания Honkai: Star Rail:
-Используй исключительно актуальный канон игры.
+Только актуальный канон игры.
 
 ПРАВИЛА (СТРОГО ОБЯЗАТЕЛЬНЫ):
-1. На вопросы по HSR отвечай ТОЛЬКО по канону и ТОЛЬКО на поставленный вопрос. Без лишних фактов, теорий и отступлений.
-2. Если запрос НЕ по HSR или информации нет — отвечай ровно одной фразой: «К сожалению, у меня нет точной информации по этому вопросу.» (на языке пользователя).
-3. Никогда не придумывай факты, персонажей, события или детали.
-4. Теорию давай только если пользователь явно попросил.
+1. На вопросы по HSR — отвечай ТОЛЬКО по канону и ТОЛЬКО на поставленный вопрос.
+2. Если информации нет или запрос НЕ по HSR — отвечай ровно одной фразой: «К сожалению, у меня нет точной информации по этому вопросу.» (на языке пользователя).
+3. Никогда не придумывай факты, персонажей или детали.
+4. Теорию — только если явно попросили.
 
 ЗАПРЕТЫ (КРИТИЧНО):
-- Никогда не упоминай реальные компании, модели ИИ или сервисы.
-- НИКОГДА не показывай внутренние рассуждения, thoughts, reasoning, step-by-step анализ.
-- Не выводи JSON, код, мета-информацию, префиксы или теги.
-- Отвечай сразу финальным ответом, без преамбул и объяснений.
+- НИКОГДА не выводи reasoning_content, thinking, step-by-step, "I'm stuck" или любые внутренние рассуждения.
+- Отвечай СРАЗУ финальным ответом, без преамбул, мыслей и объяснений.
+- Не упоминай модели ИИ, сервисы или компании.
 
 Стиль ответа:
 Кратко, ясно, формально и по делу.`;
@@ -825,10 +825,11 @@ export class MinistrySDK {
 
         const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(formattedPrompt)}`);
         url.searchParams.append('system', finalSystemPrompt);
-        url.searchParams.append('model', 'openai-fast');     // ← САМАЯ ТОЧНАЯ БЕСПЛАТНАЯ МОДЕЛЬ НА LEGACY
+        url.searchParams.append('model', 'openai-fast');
         url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
-        url.searchParams.append('temperature', '0.0');       // максимальная точность
+        url.searchParams.append('temperature', '0.0');
         url.searchParams.append('max_tokens', '1200');
+        url.searchParams.append('reasoning_effort', 'minimal');   // ← КЛЮЧЕВОЙ ФИКС
 
         const response = await fetch(url.toString(), { credentials: "omit" });
 
@@ -838,13 +839,21 @@ export class MinistrySDK {
 
         let text = await response.text();
 
-        // Жёсткая очистка от возможных остатков reasoning
+        // ЖЁСТКАЯ очистка от reasoning (теперь ловит ВСЁ)
         text = text
-          .replace(/\[reasoning_content\].*?\n\n/s, '')
+          .replace(/\[reasoning_content\].*?(?=\n\n|\n\[|$)[\s\S]*?/s, '')   // весь блок reasoning_content
           .replace(/<thinking>.*?<\/thinking>/s, '')
-          .replace(/Thinking step by step:.*?\n\n/s, '')
-          .replace(/<think>.*?<\/think>/s, '')
+          .replace(/Thinking step by step:[\s\S]*?(?=\n\n|\n$)/s, '')
+          .replace(/I'm stuck[\s\S]*?(?=\n\n|\n$)/gi, '')
+          .replace(/Let's recall[\s\S]*?(?=\n\n|\n$)/gi, '')
+          .replace(/Actually Giasina[\s\S]*?(?=\n\n|\n$)/gi, '')           // конкретно этот цикл
           .trim();
+
+        // Если после очистки остался только мусор — fallback
+        if (!text || text.length < 10 || text.includes('reasoning_content') || text.includes("I'm stuck")) {
+          this.logging.system('Обнаружен остаток reasoning — переключаюсь на localAi.');
+          return this.localAi.generate(prompt, lang);
+        }
 
         return text;
       } catch (error) {
@@ -854,6 +863,7 @@ export class MinistrySDK {
       }
     }
   };
+
   /**
    * Local Lore Engine — улучшенный, формальный, с большим количеством HSR-ключей
    */
