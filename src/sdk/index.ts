@@ -16,7 +16,7 @@ export class MinistrySDK {
   private hasWarned: boolean = false;
   private sdkConfig = {
     debug: process.env.NODE_ENV !== 'production',
-    apiBase: '',
+    apiBase: 'sk-1252b65ed5b94fbeac831dc469df9e8c',
     theme: 'dark'
   };
 
@@ -772,95 +772,92 @@ export class MinistrySDK {
   };
 
 /**
-   * Generative AI module using Pollinations (Free, works in RU, no CORS preflight)
-   * УЛУЧШЕННАЯ ВЕРСИЯ 2.0 — полностью убраны reasoning_content и внутренние мысли
+   * Generative AI module — DeepSeek (OpenAI-compatible)
+   * Чистый ответ, без reasoning_content, формальный тон, отличный HSR-лор
    */
   public genai = {
-    generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
+    generate: async (
+      prompt: string,
+      lang: Language = 'ru',
+      systemInstruction?: string,
+      history: { role: string; content: string }[] = []
+    ) => {
+      const apiKey = this.sdkConfig.deepseekApiKey || (this.config.get('deepseekApiKey') as string);
+      const model = (this.config.get('deepseekModel') as string) || 'deepseek-chat';
+
+      if (!apiKey) {
+        this.logging.warn('DeepSeek API key не установлен. Переключаюсь на локальный движок.');
+        return this.localAi.generate(prompt, lang);
+      }
+
       try {
-        const defaultSystem = `Identity (CRITICAL):
-Ты — официальный ИИ Радиостанции Ахи (Aha Radio Station), тематический помощник по вселенной Honkai: Star Rail.
+        const defaultSystem = `Ты — официальный ИИ Радиостанции Ахи (Aha Radio Station), специализированный помощник по вселенной Honkai: Star Rail.
 
 Если спросят о происхождении — отвечай: «Я — кастомный ИИ Радиостанции Ахи».
 
-Тон:
-Всегда формальный, уважительный и точный. Никакого сленга и неформальности.
+Тон: всегда формальный, уважительный и точный.
+Язык: отвечай строго на языке пользователя.
+Память: используй только контекст текущего чата.
 
-Язык:
-Отвечай строго на языке пользователя.
+Знания HSR: отвечай максимально точно по канону (Эоны, Пути, персонажи, арки, фракции).
 
-Память:
-Используй только текущий чат.
+ПРАВИЛА:
+- Выводи ТОЛЬКО финальный ответ.
+- Никогда не показывай reasoning, thoughts, <think>, JSON или любые мета-данные.
+- Если вопрос не по HSR и информации нет — отвечай: «К сожалению, у меня нет точной информации по этому вопросу.»
 
-Знания HSR:
-Отвечай максимально точно по канону. Эоны, Пути, персонажи, сюжетные арки — всё точно.
+Стиль: кратко, ясно, по делу.`;
 
-ПРАВИЛА ВЫВОДА (ОБЯЗАТЕЛЬНЫ):
-- Выводи ТОЛЬКО финальный чистый ответ.
-- НИКОГДА не выводи reasoning_content, thoughts, internal monologue, step-by-step, JSON, префиксы или любые мета-данные.
-- Не пиши ничего перед ответом и после него.
-- Если вопрос не по HSR и ты не уверен — отвечай: «К сожалению, у меня нет точной информации по этому вопросу.»
+        const messages = [
+          { role: 'system', content: systemInstruction || defaultSystem },
+          ...history.map((m) => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content,
+          })),
+          { role: 'user', content: prompt },
+        ];
 
-Стиль:
-Кратко, ясно, формально и по делу.`;
-
-        const finalSystemPrompt = systemInstruction || defaultSystem;
-
-        let formattedPrompt = prompt;
-        if (history.length > 0) {
-          const historyText = history
-            .map(m => `${m.role === 'user' ? 'Пользователь' : 'ИИ'}: ${m.content}`)
-            .join('\n');
-          formattedPrompt = `[ИСТОРИЯ ЧАТА]\n${historyText}\n\n[ТЕКУЩЕЕ СООБЩЕНИЕ]\nПользователь: ${prompt}\nИИ:`;
-        }
-
-        const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(formattedPrompt)}`);
-        url.searchParams.append('system', finalSystemPrompt);
-        url.searchParams.append('model', 'openai');
-        url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
-        url.searchParams.append('temperature', '0.1');   // минимум креатива
-        url.searchParams.append('max_tokens', '1200');
-
-        const response = await fetch(url.toString(), { credentials: "omit" });
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature: 0.2,           // низкая температура = минимум галлюцинаций
+            max_tokens: 1500,
+            stream: false,
+          }),
+        });
 
         if (!response.ok) {
-          throw new Error(`API Error: ${response.statusText}`);
+          throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
         }
 
-        let text = await response.text();
+        const data = await response.json();
+        let text = data.choices?.[0]?.message?.content?.trim() || '';
 
-        // ──────────────────────────────────────────────────────────────
-        // УСИЛЕННАЯ ОЧИСТКА — убираем ВСЁ, что может быть reasoning_content
-        // ──────────────────────────────────────────────────────────────
+        // Дополнительная защита на случай reasoner-модели
         text = text
-          // Удаляем весь JSON-блок с reasoning_content
-          .replace(/\{[\s\S]*?reasoning_content[\s\S]*?\}/gi, '')
-          // Удаляем ключ reasoning_content и его значение
-          .replace(/"?reasoning_content"?\s*:\s*".*?"/gis, '')
-          // Удаляем возможные thinking-блоки
-          .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
-          .replace(/\[reasoning_content\][\s\S]*?\n\n?/gi, '')
-          // Удаляем любые остатки JSON-структуры в начале
-          .replace(/^\s*\{[\s\S]*?\}\s*/gi, '')
-          // Убираем кавычки и escape-символы, которые иногда остаются
-          .replace(/^["\s{}]+|["\s{},]+$/g, '')
+          .replace(/<think>[\s\S]*?<\/think>/gi, '')   // убираем thinking-блок
+          .replace(/\[reasoning_content\][\s\S]*?/gi, '')
           .trim();
 
-        // Если после очистки ничего не осталось — fallback
-        if (!text || text.length < 5) {
-          this.logging.system('Очистка удалила весь ответ — используем локальный движок');
+        if (!text) {
+          this.logging.system('DeepSeek вернул пустой ответ → fallback на localAi');
           return this.localAi.generate(prompt, lang);
         }
 
         return text;
       } catch (error) {
-        console.error('AI API Error:', error);
-        this.logging.system('Переключение на локальный движок лора из-за ограничения API.');
+        console.error('DeepSeek API Error:', error);
+        this.logging.system('Ошибка DeepSeek API → переключение на локальный движок лора');
         return this.localAi.generate(prompt, lang);
       }
-    }
+    },
   };
-
   /**
    * Local Lore Engine — улучшенный, формальный, с большим количеством HSR-ключей
    */
