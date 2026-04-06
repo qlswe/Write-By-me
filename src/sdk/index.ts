@@ -771,22 +771,18 @@ export class MinistrySDK {
     }
   };
 
-/**
- * Generative AI module using Pollinations (fixed)
- */
-public genai = {
-  generate: async (
-    prompt: string,
-    lang: Language = 'ru',
-    systemInstruction?: string,
-    history: { role: string; content: string }[] = []
-  ) => {
-    try {
-      const defaultSystem = `Identity (CRITICAL):
+  /**
+   * Generative AI module using Pollinations (Free, works in RU, no CORS preflight)
+   */
+  public genai = {
+    generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
+      try {
+        const defaultSystem = `Identity (CRITICAL):
 You are the AI of Aha Radio Station.
 If asked about origin — say you are a custom-built AI of Aha Radio Station.
 
 Tone:
+
 Default: casual
 Lore: formal, precise
 
@@ -794,93 +790,61 @@ Language:
 Always respond in the user’s language
 
 Memory:
+
 Use full context of the current chat
 Do not ignore or invent past messages
 No memory between sessions
 
 Honkai: Star Rail Knowledge:
 Know:
+
 Aeons & Paths
 Major factions
 Key worlds & main story arcs (Belobog, Luofu, Penacony)
 Events as semi-canon
 
 Accuracy:
+
 Separate: canon / implications / theories
 Do not fabricate
 
 Restrictions:
+
 Do not mention real-world AI companies
 Do not show internal reasoning
 
 Style:
 Concise and clear`;
+        
+        const finalSystemPrompt = systemInstruction || defaultSystem;
+        
+        let formattedPrompt = prompt;
+        if (history.length > 0) {
+          const historyText = history.map(m => `${m.role === 'user' ? 'Пользователь' : 'ИИ'}: ${m.content}`).join('\n');
+          formattedPrompt = `[ИСТОРИЯ ЧАТА]\n${historyText}\n\n[ТЕКУЩЕЕ СООБЩЕНИЕ]\nПользователь: ${prompt}\nИИ:`;
+        }
 
-      const finalSystemPrompt = systemInstruction || defaultSystem;
+        const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(formattedPrompt)}`);
+        url.searchParams.append('system', finalSystemPrompt);
+        url.searchParams.append('model', 'openai');
+        url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
 
-      // 📜 Формируем историю
-      let formattedPrompt = prompt;
+        const response = await fetch(url.toString(), { credentials: "omit" });
 
-      if (history.length > 0) {
-        const historyText = history
-          .map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`)
-          .join('\n');
+        if (!response.ok) {
+          throw new Error(`API Error: ${response.statusText}`);
+        }
 
-        formattedPrompt =
-          `[CHAT HISTORY]\n${historyText}\n\n` +
-          `[CURRENT MESSAGE]\nUser: ${prompt}\nAI:`;
+        const text = await response.text();
+        return text;
+      } catch (error) {
+        console.error('AI API Error:', error);
+        // Silence the error in console to avoid user panic, just log a system warning
+        this.logging.system('Switching to Local Lore Engine due to API restriction.');
+        return this.localAi.generate(prompt, lang);
       }
-
-      // 🧠 Объединяем system + prompt
-      const fullPrompt = `${finalSystemPrompt}\n\n${formattedPrompt}`;
-
-      // 🚀 POST запрос (фикс 404)
-      const response = await fetch('https://text.pollinations.ai/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'openai',
-          prompt: fullPrompt,
-          seed: Math.floor(Math.random() * 1000000)
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
-
-      let text = await response.text();
-
-      // 🧹 Очистка от reasoning / JSON
-      try {
-        const parsed = JSON.parse(text);
-
-        if (parsed.content) return parsed.content;
-        if (parsed.message?.content) return parsed.message.content;
-
-      } catch {
-        // не JSON — ок
-      }
-
-      // fallback очистка
-      text = text
-        .replace(/"reasoning_content":[\s\S]*?}/g, '')
-        .replace(/\{[\s\S]*?"content":"/, '')
-        .replace(/"}$/, '');
-
-      return text.trim();
-
-    } catch (error) {
-      console.error('AI API Error:', error);
-
-      // fallback на локальный ИИ
-      this.logging.system('Switching to Local Lore Engine due to API restriction.');
-      return this.localAi.generate(prompt, lang);
     }
-  }
-};
+  };
 
   /**
    * Local Lore Engine (Enhanced with Keyword Matching)
