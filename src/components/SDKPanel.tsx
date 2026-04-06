@@ -97,7 +97,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
           productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 
           'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'
         }`}
-        title={lang === 'ru' ? 'Панель Министерства' : 'Ministry Panel'}
+        title={lang === 'ru' ? 'Панель Радио' : 'Ministry Panel'}
       >
         <Sparkles size={24} className={productionMode && !isOpen ? 'animate-pulse' : ''} />
       </motion.button>
@@ -276,7 +276,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">AI Engine:</span>
-                        <span className="text-yellow-400">Pollinations API</span>
+                        <span className="text-yellow-400">ARS API</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Local Time:</span>
