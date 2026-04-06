@@ -148,7 +148,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
               <span className="font-black text-white text-sm sm:text-base uppercase tracking-wider block leading-none mb-1">{recipientName}</span>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest">Online</span>
-                <span className="text-[8px] text-[#C3A6E6]/60 font-black uppercase tracking-tighter border border-[#C3A6E6]/20 px-1.5 py-0.5 rounded">Ministry E/D</span>
+                <span className="text-[8px] text-[#C3A6E6]/60 font-black uppercase tracking-tighter border border-[#C3A6E6]/20 px-1.5 py-0.5 rounded">AHA RADIO STATION E/D</span>
               </div>
             </div>
           </div>
