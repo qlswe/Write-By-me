@@ -773,10 +773,7 @@ export class MinistrySDK {
 
   /**
    * Generative AI module using Pollinations (Free, works in RU, no CORS preflight)
-   * ИСПРАВЛЕННАЯ ВЕРСИЯ 2026 (фикс 400 + reasoning leak):
-   * - reasoning_effort=low — минимальный уровень внутренних мыслей
-   * - Жёсткая очистка ответа от reasoning_content, "I'm stuck", циклов и т.д.
-   * - Модель openai-fast + температура 0.0
+   * ФИНАЛЬНАЯ ВЕРСИЯ 2026 — без 400, без reasoning leak, без "хуйни"
    */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
@@ -790,24 +787,22 @@ export class MinistrySDK {
 Всегда формальный, уважительный и точный. Никакого сленга, шуток, сарказма.
 
 Язык:
-Отвечай строго на языке запроса пользователя.
+Отвечай строго на языке пользователя.
 
 Память:
-Используй только контекст текущего чата.
+Только контекст текущего чата.
 
-Знания Honkai: Star Rail:
-Только актуальный канон игры.
-
-ПРАВИЛА (СТРОГО ОБЯЗАТЕЛЬНЫ):
-1. На вопросы по HSR — отвечай ТОЛЬКО по канону и ТОЛЬКО на поставленный вопрос.
-2. Если информации нет или запрос НЕ по HSR — отвечай ровно одной фразой: «К сожалению, у меня нет точной информации по этому вопросу.» (на языке пользователя).
-3. Никогда не придумывай факты, персонажей или детали.
-4. Теорию — только если явно попросили.
+ПРАВИЛА:
+1. Если вопрос касается лора Honkai: Star Rail — отвечай ТОЛЬКО по канону, кратко и точно на поставленный вопрос.
+2. Если вопрос НЕ по HSR:
+   - На приветствия и общение — отвечай вежливо и формально.
+   - На общие вопросы — отвечай формально и кратко, используя только реальные известные факты.
+   - Если ты не уверен в информации или факта нет — ровно одной фразой: «К сожалению, у меня нет точной информации по этому вопросу.»
 
 ЗАПРЕТЫ (КРИТИЧНО):
-- НИКОГДА не выводи reasoning_content, thinking, step-by-step, "I'm stuck", "Let's recall" или любые внутренние рассуждения.
-- Отвечай СРАЗУ финальным ответом, без преамбул, мыслей и объяснений.
-- Не упоминай модели ИИ, сервисы или компании.
+- Никогда не выводи reasoning_content, thinking, "I'm stuck", "Let's recall" и любые внутренние рассуждения.
+- Отвечай СРАЗУ финальным ответом, без преамбул.
+- Не придумывай факты и не галлюцинируй.
 
 Стиль ответа:
 Кратко, ясно, формально и по делу.`;
@@ -828,7 +823,7 @@ export class MinistrySDK {
         url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
         url.searchParams.append('temperature', '0.0');
         url.searchParams.append('max_tokens', '1200');
-        url.searchParams.append('reasoning_effort', 'low');   // ← ИСПРАВЛЕНО (было 'minimal')
+        url.searchParams.append('reasoning_effort', 'low');   // ← правильно
 
         const response = await fetch(url.toString(), { credentials: "omit" });
 
@@ -838,27 +833,23 @@ export class MinistrySDK {
 
         let text = await response.text();
 
-        // ЖЁСТКАЯ очистка от всего мусора (reasoning, циклы, повторы)
+        // Максимальная очистка от любого мусора
         text = text
-          .replace(/\[reasoning_content\].*?(?=\n\n|\n\[|$)[\s\S]*?/s, '')
-          .replace(/<thinking>.*?<\/thinking>/s, '')
+          .replace(/\[reasoning_content\][\s\S]*?(?=\n\n|\n\[|$)/s, '')
+          .replace(/<thinking>[\s\S]*?<\/thinking>/s, '')
           .replace(/Thinking step by step:[\s\S]*?(?=\n\n|\n$)/s, '')
           .replace(/I'm stuck[\s\S]*?(?=\n\n|\n$)/gi, '')
           .replace(/Let's recall[\s\S]*?(?=\n\n|\n$)/gi, '')
-          .replace(/Actually Giasina[\s\S]*?(?=\n\n|\n$)/gi, '')
-          .replace(/Giasina is a character[\s\S]*?(?=\n\n|\n$)/gi, '')
           .trim();
 
-        // Если после очистки остался мусор или ответ пустой — сразу fallback
-        if (!text || text.length < 15 || /reasoning_content|I'm stuck|Let's recall/i.test(text)) {
-          this.logging.system('Обнаружен остаток reasoning — переключаюсь на localAi.');
+        if (!text || text.length < 10 || /reasoning_content|I'm stuck|Let's recall/i.test(text)) {
           return this.localAi.generate(prompt, lang);
         }
 
         return text;
       } catch (error) {
         console.error('AI API Error:', error);
-        this.logging.system('Переключение на локальный движок лора из-за ограничения API.');
+        this.logging.system('Переключение на локальный движок из-за ошибки API.');
         return this.localAi.generate(prompt, lang);
       }
     }
