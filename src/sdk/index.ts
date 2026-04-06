@@ -16,7 +16,7 @@ export class MinistrySDK {
   private hasWarned: boolean = false;
   private sdkConfig = {
     debug: process.env.NODE_ENV !== 'production',
-    apiBase: 'sk-1252b65ed5b94fbeac831dc469df9e8c',
+    deepseekApiKey: 'sk-1252b65ed5b94fbeac831dc469df9e8c',             // сюда будет ставиться ключ
     theme: 'dark'
   };
 
