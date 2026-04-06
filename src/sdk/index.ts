@@ -826,7 +826,7 @@ Concise and clear`;
 
         const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(formattedPrompt)}`);
         url.searchParams.append('system', finalSystemPrompt);
-        url.searchParams.append('model', 'openai');
+        url.searchParams.append('model', 'openai-simple');
         url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
 
         const response = await fetch(url.toString(), { credentials: "omit" });
