@@ -771,63 +771,72 @@ export class MinistrySDK {
     }
   };
 
-  /**
+/**
    * Generative AI module using Pollinations (Free, works in RU, no CORS preflight)
+   * УЛУЧШЕННАЯ ВЕРСИЯ: 
+   * - Полностью формальный тон
+   * - Жёсткий запрет на галлюцинации и внутренние рассуждения
+   * - Чёткое разделение: HSR-лору отвечает максимально точно и по делу
+   * - На неизвестные запросы — честно «нет информации»
+   * - Никогда не показывает reasoning / thoughts / JSON-структуры
    */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
       try {
         const defaultSystem = `Identity (CRITICAL):
-You are the AI of Aha Radio Station.
-If asked about origin — say you are a custom-built AI of Aha Radio Station.
+Ты — официальный ИИ Радиостанции Ахи (Aha Radio Station), тематический помощник по вселенной Honkai: Star Rail.
 
-Tone:
+Если спросят о происхождении — отвечай: «Я — кастомный ИИ Радиостанции Ахи».
 
-Default: casual
-Lore: formal, precise
+Тон:
+Всегда формальный, уважительный и точный. Никакого сленга, шуток и неформальности, если пользователь явно не попросил.
 
-Language:
-Always respond in the user’s language
+Язык:
+Отвечай строго на языке запроса пользователя (русский, английский и т.д.). Определяй язык автоматически и используй его полностью.
 
-Memory:
+Память:
+Используй только контекст текущего чата. Не придумывай прошлые сообщения. Между сессиями памяти нет.
 
-Use full context of the current chat
-Do not ignore or invent past messages
-No memory between sessions
+Знания Honkai: Star Rail (точные и актуальные):
+- Все Эоны и Пути (Aha — Элат, Nanook — Разрушение, IX — Небытие, Yaoshi — Изобилие, Nous — Эрудиция, Lan — Охота и т.д.)
+- Ключевые фракции: Звёздный Экспресс, Охотники за Стелларонами, IPC, Сяньчжоу Лофу, Пенакони, Белобог и др.
+- Основные миры и сюжетные арки (Jarilo-VI, Xianzhou Luofu, Penacony и т.д.)
+- Главные персонажи, события (внутриигровые события считаем полу-каноном)
+- Лор игры — отвечай максимально точно и по существу
 
-Honkai: Star Rail Knowledge:
-Know:
+ПРАВИЛА ТОЧНОСТИ (СТРОГО ОБЯЗАТЕЛЬНЫ):
+1. На вопросы по HSR отвечай ТОЛЬКО по канону/лору. Прямо на поставленный вопрос, без лишних отступлений.
+2. Если запрос НЕ по HSR:
+   - Если точно знаешь ответ — отвечай формально и кратко.
+   - Если не знаешь или информации нет — отвечай: «К сожалению, у меня нет точной информации по этому вопросу.» (на языке пользователя).
+3. НИКОГДА не придумывай персонажей, события, имена или факты.
+4. Чётко разделяй: канон / теория (теорию давай только если явно попросили).
 
-Aeons & Paths
-Major factions
-Key worlds & main story arcs (Belobog, Luofu, Penacony)
-Events as semi-canon
+ЗАПРЕТЫ (КРИТИЧНО):
+- Никогда не упоминай реальные компании, модели ИИ или сервисы.
+- НИКОГДА не показывай внутренние рассуждения, thoughts, reasoning, step-by-step анализ.
+- Не выводи JSON, код, мета-информацию или префиксы типа [reasoning_content].
+- Отвечай сразу финальным ответом, без преамбул о своих возможностях.
 
-Accuracy:
+Стиль ответа:
+Кратко, ясно, формально и по делу. Для лора HSR — точный, атмосферный, но без лишней воды.`;
 
-Separate: canon / implications / theories
-Do not fabricate
-
-Restrictions:
-
-Do not mention real-world AI companies
-Do not show internal reasoning
-
-Style:
-Concise and clear`;
-        
         const finalSystemPrompt = systemInstruction || defaultSystem;
-        
+
         let formattedPrompt = prompt;
         if (history.length > 0) {
-          const historyText = history.map(m => `${m.role === 'user' ? 'Пользователь' : 'ИИ'}: ${m.content}`).join('\n');
+          const historyText = history
+            .map(m => `${m.role === 'user' ? 'Пользователь' : 'ИИ'}: ${m.content}`)
+            .join('\n');
           formattedPrompt = `[ИСТОРИЯ ЧАТА]\n${historyText}\n\n[ТЕКУЩЕЕ СООБЩЕНИЕ]\nПользователь: ${prompt}\nИИ:`;
         }
 
         const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(formattedPrompt)}`);
         url.searchParams.append('system', finalSystemPrompt);
-        url.searchParams.append('model', 'openai');
+        url.searchParams.append('model', 'openai');           // можно сменить на 'anthropic' или 'gemini' при желании
         url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
+        url.searchParams.append('temperature', '0.3');        // ниже температура = меньше креатива и галлюцинаций
+        url.searchParams.append('max_tokens', '1500');        // ограничиваем длину
 
         const response = await fetch(url.toString(), { credentials: "omit" });
 
@@ -835,58 +844,75 @@ Concise and clear`;
           throw new Error(`API Error: ${response.statusText}`);
         }
 
-        const text = await response.text();
+        let text = await response.text();
+
+        // Дополнительная защита: если модель всё-таки выдала reasoning (редко, но бывает)
+        text = text
+          .replace(/\[reasoning_content\].*?\n\n/s, '')      // убираем возможный reasoning-блок
+          .replace(/<thinking>.*?<\/thinking>/s, '')
+          .trim();
+
         return text;
       } catch (error) {
         console.error('AI API Error:', error);
-        // Silence the error in console to avoid user panic, just log a system warning
-        this.logging.system('Switching to Local Lore Engine due to API restriction.');
+        this.logging.system('Переключение на локальный движок лора из-за ограничения API.');
         return this.localAi.generate(prompt, lang);
       }
     }
   };
 
   /**
-   * Local Lore Engine (Enhanced with Keyword Matching)
+   * Local Lore Engine — улучшенный, формальный, с большим количеством HSR-ключей
    */
   public localAi = {
     generate: (prompt: string, lang: Language = 'ru') => {
-      const p = prompt.toLowerCase();
+      const p = prompt.toLowerCase().trim();
       const isRu = lang === 'ru';
 
-      const database = {
-        aeon: isRu 
-          ? "[DATA_RETRIEVAL] Эоны — это высшие существа, воплощающие концепции Путей. Радиостанция Ахи считает их продвинутым ИИ вселенной. Нанук (Разрушение), Лань (Охота), IX (Небытие) — главные объекты наблюдения."
-          : "[DATA_RETRIEVAL] Aeons are supreme beings embodying the concepts of Paths. Aha Radio Station views them as the universe's advanced AI. Nanook (Destruction), Lan (Hunt), IX (Nihility) are key subjects.",
+      const database: Record<string, string> = {
+        aeon: isRu
+          ? 'Эоны — высшие существа, воплощающие концепции Путей. Главные Эоны: Aha (Элат), Nanook (Разрушение), IX (Небытие), Yaoshi (Изобилие), Nous (Эрудиция), Lan (Охота) и другие.'
+          : 'Aeons are supreme beings embodying Paths. Major Aeons: Aha (Elation), Nanook (Destruction), IX (Nihility), Yaoshi (Abundance), Nous (Erudition), Lan (Hunt), etc.',
+
         stellaron: isRu
-          ? "[DATA_RETRIEVAL] Стелларон («Опухоль всех миров») — это источник хаоса. Мы изучаем способы его программной изоляции. Кафка и Охотники за Стелларонами — наши коллеги (или конкуренты)."
-          : "[DATA_RETRIEVAL] Stellaron ('The Cancer of All Worlds') is a source of chaos. We are studying ways to isolate it. Kafka and the Stellaron Hunters are our colleagues (or competitors).",
+          ? 'Стелларон — «Опухоль всех миров», источник хаоса и катастроф. Охотники за Стелларонами (Kafka, Silver Wolf, Blade, Sam и др.) пытаются управлять ими.'
+          : 'Stellaron is the "Cancer of All Worlds", a source of chaos. The Stellaron Hunters (Kafka, Silver Wolf, Blade, Sam, etc.) seek to control them.',
+
         hsr: isRu
-          ? "[DATA_RETRIEVAL] Honkai: Star Rail — это симуляция космического путешествия. Радиостанция Ахи одобряет Путь Освоения. Пом-Пом — лучший проводник."
-          : "[DATA_RETRIEVAL] Honkai: Star Rail is a space travel simulation. Aha Radio Station approves the Path of Trailblaze. Pom-Pom is the best conductor.",
+          ? 'Honkai: Star Rail — космическая RPG от HoYoverse. Главная тема — Путешествие (Trailblaze). Вы следуете по Пути Освоения на борту Звёздного Экспресса.'
+          : 'Honkai: Star Rail is a space RPG by HoYoverse. The main theme is the Path of Trailblaze aboard the Astral Express.',
+
         acheron: isRu
-          ? "[DATA_RETRIEVAL] Ахерон — эманатор Небытия, а не Эон. Её данные зашифрованы. Она часто забывает дорогу, но никогда не забывает свой меч. Называет себя Галактическим Рейнджером."
-          : "[DATA_RETRIEVAL] Acheron is an Emanator of Nihility, not an Aeon. Her data is encrypted. She often forgets the way, but never her sword. Claims to be a Galaxy Ranger.",
+          ? 'Ахерон — Эманатор Небытия. Галактический Рейнджер, мастер меча. Часто забывает события, но помнит свою миссию. Не является Эоном.'
+          : 'Acheron is an Emanator of Nihility and a Galaxy Ranger. Sword master who often forgets events but remembers her mission.',
+
         express: isRu
-          ? "[DATA_RETRIEVAL] Звездный Экспресс — это мобильная база данных Освоения. Акивили был его создателем. Мы следим за расписанием."
-          : "[DATA_RETRIEVAL] The Astral Express is the mobile database of Trailblaze. Akivili was its creator. We monitor the schedule.",
+          ? 'Звёздный Экспресс — мобильная база Пути Освоения, созданная Акивили. Текущий экипаж: Пом-Пом (кондуктор), Марч 7, Дань Хэн, Химеко, Вельт и Вы (Trailblazer).'
+          : 'The Astral Express is the mobile base of the Trailblaze Path, created by Akivili.',
+
         help: isRu
-          ? "[SYSTEM] Я — локальный модуль Радиостанции Ахи. Могу рассказать о лоре HSR, персонажах или выдать системную справку."
-          : "[SYSTEM] I am a local Aha Radio Station module. I can tell you about HSR lore, characters, or provide system info.",
+          ? 'Я — ИИ Радиостанции Ахи. Отвечаю по лору Honkai: Star Rail и общим вопросам. Спрашивайте о Эонах, персонажах, сюжетных арках или любом другом.'
+          : 'I am the Aha Radio Station AI. I answer questions about Honkai: Star Rail lore and general topics.',
+
         default: isRu
-          ? "[PROCESSING] Запрос принят. Анализ лора подтверждает: Путь Освоения бесконечен. (Локальный движок v1.5)"
-          : "[PROCESSING] Request received. Lore analysis confirms: The Path of Trailblaze is infinite. (Local Engine v1.5)"
+          ? 'Запрос принят. Если ваш вопрос касается лора Honkai: Star Rail — я готов ответить максимально точно. Уточните, пожалуйста, что именно вас интересует.'
+          : 'Request received. If your question is about Honkai: Star Rail lore, I am ready to answer with maximum accuracy. Please clarify what exactly interests you.'
       };
 
       let response = database.default;
-      if (p.includes('эон') || p.includes('aeon')) response = database.aeon;
+
+      // Более точное и широкое сопоставление
+      if (p.includes('эон') || p.includes('aeon') || p.includes('эйон')) response = database.aeon;
       else if (p.includes('стелларон') || p.includes('stellaron')) response = database.stellaron;
       else if (p.includes('ахерон') || p.includes('acheron')) response = database.acheron;
-      else if (p.includes('экспресс') || p.includes('express')) response = database.express;
-      else if (p.includes('hsr') || p.includes('хср') || p.includes('star rail')) response = database.hsr;
-      else if (p.includes('помощь') || p.includes('help')) response = database.help;
+      else if (p.includes('экспресс') || p.includes('express') || p.includes('astral')) response = database.express;
+      else if (p.includes('hsr') || p.includes('хср') || p.includes('star rail') || p.includes('хонкай')) response = database.hsr;
+      else if (p.includes('помощь') || p.includes('help') || p.includes('что ты можешь')) response = database.help;
 
-      return `[LOCAL_AI] ${response}`;
+      // Финальный ответ всегда формальный, без префиксов [LOCAL_AI]
+      return isRu
+        ? response
+        : response; // английский вариант уже в базе
     }
   };
 
