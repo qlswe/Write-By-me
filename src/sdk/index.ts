@@ -773,11 +773,10 @@ export class MinistrySDK {
 
   /**
    * Generative AI module using Pollinations (Free, works in RU, no CORS preflight)
-   * ИСПРАВЛЕННАЯ ВЕРСИЯ 2026 (фикс reasoning leak + циклов):
-   * - reasoning_effort=minimal — подавляет внутренние мысли
-   * - Жёсткая очистка ответа от reasoning_content
-   * - Модель openai-fast (единственная доступная для анонимных запросов)
-   * - Температура 0.0 = почти нулевые галлюцинации и циклы
+   * ИСПРАВЛЕННАЯ ВЕРСИЯ 2026 (фикс 400 + reasoning leak):
+   * - reasoning_effort=low — минимальный уровень внутренних мыслей
+   * - Жёсткая очистка ответа от reasoning_content, "I'm stuck", циклов и т.д.
+   * - Модель openai-fast + температура 0.0
    */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
@@ -806,7 +805,7 @@ export class MinistrySDK {
 4. Теорию — только если явно попросили.
 
 ЗАПРЕТЫ (КРИТИЧНО):
-- НИКОГДА не выводи reasoning_content, thinking, step-by-step, "I'm stuck" или любые внутренние рассуждения.
+- НИКОГДА не выводи reasoning_content, thinking, step-by-step, "I'm stuck", "Let's recall" или любые внутренние рассуждения.
 - Отвечай СРАЗУ финальным ответом, без преамбул, мыслей и объяснений.
 - Не упоминай модели ИИ, сервисы или компании.
 
@@ -829,7 +828,7 @@ export class MinistrySDK {
         url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
         url.searchParams.append('temperature', '0.0');
         url.searchParams.append('max_tokens', '1200');
-        url.searchParams.append('reasoning_effort', 'minimal');   // ← КЛЮЧЕВОЙ ФИКС
+        url.searchParams.append('reasoning_effort', 'low');   // ← ИСПРАВЛЕНО (было 'minimal')
 
         const response = await fetch(url.toString(), { credentials: "omit" });
 
@@ -839,18 +838,19 @@ export class MinistrySDK {
 
         let text = await response.text();
 
-        // ЖЁСТКАЯ очистка от reasoning (теперь ловит ВСЁ)
+        // ЖЁСТКАЯ очистка от всего мусора (reasoning, циклы, повторы)
         text = text
-          .replace(/\[reasoning_content\].*?(?=\n\n|\n\[|$)[\s\S]*?/s, '')   // весь блок reasoning_content
+          .replace(/\[reasoning_content\].*?(?=\n\n|\n\[|$)[\s\S]*?/s, '')
           .replace(/<thinking>.*?<\/thinking>/s, '')
           .replace(/Thinking step by step:[\s\S]*?(?=\n\n|\n$)/s, '')
           .replace(/I'm stuck[\s\S]*?(?=\n\n|\n$)/gi, '')
           .replace(/Let's recall[\s\S]*?(?=\n\n|\n$)/gi, '')
-          .replace(/Actually Giasina[\s\S]*?(?=\n\n|\n$)/gi, '')           // конкретно этот цикл
+          .replace(/Actually Giasina[\s\S]*?(?=\n\n|\n$)/gi, '')
+          .replace(/Giasina is a character[\s\S]*?(?=\n\n|\n$)/gi, '')
           .trim();
 
-        // Если после очистки остался только мусор — fallback
-        if (!text || text.length < 10 || text.includes('reasoning_content') || text.includes("I'm stuck")) {
+        // Если после очистки остался мусор или ответ пустой — сразу fallback
+        if (!text || text.length < 15 || /reasoning_content|I'm stuck|Let's recall/i.test(text)) {
           this.logging.system('Обнаружен остаток reasoning — переключаюсь на localAi.');
           return this.localAi.generate(prompt, lang);
         }
