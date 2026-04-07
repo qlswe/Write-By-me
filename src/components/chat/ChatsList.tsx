@@ -38,10 +38,10 @@ const ChatItem = React.memo(({
 
   return (
     <motion.button
-      whileHover={{ scale: 1.02, backgroundColor: 'rgba(47, 36, 79, 0.6)' }}
+      whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={() => onSelect(recipientId || '', profile?.name || 'User', profile?.photo)}
-      className={`w-full border rounded-2xl p-4 flex items-center gap-4 transition-all text-left group relative overflow-hidden ${isUnread ? 'bg-[#3E3160]/60 border-[#C3A6E6]/50' : 'bg-[#2F244F]/30 border-[#5C4B8B]/30'}`}
+      className={`w-full border rounded-2xl p-4 flex items-center gap-4 transition-all text-left group relative overflow-hidden ${isUnread ? 'bg-[#3E3160]/60 border-[#C3A6E6]/50 hover:bg-[#3E3160]/80' : 'bg-[#2F244F]/30 border-[#5C4B8B]/30 hover:bg-[#2F244F]/60'}`}
     >
       {isUnread && (
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#C3A6E6] shadow-[0_0_10px_#C3A6E6]" />

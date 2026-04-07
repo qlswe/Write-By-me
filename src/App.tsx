@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
@@ -10,6 +10,8 @@ import { Language, translations } from './data/translations';
 import { useAuth } from './hooks/useAuth';
 import { useUserData } from './hooks/useUserData';
 import { useContent } from './hooks/useContent';
+import { useChat, Chat } from './hooks/useChat';
+import { useTranslation } from 'react-i18next';
 import { sdk } from './sdk';
 
 // Components
@@ -33,12 +35,11 @@ import { UserData } from './hooks/useUsers';
 const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
 const BlogSection = lazy(() => import('./components/sections/BlogSection').then(m => ({ default: m.BlogSection })));
 const ChronicleSection = lazy(() => import('./components/sections/ChronicleSection').then(m => ({ default: m.ChronicleSection })));
-const TierListSection = lazy(() => import('./components/sections/TierListSection').then(m => ({ default: m.TierListSection })));
 const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
 const UsersList = lazy(() => import('./components/admin/UsersList').then(m => ({ default: m.UsersList })));
 const ChatsList = lazy(() => import('./components/chat/ChatsList').then(m => ({ default: m.ChatsList })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'tierlist' | 'users' | 'chats';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats';
 
 let hasPrintedStopWarning = false;
 
@@ -68,6 +69,13 @@ export default function App() {
   // User Data (Syncs with Firebase)
   const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role } = useUserData('ru');
   const { theories, blogPosts, events, promoCodes } = useContent();
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang);
+    }
+  }, [lang, i18n]);
 
   // Production Mode (High Fidelity)
   const [productionMode, setProductionMode] = useState(() => localStorage.getItem('productionMode') === 'true');
@@ -107,6 +115,64 @@ export default function App() {
 
   // Chat state
   const [activeChat, setActiveChat] = useState<{ uid: string, displayName: string, photoURL?: string } | null>(null);
+
+  // Chat notifications
+  const { chats } = useChat();
+  const notifiedChats = useRef<Record<string, number>>({});
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    // Request notification permission on load
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let count = 0;
+    
+    chats.forEach(chat => {
+      const lastMessageAt = chat.lastMessageAt?.toMillis?.() || 0;
+      const lastReadAt = chat.lastReadAt?.[user.uid]?.toMillis?.() || 0;
+      
+      if (lastMessageAt > lastReadAt) {
+        count++;
+      }
+
+      const lastNotified = notifiedChats.current[chat.id] || 0;
+      
+      // If there's a new message and we're not currently chatting with this user
+      if (lastMessageAt > lastNotified && lastMessageAt > lastReadAt) {
+        const otherUserId = chat.participants.find(id => id !== user.uid);
+        if (activeChat?.uid !== otherUserId) {
+          const title = lang === 'ru' ? 'Новое сообщение!' : 'New message!';
+          setToast(title);
+          
+          // OS Notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, {
+              body: lang === 'ru' ? 'У вас новое непрочитанное сообщение.' : 'You have a new unread message.',
+              icon: '/favicon.ico'
+            });
+          }
+
+          // Optional: play a sound here
+          try {
+            const audio = new Audio('/notification.mp3');
+            audio.play().catch(() => {});
+          } catch (e) {}
+        }
+        notifiedChats.current[chat.id] = lastMessageAt;
+      }
+    });
+
+    setUnreadCount(count);
+  }, [chats, user, activeChat, lang]);
 
   const t = translations[lang as Language];
 
@@ -180,7 +246,6 @@ export default function App() {
     { id: 'blog', label: t.navBlog, icon: Globe },
     { id: 'chronicle', label: t.navChronicle, icon: RefreshCw },
     { id: 'promo', label: t.navPromo, icon: Ticket },
-    { id: 'tierlist', label: t.navTierList, icon: ListOrdered },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'users' as const, label: t.navUsers, icon: User },
   ] as const;
@@ -248,7 +313,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0] ${productionMode ? 'production-visuals' : ''}`}>
-      <LoadingScreen isLoading={isLoading} />
+      <LoadingScreen isLoading={isLoading} lang={lang as Language} lowPerfMode={lowPerfMode} />
       <SDKPanel 
         lang={lang as Language} 
         productionMode={productionMode}
@@ -372,7 +437,6 @@ export default function App() {
                   role={role}
                 />
               )}
-              {section === 'tierlist' && <TierListSection lang={lang as Language} lowPerfMode={lowPerfMode} />}
               {section === 'promo' && (
                 <PromoSection 
                   lang={lang as Language} 

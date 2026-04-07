@@ -39,13 +39,6 @@ export function useUserData(initialLang: string) {
   const [photoURL, setPhotoURL] = useState<string>('');
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // Sync i18n when lang state changes
-  useEffect(() => {
-    if (i18n.language !== lang) {
-      i18n.changeLanguage(lang);
-    }
-  }, [lang, i18n]);
-
   // Load from local storage initially for fast render
   useEffect(() => {
     try {

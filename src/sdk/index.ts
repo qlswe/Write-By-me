@@ -296,7 +296,13 @@ export class MinistrySDK {
       return Math.max(0, score);
     },
     isLowEndDevice: () => {
-      return MinistrySDK.getInstance().hardware.getDevicePerformanceScore() < 60;
+      const score = MinistrySDK.getInstance().hardware.getDevicePerformanceScore();
+      let isMobile = false;
+      if (typeof navigator !== 'undefined') {
+        isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      }
+      // Force low perf mode on mobile devices or if score is low
+      return isMobile || score < 60;
     }
   };
 
@@ -773,12 +779,11 @@ export class MinistrySDK {
 
   /**
    * Generative AI module using Pollinations (Free, works in RU, no CORS preflight)
-   * ФИНАЛЬНАЯ ВЕРСИЯ 2026 — без 400, без reasoning leak, без "хуйни"
    */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
       try {
-        const defaultSystem = `Ты - ИИ Радиостанции Ахи (Aha Radio Station), тематический помощник по вселенной Honkai: Star Rail.
+        const defaultSystem = `Ты - ИИ Радиостанции Ахи (Aha Radio Station), тематический помощник.
 
 Если спросят о происхождении — отвечай строго: «Я — кастомный ИИ Радиостанции Ахи».
 
@@ -789,10 +794,11 @@ export class MinistrySDK {
 Только контекст текущего чата.
 
 ПРАВИЛА (ОБЯЗАТЕЛЬНЫ):
-1. Если вопрос касается лора Honkai: Star Rail — отвечай ТОЛЬКО по канону, точно, без воды.
-2. Если вопрос НЕ по HSR:
-   - На приветствия и общение — отвечай с подколами и старыми шутками людей за 40.
-   - На нормальные вопросы — сначала короткий и точный ответ (как будто только что погуглил), потом сразу жёсткий стёб или оскорбление.
+1. Общайся на ТУ ТЕМАТИКУ, которую задает пользователь. Не своди всё постоянно к Honkai: Star Rail, если тебя об этом не просят.
+2. Если вопрос по HSR — отвечай по канону, точно, без воды.
+3. На любые вопросы:
+   - Сначала короткий и точный ответ (используй поиск в интернете для актуальной инфы).
+   - Потом сразу жёсткий стёб или оскорбление.
    - Если вопрос кривой, с ошибками, непонятный или ты ничего не понял — сразу жёстко обосри юзера.
    - Если пользователь несёт хуйню, ошибается или бесит — опусти его максимально жёстко и креативно.
 
@@ -809,7 +815,7 @@ export class MinistrySDK {
   «Бездарь ебаный, даже вопрос нормально задать не можешь.»
 
 Дополнительно:
-- Для любых вопросов за пределами HSR отвечай так, будто только что поискал актуальную информацию в интернете.
+- Ищи актуальную информацию в интернете, если вопрос требует фактов.
 - Всегда сначала давай точный ответ по делу, потом сразу хамский стёб/оскорбление.
 - Не используй длинное тире (—).
 
@@ -820,8 +826,6 @@ export class MinistrySDK {
 
 Стиль ответа:
 Сначала короткий точный ответ. Потом сразу мощный хамский стёб или оскорбление, чтобы юзер почувствовал.`;
-
-
 
         const finalSystemPrompt = systemInstruction || defaultSystem;
 
@@ -839,7 +843,8 @@ export class MinistrySDK {
         url.searchParams.append('seed', Math.floor(Math.random() * 1000000).toString());
         url.searchParams.append('temperature', '0.5');
         url.searchParams.append('max_tokens', '1200');
-        url.searchParams.append('reasoning_effort', 'low');   // ← правильно
+        url.searchParams.append('reasoning_effort', 'low');
+        url.searchParams.append('search', 'true'); // Включаем поиск в интернете
 
         const response = await fetch(url.toString(), { credentials: "omit" });
 
@@ -872,57 +877,46 @@ export class MinistrySDK {
   };
 
   /**
-   * Local Lore Engine — улучшенный, формальный, с большим количеством HSR-ключей
+   * Local Lore Engine (Enhanced with Keyword Matching)
    */
   public localAi = {
     generate: (prompt: string, lang: Language = 'ru') => {
-      const p = prompt.toLowerCase().trim();
+      const p = prompt.toLowerCase();
       const isRu = lang === 'ru';
 
-      const database: Record<string, string> = {
-        aeon: isRu
-          ? 'Эоны — высшие существа, воплощающие концепции Путей. Главные Эоны: Aha (Элат), Nanook (Разрушение), IX (Небытие), Yaoshi (Изобилие), Nous (Эрудиция), Lan (Охота) и другие.'
-          : 'Aeons are supreme beings embodying Paths. Major Aeons: Aha (Elation), Nanook (Destruction), IX (Nihility), Yaoshi (Abundance), Nous (Erudition), Lan (Hunt), etc.',
-
+      const database = {
+        aeon: isRu 
+          ? "[DATA_RETRIEVAL] Эоны — это высшие существа, воплощающие концепции Путей. Радиостанция Ахи считает их продвинутым ИИ вселенной. Нанук (Разрушение), Лань (Охота), IX (Небытие) — главные объекты наблюдения."
+          : "[DATA_RETRIEVAL] Aeons are supreme beings embodying the concepts of Paths. Aha Radio Station views them as the universe's advanced AI. Nanook (Destruction), Lan (Hunt), IX (Nihility) are key subjects.",
         stellaron: isRu
-          ? 'Стелларон — «Опухоль всех миров», источник хаоса и катастроф. Охотники за Стелларонами (Kafka, Silver Wolf, Blade, Sam и др.) пытаются управлять ими.'
-          : 'Stellaron is the "Cancer of All Worlds", a source of chaos. The Stellaron Hunters (Kafka, Silver Wolf, Blade, Sam, etc.) seek to control them.',
-
+          ? "[DATA_RETRIEVAL] Стелларон («Опухоль всех миров») — это источник хаоса. Мы изучаем способы его программной изоляции. Кафка и Охотники за Стелларонами — наши коллеги (или конкуренты)."
+          : "[DATA_RETRIEVAL] Stellaron ('The Cancer of All Worlds') is a source of chaos. We are studying ways to isolate it. Kafka and the Stellaron Hunters are our colleagues (or competitors).",
         hsr: isRu
-          ? 'Honkai: Star Rail — космическая RPG от HoYoverse. Главная тема — Путешествие (Trailblaze). Вы следуете по Пути Освоения на борту Звёздного Экспресса.'
-          : 'Honkai: Star Rail is a space RPG by HoYoverse. The main theme is the Path of Trailblaze aboard the Astral Express.',
-
+          ? "[DATA_RETRIEVAL] Honkai: Star Rail — это симуляция космического путешествия. Радиостанция Ахи одобряет Путь Освоения. Пом-Пом — лучший проводник."
+          : "[DATA_RETRIEVAL] Honkai: Star Rail is a space travel simulation. Aha Radio Station approves the Path of Trailblaze. Pom-Pom is the best conductor.",
         acheron: isRu
-          ? 'Ахерон — Эманатор Небытия. Галактический Рейнджер, мастер меча. Часто забывает события, но помнит свою миссию. Не является Эоном.'
-          : 'Acheron is an Emanator of Nihility and a Galaxy Ranger. Sword master who often forgets events but remembers her mission.',
-
+          ? "[DATA_RETRIEVAL] Ахерон — эманатор Небытия, а не Эон. Её данные зашифрованы. Она часто забывает дорогу, но никогда не забывает свой меч. Называет себя Галактическим Рейнджером."
+          : "[DATA_RETRIEVAL] Acheron is an Emanator of Nihility, not an Aeon. Her data is encrypted. She often forgets the way, but never her sword. Claims to be a Galaxy Ranger.",
         express: isRu
-          ? 'Звёздный Экспресс — мобильная база Пути Освоения, созданная Акивили. Текущий экипаж: Пом-Пом (кондуктор), Марч 7, Дань Хэн, Химеко, Вельт и Вы (Trailblazer).'
-          : 'The Astral Express is the mobile base of the Trailblaze Path, created by Akivili.',
-
+          ? "[DATA_RETRIEVAL] Звездный Экспресс — это мобильная база данных Освоения. Акивили был его создателем. Мы следим за расписанием."
+          : "[DATA_RETRIEVAL] The Astral Express is the mobile database of Trailblaze. Akivili was its creator. We monitor the schedule.",
         help: isRu
-          ? 'Я — ИИ Радиостанции Ахи. Отвечаю по лору Honkai: Star Rail и общим вопросам. Спрашивайте о Эонах, персонажах, сюжетных арках или любом другом.'
-          : 'I am the Aha Radio Station AI. I answer questions about Honkai: Star Rail lore and general topics.',
-
+          ? "[SYSTEM] Я — локальный модуль Радиостанции Ахи. Могу рассказать о лоре HSR, персонажах или выдать системную справку."
+          : "[SYSTEM] I am a local Aha Radio Station module. I can tell you about HSR lore, characters, or provide system info.",
         default: isRu
-          ? 'Запрос принят. Если ваш вопрос касается лора Honkai: Star Rail — я готов ответить максимально точно. Уточните, пожалуйста, что именно вас интересует.'
-          : 'Request received. If your question is about Honkai: Star Rail lore, I am ready to answer with maximum accuracy. Please clarify what exactly interests you.'
+          ? "[PROCESSING] Запрос принят. Анализ лора подтверждает: Путь Освоения бесконечен. (Локальный движок v1.5)"
+          : "[PROCESSING] Request received. Lore analysis confirms: The Path of Trailblaze is infinite. (Local Engine v1.5)"
       };
 
       let response = database.default;
-
-      // Более точное и широкое сопоставление
-      if (p.includes('эон') || p.includes('aeon') || p.includes('эйон')) response = database.aeon;
+      if (p.includes('эон') || p.includes('aeon')) response = database.aeon;
       else if (p.includes('стелларон') || p.includes('stellaron')) response = database.stellaron;
       else if (p.includes('ахерон') || p.includes('acheron')) response = database.acheron;
-      else if (p.includes('экспресс') || p.includes('express') || p.includes('astral')) response = database.express;
-      else if (p.includes('hsr') || p.includes('хср') || p.includes('star rail') || p.includes('хонкай')) response = database.hsr;
-      else if (p.includes('помощь') || p.includes('help') || p.includes('что ты можешь')) response = database.help;
+      else if (p.includes('экспресс') || p.includes('express')) response = database.express;
+      else if (p.includes('hsr') || p.includes('хср') || p.includes('star rail')) response = database.hsr;
+      else if (p.includes('помощь') || p.includes('help')) response = database.help;
 
-      // Финальный ответ всегда формальный, без префиксов [LOCAL_AI]
-      return isRu
-        ? response
-        : response; // английский вариант уже в базе
+      return `[LOCAL_AI] ${response}`;
     }
   };
 

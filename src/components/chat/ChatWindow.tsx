@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChat, Message } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
-import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown } from 'lucide-react';
+import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 
 const STICKERS = ['👋', '👍', '❤️', '😂', '🔥', '🎉', '👀', '💯'];
-const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '✨'];
 
 interface ChatWindowProps {
   recipientId: string;
@@ -29,6 +29,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -60,6 +61,58 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     if (isToday(date)) return lang === 'ru' ? 'Сегодня' : 'Today';
     if (isYesterday(date)) return lang === 'ru' ? 'Вчера' : 'Yesterday';
     return format(date, lang === 'ru' ? 'dd MMMM yyyy' : 'MMMM dd, yyyy');
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert(lang === 'ru' ? 'Файл слишком большой. Максимум 5MB.' : 'File too large. Maximum 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        const base64String = canvas.toDataURL('image/jpeg', 0.7);
+        
+        setIsSending(true);
+        try {
+          await sendMessage(base64String, recipientId, 'image', replyingTo?.id);
+          setReplyingTo(null);
+        } catch (error) {
+          console.error("Error sending image:", error);
+        } finally {
+          setIsSending(false);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -124,6 +177,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   };
 
   return (
+    <>
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -148,7 +202,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
               <span className="font-black text-white text-sm sm:text-base uppercase tracking-wider block leading-none mb-1">{recipientName}</span>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest">Online</span>
-                <span className="text-[8px] text-[#C3A6E6]/60 font-black uppercase tracking-tighter border border-[#C3A6E6]/20 px-1.5 py-0.5 rounded">AHA RADIO STATION E/D</span>
+                <span className="text-[8px] text-[#C3A6E6]/60 font-black uppercase tracking-tighter border border-[#C3A6E6]/20 px-1.5 py-0.5 rounded">Ministry E/D</span>
               </div>
             </div>
           </div>
@@ -296,6 +350,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               </div>
                             ) : msg.type === 'sticker' ? (
                               <div className="text-6xl filter drop-shadow-lg">{msg.text}</div>
+                            ) : msg.type === 'image' ? (
+                              <img src={msg.text} alt="Sent image" className="max-w-[200px] sm:max-w-[250px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setFullscreenImage(msg.text)} />
                             ) : (
                               <p className="break-words leading-relaxed">{msg.text}</p>
                             )}
@@ -304,7 +360,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               {msg.isEdited && !msg.isDeleted && <span>(изменено)</span>}
                               {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'HH:mm') : ''}
                               {isMe && !msg.isDeleted && (
-                                isRead ? <CheckCheck className="w-3 h-3 text-[#2F244F] ml-0.5" /> : <Check className="w-3 h-3 opacity-50 ml-0.5" />
+                                isRead ? <CheckCheck className={`w-3 h-3 ml-0.5 ${msg.type === 'sticker' ? 'text-blue-400' : 'text-[#2F244F]'}`} /> : <Check className={`w-3 h-3 ml-0.5 ${msg.type === 'sticker' ? 'text-gray-400' : 'opacity-50'}`} />
                               )}
                             </div>
                           </div>
@@ -461,6 +517,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                 >
                   <Sticker className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
+                <label className="p-3 sm:p-4 rounded-2xl transition-all bg-[#2F244F] text-gray-400 hover:text-white border border-[#5C4B8B] hover:border-[#C3A6E6] cursor-pointer flex items-center justify-center">
+                  <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isSending} />
+                </label>
                 <input
                   type="text"
                   value={inputText}
@@ -483,5 +543,31 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
         )}
       </motion.div>
     </AnimatePresence>
+    
+    {/* Fullscreen Image Modal */}
+    <AnimatePresence>
+      {fullscreenImage && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          onClick={() => setFullscreenImage(null)}
+        >
+          <button className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-white/20 text-white rounded-full transition-colors">
+            <X size={24} />
+          </button>
+          <motion.img
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.9 }}
+            src={fullscreenImage}
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 };

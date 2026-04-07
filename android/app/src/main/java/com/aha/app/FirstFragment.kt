@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.aha.app.R
 import com.aha.app.databinding.FragmentFirstBinding
 
 class FirstFragment : Fragment() {

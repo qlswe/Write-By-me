@@ -9,7 +9,7 @@ export interface Message {
   senderId: string;
   text: string;
   createdAt: any;
-  type?: 'text' | 'sticker';
+  type?: 'text' | 'sticker' | 'image';
   replyTo?: string; // ID of the message being replied to
   reactions?: Record<string, string[]>; // emoji -> array of user IDs
   isEdited?: boolean;
@@ -94,8 +94,8 @@ export function useChat(otherUserId?: string) {
     return unsubscribe;
   }, [user, otherUserId]);
 
-  const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' = 'text', replyTo?: string) => {
-    if (!user || (!text.trim() && type === 'text')) return;
+  const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' | 'image' = 'text', replyTo?: string) => {
+    if (!user || (!text.trim() && type !== 'image')) return;
 
     const chatId = [user.uid, recipientId].sort().join('_');
     const chatRef = doc(db, 'chats', chatId);
@@ -126,7 +126,7 @@ export function useChat(otherUserId?: string) {
 
       // Update chat metadata
       await setDoc(chatRef, {
-        lastMessage: type === 'sticker' ? encrypt('Sticker') : encryptedText,
+        lastMessage: type === 'sticker' ? encrypt('Sticker') : type === 'image' ? encrypt('Фото') : encryptedText,
         lastMessageAt: serverTimestamp(),
         participants: [user.uid, recipientId]
       }, { merge: true });

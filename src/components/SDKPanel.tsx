@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Terminal, X, Settings, Cpu, ChevronRight, MessageSquare, Maximize2, Minimize2 } from 'lucide-react';
+import { Sparkles, Terminal, X, Settings, Cpu, ChevronRight, MessageSquare, Maximize2, Minimize2, Lock, Trash2 } from 'lucide-react';
 import { sdk } from '../sdk';
 import { Language } from '../data/translations';
+import { useAuth } from '../hooks/useAuth';
 
 interface SDKPanelProps {
   lang: Language;
@@ -24,15 +25,48 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Terminal/Chat state
-  const [history, setHistory] = useState<{ type: 'cmd' | 'res' | 'info', text: string }[]>([
-    { type: 'info', text: lang === 'ru' ? 'Радиостанция Ахи ИИ v2.0' : 'Aha Radio Station AI v2.0' },
-    { type: 'info', text: lang === 'ru' ? 'Спросите меня о лоре HSR или используйте команды SDK (начните с /).' : 'Ask me about HSR lore or use SDK commands (start with /).' }
-  ]);
+  const [history, setHistory] = useState<{ type: 'cmd' | 'res' | 'info', text: string }[]>([]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [localTime, setLocalTime] = useState(new Date().toLocaleTimeString());
+  const { user, loginWithGoogle } = useAuth();
+
+  const initialHistory = [
+    { type: 'info' as const, text: lang === 'ru' ? 'Радиостанция Ахи ИИ v2.0' : 'Aha Radio Station AI v2.0' },
+    { type: 'info' as const, text: lang === 'ru' ? 'Спросите меня о лоре HSR или используйте команды SDK (начните с /).' : 'Ask me about HSR lore or use SDK commands (start with /).' }
+  ];
+
+  useEffect(() => {
+    if (user) {
+      const saved = localStorage.getItem(`ai_history_${user.uid}`);
+      if (saved) {
+        try {
+          setHistory(JSON.parse(saved));
+        } catch (e) {
+          setHistory(initialHistory);
+        }
+      } else {
+        setHistory(initialHistory);
+      }
+    } else {
+      setHistory(initialHistory);
+    }
+  }, [user, lang]);
+
+  useEffect(() => {
+    if (user && history.length > 0) {
+      localStorage.setItem(`ai_history_${user.uid}`, JSON.stringify(history));
+    }
+  }, [history, user]);
+
+  const clearHistory = () => {
+    setHistory(initialHistory);
+    if (user) {
+      localStorage.removeItem(`ai_history_${user.uid}`);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -97,7 +131,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
           productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 
           'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'
         }`}
-        title={lang === 'ru' ? 'Панель Радио' : 'Ministry Panel'}
+        title={lang === 'ru' ? 'Панель Министерства' : 'Ministry Panel'}
       >
         <Sparkles size={24} className={productionMode && !isOpen ? 'animate-pulse' : ''} />
       </motion.button>
@@ -160,11 +194,41 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                 <Settings size={14} />
                 {lang === 'ru' ? 'SDK Настройки' : 'SDK Settings'}
               </button>
+              {activeTab === 'chat' && user && (
+                <button
+                  onClick={clearHistory}
+                  className="px-4 py-2.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors border-b-2 border-transparent"
+                  title={lang === 'ru' ? 'Очистить историю' : 'Clear history'}
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
 
             {/* Content */}
             <div className="flex-1 overflow-hidden relative">
               {activeTab === 'chat' ? (
+                !user ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4">
+                    <div className="w-16 h-16 bg-[#C3A6E6]/10 rounded-full flex items-center justify-center border border-[#C3A6E6]/20">
+                      <Lock className="w-8 h-8 text-[#C3A6E6]" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white mb-2">
+                        {lang === 'ru' ? 'Требуется авторизация' : 'Authorization Required'}
+                      </h3>
+                      <p className="text-sm text-gray-400 mb-6">
+                        {lang === 'ru' ? 'Использование ИИ доступно только после авторизации через Google.' : 'AI usage is only available after logging in with Google.'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={loginWithGoogle}
+                      className="bg-white text-[#2F244F] px-6 py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors"
+                    >
+                      {lang === 'ru' ? 'Войти через Google' : 'Login with Google'}
+                    </button>
+                  </div>
+                ) : (
                 <div className="absolute inset-0 flex flex-col">
                   <div 
                     ref={scrollRef}
@@ -218,6 +282,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                     </div>
                   </form>
                 </div>
+                )
               ) : (
                 <div className="absolute inset-0 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-[#5C4B8B] scrollbar-track-transparent">
                   <div className="space-y-4">
@@ -276,7 +341,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">AI Engine:</span>
-                        <span className="text-yellow-400">ARS API</span>
+                        <span className="text-yellow-400">Pollinations API</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Local Time:</span>
