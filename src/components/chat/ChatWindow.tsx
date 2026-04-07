@@ -513,11 +513,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                 <button
                   type="button"
                   onClick={() => setShowStickers(!showStickers)}
-                  className={`p-3 sm:p-4 rounded-2xl transition-all ${showStickers ? 'bg-[#C3A6E6] text-[#2F244F]' : 'bg-[#2F244F] text-gray-400 hover:text-white border border-[#5C4B8B] hover:border-[#C3A6E6]'}`}
+                  className={`shrink-0 p-3 sm:p-4 rounded-2xl transition-all ${showStickers ? 'bg-[#C3A6E6] text-[#2F244F]' : 'bg-[#2F244F] text-gray-400 hover:text-white border border-[#5C4B8B] hover:border-[#C3A6E6]'}`}
                 >
                   <Sticker className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
-                <label className="p-3 sm:p-4 rounded-2xl transition-all bg-[#2F244F] text-gray-400 hover:text-white border border-[#5C4B8B] hover:border-[#C3A6E6] cursor-pointer flex items-center justify-center">
+                <label className="shrink-0 p-3 sm:p-4 rounded-2xl transition-all bg-[#2F244F] text-gray-400 hover:text-white border border-[#5C4B8B] hover:border-[#C3A6E6] cursor-pointer flex items-center justify-center">
                   <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                   <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isSending} />
                 </label>
@@ -528,7 +528,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   onKeyDown={handleKeyDown}
                   disabled={isSending}
                   placeholder={t.chatPlaceholder}
-                  className="flex-1 bg-[#2F244F] border border-[#5C4B8B] rounded-2xl px-4 sm:px-5 py-3 text-sm sm:text-base text-white outline-none focus:border-[#C3A6E6] transition-all disabled:opacity-50 placeholder:text-gray-500"
+                  className="flex-1 min-w-0 bg-[#2F244F] border border-[#5C4B8B] rounded-2xl px-4 sm:px-5 py-3 text-sm sm:text-base text-white outline-none focus:border-[#C3A6E6] transition-all disabled:opacity-50 placeholder:text-gray-500"
                 />
                 <button
                   type="submit"

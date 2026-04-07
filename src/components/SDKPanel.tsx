@@ -270,12 +270,12 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder={lang === 'ru' ? 'Спросите ИИ (или /команда)...' : 'Ask AI (or /command)...'}
-                        className="flex-1 bg-transparent border-none outline-none px-3 py-2 text-sm text-white placeholder-gray-500"
+                        className="flex-1 min-w-0 bg-transparent border-none outline-none px-3 py-2 text-sm text-white placeholder-gray-500"
                       />
                       <button 
                         type="submit"
                         disabled={!input.trim() || isProcessing}
-                        className="p-2 bg-[#C3A6E6] text-[#2F244F] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white transition-colors"
+                        className="shrink-0 p-2 bg-[#C3A6E6] text-[#2F244F] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white transition-colors"
                       >
                         <ChevronRight size={18} />
                       </button>
