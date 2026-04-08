@@ -6,7 +6,7 @@ import { Heart, ThumbsUp, Laugh, MessageCircle, Flame, Sparkles, Ghost } from 'l
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { Language, translations } from '../../data/translations';
 
-export const STANDARD_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '✨'];
+import { REACTIONS as STANDARD_REACTIONS } from '../../constants/reactions';
 
 interface ReactionsBarProps {
   targetId: string;
@@ -49,20 +49,11 @@ export const ReactionsBar: React.FC<ReactionsBarProps> = ({ targetId, lang, coll
       const currentReactions = docSnap.exists() ? (docSnap.data().reactions || {}) : {};
       const updates: Record<string, any> = {};
       
-      let previousKey: string | null = null;
-      for (const [k, users] of Object.entries(currentReactions)) {
-        if ((users as string[]).includes(user.uid)) {
-          previousKey = k;
-          break;
-        }
-      }
+      const usersForEmoji = currentReactions[key] || [];
 
-      if (previousKey === key) {
+      if (usersForEmoji.includes(user.uid)) {
         updates[`reactions.${key}`] = arrayRemove(user.uid);
       } else {
-        if (previousKey) {
-          updates[`reactions.${previousKey}`] = arrayRemove(user.uid);
-        }
         updates[`reactions.${key}`] = arrayUnion(user.uid);
       }
       

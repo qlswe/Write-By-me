@@ -136,7 +136,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="bg-[#3E3160]/90 backdrop-blur-md rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#5C4B8B] relative overflow-hidden"
+            className="bg-[#3E3160] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#5C4B8B] relative overflow-hidden"
           >
             {/* Background Decorative Element */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#C3A6E6]/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
@@ -217,7 +217,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="bg-[#3E3160]/90 backdrop-blur-md rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#5C4B8B]"
+            className="bg-[#3E3160] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#5C4B8B]"
           >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
               <div>

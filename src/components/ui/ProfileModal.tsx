@@ -159,7 +159,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/80">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -175,7 +175,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                 </div>
                 <button
                   onClick={onClose}
-                  className="absolute top-6 right-6 p-2.5 bg-black/20 hover:bg-black/40 rounded-2xl text-white transition-all backdrop-blur-md z-20 border border-white/10 hover:scale-110 active:scale-95"
+                  className="absolute top-6 right-6 p-2.5 bg-black/40 hover:bg-black/60 rounded-2xl text-white transition-all z-20 border border-white/10 hover:scale-110 active:scale-95"
                 >
                   <X size={20} />
                 </button>

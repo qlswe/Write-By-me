@@ -70,12 +70,12 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-[#2F244F]/90 backdrop-blur-2xl rounded-[1.5rem] sm:rounded-[3rem] w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden border border-[#5C4B8B]/30 shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col"
+        className="bg-[#2F244F] rounded-[1.5rem] sm:rounded-[3rem] w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden border border-[#5C4B8B]/30 shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col"
       >
         {/* Header */}
         <div className="bg-[#3E3160]/50 p-4 sm:p-8 border-b border-[#5C4B8B]/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">

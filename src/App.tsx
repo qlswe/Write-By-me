@@ -352,7 +352,7 @@ export default function App() {
           >
             <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#C3A6E6] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(195,166,230,0.3)]"></div></div>}>
               {section === 'home' && (
-                <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
+                <div className="bg-[#3E3160] rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
                   <h2 className="text-3xl font-bold text-[#C3A6E6] mb-4">{t.homeTitle}</h2>
                   <p className="text-gray-300 mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: t.homeDesc }} />
                   <div className="flex items-center gap-2 text-xs text-gray-500 mb-8">
@@ -466,7 +466,7 @@ export default function App() {
                     <MessageSquare size={32} />
                     {t.navChats}
                   </h2>
-                  <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-3xl p-6 border border-[#5C4B8B] shadow-2xl">
+                  <div className="bg-[#3E3160] rounded-3xl p-6 border border-[#5C4B8B] shadow-2xl">
                     <ChatsList lang={lang as Language} onSelectChat={(id, name) => setActiveChat({ uid: id, displayName: name })} />
                   </div>
                 </div>

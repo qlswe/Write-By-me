@@ -42,7 +42,7 @@ const PromoCard = React.memo(({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: index * 0.1, duration: 0.4 }}
       whileHover={{ y: -5, transition: { duration: 0.2 } }}
-      className={`group relative bg-[#3E3160]/80 backdrop-blur-md p-8 rounded-[2rem] shadow-2xl border transition-all duration-300 overflow-hidden ${
+      className={`group relative bg-[#3E3160] p-8 rounded-[2rem] shadow-2xl border transition-all duration-300 overflow-hidden ${
         promo.isActive === false ? 'border-red-500/20 opacity-60' : 'border-[#5C4B8B] hover:border-[#C3A6E6]/50'
       }`}
     >

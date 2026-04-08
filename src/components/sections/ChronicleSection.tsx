@@ -164,7 +164,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
   };
 
   return (
-    <div className="bg-[#2F244F]/40 backdrop-blur-2xl rounded-[3rem] p-8 sm:p-12 border border-[#5C4B8B]/30 shadow-[0_0_50px_rgba(0,0,0,0.3)]">
+    <div className="bg-[#2F244F] rounded-[3rem] p-8 sm:p-12 border border-[#5C4B8B]/30 shadow-[0_0_50px_rgba(0,0,0,0.3)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-16">
         <div>
           <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic flex items-center gap-4">

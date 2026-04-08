@@ -73,7 +73,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-[#2F244F]/80 backdrop-blur-xl border-b border-[#3E3160] shadow-2xl">
+      <header className="sticky top-0 z-50 bg-[#2F244F] border-b border-[#3E3160] shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <h1 className="text-xl md:text-2xl font-black text-white tracking-tighter shrink-0 flex items-center gap-2">
             <Zap className="text-[#C3A6E6] fill-[#C3A6E6]" size={24} />
@@ -85,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Desktop Nav */}
           <nav 
             ref={navRef}
-            className="hidden lg:flex items-center gap-1 bg-[#3E3160]/40 backdrop-blur-md p-1 rounded-2xl border border-[#5C4B8B]/30 overflow-x-auto no-scrollbar scroll-smooth"
+            className="hidden lg:flex items-center gap-1 bg-[#3E3160] p-1 rounded-2xl border border-[#5C4B8B]/30 overflow-x-auto no-scrollbar scroll-smooth"
           >
             {navItems.map(item => (
               <button

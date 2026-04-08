@@ -256,7 +256,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
           className={`${isReply ? 'w-8 h-8' : 'w-10 h-10'} rounded-2xl border-2 border-[#5C4B8B]/50 shrink-0 mt-1 shadow-lg group-hover:border-[#C3A6E6] transition-colors object-cover`}
         />
         <div className="flex-1 min-w-0">
-          <div className={`bg-[#2F244F]/30 backdrop-blur-xl rounded-[1.5rem] rounded-tl-none p-4 sm:p-5 border border-[#5C4B8B]/20 shadow-xl transition-all group-hover:border-[#C3A6E6]/30 group-hover:bg-[#2F244F]/50`}>
+          <div className={`bg-[#2F244F] rounded-[1.5rem] rounded-tl-none p-4 sm:p-5 border border-[#5C4B8B]/20 shadow-xl transition-all group-hover:border-[#C3A6E6]/30 group-hover:bg-[#3E3160]`}>
             <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
               <div className="flex items-center flex-wrap gap-3">
                 <span className="font-black text-white text-sm uppercase tracking-wider">{comment.authorName}</span>
@@ -418,7 +418,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
           )}
         </div>
       ) : (
-        <div className="bg-[#2F244F]/20 border border-[#5C4B8B]/20 rounded-[2.5rem] p-12 text-center mb-12 backdrop-blur-xl">
+        <div className="bg-[#2F244F] border border-[#5C4B8B]/20 rounded-[2.5rem] p-12 text-center mb-12">
           <MessageCircle size={48} className="mx-auto text-gray-600 mb-6" />
           <p className="text-gray-400 mb-8 font-black uppercase tracking-widest text-sm">{t.loginToComment || "Войдите, чтобы оставить комментарий"}</p>
           <button

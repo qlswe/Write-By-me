@@ -35,7 +35,7 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
   };
 
   return (
-    <div className="bg-[#2F244F]/80 backdrop-blur-md border border-[#5C4B8B] rounded-2xl p-6 relative overflow-hidden group">
+    <div className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-6 relative overflow-hidden group">
       {/* Background decoration */}
       <div className="absolute -right-10 -top-10 w-40 h-40 bg-[#C3A6E6]/10 rounded-full blur-3xl group-hover:bg-[#C3A6E6]/20 transition-colors duration-700"></div>
       

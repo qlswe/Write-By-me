@@ -33,7 +33,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className={`fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-xl ${fullScreen ? (isDestructive ? 'bg-red-950/90' : 'bg-[#1A1625]/95') : 'bg-black/80'}`}
+        className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${fullScreen ? (isDestructive ? 'bg-red-950' : 'bg-[#1A1625]') : 'bg-black/80'}`}
         onClick={onClose}
       >
         <motion.div

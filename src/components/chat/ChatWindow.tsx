@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 
 const STICKERS = ['👋', '👍', '❤️', '😂', '🔥', '🎉', '👀', '💯'];
-const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '✨'];
+import { REACTIONS } from '../../constants/reactions';
 
 interface ChatWindowProps {
   recipientId: string;
@@ -22,6 +22,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   const { chats, messages, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead } = useChat(recipientId);
   const t = translations[lang];
   const [inputText, setInputText] = useState('');
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -50,7 +51,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    setShowScrollButton(scrollHeight - scrollTop - clientHeight > 100);
+    const shouldShow = scrollHeight - scrollTop - clientHeight > 100;
+    if (showScrollButton !== shouldShow) {
+      setShowScrollButton(shouldShow);
+    }
   };
 
   const handleCopy = (text: string) => {
@@ -64,60 +68,60 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert(lang === 'ru' ? 'Файл слишком большой. Максимум 5MB.' : 'File too large. Maximum 5MB.');
-      return;
-    }
+    files.forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        alert(lang === 'ru' ? 'Файл слишком большой. Максимум 5MB.' : 'File too large. Maximum 5MB.');
+        return;
+      }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = async () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 1200;
-        let width = img.width;
-        let height = img.height;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
           }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        const base64String = canvas.toDataURL('image/jpeg', 0.7);
-        
-        setIsSending(true);
-        try {
-          await sendMessage(base64String, recipientId, 'image', replyingTo?.id);
-          setReplyingTo(null);
-        } catch (error) {
-          console.error("Error sending image:", error);
-        } finally {
-          setIsSending(false);
-        }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          const base64String = canvas.toDataURL('image/jpeg', 0.7);
+          setSelectedImages(prev => [...prev, base64String]);
+        };
+        img.src = e.target?.result as string;
       };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    });
+    
+    // Clear the input value so the same files can be selected again
+    e.target.value = '';
+  };
+
+  const removeSelectedImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!inputText.trim() || isSending) return;
+    if ((!inputText.trim() && selectedImages.length === 0) || isSending) return;
     
     setIsSending(true);
     try {
@@ -125,9 +129,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
         await editMessage(editingMessage.id, recipientId, inputText);
         setEditingMessage(null);
       } else {
-        await sendMessage(inputText, recipientId, 'text', replyingTo?.id);
+        const type = selectedImages.length > 0 ? 'image' : 'text';
+        await sendMessage(inputText, recipientId, type, replyingTo?.id, selectedImages);
       }
       setInputText('');
+      setSelectedImages([]);
       setReplyingTo(null);
       setTyping(recipientId, false);
       setIsTyping(false);
@@ -186,22 +192,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
         className="fixed inset-0 sm:inset-auto sm:bottom-4 sm:right-4 sm:w-[400px] sm:h-[600px] bg-[#2F244F] sm:border sm:border-[#3E3160] sm:rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden z-50"
       >
         {/* Header */}
-        <div className="p-4 sm:p-6 bg-[#3E3160]/50 border-b border-[#3E3160] flex items-center justify-between backdrop-blur-md shrink-0">
+        <div className="p-3 sm:p-4 bg-[#1a142e] border-b border-[#5C4B8B]/30 flex items-center justify-between shrink-0 z-20 shadow-md">
           <div className="flex items-center gap-3">
             <div className="relative">
               {recipientPhoto ? (
-                <img src={recipientPhoto} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover border-2 border-[#C3A6E6]/30" />
+                <img src={recipientPhoto} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl object-cover border-2 border-[#C3A6E6]/30 shadow-[0_0_10px_rgba(195,166,230,0.15)]" />
               ) : (
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#C3A6E6]/20 flex items-center justify-center border-2 border-[#C3A6E6]/30">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#C3A6E6]/20 flex items-center justify-center border-2 border-[#C3A6E6]/30 shadow-[0_0_10px_rgba(195,166,230,0.15)]">
                   <User className="w-5 h-5 text-[#C3A6E6]" />
                 </div>
               )}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#2F244F] rounded-full" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#1a142e] rounded-full shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
             </div>
             <div>
               <span className="font-black text-white text-sm sm:text-base uppercase tracking-wider block leading-none mb-1">{recipientName}</span>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest">Online</span>
+                <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                  Online
+                </span>
                 <span className="text-[8px] text-[#C3A6E6]/60 font-black uppercase tracking-tighter border border-[#C3A6E6]/20 px-1.5 py-0.5 rounded">Ministry E/D</span>
               </div>
             </div>
@@ -242,7 +251,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             <div 
               ref={messagesContainerRef}
               onScroll={handleScroll}
-              className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar bg-[#1A1528]/30 relative"
+              className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 custom-scrollbar bg-[#0f0c1b] relative"
             >
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4 opacity-40">
@@ -263,17 +272,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                     const showDateSeparator = !lastDate || !isSameDay(lastDate, msgDate);
                     lastDate = msgDate;
                     
-                    const isRead = currentChat?.lastReadAt?.[recipientId] && 
-                                   msg.createdAt && 
-                                   typeof msg.createdAt.toMillis === 'function' && 
-                                   typeof currentChat.lastReadAt[recipientId].toMillis === 'function' && 
-                                   msg.createdAt.toMillis() <= currentChat.lastReadAt[recipientId].toMillis();
+                    let isRead = false;
+                    if (currentChat?.lastReadAt?.[recipientId] && msg.createdAt) {
+                      const readAt = currentChat.lastReadAt[recipientId]?.toMillis?.() || currentChat.lastReadAt[recipientId];
+                      const msgAt = msg.createdAt?.toMillis?.() || msg.createdAt;
+                      if (readAt && msgAt) {
+                        isRead = msgAt <= readAt;
+                      }
+                    }
                     
                     return (
                       <React.Fragment key={msg.id || idx}>
                         {showDateSeparator && (
                           <div className="flex justify-center my-6">
-                            <span className="bg-[#2F244F]/80 text-gray-300 text-[10px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-full backdrop-blur-sm border border-[#5C4B8B]/30 shadow-lg">
+                            <span className="bg-[#2F244F] text-gray-300 text-[10px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-full border border-[#5C4B8B]/30 shadow-lg">
                               {formatDateSeparator(msgDate)}
                             </span>
                           </div>
@@ -324,12 +336,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                           )}
 
                           <div
-                            className={`max-w-[85%] p-3 sm:p-4 rounded-2xl text-sm sm:text-base shadow-lg relative ${
+                            className={`max-w-[85%] p-3 sm:p-4 rounded-2xl text-sm sm:text-base shadow-sm relative ${
                               msg.type === 'sticker' && !msg.isDeleted
                                 ? 'bg-transparent shadow-none p-0' 
                                 : isMe
-                                  ? 'bg-[#C3A6E6] text-[#2F244F] rounded-tr-none font-medium'
-                                  : 'bg-[#3E3160] text-gray-200 rounded-tl-none border border-[#5C4B8B]/30'
+                                  ? 'bg-[#C3A6E6] text-[#1a142e] rounded-tr-sm font-medium'
+                                  : 'bg-[#2F244F] text-gray-100 rounded-tl-sm border border-[#5C4B8B]/30'
                             } ${msg.isDeleted ? 'opacity-50 italic' : ''}`}
                           >
                             {repliedMsg && msg.type !== 'sticker' && !msg.isDeleted && (
@@ -351,16 +363,29 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             ) : msg.type === 'sticker' ? (
                               <div className="text-6xl filter drop-shadow-lg">{msg.text}</div>
                             ) : msg.type === 'image' ? (
-                              <img src={msg.text} alt="Sent image" className="max-w-[200px] sm:max-w-[250px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setFullscreenImage(msg.text)} />
+                              <div className="flex flex-col gap-2">
+                                {msg.images && msg.images.length > 0 ? (
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {msg.images.map((img, i) => (
+                                      <img key={i} src={img} alt="Sent image" className="max-w-full rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setFullscreenImage(img)} />
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <img src={msg.text} alt="Sent image" className="max-w-[200px] sm:max-w-[250px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setFullscreenImage(msg.text)} />
+                                )}
+                                {msg.text && msg.images && msg.images.length > 0 && (
+                                  <p className="break-words leading-relaxed mt-1">{msg.text}</p>
+                                )}
+                              </div>
                             ) : (
                               <p className="break-words leading-relaxed">{msg.text}</p>
                             )}
                             
-                            <div className={`text-[10px] mt-1 font-bold opacity-60 flex items-center gap-1 ${isMe ? 'justify-end' : 'justify-start'} ${msg.type === 'sticker' && !msg.isDeleted ? 'text-gray-400' : ''}`}>
+                            <div className={`text-[10px] mt-1.5 font-bold opacity-70 flex items-center gap-1 ${isMe ? 'justify-end' : 'justify-start'} ${msg.type === 'sticker' && !msg.isDeleted ? 'text-gray-400' : ''}`}>
                               {msg.isEdited && !msg.isDeleted && <span>(изменено)</span>}
                               {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'HH:mm') : ''}
                               {isMe && !msg.isDeleted && (
-                                isRead ? <CheckCheck className={`w-3 h-3 ml-0.5 ${msg.type === 'sticker' ? 'text-blue-400' : 'text-[#2F244F]'}`} /> : <Check className={`w-3 h-3 ml-0.5 ${msg.type === 'sticker' ? 'text-gray-400' : 'opacity-50'}`} />
+                                isRead ? <CheckCheck className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-blue-400' : 'text-[#1a142e]'}`} /> : <Check className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-gray-400' : 'opacity-60'}`} />
                               )}
                             </div>
                           </div>
@@ -409,7 +434,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             </AnimatePresence>
 
             {/* Input Area */}
-            <div className="bg-[#3E3160]/40 border-t border-[#3E3160] backdrop-blur-md shrink-0 relative">
+            <div className="bg-[#3E3160] border-t border-[#3E3160] shrink-0 relative">
               {/* Reply Banner */}
               <AnimatePresence>
                 {replyingTo && (
@@ -509,34 +534,60 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                 )}
               </AnimatePresence>
 
-              <form onSubmit={handleSend} className="p-4 sm:p-6 flex gap-2 sm:gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowStickers(!showStickers)}
-                  className={`shrink-0 p-3 sm:p-4 rounded-2xl transition-all ${showStickers ? 'bg-[#C3A6E6] text-[#2F244F]' : 'bg-[#2F244F] text-gray-400 hover:text-white border border-[#5C4B8B] hover:border-[#C3A6E6]'}`}
-                >
-                  <Sticker className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
-                <label className="shrink-0 p-3 sm:p-4 rounded-2xl transition-all bg-[#2F244F] text-gray-400 hover:text-white border border-[#5C4B8B] hover:border-[#C3A6E6] cursor-pointer flex items-center justify-center">
-                  <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" />
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={isSending} />
-                </label>
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={handleTyping}
-                  onKeyDown={handleKeyDown}
-                  disabled={isSending}
-                  placeholder={t.chatPlaceholder}
-                  className="flex-1 min-w-0 bg-[#2F244F] border border-[#5C4B8B] rounded-2xl px-4 sm:px-5 py-3 text-sm sm:text-base text-white outline-none focus:border-[#C3A6E6] transition-all disabled:opacity-50 placeholder:text-gray-500"
-                />
-                <button
-                  type="submit"
-                  disabled={!inputText.trim() || isSending}
-                  className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center bg-[#C3A6E6] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed text-[#2F244F] rounded-2xl transition-all active:scale-90 shadow-lg shadow-[#C3A6E6]/20 shrink-0"
-                >
-                  <Send className="w-5 h-5 sm:w-6 sm:h-6" />
-                </button>
+              <AnimatePresence>
+                {selectedImages.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="px-4 sm:px-6 pt-2 flex gap-2 overflow-x-auto"
+                  >
+                    {selectedImages.map((img, idx) => (
+                      <div key={idx} className="relative shrink-0">
+                        <img src={img} alt="Preview" className="w-16 h-16 object-cover rounded-xl border border-[#5C4B8B]" />
+                        <button
+                          type="button"
+                          onClick={() => removeSelectedImage(idx)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <form onSubmit={handleSend} className="p-2 sm:p-3 bg-[#1a142e] border-t border-[#5C4B8B]/30 z-20">
+                <div className="flex items-center gap-1 sm:gap-2 bg-[#0f0c1b] rounded-full p-1 border border-[#5C4B8B]/40 focus-within:border-[#C3A6E6]/50 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setShowStickers(!showStickers)}
+                    className={`shrink-0 p-2 sm:p-2.5 rounded-full transition-all ${showStickers ? 'bg-[#C3A6E6] text-[#1a142e]' : 'text-gray-400 hover:text-[#C3A6E6] hover:bg-[#2F244F]'}`}
+                  >
+                    <Sticker className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </button>
+                  <label className="shrink-0 p-2 sm:p-2.5 rounded-full transition-all text-gray-400 hover:text-[#C3A6E6] hover:bg-[#2F244F] cursor-pointer flex items-center justify-center">
+                    <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={isSending} />
+                  </label>
+                  <input
+                    type="text"
+                    value={inputText}
+                    onChange={handleTyping}
+                    onKeyDown={handleKeyDown}
+                    disabled={isSending}
+                    placeholder={t.chatPlaceholder}
+                    className="flex-1 min-w-0 bg-transparent px-2 py-2 text-sm sm:text-base text-white outline-none disabled:opacity-50 placeholder:text-gray-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={(!inputText.trim() && selectedImages.length === 0) || isSending}
+                    className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-[#C3A6E6] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed text-[#1a142e] rounded-full transition-all active:scale-95 shrink-0 mr-1"
+                  >
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5 ml-0.5" />
+                  </button>
+                </div>
               </form>
             </div>
           </>
@@ -551,7 +602,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
           onClick={() => setFullscreenImage(null)}
         >
           <button className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-white/20 text-white rounded-full transition-colors">

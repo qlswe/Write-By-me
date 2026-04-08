@@ -41,7 +41,7 @@ export const PerformanceWidget: React.FC = () => {
       animate={{ opacity: 1, x: 0 }}
       drag
       dragMomentum={false}
-      className="fixed top-20 right-4 z-[100] bg-[#2F244F]/80 backdrop-blur-md border border-[#5C4B8B] rounded-xl p-3 shadow-lg flex flex-col gap-2 cursor-move"
+      className="fixed top-20 right-4 z-[100] bg-[#2F244F] border border-[#5C4B8B] rounded-xl p-3 shadow-lg flex flex-col gap-2 cursor-move"
     >
       <div className="flex items-center gap-2 text-[#C3A6E6] text-xs font-bold uppercase tracking-wider pointer-events-none">
         <Activity size={14} />

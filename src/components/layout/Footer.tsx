@@ -15,7 +15,7 @@ export const Footer: React.FC<FooterProps> = ({ lang, setFeedbackOpen }) => {
   trackRender();
 
   return (
-    <footer className="bg-[#3E3160]/90 backdrop-blur-md border-t border-[#5C4B8B] mt-auto relative z-10">
+    <footer className="bg-[#3E3160] border-t border-[#5C4B8B] mt-auto relative z-10">
       <div className="max-w-5xl mx-auto px-4 py-12">
         <DailyFortune lang={lang} />
         

@@ -144,7 +144,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
 
   if (!user) {
     return (
-      <div className="text-center py-16 bg-[#2F244F]/20 rounded-3xl border border-[#5C4B8B]/20 backdrop-blur-xl">
+      <div className="text-center py-16 bg-[#2F244F]/20 rounded-3xl border border-[#5C4B8B]/20">
         <User className="mx-auto mb-6 text-gray-600" size={48} />
         <p className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">
           {lang === 'ru' ? "Войдите, чтобы просматривать сообщения" : "Log in to view your chats"}

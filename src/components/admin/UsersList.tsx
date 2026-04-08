@@ -107,7 +107,7 @@ const UserListItem = React.memo(({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-[#2F244F]/50 backdrop-blur-md border border-[#5C4B8B]/30 rounded-3xl p-5 flex items-center justify-between gap-4 group hover:border-[#C3A6E6]/30 transition-all hover:bg-[#3E3160] relative ${openDropdownId === user.uid ? 'z-50' : 'z-10'}`}
+      className={`bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-5 flex items-center justify-between gap-4 group hover:border-[#C3A6E6]/30 transition-all hover:bg-[#3E3160] relative ${openDropdownId === user.uid ? 'z-50' : 'z-10'}`}
     >
       <div className="flex items-center gap-5 flex-1 min-w-0">
         <button 

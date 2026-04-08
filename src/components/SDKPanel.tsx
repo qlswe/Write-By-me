@@ -144,7 +144,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`fixed z-40 bg-[#1a142e]/95 backdrop-blur-xl border border-[#5C4B8B]/50 shadow-2xl rounded-2xl flex flex-col overflow-hidden ${
+            className={`fixed z-40 bg-[#1a142e] border border-[#5C4B8B]/50 shadow-2xl rounded-2xl flex flex-col overflow-hidden ${
               isExpanded 
                 ? 'inset-4 md:inset-10' 
                 : 'bottom-24 right-6 w-[90vw] md:w-[450px] h-[60vh] max-h-[600px]'
