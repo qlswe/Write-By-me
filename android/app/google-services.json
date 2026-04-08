@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "366592294570",
+    "firebase_url": "https://wbm-static-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "wbm-static",
+    "storage_bucket": "wbm-static.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:366592294570:android:46c9aa8d448cf9a1279ad3",
+        "android_client_info": {
+          "package_name": "com.aha.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "366592294570-nmkq10g457q04hn0sr0gfnbpbvhlussi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB51deTwuxYKJJt_iEF8Od6yLoDwEgWoIk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "366592294570-nmkq10g457q04hn0sr0gfnbpbvhlussi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
