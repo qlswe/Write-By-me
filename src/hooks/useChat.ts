@@ -159,6 +159,17 @@ export function useChat(otherUserId?: string) {
             updates[`reactions.${emoji}`] = newUsers;
           }
         } else {
+          // Remove user from all other reactions
+          Object.keys(reactions).forEach(existingKey => {
+            if (existingKey !== emoji && reactions[existingKey].includes(user.uid)) {
+              const remainingUsers = reactions[existingKey].filter((id: string) => id !== user.uid);
+              if (remainingUsers.length === 0) {
+                updates[`reactions.${existingKey}`] = deleteField();
+              } else {
+                updates[`reactions.${existingKey}`] = remainingUsers;
+              }
+            }
+          });
           updates[`reactions.${emoji}`] = [...usersForEmoji, user.uid];
         }
         

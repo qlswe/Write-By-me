@@ -11,6 +11,8 @@ interface SDKPanelProps {
   toggleProductionMode: () => void;
   lowPerfMode: boolean;
   toggleLowPerfMode: () => void;
+  showLoadWidget: boolean;
+  toggleLoadWidget: () => void;
 }
 
 export const SDKPanel: React.FC<SDKPanelProps> = ({ 
@@ -18,7 +20,9 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
   productionMode, 
   toggleProductionMode,
   lowPerfMode,
-  toggleLowPerfMode
+  toggleLowPerfMode,
+  showLoadWidget,
+  toggleLoadWidget
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'sdk'>('chat');
@@ -321,6 +325,23 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                         className={`w-12 h-6 rounded-full transition-colors relative ${lowPerfMode ? 'bg-[#C3A6E6]' : 'bg-gray-600'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${lowPerfMode ? 'left-7' : 'left-1'}`} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-[#2F244F]/40 rounded-xl border border-[#5C4B8B]/30">
+                      <div>
+                        <div className="font-bold text-white text-sm mb-1">
+                          {lang === 'ru' ? 'Виджет нагрузки' : 'Load Widget'}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {lang === 'ru' ? 'Показывать виджет производительности' : 'Show performance widget'}
+                        </div>
+                      </div>
+                      <button 
+                        onClick={toggleLoadWidget}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${showLoadWidget ? 'bg-[#C3A6E6]' : 'bg-gray-600'}`}
+                      >
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${showLoadWidget ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
                   </div>

@@ -1040,8 +1040,8 @@ export class MinistrySDK {
           description: "Комплексный набор инструментов для разработчиков и системных администраторов в экосистеме Ахи.",
           useCases: [
             "Интеграция ИИ: Использование собственной нейросети для динамических диалогов и анализа лора Honkai: Star Rail.",
-            "Локальный движок лора: Резервная система ответов на основе ключевых слов по вселенной HSR.",
-            "Терминал: Симуляция командной строки для взаимодействия с ИИ и системой.",
+            "Радиостанция Ахи: Бесконечная генерация самых несмешных шуток, озвученных ИИ.",
+            "Социальные функции: Блог, теории, чаты в реальном времени и система комментариев.",
             "Логирование и Мониторинг: Отслеживание производительности и взаимодействий в реальном времени.",
             "Доступ к оборудованию: Управление буфером обмена и функциями обмена."
           ],
@@ -1053,8 +1053,8 @@ export class MinistrySDK {
         description: "A comprehensive toolkit for game developers and system administrators within the Aha ecosystem.",
         useCases: [
           "AI Integration: Leverage custom neural network for dynamic dialogue and Honkai: Star Rail lore analysis.",
-          "Local Lore Engine: Fallback keyword-based response system for HSR universe.",
-          "Terminal: Command-line simulation for interacting with AI and the system.",
+          "Aha Radio Station: Endless generation of the least funny jokes, voiced by AI.",
+          "Social Features: Blog, theories, real-time chats, and commenting system.",
           "Logging & Monitoring: Track performance and user interactions in real-time.",
           "Hardware Access: Control clipboard and sharing features."
         ],

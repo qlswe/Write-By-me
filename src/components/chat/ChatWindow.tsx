@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 
 const STICKERS = ['👋', '👍', '❤️', '😂', '🔥', '🎉', '👀', '💯'];
-import { REACTIONS } from '../../constants/reactions';
+import { CHAT_REACTIONS } from '../../constants/reactions';
 
 interface ChatWindowProps {
   recipientId: string;
@@ -27,7 +27,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [showStickers, setShowStickers] = useState(false);
-  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -253,6 +253,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
               onScroll={handleScroll}
               className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4 custom-scrollbar bg-[#0f0c1b] relative"
             >
+              {activeMessageId && (
+                <div className="fixed inset-0 z-40" onClick={() => setActiveMessageId(null)} />
+              )}
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4 opacity-40">
                   <div className="w-16 h-16 bg-[#C3A6E6]/5 rounded-full flex items-center justify-center border border-[#C3A6E6]/10">
@@ -294,49 +297,63 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                           initial={{ opacity: 0, x: isMe ? 20 : -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group`}
-                          onMouseEnter={() => setHoveredMessageId(msg.id)}
-                          onMouseLeave={() => setHoveredMessageId(null)}
                         >
-                          {/* Hover Actions */}
-                          {hoveredMessageId === msg.id && !msg.isDeleted && (
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className={`absolute -top-7 sm:-top-10 ${isMe ? 'right-0' : 'left-0'} bg-[#2F244F] border border-[#5C4B8B] rounded-lg sm:rounded-xl p-0.5 sm:p-1 flex gap-0.5 sm:gap-1 shadow-xl z-10`}
-                            >
-                              <button onClick={() => setReplyingTo(msg)} className="p-1 sm:p-1.5 hover:bg-[#C3A6E6]/20 rounded-md sm:rounded-lg text-gray-400 hover:text-[#C3A6E6] transition-colors" title="Ответить">
-                                <Reply className="w-3 h-3 sm:w-4 sm:h-4" />
-                              </button>
-                              {msg.type !== 'sticker' && (
-                                <button onClick={() => handleCopy(msg.text)} className="p-1 sm:p-1.5 hover:bg-[#C3A6E6]/20 rounded-md sm:rounded-lg text-gray-400 hover:text-[#C3A6E6] transition-colors" title="Копировать">
-                                  <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
-                                </button>
-                              )}
-                              {isMe && msg.type !== 'sticker' && (
-                                <button onClick={() => { setEditingMessage(msg); setInputText(msg.text); }} className="p-1 sm:p-1.5 hover:bg-[#C3A6E6]/20 rounded-md sm:rounded-lg text-gray-400 hover:text-[#C3A6E6] transition-colors" title="Редактировать">
-                                  <Pencil className="w-3 h-3 sm:w-4 sm:h-4" />
-                                </button>
-                              )}
-                              {isMe && (
-                                <button onClick={() => deleteMessage(msg.id, recipientId)} className="p-1 sm:p-1.5 hover:bg-red-500/20 rounded-md sm:rounded-lg text-gray-400 hover:text-red-400 transition-colors" title="Удалить">
-                                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                                </button>
-                              )}
-                              <div className="w-px bg-[#5C4B8B] mx-0.5 sm:mx-1" />
-                              {REACTIONS.map(emoji => (
-                                <button 
-                                  key={emoji}
-                                  onClick={() => toggleReaction(msg.id, recipientId, emoji)}
-                                  className="p-1 sm:p-1.5 hover:bg-[#C3A6E6]/20 rounded-md sm:rounded-lg text-[10px] sm:text-sm transition-transform hover:scale-125"
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
-                            </motion.div>
-                          )}
+                          {/* Modern Action Menu */}
+                          <AnimatePresence>
+                            {activeMessageId === msg.id && !msg.isDeleted && (
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                className={`absolute z-50 flex flex-col gap-2 ${isMe ? 'right-0 items-end' : 'left-0 items-start'} bottom-full mb-2`}
+                              >
+                                {/* Reactions Row */}
+                                <div className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-1.5 flex gap-1 shadow-2xl">
+                                  {CHAT_REACTIONS.map(emoji => (
+                                    <button 
+                                      key={emoji}
+                                      onClick={(e) => { e.stopPropagation(); toggleReaction(msg.id, recipientId, emoji); setActiveMessageId(null); }}
+                                      className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center hover:bg-[#C3A6E6]/20 rounded-xl text-lg sm:text-xl transition-transform hover:scale-125"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                                
+                                {/* Actions Row */}
+                                <div className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-1 flex flex-col shadow-2xl min-w-[160px]">
+                                  <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); setActiveMessageId(null); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                                    <Reply className="w-4 h-4" /> Ответить
+                                  </button>
+                                  {msg.type !== 'sticker' && (
+                                    <button onClick={(e) => { e.stopPropagation(); handleCopy(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                                      <Copy className="w-4 h-4" /> Копировать
+                                    </button>
+                                  )}
+                                  {isMe && msg.type !== 'sticker' && (
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingMessage(msg); setInputText(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-sm font-medium">
+                                      <Pencil className="w-4 h-4" /> Изменить
+                                    </button>
+                                  )}
+                                  {isMe && (
+                                    <button onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id, recipientId); setActiveMessageId(null); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-red-400 hover:text-red-300 transition-colors text-sm font-medium">
+                                      <Trash2 className="w-4 h-4" /> Удалить
+                                    </button>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
 
                           <div
-                            className={`max-w-[85%] p-3 sm:p-4 rounded-2xl text-sm sm:text-base shadow-sm relative ${
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!msg.isDeleted) {
+                                setActiveMessageId(activeMessageId === msg.id ? null : msg.id);
+                              }
+                            }}
+                            className={`max-w-[85%] p-3 sm:p-4 rounded-2xl text-sm sm:text-base shadow-sm relative cursor-pointer transition-transform active:scale-[0.98] ${
                               msg.type === 'sticker' && !msg.isDeleted
                                 ? 'bg-transparent shadow-none p-0' 
                                 : isMe

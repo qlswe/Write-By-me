@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -38,8 +38,9 @@ const ChronicleSection = lazy(() => import('./components/sections/ChronicleSecti
 const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
 const UsersList = lazy(() => import('./components/admin/UsersList').then(m => ({ default: m.UsersList })));
 const ChatsList = lazy(() => import('./components/chat/ChatsList').then(m => ({ default: m.ChatsList })));
+const AhiRadio = lazy(() => import('./components/sections/AhiRadio').then(m => ({ default: m.AhiRadio })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio';
 
 let hasPrintedStopWarning = false;
 
@@ -120,6 +121,19 @@ export default function App() {
   const { chats } = useChat();
   const notifiedChats = useRef<Record<string, number>>({});
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const [showLoadWidget, setShowLoadWidget] = useState(() => {
+    const saved = localStorage.getItem('showLoadWidget');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  const toggleLoadWidget = () => {
+    setShowLoadWidget((prev: boolean) => {
+      const next = !prev;
+      localStorage.setItem('showLoadWidget', JSON.stringify(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     // Request notification permission on load
@@ -242,6 +256,7 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
+    { id: 'radio' as const, label: lang === 'ru' ? 'Радио Ахи' : 'Aha Radio', icon: Radio },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
     { id: 'chronicle', label: t.navChronicle, icon: RefreshCw },
@@ -320,9 +335,11 @@ export default function App() {
         toggleProductionMode={toggleProductionMode}
         lowPerfMode={lowPerfMode}
         toggleLowPerfMode={toggleLowPerfMode}
+        showLoadWidget={showLoadWidget}
+        toggleLoadWidget={toggleLoadWidget}
       />
       <Starfield lowPerfMode={lowPerfMode || !productionMode} />
-      <PerformanceWidget />
+      {showLoadWidget && <PerformanceWidget />}
       
       <Header 
         lang={lang as Language} 
@@ -389,6 +406,10 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+              )}
+
+              {section === 'radio' && (
+                <AhiRadio lang={lang as Language} />
               )}
 
               {section === 'theories' && (

@@ -6,7 +6,7 @@ import { Heart, ThumbsUp, Laugh, MessageCircle, Flame, Sparkles, Ghost } from 'l
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { Language, translations } from '../../data/translations';
 
-import { REACTIONS as STANDARD_REACTIONS } from '../../constants/reactions';
+import { POST_REACTIONS as STANDARD_REACTIONS } from '../../constants/reactions';
 
 interface ReactionsBarProps {
   targetId: string;
@@ -54,6 +54,12 @@ export const ReactionsBar: React.FC<ReactionsBarProps> = ({ targetId, lang, coll
       if (usersForEmoji.includes(user.uid)) {
         updates[`reactions.${key}`] = arrayRemove(user.uid);
       } else {
+        // Enforce 1 reaction per user: remove from all other emojis
+        Object.keys(currentReactions).forEach(existingKey => {
+          if (existingKey !== key && currentReactions[existingKey].includes(user.uid)) {
+            updates[`reactions.${existingKey}`] = arrayRemove(user.uid);
+          }
+        });
         updates[`reactions.${key}`] = arrayUnion(user.uid);
       }
       
