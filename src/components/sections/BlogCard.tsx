@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Star, Edit, Trash2, ArrowRight, Calendar, Share2 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
-import { sdk } from '../../sdk';
+import { TimeAgo } from '../ui/TimeAgo';
 
 
 interface BlogCardProps {
@@ -51,7 +51,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
           </div>
           <div className="flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
             <Calendar size={10} />
-            {sdk.data.formatDate(post.createdAt, lang)}
+            <TimeAgo date={post.createdAt} lang={lang} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0 justify-end">

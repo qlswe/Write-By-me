@@ -39,8 +39,9 @@ const PromoSection = lazy(() => import('./components/sections/PromoSection').the
 const UsersList = lazy(() => import('./components/admin/UsersList').then(m => ({ default: m.UsersList })));
 const ChatsList = lazy(() => import('./components/chat/ChatsList').then(m => ({ default: m.ChatsList })));
 const AhiRadio = lazy(() => import('./components/sections/AhiRadio').then(m => ({ default: m.AhiRadio })));
+const ForumSection = lazy(() => import('./components/sections/ForumSection').then(m => ({ default: m.ForumSection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum';
 
 let hasPrintedStopWarning = false;
 
@@ -256,6 +257,7 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
+    { id: 'forum' as const, label: lang === 'ru' ? 'Форум Ахи' : 'Aha Forum', icon: MessageSquare },
     { id: 'radio' as const, label: lang === 'ru' ? 'Радио Ахи' : 'Aha Radio', icon: Radio },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
@@ -406,6 +408,14 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+              )}
+
+              {section === 'forum' && (
+                <ForumSection 
+                  lang={lang as Language}
+                  onOpenChat={(uid, name) => setActiveChat({ uid, displayName: name })}
+                  role={role}
+                />
               )}
 
               {section === 'radio' && (

@@ -298,38 +298,41 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                           animate={{ opacity: 1, x: 0 }}
                           className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group`}
                         >
-                          {/* Modern Action Menu */}
+                          {/* Modern Action Menu - Centered Modal */}
                           <AnimatePresence>
                             {activeMessageId === msg.id && !msg.isDeleted && (
-                              <motion.div 
-                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                className={`absolute z-50 flex flex-col gap-2 ${isMe ? 'right-0 items-end' : 'left-0 items-start'} ${idx < 3 ? 'top-full mt-2' : 'bottom-full mb-2'}`}
-                              >
-                                {/* Actions Row */}
-                                <div className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-1 flex flex-col shadow-2xl min-w-[160px]">
-                                  <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); setActiveMessageId(null); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-sm font-medium">
-                                    <Reply className="w-4 h-4" /> Ответить
+                              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={(e) => { e.stopPropagation(); setActiveMessageId(null); }}>
+                                <motion.div 
+                                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                  className="bg-[#2F244F] border border-[#5C4B8B] rounded-3xl p-2 flex flex-col shadow-2xl w-full max-w-xs"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="px-4 py-3 border-b border-[#5C4B8B]/50 mb-1">
+                                    <h4 className="text-white font-bold text-center">Действия</h4>
+                                  </div>
+                                  <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
+                                    <Reply className="w-5 h-5 text-[#C3A6E6]" /> Ответить
                                   </button>
                                   {msg.type !== 'sticker' && (
-                                    <button onClick={(e) => { e.stopPropagation(); handleCopy(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-sm font-medium">
-                                      <Copy className="w-4 h-4" /> Копировать
+                                    <button onClick={(e) => { e.stopPropagation(); handleCopy(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
+                                      <Copy className="w-5 h-5 text-[#C3A6E6]" /> Копировать
                                     </button>
                                   )}
                                   {isMe && msg.type !== 'sticker' && (
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingMessage(msg); setInputText(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-sm font-medium">
-                                      <Pencil className="w-4 h-4" /> Изменить
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingMessage(msg); setInputText(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
+                                      <Pencil className="w-5 h-5 text-[#C3A6E6]" /> Изменить
                                     </button>
                                   )}
                                   {isMe && (
-                                    <button onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id, recipientId); setActiveMessageId(null); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-red-500/10 rounded-xl text-red-400 hover:text-red-300 transition-colors text-sm font-medium">
-                                      <Trash2 className="w-4 h-4" /> Удалить
+                                    <button onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id, recipientId); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-red-500/10 rounded-xl text-red-400 hover:text-red-300 transition-colors text-base font-medium mt-1 border-t border-[#5C4B8B]/30">
+                                      <Trash2 className="w-5 h-5" /> Удалить
                                     </button>
                                   )}
-                                </div>
-                              </motion.div>
+                                </motion.div>
+                              </div>
                             )}
                           </AnimatePresence>
 

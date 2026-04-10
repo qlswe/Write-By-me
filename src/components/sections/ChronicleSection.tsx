@@ -42,8 +42,8 @@ const EventCard = React.memo(({
   onEdit?: (event: any) => void, 
   onDelete: (id: string) => void 
 }) => {
-  const { nextDate, progress } = getEventProgress(event);
-  const countdown = formatCountdown(nextDate, t, lang);
+  const { nextDate, progress } = getEventProgress(event, now);
+  const countdown = formatCountdown(nextDate, t, lang, now);
   
   return (
     <motion.div 
@@ -149,7 +149,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(new Date());
-    }, 60000); // Update every minute instead of every second to save performance
+    }, 1000); // Update every second for dynamic countdown
     return () => clearInterval(timer);
   }, []);
 

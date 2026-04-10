@@ -9,6 +9,9 @@ import { Trash2, Send, Heart, Edit2, X, Check, MessageCircle, ChevronDown, Chevr
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { GoogleGenAI } from '@google/genai';
+
+const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || 'dummy' });
 
 interface Comment {
   id: string;
@@ -90,6 +93,34 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     return () => unsubscribe();
   }, [targetId]);
 
+  const moderateContent = async (text: string): Promise<boolean> => {
+    try {
+      if (!(import.meta as any).env.VITE_GEMINI_API_KEY && !process.env.GEMINI_API_KEY) return true;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `You are an automated moderation bot for a forum called "Форум Ахи". 
+Analyze the following text and determine if it contains severe profanity, hate speech, illegal content, or extreme toxicity.
+Respond ONLY with a JSON object in the following format:
+{"isApproved": true/false}
+
+Text to analyze:
+"${text}"`
+      });
+      const resultText = response.text;
+      if (resultText) {
+        const match = resultText.match(/\{.*\}/s);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          return parsed.isApproved;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('Moderation error:', error);
+      return true; // fail open
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent, parentId?: string) => {
     e.preventDefault();
     const content = parentId ? replyContent : newComment;
@@ -97,6 +128,13 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
 
     setIsSubmitting(true);
     try {
+      const isApproved = await moderateContent(content);
+      if (!isApproved) {
+        alert(lang === 'ru' ? 'Ваш комментарий был отклонен автоматической модерацией.' : 'Your comment was rejected by automatic moderation.');
+        setIsSubmitting(false);
+        return;
+      }
+
       await addDoc(collection(db, 'comments'), {
         targetId,
         parentId: parentId || null,
@@ -370,7 +408,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
               </button>
             </div>
 
-            {!isReply && user && (
+            {user && (
               <button
                 onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
                 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-[#C3A6E6] transition-all px-4 py-2 rounded-xl hover:bg-[#C3A6E6]/10 border border-transparent hover:border-[#C3A6E6]/30"
@@ -383,6 +421,48 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
         </div>
       </div>
     </div>
+    );
+  };
+
+  const renderCommentTree = (parentId: string | null = null, depth: number = 0) => {
+    const commentsAtLevel = parentId ? (repliesMap[parentId] || []) : topLevelComments;
+    
+    if (commentsAtLevel.length === 0) return null;
+
+    return (
+      <div className={`space-y-4 ${depth > 0 ? 'ml-4 sm:ml-8 mt-4 border-l-2 border-[#5C4B8B]/30 pl-4 sm:pl-6' : ''}`}>
+        {commentsAtLevel.map(comment => (
+          <div key={comment.id} className="space-y-4">
+            {renderCommentContent(comment, depth > 0)}
+            
+            {/* Recursive Replies */}
+            {renderCommentTree(comment.id, depth + 1)}
+
+            {/* Reply Input */}
+            {replyingTo === comment.id && (
+              <div className={`mt-4 ${depth === 0 ? 'ml-4 sm:ml-8 pl-4 sm:pl-6 border-l-2 border-[#5C4B8B]/30' : ''}`}>
+                <form onSubmit={(e) => handleSubmit(e, comment.id)} className="relative group">
+                  <textarea
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, comment.id)}
+                    placeholder={t.writeReply || "Написать ответ..."}
+                    className="w-full bg-[#2F244F]/30 border border-[#5C4B8B]/20 rounded-2xl p-4 pr-14 text-gray-200 focus:outline-none focus:border-[#C3A6E6]/50 focus:bg-[#2F244F]/50 transition-all resize-none min-h-[100px] text-sm font-medium"
+                    maxLength={1000}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!replyContent.trim() || isSubmitting}
+                    className="absolute bottom-4 right-4 p-2.5 bg-[#C3A6E6] text-[#2F244F] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B396D6] hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(195,166,230,0.3)]"
+                  >
+                    <Send size={16} />
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     );
   };
 
@@ -431,45 +511,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
       )}
 
       <div className="space-y-10">
-        {topLevelComments.map((comment) => {
-          const replies = repliesMap[comment.id] || [];
-          
-          return (
-            <div key={comment.id} className="space-y-4">
-              {renderCommentContent(comment, false)}
-              
-              {/* Replies */}
-              {replies.length > 0 && (
-                <div className="ml-6 sm:ml-16 mt-4 space-y-0 border-l-2 border-[#2F244F] pl-4 sm:pl-8">
-                  {replies.map(reply => renderCommentContent(reply, true))}
-                </div>
-              )}
-
-              {/* Reply Input */}
-              {replyingTo === comment.id && (
-                <div className="ml-6 sm:ml-16 mt-6 pl-4 sm:pl-8 border-l-2 border-transparent">
-                  <form onSubmit={(e) => handleSubmit(e, comment.id)} className="relative group">
-                    <textarea
-                      value={replyContent}
-                      onChange={(e) => setReplyContent(e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, comment.id)}
-                      placeholder={t.writeReply || "Написать ответ..."}
-                      className="w-full bg-[#2F244F]/30 border border-[#5C4B8B]/20 rounded-2xl p-4 pr-14 text-gray-200 focus:outline-none focus:border-[#C3A6E6]/50 focus:bg-[#2F244F]/50 transition-all resize-none min-h-[100px] text-sm font-medium"
-                      maxLength={1000}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!replyContent.trim() || isSubmitting}
-                      className="absolute bottom-4 right-4 p-3 bg-[#C3A6E6] text-[#2F244F] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B396D6] hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(195,166,230,0.3)] border border-white/20"
-                    >
-                      <Send size={16} />
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {renderCommentTree(null, 0)}
       </div>
 
       <ConfirmModal

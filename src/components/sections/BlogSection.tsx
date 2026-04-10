@@ -11,7 +11,7 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { useAuth } from '../../hooks/useAuth';
-import { sdk } from '../../sdk';
+import { TimeAgo } from '../ui/TimeAgo';
 
 import { ConfirmModal } from '../ui/ConfirmModal';
 
@@ -82,7 +82,6 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
 
   const handlePostClick = useCallback((id: string) => {
     setSelectedPostId(id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const handleToggleFavorite = useCallback((id: string, e: React.MouseEvent) => {
@@ -90,6 +89,12 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   }, [toggleFavorite]);
 
   const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedPostId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [selectedPostId]);
 
   useEffect(() => {
     if (contentRef.current) {
@@ -135,7 +140,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                   </span>
                   <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
                     <Clock size={12} />
-                    {sdk.data.formatDate(selectedPost.createdAt, lang)}
+                    <TimeAgo date={selectedPost.createdAt} lang={lang} />
                   </div>
                 </div>
                 <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight tracking-tighter">

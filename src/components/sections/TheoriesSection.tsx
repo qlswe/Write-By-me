@@ -11,7 +11,7 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { useAuth } from '../../hooks/useAuth';
-import { sdk } from '../../sdk';
+import { TimeAgo } from '../ui/TimeAgo';
 
 import { ConfirmModal } from '../ui/ConfirmModal';
 
@@ -107,8 +107,13 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
 
   const handleTheoryClick = useCallback((id: string) => {
     setSelectedTheoryId(id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  useEffect(() => {
+    if (selectedTheoryId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [selectedTheoryId]);
 
   const handleToggleFavorite = useCallback((id: string, e: React.MouseEvent) => {
     toggleFavorite(id, e);
@@ -160,7 +165,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                   </span>
                   <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
                     <Clock size={12} />
-                    {sdk.data.formatDate(selectedTheory.createdAt, lang)}
+                    <TimeAgo date={selectedTheory.createdAt} lang={lang} />
                   </div>
                 </div>
                 <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight tracking-tighter">

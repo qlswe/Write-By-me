@@ -53,29 +53,37 @@ const RoleSelector: React.FC<{
       
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute right-0 mt-2 w-40 bg-[#2F244F] border border-[#5C4B8B] rounded-xl shadow-xl overflow-hidden z-50"
-          >
-            {roles.map((role) => (
-              <button
-                key={role.value}
-                onClick={() => {
-                  updateUserRole(user.uid, role.value as any);
-                  onClose();
-                }}
-                className={`w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
-                  user.role === role.value 
-                    ? 'bg-[#C3A6E6] text-[#2F244F]' 
-                    : 'text-white hover:bg-[#5C4B8B]/50'
-                }`}
-              >
-                {role.label}
-              </button>
-            ))}
-          </motion.div>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="w-full max-w-xs bg-[#2F244F] border border-[#5C4B8B] rounded-3xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 py-3 border-b border-[#5C4B8B]/50 bg-[#1A1625]/50">
+                <h4 className="text-white font-bold text-center uppercase tracking-widest text-xs">Выберите роль</h4>
+              </div>
+              <div className="flex flex-col p-2 gap-1">
+                {roles.map((role) => (
+                  <button
+                    key={role.value}
+                    onClick={() => {
+                      updateUserRole(user.uid, role.value as any);
+                      onClose();
+                    }}
+                    className={`w-full text-left px-4 py-3.5 text-sm font-black uppercase tracking-widest transition-colors rounded-xl ${
+                      user.role === role.value 
+                        ? 'bg-[#C3A6E6] text-[#2F244F]' 
+                        : 'text-white hover:bg-[#5C4B8B]/50'
+                    }`}
+                  >
+                    {role.label}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
@@ -189,7 +197,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-32">
       {users.length > 0 && (
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
