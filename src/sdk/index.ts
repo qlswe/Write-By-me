@@ -493,8 +493,26 @@ export class MinistrySDK {
     formatDate: (date: any, lang: Language = 'ru'): string => {
       if (!date) return '---';
       try {
-        const d = new Date(date);
+        const d = typeof date?.toDate === 'function' ? date.toDate() : new Date(date);
         if (isNaN(d.getTime())) return '---';
+        
+        const now = new Date();
+        const diffMs = now.getTime() - d.getTime();
+        const diffSecs = Math.floor(diffMs / 1000);
+        const diffMins = Math.floor(diffSecs / 60);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffSecs < 60) {
+          return lang === 'ru' ? 'Только что' : 'Just now';
+        } else if (diffMins < 60) {
+          return lang === 'ru' ? `${diffMins} мин. назад` : `${diffMins} min ago`;
+        } else if (diffHours < 24) {
+          return lang === 'ru' ? `${diffHours} ч. назад` : `${diffHours} h ago`;
+        } else if (diffDays < 7) {
+          return lang === 'ru' ? `${diffDays} дн. назад` : `${diffDays} d ago`;
+        }
+
         return d.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', {
           year: 'numeric',
           month: 'long',

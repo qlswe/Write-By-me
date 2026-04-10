@@ -306,21 +306,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
                                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                className={`absolute z-50 flex flex-col gap-2 ${isMe ? 'right-0 items-end' : 'left-0 items-start'} bottom-full mb-2`}
+                                className={`absolute z-50 flex flex-col gap-2 ${isMe ? 'right-0 items-end' : 'left-0 items-start'} ${idx < 3 ? 'top-full mt-2' : 'bottom-full mb-2'}`}
                               >
-                                {/* Reactions Row */}
-                                <div className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-1.5 flex gap-1 shadow-2xl">
-                                  {CHAT_REACTIONS.map(emoji => (
-                                    <button 
-                                      key={emoji}
-                                      onClick={(e) => { e.stopPropagation(); toggleReaction(msg.id, recipientId, emoji); setActiveMessageId(null); }}
-                                      className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center hover:bg-[#C3A6E6]/20 rounded-xl text-lg sm:text-xl transition-transform hover:scale-125"
-                                    >
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                                
                                 {/* Actions Row */}
                                 <div className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-1 flex flex-col shadow-2xl min-w-[160px]">
                                   <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); setActiveMessageId(null); }} className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-sm font-medium">
@@ -406,26 +393,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               )}
                             </div>
                           </div>
-
-                          {/* Reactions */}
-                          {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                            <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                              {Object.entries(msg.reactions).map(([emoji, users]) => (
-                                <button
-                                  key={emoji}
-                                  onClick={() => toggleReaction(msg.id, recipientId, emoji)}
-                                  className={`text-xs px-1.5 py-0.5 rounded-full border flex items-center gap-1 ${
-                                    users.includes(user?.uid || '') 
-                                      ? 'bg-[#C3A6E6]/20 border-[#C3A6E6]/50 text-white' 
-                                      : 'bg-[#2F244F]/50 border-[#5C4B8B]/50 text-gray-300'
-                                  }`}
-                                >
-                                  <span>{emoji}</span>
-                                  <span className="text-[10px] opacity-70">{users.length}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
                         </motion.div>
                       </React.Fragment>
                     );

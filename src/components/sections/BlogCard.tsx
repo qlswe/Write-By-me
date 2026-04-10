@@ -4,7 +4,7 @@ import { Star, Edit, Trash2, ArrowRight, Calendar, Share2 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { sdk } from '../../sdk';
-import { ReactionsBar } from '../ui/ReactionsBar';
+
 
 interface BlogCardProps {
   post: any;
@@ -104,7 +104,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
 
       <div className="flex flex-col gap-4 mt-auto">
         <div className="flex items-center justify-between">
-          <ReactionsBar targetId={post.id} lang={lang} />
+
           
           <div className="flex items-center gap-2 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-x-0 sm:translate-x-[-10px] sm:group-hover:translate-x-0">
             {t.readArticle} <ArrowRight size={12} />

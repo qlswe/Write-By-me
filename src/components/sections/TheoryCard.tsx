@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Star, Share2, Check, Edit, Trash2, ArrowRight } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
-import { ReactionsBar } from '../ui/ReactionsBar';
+
 
 interface TheoryCardProps {
   theory: any;
@@ -119,7 +119,7 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
 
       <div className="flex flex-col gap-4 mt-auto">
         <div className="flex items-center justify-between">
-          <ReactionsBar targetId={theory.id} lang={lang} />
+
           
           <div className="flex items-center gap-2 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-x-0 sm:translate-x-[-10px] sm:group-hover:translate-x-0">
             {t.readArchive} <ArrowRight size={12} />

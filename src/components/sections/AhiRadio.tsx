@@ -265,15 +265,19 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   };
 
   useEffect(() => {
-    // Load voices early
-    window.speechSynthesis.getVoices();
+    // Load voices early if supported
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+    }
     
     return () => {
       if (utteranceRef.current) {
         utteranceRef.current.onend = null;
         utteranceRef.current.onerror = null;
       }
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, []);
 
@@ -354,20 +358,20 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
           )}
         </div>
 
-        <div className="h-20 flex flex-col items-center justify-center">
+        <div className="min-h-[5rem] flex flex-col items-center justify-center w-full px-4">
           {isPlaying && currentJoke && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               key={currentJoke}
-              className="text-lg sm:text-xl font-medium text-white max-w-2xl italic"
+              className="text-base sm:text-lg md:text-xl font-medium text-white max-w-2xl italic w-full text-center break-words"
             >
               "{currentJoke}"
             </motion.div>
           )}
-          <div className="text-sm text-[#C3A6E6] mt-4 font-mono uppercase tracking-widest flex items-center gap-2">
-            {isPlaying && <Volume2 className="w-4 h-4" />}
-            {statusText}
+          <div className="text-xs sm:text-sm text-[#C3A6E6] mt-4 font-mono uppercase tracking-widest flex items-center gap-2">
+            {isPlaying && <Volume2 className="w-4 h-4 shrink-0" />}
+            <span className="truncate">{statusText}</span>
           </div>
         </div>
       </div>

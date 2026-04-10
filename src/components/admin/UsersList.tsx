@@ -107,9 +107,9 @@ const UserListItem = React.memo(({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-5 flex items-center justify-between gap-4 group hover:border-[#C3A6E6]/30 transition-all hover:bg-[#3E3160] relative ${openDropdownId === user.uid ? 'z-50' : 'z-10'}`}
+      className={`bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-[#C3A6E6]/30 transition-all hover:bg-[#3E3160] relative ${openDropdownId === user.uid ? 'z-50' : 'z-10'}`}
     >
-      <div className="flex items-center gap-5 flex-1 min-w-0">
+      <div className="flex items-center gap-4 sm:gap-5 flex-1 min-w-0">
         <button 
           onClick={() => onViewProfile?.(user)}
           className="relative shrink-0 hover:scale-110 transition-transform"
@@ -117,36 +117,36 @@ const UserListItem = React.memo(({
           <img
             src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=3E3160&color=fff`}
             alt={user.displayName}
-            className="w-14 h-14 rounded-2xl object-cover border-2 border-[#5C4B8B]/50 group-hover:border-[#C3A6E6] transition-colors shadow-lg"
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border-2 border-[#5C4B8B]/50 group-hover:border-[#C3A6E6] transition-colors shadow-lg"
             referrerPolicy="no-referrer"
           />
-          <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-[#1A1625] ${
+          <div className={`absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-4 border-[#1A1625] ${
             user.role === 'admin' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : user.role === 'moderator' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'
           }`} />
         </button>
-        <div className="min-w-0">
-          <h3 className="font-black text-white flex items-center gap-3 truncate uppercase tracking-tighter text-base">
-            {user.displayName}
-            {user.role === 'admin' && <Shield className="w-4 h-4 text-red-500" />}
+        <div className="min-w-0 flex-1">
+          <h3 className="font-black text-white flex items-center gap-2 sm:gap-3 truncate uppercase tracking-tighter text-sm sm:text-base">
+            <span className="truncate">{user.displayName}</span>
+            {user.role === 'admin' && <Shield className="w-4 h-4 text-red-500 shrink-0" />}
           </h3>
           {isAdmin && user.email && <p className="text-[10px] text-gray-500 truncate font-black uppercase tracking-[0.2em] mt-1">{user.email}</p>}
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-wrap justify-end">
         <button
           onClick={() => onViewProfile?.(user)}
-          className="p-3 bg-[#5C4B8B]/30 hover:bg-[#C3A6E6] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#C3A6E6]/30 shadow-lg"
+          className="p-2.5 sm:p-3 bg-[#5C4B8B]/30 hover:bg-[#C3A6E6] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#C3A6E6]/30 shadow-lg"
           title={lang === 'ru' ? 'Профиль' : 'Profile'}
         >
-          <User className="w-5 h-5" />
+          <User className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
         <button
           onClick={() => onOpenChat(user.uid, user.displayName, user.photoURL)}
-          className="p-3 bg-[#5C4B8B]/30 hover:bg-[#C3A6E6] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#C3A6E6]/30 shadow-lg"
+          className="p-2.5 sm:p-3 bg-[#5C4B8B]/30 hover:bg-[#C3A6E6] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#C3A6E6]/30 shadow-lg"
           title={t.sendMessage}
         >
-          <MessageSquare className="w-5 h-5" />
+          <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
         
         {isAdmin && (

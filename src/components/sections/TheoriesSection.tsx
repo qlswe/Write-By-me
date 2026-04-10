@@ -6,7 +6,7 @@ import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { CommentsSection } from './CommentsSection';
 import { TheoryCard } from './TheoryCard';
-import { ReactionsBar } from '../ui/ReactionsBar';
+
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
@@ -107,6 +107,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
 
   const handleTheoryClick = useCallback((id: string) => {
     setSelectedTheoryId(id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const handleToggleFavorite = useCallback((id: string, e: React.MouseEvent) => {
@@ -204,7 +205,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             />
 
             <div className="mb-12">
-              <ReactionsBar targetId={selectedTheory.id} lang={lang} />
+
             </div>
 
             <div className="pt-10 border-t border-[#5C4B8B]">

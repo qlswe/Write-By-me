@@ -6,7 +6,7 @@ import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { CommentsSection } from './CommentsSection';
 import { BlogCard } from './BlogCard';
-import { ReactionsBar } from '../ui/ReactionsBar';
+
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
@@ -82,6 +82,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
 
   const handlePostClick = useCallback((id: string) => {
     setSelectedPostId(id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const handleToggleFavorite = useCallback((id: string, e: React.MouseEvent) => {
@@ -168,7 +169,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             />
 
             <div className="mb-12">
-              <ReactionsBar targetId={selectedPost.id} lang={lang} />
+
             </div>
 
             <div className="pt-10 border-t border-[#5C4B8B]">
