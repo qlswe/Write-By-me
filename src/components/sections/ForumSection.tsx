@@ -36,7 +36,6 @@ interface ForumComment {
   downvotes?: string[];
   isEdited?: boolean;
   isBot?: boolean;
-  parentId?: string | null;
 }
 
 interface ForumSectionProps {
@@ -69,9 +68,6 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
   
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentContent, setEditCommentContent] = useState('');
-  
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyContent, setReplyContent] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'forum_threads'), orderBy('createdAt', 'desc'));
@@ -163,8 +159,7 @@ Text to analyze:
         createdAt: serverTimestamp(),
         upvotes: [],
         downvotes: [],
-        isBot: true,
-        parentId: null
+        isBot: true
       });
 
       setIsCreating(false);
@@ -177,12 +172,11 @@ Text to analyze:
     }
   };
 
-  const handleCreateComment = async (parentId: string | null = null) => {
-    const content = parentId ? replyContent : newComment;
-    if (!user || !selectedThread || !content.trim() || isSubmitting) return;
+  const handleCreateComment = async () => {
+    if (!user || !selectedThread || !newComment.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const isApproved = await moderateContent(content);
+      const isApproved = await moderateContent(newComment);
       if (!isApproved) {
         alert(lang === 'ru' ? 'Ваш комментарий был отклонен автоматической модерацией.' : 'Your comment was rejected by automatic moderation.');
         setIsSubmitting(false);
@@ -191,14 +185,13 @@ Text to analyze:
 
       await addDoc(collection(db, 'forum_comments'), {
         threadId: selectedThread.id,
-        content: content.trim(),
+        content: newComment.trim(),
         authorId: user.uid,
         authorName: user.displayName || 'Anonymous',
         authorPhoto: user.photoURL || '',
         createdAt: serverTimestamp(),
         upvotes: [],
-        downvotes: [],
-        parentId: parentId
+        downvotes: []
       });
       
       const threadRef = doc(db, 'forum_threads', selectedThread.id);
@@ -206,12 +199,7 @@ Text to analyze:
         commentCount: (selectedThread.commentCount || 0) + 1
       });
       
-      if (parentId) {
-        setReplyContent('');
-        setReplyingTo(null);
-      } else {
-        setNewComment('');
-      }
+      setNewComment('');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'forum_comments');
     } finally {
@@ -354,167 +342,6 @@ Text to analyze:
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     t.content.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const renderCommentTree = (parentId: string | null = null, depth: number = 0) => {
-    const threadComments = comments.filter(c => (c.parentId || null) === parentId);
-    if (threadComments.length === 0) return null;
-
-    return (
-      <div className={`space-y-4 ${depth > 0 ? 'ml-6 sm:ml-12 border-l-2 border-[#5C4B8B]/30 pl-4 sm:pl-6 mt-4' : ''}`}>
-        {threadComments.map(comment => (
-          <div key={comment.id}>
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`bg-[#2F244F] border border-[#5C4B8B]/20 rounded-2xl p-4 sm:p-5 flex gap-4 group ${comment.isBot ? 'border-[#C3A6E6]/50 bg-[#C3A6E6]/5' : ''}`}
-            >
-              <img 
-                src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=3E3160&color=fff`}
-                alt={comment.authorName}
-                className="w-10 h-10 rounded-full border border-[#5C4B8B]/50 shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <div className="font-bold text-white text-sm truncate flex items-center gap-2">
-                    {comment.authorName}
-                    {comment.isBot && <Shield size={12} className="text-[#C3A6E6]" />}
-                    {comment.isEdited && <span className="text-[10px] text-gray-500 font-normal">(изменено)</span>}
-                  </div>
-                  <div className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0">
-                    <TimeAgo date={comment.createdAt} lang={lang} />
-                  </div>
-                </div>
-                
-                {editingCommentId === comment.id ? (
-                  <div className="mt-2 space-y-3">
-                    <textarea
-                      value={editCommentContent}
-                      onChange={(e) => setEditCommentContent(e.target.value)}
-                      className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[80px] resize-y text-sm"
-                    />
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => setEditingCommentId(null)}
-                        className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
-                      >
-                        {lang === 'ru' ? 'Отмена' : 'Cancel'}
-                      </button>
-                      <button
-                        onClick={handleUpdateComment}
-                        disabled={!editCommentContent.trim() || isSubmitting}
-                        className="bg-[#C3A6E6] text-[#2F244F] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
-                      >
-                        {isSubmitting ? '...' : (lang === 'ru' ? 'Сохранить' : 'Save')}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-gray-300 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1 bg-[#1A1625]/50 p-1 rounded-lg border border-[#5C4B8B]/30 w-fit">
-                        <button
-                          onClick={() => handleVote('comment', comment, 'up')}
-                          disabled={!user}
-                          className={`p-1 rounded transition-all ${comment.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
-                        >
-                          <ChevronUp size={16} />
-                        </button>
-                        <span className={`text-[10px] font-black px-2 min-w-[1.5rem] text-center ${((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                          {(comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)}
-                        </span>
-                        <button
-                          onClick={() => handleVote('comment', comment, 'down')}
-                          disabled={!user}
-                          className={`p-1 rounded transition-all ${comment.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
-                        >
-                          <ChevronDown size={16} />
-                        </button>
-                      </div>
-                      
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {user && !comment.isBot && (
-                          <button
-                            onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                            className="p-1.5 text-gray-500 hover:text-[#C3A6E6] transition-all rounded-md hover:bg-[#C3A6E6]/10 text-xs font-bold"
-                          >
-                            {lang === 'ru' ? 'Ответить' : 'Reply'}
-                          </button>
-                        )}
-                        {user?.uid === comment.authorId && !comment.isBot && (
-                          <button 
-                            onClick={() => {
-                              setEditingCommentId(comment.id);
-                              setEditCommentContent(comment.content);
-                            }}
-                            className="p-1.5 text-gray-500 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                        )}
-                        {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator') && !comment.isBot && (
-                          <button 
-                            onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
-                            className="p-1.5 text-gray-500 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </motion.div>
-
-            {replyingTo === comment.id && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="mt-4 ml-6 sm:ml-12"
-              >
-                <div className="bg-[#2F244F] border border-[#5C4B8B]/30 rounded-2xl p-4 flex gap-4">
-                  <img 
-                    src={user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || 'User')}&background=3E3160&color=fff`}
-                    alt={user?.displayName || 'User'}
-                    className="w-8 h-8 rounded-full border border-[#5C4B8B]/50 hidden sm:block"
-                  />
-                  <div className="flex-1 flex flex-col gap-2">
-                    <textarea
-                      value={replyContent}
-                      onChange={(e) => setReplyContent(e.target.value)}
-                      placeholder={lang === 'ru' ? 'Написать ответ...' : 'Write a reply...'}
-                      className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[60px] resize-none text-sm"
-                    />
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setReplyingTo(null);
-                          setReplyContent('');
-                        }}
-                        className="px-4 py-1.5 rounded-xl font-bold text-gray-400 hover:text-white transition-colors text-xs"
-                      >
-                        {lang === 'ru' ? 'Отмена' : 'Cancel'}
-                      </button>
-                      <button
-                        onClick={() => handleCreateComment(comment.id)}
-                        disabled={!replyContent.trim() || isSubmitting}
-                        className="bg-[#C3A6E6] text-[#2F244F] px-4 py-1.5 rounded-xl font-bold hover:bg-white transition-colors disabled:opacity-50 flex items-center gap-2 text-xs"
-                      >
-                        {isSubmitting ? <span className="animate-pulse">...</span> : <><Send size={14} /> {lang === 'ru' ? 'Ответить' : 'Reply'}</>}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {renderCommentTree(comment.id, depth + 1)}
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   if (selectedThread) {
     return (
@@ -665,7 +492,104 @@ Text to analyze:
           )}
 
           <div className="space-y-4 mt-8">
-            {renderCommentTree(null, 0)}
+            {comments.map(comment => (
+              <motion.div 
+                key={comment.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`bg-[#2F244F] border border-[#5C4B8B]/20 rounded-2xl p-4 sm:p-5 flex gap-4 group ${comment.isBot ? 'border-[#C3A6E6]/50 bg-[#C3A6E6]/5' : ''}`}
+              >
+                <img 
+                  src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=3E3160&color=fff`}
+                  alt={comment.authorName}
+                  className="w-10 h-10 rounded-full border border-[#5C4B8B]/50 shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="font-bold text-white text-sm truncate flex items-center gap-2">
+                      {comment.authorName}
+                      {comment.isBot && <Shield size={12} className="text-[#C3A6E6]" />}
+                      {comment.isEdited && <span className="text-[10px] text-gray-500 font-normal">(изменено)</span>}
+                    </div>
+                    <div className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0">
+                      <TimeAgo date={comment.createdAt} lang={lang} />
+                    </div>
+                  </div>
+                  
+                  {editingCommentId === comment.id ? (
+                    <div className="mt-2 space-y-3">
+                      <textarea
+                        value={editCommentContent}
+                        onChange={(e) => setEditCommentContent(e.target.value)}
+                        className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[80px] resize-y text-sm"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setEditingCommentId(null)}
+                          className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
+                        >
+                          {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                        </button>
+                        <button
+                          onClick={handleUpdateComment}
+                          disabled={!editCommentContent.trim() || isSubmitting}
+                          className="bg-[#C3A6E6] text-[#2F244F] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
+                        >
+                          {isSubmitting ? '...' : (lang === 'ru' ? 'Сохранить' : 'Save')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-gray-300 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1 bg-[#1A1625]/50 p-1 rounded-lg border border-[#5C4B8B]/30 w-fit">
+                          <button
+                            onClick={() => handleVote('comment', comment, 'up')}
+                            disabled={!user}
+                            className={`p-1 rounded transition-all ${comment.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
+                          >
+                            <ChevronUp size={16} />
+                          </button>
+                          <span className={`text-[10px] font-black px-2 min-w-[1.5rem] text-center ${((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                            {(comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)}
+                          </span>
+                          <button
+                            onClick={() => handleVote('comment', comment, 'down')}
+                            disabled={!user}
+                            className={`p-1 rounded transition-all ${comment.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
+                          >
+                            <ChevronDown size={16} />
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {user?.uid === comment.authorId && !comment.isBot && (
+                            <button 
+                              onClick={() => {
+                                setEditingCommentId(comment.id);
+                                setEditCommentContent(comment.content);
+                              }}
+                              className="p-1.5 text-gray-500 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          )}
+                          {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator') && !comment.isBot && (
+                            <button 
+                              onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
+                              className="p-1.5 text-gray-500 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </div>
