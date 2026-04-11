@@ -1,6 +1,6 @@
 export async function translateContent(
   text: string,
-  targetLanguages: string[] = ['ru', 'by', 'jp', 'de', 'fr', 'zh']
+  targetLanguages: string[] = ['ru', 'by', 'de', 'fr', 'zh']
 ): Promise<Record<string, string>> {
   if (!text || text.trim() === '') {
     const result: Record<string, string> = {};
@@ -46,7 +46,7 @@ export async function translatePostFields(
   title: string,
   summary: string,
   content: string,
-  targetLanguages: string[] = ['ru', 'by', 'jp', 'de', 'fr', 'zh']
+  targetLanguages: string[] = ['ru', 'by', 'de', 'fr', 'zh']
 ): Promise<{ title: Record<string, string>, summary: Record<string, string>, content: Record<string, string> }> {
   try {
     const prompt = `Translate the following title, summary, and content into these languages: ${targetLanguages.join(', ')}.

@@ -13,7 +13,7 @@ interface BlogEditorProps {
   lang: Language;
 }
 
-const LANGUAGES = ['ru', 'en', 'by', 'jp', 'de', 'fr', 'zh'];
+const LANGUAGES = ['ru', 'en', 'by', 'de', 'fr', 'zh'];
 
 export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) => {
   const { user } = useAuth();

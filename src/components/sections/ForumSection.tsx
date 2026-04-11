@@ -412,27 +412,29 @@ Text to analyze:
             <>
               <p className="text-gray-300 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 bg-[#1A1625]/50 p-1 rounded-lg border border-[#5C4B8B]/30 w-fit">
-                  <button
-                    onClick={() => handleVote('comment', comment, 'up')}
-                    disabled={!user}
-                    className={`p-1 rounded transition-all ${comment.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
-                  >
-                    <ChevronUp size={16} />
-                  </button>
-                  <span className={`text-[10px] font-black px-2 min-w-[1.5rem] text-center ${((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                    {(comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)}
-                  </span>
-                  <button
-                    onClick={() => handleVote('comment', comment, 'down')}
-                    disabled={!user}
-                    className={`p-1 rounded transition-all ${comment.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
-                  >
-                    <ChevronDown size={16} />
-                  </button>
-                </div>
+                {!comment.isBot && (
+                  <div className="flex items-center gap-1 bg-[#1A1625]/50 p-1 rounded-lg border border-[#5C4B8B]/30 w-fit">
+                    <button
+                      onClick={() => handleVote('comment', comment, 'up')}
+                      disabled={!user}
+                      className={`p-1 rounded transition-all ${comment.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                    <span className={`text-[10px] font-black px-2 min-w-[1.5rem] text-center ${((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                      {(comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)}
+                    </span>
+                    <button
+                      onClick={() => handleVote('comment', comment, 'down')}
+                      disabled={!user}
+                      className={`p-1 rounded transition-all ${comment.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                  </div>
+                )}
                 
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${comment.isBot ? 'ml-auto' : ''}`}>
                   {user && !comment.isBot && !isReply && (
                     <button 
                       onClick={() => setReplyingToCommentId(comment.id)}

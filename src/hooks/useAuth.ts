@@ -35,7 +35,8 @@ export function useAuth() {
               uid: user.uid,
               displayName: user.displayName,
               photoURL: userData.photoURL || user.photoURL,
-              role: userData.role || 'user'
+              role: userData.role || 'user',
+              lastSeen: new Date().toISOString()
             }, { merge: true });
           } else {
             // First time login - create user document
@@ -56,7 +57,8 @@ export function useAuth() {
               uid: user.uid,
               displayName: user.displayName,
               photoURL: user.photoURL,
-              role: initialRole
+              role: initialRole,
+              lastSeen: new Date().toISOString()
             });
             
             setRole(initialRole);
@@ -77,6 +79,26 @@ export function useAuth() {
 
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const updateLastSeen = async () => {
+      try {
+        await setDoc(doc(db, 'public_profiles', user.uid), {
+          lastSeen: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.error("Error updating last seen:", e);
+      }
+    };
+
+    // Update immediately and then every 2 minutes
+    updateLastSeen();
+    const interval = setInterval(updateLastSeen, 2 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   const [error, setError] = useState<string | null>(null);
 

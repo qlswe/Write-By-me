@@ -5,6 +5,8 @@ import { translations, Language } from '../../data/translations';
 import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 const STICKERS = ['👋', '👍', '❤️', '😂', '🔥', '🎉', '👀', '💯'];
 import { CHAT_REACTIONS } from '../../constants/reactions';
@@ -31,6 +33,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [recipientProfile, setRecipientProfile] = useState<any>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -48,6 +51,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
       markChatAsRead(recipientId);
     }
   }, [messages]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'public_profiles', recipientId), (doc) => {
+      if (doc.exists()) {
+        setRecipientProfile(doc.data());
+      }
+    });
+    return () => unsub();
+  }, [recipientId]);
+
+  const isUserOnline = () => {
+    if (!recipientProfile?.lastSeen) return false;
+    const lastSeenTime = new Date(recipientProfile.lastSeen).getTime();
+    const now = new Date().getTime();
+    // Consider online if lastSeen was within the last 3 minutes
+    return (now - lastSeenTime) < 3 * 60 * 1000;
+  };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
@@ -207,11 +227,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             <div>
               <span className="font-black text-white text-sm sm:text-base uppercase tracking-wider block leading-none mb-1">{recipientName}</span>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                  Online
-                </span>
-                <span className="text-[8px] text-[#C3A6E6]/60 font-black uppercase tracking-tighter border border-[#C3A6E6]/20 px-1.5 py-0.5 rounded">Ministry E/D</span>
+                {isUserOnline() ? (
+                  <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    {lang === 'ru' ? 'В сети' : 'Online'}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                    {lang === 'ru' ? 'Не в сети' : 'Offline'}
+                  </span>
+                )}
+                <span className="text-[8px] text-[#C3A6E6]/60 font-black uppercase tracking-tighter border border-[#C3A6E6]/20 px-1.5 py-0.5 rounded">Aha radio E/D</span>
               </div>
             </div>
           </div>

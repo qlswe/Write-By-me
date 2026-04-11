@@ -5,7 +5,7 @@ import { translations, Language } from '../../data/translations';
 import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
-import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
+import { ru, enUS, be, de, fr, zhCN } from 'date-fns/locale';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
@@ -14,7 +14,7 @@ interface ChatsListProps {
   onSelectChat: (recipientId: string, name: string, photoURL?: string) => void;
 }
 
-const locales = { ru, en: enUS, by: be, jp: ja, de, fr, zh: zhCN };
+const locales = { ru, en: enUS, by: be, de, fr, zh: zhCN };
 
 const ChatItem = React.memo(({ 
   chat, 
