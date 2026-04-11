@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useChat, Chat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
-import { MessageSquare, Clock, User, Search, X, Circle } from 'lucide-react';
+import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
@@ -96,6 +96,18 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [profiles, setProfiles] = useState<Record<string, { name: string, photo?: string }>>({});
+  const [showNotifPrompt, setShowNotifPrompt] = useState(
+    typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default'
+  );
+
+  const requestNotifications = async () => {
+    if ('Notification' in window) {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'default') {
+        setShowNotifPrompt(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!user || chats.length === 0) return;
@@ -169,6 +181,44 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
 
   return (
     <div className="space-y-4">
+      {showNotifPrompt && user && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[#5C4B8B]/20 border border-[#C3A6E6]/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg"
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-[#C3A6E6]/20 rounded-xl shrink-0">
+              <Bell className="w-5 h-5 text-[#C3A6E6]" />
+            </div>
+            <div>
+              <h4 className="text-white font-bold text-sm mb-1">
+                {lang === 'ru' ? 'Включить уведомления?' : 'Enable notifications?'}
+              </h4>
+              <p className="text-gray-300 text-xs leading-relaxed">
+                {lang === 'ru' 
+                  ? 'Это нужно, чтобы вы не пропустили новые сообщения, когда сайт свернут или вы находитесь в другом разделе.' 
+                  : 'This is needed so you don\'t miss new messages when the site is minimized or you are in another section.'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <button 
+              onClick={() => setShowNotifPrompt(false)}
+              className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-[#5C4B8B]/30 transition-colors"
+            >
+              {lang === 'ru' ? 'Позже' : 'Later'}
+            </button>
+            <button 
+              onClick={requestNotifications}
+              className="flex-1 sm:flex-none bg-[#C3A6E6] text-[#2F244F] px-4 py-2 rounded-xl text-xs font-bold hover:bg-white transition-colors shadow-[0_0_15px_rgba(195,166,230,0.3)]"
+            >
+              {lang === 'ru' ? 'Включить' : 'Enable'}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Search Bar */}
       {chats.length > 0 && (
         <div className="relative">

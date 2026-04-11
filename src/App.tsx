@@ -149,14 +149,13 @@ export default function App() {
   };
 
   useEffect(() => {
-    // Request notification permission on load
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  useEffect(() => {
     if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const isAuthorizedForMaintenance = role === 'admin' || role === 'moderator' || role === 'beta-tester';
+    if (maintenanceMode && !isAuthorizedForMaintenance) {
       setUnreadCount(0);
       return;
     }
@@ -357,6 +356,7 @@ export default function App() {
         toggleLowPerfMode={toggleLowPerfMode}
         showLoadWidget={showLoadWidget}
         toggleLoadWidget={toggleLoadWidget}
+        mobileMenuOpen={mobileMenuOpen}
       />
       <Starfield lowPerfMode={lowPerfMode || !productionMode} />
       {showLoadWidget && <PerformanceWidget />}

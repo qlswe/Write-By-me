@@ -13,6 +13,7 @@ interface SDKPanelProps {
   toggleLowPerfMode: () => void;
   showLoadWidget: boolean;
   toggleLoadWidget: () => void;
+  mobileMenuOpen: boolean;
 }
 
 export const SDKPanel: React.FC<SDKPanelProps> = ({ 
@@ -22,7 +23,8 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
   lowPerfMode,
   toggleLowPerfMode,
   showLoadWidget,
-  toggleLoadWidget
+  toggleLoadWidget,
+  mobileMenuOpen
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'sdk'>('chat');
@@ -126,19 +128,26 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
   return (
     <>
       {/* Floating Button */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-2xl border transition-all duration-500 ${
-          isOpen ? 'bg-[#C3A6E6] text-[#2F244F] border-white scale-110' : 
-          productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 
-          'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'
-        }`}
-        title={lang === 'ru' ? 'Панель Министерства' : 'Ministry Panel'}
-      >
-        <Sparkles size={24} className={productionMode && !isOpen ? 'animate-pulse' : ''} />
-      </motion.button>
+      <AnimatePresence>
+        {(!mobileMenuOpen || isOpen) && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setIsOpen(!isOpen)}
+            className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-2xl border transition-all duration-500 ${
+              isOpen ? 'bg-[#C3A6E6] text-[#2F244F] border-white scale-110' : 
+              productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 
+              'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'
+            }`}
+            title={lang === 'ru' ? 'Панель Министерства' : 'Ministry Panel'}
+          >
+            <Sparkles size={24} className={productionMode && !isOpen ? 'animate-pulse' : ''} />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* Expandable Panel */}
       <AnimatePresence>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
-import { Radio, Play, Square, Volume2, Loader2, Lock } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Radio, Play, Square, Volume2, Loader2, Lock, SkipForward, Disc, Music } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 
@@ -29,10 +29,15 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
     
     // Add a random seed to prevent caching and ensure unique jokes
     const seed = Math.floor(Math.random() * 1000000);
+    
+    const topicsRu = ['про животных', 'про работу', 'про технологии', 'про еду', 'про отношения', 'про спорт', 'про путешествия', 'абсурдную', 'про космос', 'про врачей', 'про школу', 'про студентов', 'про программистов', 'про музыку', 'про кино', 'про историю', 'про будущее', 'про инопланетян', 'про роботов', 'про супергероев'];
+    const topicsEn = ['about animals', 'about work', 'about technology', 'about food', 'about relationships', 'about sports', 'about travel', 'absurd', 'about space', 'about doctors', 'about school', 'about students', 'about programmers', 'about music', 'about movies', 'about history', 'about the future', 'about aliens', 'about robots', 'about superheroes'];
+    const topic = lang === 'ru' ? topicsRu[Math.floor(Math.random() * topicsRu.length)] : topicsEn[Math.floor(Math.random() * topicsEn.length)];
+
     // Strict prompt to prevent chain-of-thought leaks (like "Let's do something witty...")
     const prompt = lang === 'ru' 
-      ? `Сгенерируй ровно одну короткую шутку на русском. ВАЖНО: Выведи ТОЛЬКО текст шутки. ЗАПРЕЩЕНО писать свои мысли, рассуждения, варианты или английские слова. БЕЗ кавычек. Уникальный номер: ${seed}`
-      : `Generate exactly one short dad joke. IMPORTANT: Output ONLY the joke text. NO thinking process, NO multiple options, NO quotes. Unique ID: ${seed}`;
+      ? `Сгенерируй ровно одну короткую, смешную шутку на тему: ${topic}. ВАЖНО: Выведи ТОЛЬКО текст шутки. ЗАПРЕЩЕНО писать свои мысли, рассуждения, варианты или английские слова. БЕЗ кавычек. Уникальный номер: ${seed}`
+      : `Generate exactly one short, funny joke about: ${topic}. IMPORTANT: Output ONLY the joke text. NO thinking process, NO multiple options, NO quotes. Unique ID: ${seed}`;
     
     // Use a specific model that is less prone to chain-of-thought leaks if possible, or just rely on the strict prompt
     const targetUrl = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${seed}&model=openai`;
@@ -166,19 +171,17 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       const voices = window.speechSynthesis.getVoices();
       const targetLangPrefix = targetLang.split('-')[0];
       
-      // Prefer Google voices as they are usually more expressive
-      let voice = voices.find(v => v.lang.startsWith(targetLangPrefix) && v.name.includes('Google'));
-      if (!voice) {
-        voice = voices.find(v => v.lang.startsWith(targetLangPrefix));
-      }
+      const availableVoices = voices.filter(v => v.lang.startsWith(targetLangPrefix));
       
-      if (voice) {
-        utterance.voice = voice;
+      if (availableVoices.length > 0) {
+        // Pick a random voice from the available ones for the language
+        const randomVoice = availableVoices[Math.floor(Math.random() * availableVoices.length)];
+        utterance.voice = randomVoice;
       }
 
-      // Make it sound more human
-      utterance.pitch = Math.random() * 0.1 + 0.95; // 0.95 to 1.05
-      utterance.rate = Math.random() * 0.1 + 0.9; // 0.9 to 1.0
+      // Make it sound more human with wider variations
+      utterance.pitch = Math.random() * 0.4 + 0.8; // 0.8 to 1.2
+      utterance.rate = Math.random() * 0.2 + 0.9; // 0.9 to 1.1
 
       utterance.onend = () => {
         if (isPlayingRef.current) {
@@ -308,70 +311,163 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 sm:p-12 bg-[#2F244F]/40 rounded-3xl border border-[#5C4B8B]/30 relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-[#1A1625] to-[#2F244F] rounded-[2.5rem] border border-[#5C4B8B]/40 relative overflow-hidden shadow-2xl">
       {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#C3A6E6]/10 rounded-full blur-3xl transition-opacity duration-1000 ${isPlaying ? 'opacity-100 animate-pulse' : 'opacity-0'}`} />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-[#C3A6E6]/10 rounded-full blur-[100px] transition-all duration-1000 ${isPlaying ? 'opacity-100 scale-110' : 'opacity-30 scale-90'}`} />
+        
+        {/* Floating music notes when playing */}
+        <AnimatePresence>
+          {isPlaying && (
+            <>
+              <motion.div
+                initial={{ opacity: 0, y: 50, x: -50 }}
+                animate={{ opacity: [0, 0.5, 0], y: -100, x: -100 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                className="absolute top-1/4 left-1/4"
+              >
+                <Music className="w-8 h-8 text-[#C3A6E6]/30" />
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 50, x: 50 }}
+                animate={{ opacity: [0, 0.5, 0], y: -150, x: 100 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear", delay: 1 }}
+                className="absolute top-1/3 right-1/4"
+              >
+                <Music className="w-6 h-6 text-[#C3A6E6]/20" />
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center space-y-8">
-        <div className="space-y-2">
-          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight flex items-center justify-center gap-3">
-            <Radio className={`w-8 h-8 sm:w-10 sm:h-10 ${isPlaying ? 'text-[#C3A6E6] animate-pulse' : 'text-gray-500'}`} />
+      <div className="relative z-10 w-full max-w-2xl flex flex-col items-center">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-10 bg-[#1A1625]/50 px-6 py-3 rounded-full border border-[#5C4B8B]/30 backdrop-blur-sm">
+          <Radio className={`w-5 h-5 ${isPlaying ? 'text-[#C3A6E6] animate-pulse' : 'text-gray-400'}`} />
+          <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">
             {lang === 'ru' ? 'Радиостанция Ахи' : 'Aha Radio Station'}
           </h2>
-          <p className="text-gray-400">
-            {lang === 'ru' ? 'Самые несмешные шутки во вселенной' : 'The least funny jokes in the universe'}
-          </p>
         </div>
 
-        <div className="relative">
-          <button
-            onClick={toggleRadio}
-            disabled={isLoading}
-            className={`w-32 h-32 sm:w-40 sm:h-40 rounded-full flex items-center justify-center transition-all duration-500 ${
-              isPlaying 
-                ? 'bg-[#C3A6E6] text-[#2F244F] shadow-[0_0_50px_rgba(195,166,230,0.5)] scale-105' 
-                : 'bg-[#3E3160] text-gray-400 hover:bg-[#4a3b73] hover:text-white border-2 border-[#5C4B8B]'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            {isLoading ? (
-              <Loader2 className="w-12 h-12 animate-spin" />
-            ) : isPlaying ? (
-              <Square className="w-12 h-12 fill-current" />
-            ) : (
-              <Play className="w-12 h-12 fill-current ml-2" />
-            )}
-          </button>
+        {/* Player Core */}
+        <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16 w-full">
           
-          {isPlaying && (
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-1">
-              {[...Array(5)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  animate={{ height: [10, 24, 10] }}
-                  transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.1 }}
-                  className="w-1.5 bg-[#C3A6E6] rounded-full"
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="min-h-[5rem] flex flex-col items-center justify-center w-full px-4">
-          {isPlaying && currentJoke && (
+          {/* Vinyl Record / Album Art Area */}
+          <div className="relative shrink-0">
             <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              key={currentJoke}
-              className="text-base sm:text-lg md:text-xl font-medium text-white max-w-2xl italic w-full text-center break-words"
+              animate={{ rotate: isPlaying ? 360 : 0 }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              className={`w-48 h-48 sm:w-56 sm:h-56 rounded-full flex items-center justify-center border-4 border-[#1A1625] shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden ${isPlaying ? 'bg-[#2F244F]' : 'bg-[#1A1625]'}`}
             >
-              "{currentJoke}"
+              {/* Vinyl grooves */}
+              <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-2"></div>
+              <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-6"></div>
+              <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-10"></div>
+              <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-14"></div>
+              
+              {/* Center label */}
+              <div className="w-20 h-20 bg-gradient-to-br from-[#C3A6E6] to-[#5C4B8B] rounded-full flex items-center justify-center shadow-inner relative z-10">
+                <div className="w-4 h-4 bg-[#1A1625] rounded-full shadow-inner"></div>
+                <Disc className="absolute w-10 h-10 text-white/20" />
+              </div>
             </motion.div>
-          )}
-          <div className="text-xs sm:text-sm text-[#C3A6E6] mt-4 font-mono uppercase tracking-widest flex items-center gap-2">
-            {isPlaying && <Volume2 className="w-4 h-4 shrink-0" />}
-            <span className="truncate">{statusText}</span>
+            
+            {/* Playback Controls Overlay */}
+            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#1A1625] p-2 rounded-full border border-[#5C4B8B]/50 shadow-xl">
+              <button
+                onClick={toggleRadio}
+                disabled={isLoading}
+                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                  isPlaying 
+                    ? 'bg-[#C3A6E6] text-[#2F244F] shadow-[0_0_20px_rgba(195,166,230,0.4)] hover:scale-105' 
+                    : 'bg-[#3E3160] text-white hover:bg-[#C3A6E6] hover:text-[#2F244F]'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : isPlaying ? (
+                  <Square className="w-5 h-5 fill-current" />
+                ) : (
+                  <Play className="w-6 h-6 fill-current ml-1" />
+                )}
+              </button>
+              
+              {isPlaying && (
+                <button
+                  onClick={handleNextJoke}
+                  disabled={isLoading || statusText.includes('Думаю') || statusText.includes('Thinking')}
+                  className="w-10 h-10 rounded-full bg-[#2F244F] text-gray-400 hover:text-white hover:bg-[#3E3160] flex items-center justify-center transition-all disabled:opacity-50"
+                  title={lang === 'ru' ? 'Следующая шутка' : 'Next joke'}
+                >
+                  <SkipForward className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Text & Status Area */}
+          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full mt-8 md:mt-0">
+            <div className="mb-4">
+              <p className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest mb-1">
+                {lang === 'ru' ? 'Сейчас в эфире' : 'Now Playing'}
+              </p>
+              <h3 className="text-xl sm:text-2xl font-black text-white">
+                {lang === 'ru' ? 'Стендап от ИИ' : 'AI Stand-up'}
+              </h3>
+            </div>
+
+            <div className="bg-[#1A1625]/60 border border-[#5C4B8B]/30 rounded-2xl p-5 w-full min-h-[8rem] flex flex-col justify-center relative">
+              {isPlaying && currentJoke ? (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  key={currentJoke}
+                  className="text-sm sm:text-base font-medium text-gray-200 italic leading-relaxed"
+                >
+                  "{currentJoke}"
+                </motion.div>
+              ) : (
+                <div className="text-gray-500 text-sm italic flex items-center justify-center md:justify-start gap-2">
+                  {isPlaying ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {lang === 'ru' ? 'Подготовка материала...' : 'Preparing material...'}
+                    </>
+                  ) : (
+                    lang === 'ru' ? 'Нажмите Play, чтобы начать трансляцию' : 'Press Play to start broadcasting'
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex items-center justify-between w-full">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider bg-[#1A1625] px-3 py-1.5 rounded-lg border border-[#5C4B8B]/30">
+                {isPlaying ? (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 text-[#C3A6E6]" />
+                    <span className="text-[#C3A6E6]">{statusText}</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 opacity-50" />
+                    <span>{lang === 'ru' ? 'Офлайн' : 'Offline'}</span>
+                  </>
+                )}
+              </div>
+
+              {/* Visualizer bars */}
+              <div className="flex gap-1 items-end h-6">
+                {[...Array(4)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    animate={isPlaying ? { height: [4, 20, 4] } : { height: 4 }}
+                    transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.15 }}
+                    className={`w-1.5 rounded-full ${isPlaying ? 'bg-[#C3A6E6]' : 'bg-[#5C4B8B]/50'}`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
