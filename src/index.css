@@ -10,6 +10,12 @@
   * {
     -ms-overflow-style: none;
     scrollbar-width: none;
+    -webkit-tap-highlight-color: transparent;
+    outline: none !important;
+  }
+  
+  *:focus {
+    outline: none !important;
   }
   
   *::-webkit-scrollbar {
