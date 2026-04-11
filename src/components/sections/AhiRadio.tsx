@@ -354,7 +354,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16 w-full">
           
           {/* Vinyl Record / Album Art Area */}
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 mb-8 md:mb-0">
             <motion.div 
               animate={{ rotate: isPlaying ? 360 : 0 }}
               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
@@ -374,7 +374,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
             </motion.div>
             
             {/* Playback Controls Overlay */}
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#1A1625] p-2 rounded-full border border-[#5C4B8B]/50 shadow-xl">
+            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#1A1625] p-2 rounded-full border border-[#5C4B8B]/50 shadow-xl z-20">
               <button
                 onClick={toggleRadio}
                 disabled={isLoading}

@@ -144,7 +144,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
             }`}
             title={lang === 'ru' ? 'Панель Министерства' : 'Ministry Panel'}
           >
-            <Sparkles size={24} className={productionMode && !isOpen ? 'animate-pulse' : ''} />
+            <Sparkles size={24} />
           </motion.button>
         )}
       </AnimatePresence>
