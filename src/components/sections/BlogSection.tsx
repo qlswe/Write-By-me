@@ -28,7 +28,7 @@ interface BlogSectionProps {
   onEdit?: (post: any) => void;
   onCreate?: () => void;
   onOpenChat?: (uid: string, name: string) => void;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
 }
 
 export const BlogSection: React.FC<BlogSectionProps> = ({

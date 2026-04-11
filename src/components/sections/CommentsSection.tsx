@@ -31,7 +31,7 @@ interface CommentsSectionProps {
   targetId: string;
   lang: Language;
   lowPerfMode?: boolean;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
   onOpenChat?: (uid: string, name: string) => void;
 }
 

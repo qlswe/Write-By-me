@@ -28,7 +28,7 @@ interface TheoriesSectionProps {
   onEdit?: (theory: any) => void;
   onCreate?: () => void;
   onOpenChat?: (uid: string, name: string) => void;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
 }
 
 export const TheoriesSection: React.FC<TheoriesSectionProps> = ({

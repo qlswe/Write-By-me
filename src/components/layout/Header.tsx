@@ -19,7 +19,7 @@ interface HeaderProps {
   clearFavorites: () => void;
   lowPerfMode?: boolean;
   toggleLowPerfMode?: () => void;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
 }
 
 export const Header: React.FC<HeaderProps> = ({

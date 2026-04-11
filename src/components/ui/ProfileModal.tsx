@@ -152,6 +152,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const getRoleDisplay = () => {
     if (userRole === 'admin') return lang === 'ru' ? 'Администратор' : 'Administrator';
     if (userRole === 'moderator') return lang === 'ru' ? 'Модератор' : 'Moderator';
+    if (userRole === 'beta-tester') return lang === 'ru' ? 'Бета-тестер' : 'Beta Tester';
     return lang === 'ru' ? 'Активный Путешественник' : 'Active Trailblazer';
   };
 

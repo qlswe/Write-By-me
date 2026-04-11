@@ -2,8 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUsers, UserData } from '../../hooks/useUsers';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
-import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X } from 'lucide-react';
+import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 interface UsersListProps {
   lang: Language;
@@ -13,12 +15,13 @@ interface UsersListProps {
 
 const RoleSelector: React.FC<{
   user: UserData;
-  updateUserRole: (uid: string, role: 'admin' | 'user' | 'moderator') => void;
+  updateUserRole: (uid: string, role: 'admin' | 'user' | 'moderator' | 'beta-tester') => void;
   t: any;
+  lang: Language;
   isOpen: boolean;
   onToggle: () => void;
   onClose: () => void;
-}> = ({ user, updateUserRole, t, isOpen, onToggle, onClose }) => {
+}> = ({ user, updateUserRole, t, lang, isOpen, onToggle, onClose }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,6 +38,7 @@ const RoleSelector: React.FC<{
 
   const roles = [
     { value: 'user', label: t.roleUser },
+    { value: 'beta-tester', label: lang === 'ru' ? 'Бета-тестер' : 'Beta Tester' },
     { value: 'moderator', label: t.roleModerator },
     { value: 'admin', label: t.roleAdmin },
   ];
@@ -109,7 +113,7 @@ const UserListItem = React.memo(({
   setOpenDropdownId: (id: string | null) => void, 
   onViewProfile?: (user: UserData) => void, 
   onOpenChat: (uid: string, name: string, photoURL?: string) => void, 
-  updateUserRole: (uid: string, role: 'admin' | 'user' | 'moderator') => void 
+  updateUserRole: (uid: string, role: 'admin' | 'user' | 'moderator' | 'beta-tester') => void 
 }) => {
   return (
     <motion.div
@@ -129,7 +133,7 @@ const UserListItem = React.memo(({
             referrerPolicy="no-referrer"
           />
           <div className={`absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-4 border-[#1A1625] ${
-            user.role === 'admin' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : user.role === 'moderator' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'
+            user.role === 'admin' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : user.role === 'moderator' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : user.role === 'beta-tester' ? 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'
           }`} />
         </button>
         <div className="min-w-0 flex-1">
@@ -162,6 +166,7 @@ const UserListItem = React.memo(({
             user={user} 
             updateUserRole={updateUserRole} 
             t={t} 
+            lang={lang}
             isOpen={openDropdownId === user.uid}
             onToggle={() => setOpenDropdownId(openDropdownId === user.uid ? null : user.uid)}
             onClose={() => setOpenDropdownId(null)}
@@ -178,6 +183,26 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
   const t = translations[lang];
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+      if (docSnap.exists()) {
+        setMaintenanceMode(docSnap.data().maintenanceMode || false);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const toggleMaintenanceMode = async () => {
+    if (!isAdmin) return;
+    try {
+      const docRef = doc(db, 'settings', 'general');
+      await setDoc(docRef, { maintenanceMode: !maintenanceMode }, { merge: true });
+    } catch (error) {
+      console.error("Error toggling maintenance mode:", error);
+    }
+  };
 
   const filteredUsers = React.useMemo(() => {
     if (!searchQuery.trim()) return users;
@@ -198,6 +223,36 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
 
   return (
     <div className="space-y-4 pb-32">
+      {isAdmin && (
+        <div className="bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg mb-6">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${maintenanceMode ? 'bg-red-500/20 text-red-400' : 'bg-[#5C4B8B]/30 text-[#C3A6E6]'}`}>
+              <Settings size={20} />
+            </div>
+            <div>
+              <h3 className="font-black text-white uppercase tracking-widest text-sm">
+                {lang === 'ru' ? 'Режим обслуживания' : 'Maintenance Mode'}
+              </h3>
+              <p className="text-xs text-gray-400">
+                {lang === 'ru' ? 'Закрыть сайт для обычных пользователей' : 'Close site for regular users'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={toggleMaintenanceMode}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+              maintenanceMode ? 'bg-red-500' : 'bg-[#1A1625]'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                maintenanceMode ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      )}
+
       {users.length > 0 && (
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

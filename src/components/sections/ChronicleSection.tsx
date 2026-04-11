@@ -16,7 +16,7 @@ interface ChronicleSectionProps {
   events: any[];
   onEdit?: (event: any) => void;
   onCreate?: () => void;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
 }
 
 const EventCard = React.memo(({ 

@@ -9,7 +9,7 @@ export function useAuth() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [role, setRole] = useState<'admin' | 'moderator' | 'user'>('user');
+  const [role, setRole] = useState<'admin' | 'moderator' | 'user' | 'beta-tester'>('user');
 
   useEffect(() => {
     // Handle redirect result for WebViews
@@ -128,5 +128,5 @@ export function useAuth() {
     }
   };
 
-  return { user, loading, isAdmin, role, error, loginWithGoogle, loginWithEmail, logout };
+  return { user, loading, isAdmin, role, error, loginWithGoogle, loginWithEmail, logout, isLoggingIn };
 }

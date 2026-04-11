@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
 import { handleFirestoreError, OperationType } from './utils/errorHandlers';
@@ -30,6 +30,8 @@ import { PromoEditor } from './components/sections/PromoEditor';
 import { SDKPanel } from './components/SDKPanel';
 import { ChatWindow } from './components/chat/ChatWindow';
 import { UserData } from './hooks/useUsers';
+
+import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
 
 // Lazy load sections for better performance
 const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
@@ -98,6 +100,16 @@ export default function App() {
 
   // Filters
   const [theoryCategory, setTheoryCategory] = useState('all');
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+      if (docSnap.exists()) {
+        setMaintenanceMode(docSnap.data().maintenanceMode || false);
+      }
+    });
+    return () => unsub();
+  }, []);
   const [theorySearch, setTheorySearch] = useState('');
   const [blogCategory, setBlogCategory] = useState('all');
   const [blogSearch, setBlogSearch] = useState('');
@@ -327,6 +339,12 @@ export default function App() {
     setShowBanner(false);
     localStorage.setItem('hideInstallBanner', 'true');
   };
+
+  const isAuthorizedForMaintenance = role === 'admin' || role === 'moderator' || role === 'beta-tester';
+
+  if (!isLoading && maintenanceMode && !isAuthorizedForMaintenance) {
+    return <MaintenanceScreen lang={lang as Language} />;
+  }
 
   return (
     <div className={`min-h-screen flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0] ${productionMode ? 'production-visuals' : ''}`}>

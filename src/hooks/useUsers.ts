@@ -8,7 +8,7 @@ export interface UserData {
   displayName: string;
   email: string;
   photoURL: string;
-  role: 'admin' | 'moderator' | 'user';
+  role: 'admin' | 'moderator' | 'user' | 'beta-tester';
   createdAt: string;
   lastLogin: string;
 }
@@ -44,7 +44,7 @@ export function useUsers() {
     return unsubscribe;
   }, [isAdmin, user]);
 
-  const updateUserRole = async (uid: string, role: 'admin' | 'moderator' | 'user') => {
+  const updateUserRole = async (uid: string, role: 'admin' | 'moderator' | 'user' | 'beta-tester') => {
     if (!isAdmin) return;
     try {
       const userRef = doc(db, 'users', uid);

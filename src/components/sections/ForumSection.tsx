@@ -36,12 +36,13 @@ interface ForumComment {
   downvotes?: string[];
   isEdited?: boolean;
   isBot?: boolean;
+  replyToId?: string;
 }
 
 interface ForumSectionProps {
   lang: Language;
   onOpenChat: (uid: string, name: string, photoURL?: string) => void;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
 }
 
 const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || 'dummy' });
@@ -68,6 +69,9 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
   
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentContent, setEditCommentContent] = useState('');
+  
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'forum_threads'), orderBy('createdAt', 'desc'));
@@ -102,8 +106,11 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
       if (!(import.meta as any).env.VITE_GEMINI_API_KEY && !process.env.GEMINI_API_KEY) return true;
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: `You are an automated moderation bot for a forum called "Форум Ахи". 
-Analyze the following text and determine if it contains severe profanity, hate speech, illegal content, or extreme toxicity.
+        contents: `You are a strict automated moderation bot for a forum called "Aha Forum". 
+Analyze the following text and determine if it contains ANY profanity, hate speech, illegal content, or extreme toxicity.
+You MUST catch all variations of Russian swear words (mat), including misspellings, transliterations, and symbol substitutions (e.g., пиздец, пiздец, p1zdec, хуй, xyu, бля, blya, ебать, etc.). ANY variation of these words is COMPLETELY FORBIDDEN.
+If there is even a hint of profanity or offensive language, return {"isApproved": false}.
+Otherwise, return {"isApproved": true}.
 Respond ONLY with a JSON object in the following format:
 {"isApproved": true/false}
 
@@ -154,8 +161,8 @@ Text to analyze:
           ? 'Добро пожаловать в обсуждение! Пожалуйста, соблюдайте правила: уважайте других участников, не используйте ненормативную лексику и не публикуйте запрещенный контент. Нарушители будут заблокированы.'
           : 'Welcome to the discussion! Please follow the rules: respect other members, do not use profanity, and do not post illegal content. Violators will be banned.',
         authorId: 'system-bot',
-        authorName: 'Ahi Bot',
-        authorPhoto: 'https://ui-avatars.com/api/?name=Ahi+Bot&background=C3A6E6&color=2F244F',
+        authorName: 'Aha Bot',
+        authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=C3A6E6&color=2F244F',
         createdAt: serverTimestamp(),
         upvotes: [],
         downvotes: [],
@@ -172,11 +179,12 @@ Text to analyze:
     }
   };
 
-  const handleCreateComment = async () => {
-    if (!user || !selectedThread || !newComment.trim() || isSubmitting) return;
+  const handleCreateComment = async (replyToId?: string) => {
+    const contentToSubmit = replyToId ? replyContent : newComment;
+    if (!user || !selectedThread || !contentToSubmit.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const isApproved = await moderateContent(newComment);
+      const isApproved = await moderateContent(contentToSubmit);
       if (!isApproved) {
         alert(lang === 'ru' ? 'Ваш комментарий был отклонен автоматической модерацией.' : 'Your comment was rejected by automatic moderation.');
         setIsSubmitting(false);
@@ -185,13 +193,14 @@ Text to analyze:
 
       await addDoc(collection(db, 'forum_comments'), {
         threadId: selectedThread.id,
-        content: newComment.trim(),
+        content: contentToSubmit.trim(),
         authorId: user.uid,
         authorName: user.displayName || 'Anonymous',
         authorPhoto: user.photoURL || '',
         createdAt: serverTimestamp(),
         upvotes: [],
-        downvotes: []
+        downvotes: [],
+        ...(replyToId ? { replyToId } : {})
       });
       
       const threadRef = doc(db, 'forum_threads', selectedThread.id);
@@ -199,7 +208,12 @@ Text to analyze:
         commentCount: (selectedThread.commentCount || 0) + 1
       });
       
-      setNewComment('');
+      if (replyToId) {
+        setReplyContent('');
+        setReplyingToCommentId(null);
+      } else {
+        setNewComment('');
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'forum_comments');
     } finally {
@@ -344,6 +358,150 @@ Text to analyze:
   );
 
   if (selectedThread) {
+    const topLevelComments = comments.filter(c => !c.replyToId);
+    const getReplies = (parentId: string) => comments.filter(c => c.replyToId === parentId);
+
+    const renderComment = (comment: ForumComment, isReply: boolean = false) => (
+      <motion.div 
+        key={comment.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`bg-[#2F244F] border border-[#5C4B8B]/20 rounded-2xl p-4 sm:p-5 flex gap-4 group ${comment.isBot ? 'border-[#C3A6E6]/50 bg-[#C3A6E6]/5' : ''} ${isReply ? 'ml-8 sm:ml-12 mt-2 border-l-2 border-l-[#C3A6E6]/30' : ''}`}
+      >
+        <img 
+          src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=3E3160&color=fff`}
+          alt={comment.authorName}
+          className="w-10 h-10 rounded-full border border-[#5C4B8B]/50 shrink-0"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="font-bold text-white text-sm truncate flex items-center gap-2">
+              {comment.authorName}
+              {comment.isBot && <Shield size={12} className="text-[#C3A6E6]" />}
+              {comment.isEdited && <span className="text-[10px] text-gray-500 font-normal">(изменено)</span>}
+            </div>
+            <div className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0">
+              <TimeAgo date={comment.createdAt} lang={lang} />
+            </div>
+          </div>
+          
+          {editingCommentId === comment.id ? (
+            <div className="mt-2 space-y-3">
+              <textarea
+                value={editCommentContent}
+                onChange={(e) => setEditCommentContent(e.target.value)}
+                className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[80px] resize-y text-sm"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setEditingCommentId(null)}
+                  className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
+                >
+                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                </button>
+                <button
+                  onClick={handleUpdateComment}
+                  disabled={!editCommentContent.trim() || isSubmitting}
+                  className="bg-[#C3A6E6] text-[#2F244F] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
+                >
+                  {isSubmitting ? '...' : (lang === 'ru' ? 'Сохранить' : 'Save')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-gray-300 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1 bg-[#1A1625]/50 p-1 rounded-lg border border-[#5C4B8B]/30 w-fit">
+                  <button
+                    onClick={() => handleVote('comment', comment, 'up')}
+                    disabled={!user}
+                    className={`p-1 rounded transition-all ${comment.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+                  <span className={`text-[10px] font-black px-2 min-w-[1.5rem] text-center ${((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {(comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)}
+                  </span>
+                  <button
+                    onClick={() => handleVote('comment', comment, 'down')}
+                    disabled={!user}
+                    className={`p-1 rounded transition-all ${comment.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
+                  >
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
+                
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {user && !comment.isBot && !isReply && (
+                    <button 
+                      onClick={() => setReplyingToCommentId(comment.id)}
+                      className="p-1.5 text-gray-500 hover:text-[#C3A6E6] transition-all rounded-md hover:bg-[#C3A6E6]/10 text-xs font-bold uppercase tracking-widest"
+                    >
+                      {lang === 'ru' ? 'Ответить' : 'Reply'}
+                    </button>
+                  )}
+                  {user?.uid === comment.authorId && !comment.isBot && (
+                    <button 
+                      onClick={() => {
+                        setEditingCommentId(comment.id);
+                        setEditCommentContent(comment.content);
+                      }}
+                      className="p-1.5 text-gray-500 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator' || role === 'beta-tester') && !comment.isBot && (
+                    <button 
+                      onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
+                      className="p-1.5 text-gray-500 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {replyingToCommentId === comment.id && (
+            <div className="mt-4 bg-[#1A1625] rounded-xl p-3 border border-[#5C4B8B]/30">
+              <textarea
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                placeholder={lang === 'ru' ? 'Ваш ответ...' : 'Your reply...'}
+                className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none min-h-[60px] resize-y text-sm mb-2"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setReplyingToCommentId(null);
+                    setReplyContent('');
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
+                >
+                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                </button>
+                <button
+                  onClick={() => handleCreateComment(comment.id)}
+                  disabled={!replyContent.trim() || isSubmitting}
+                  className="bg-[#C3A6E6] text-[#2F244F] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs flex items-center gap-2"
+                >
+                  {isSubmitting ? '...' : (
+                    <>
+                      <Send size={12} />
+                      {lang === 'ru' ? 'Ответить' : 'Reply'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+
     return (
       <div className="space-y-6">
         <button 
@@ -476,7 +634,7 @@ Text to analyze:
                 />
                 <div className="flex justify-end">
                   <button
-                    onClick={handleCreateComment}
+                    onClick={() => handleCreateComment()}
                     disabled={!newComment.trim() || isSubmitting}
                     className="bg-[#C3A6E6] text-[#2F244F] px-6 py-2 rounded-xl font-bold uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
@@ -492,103 +650,11 @@ Text to analyze:
           )}
 
           <div className="space-y-4 mt-8">
-            {comments.map(comment => (
-              <motion.div 
-                key={comment.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`bg-[#2F244F] border border-[#5C4B8B]/20 rounded-2xl p-4 sm:p-5 flex gap-4 group ${comment.isBot ? 'border-[#C3A6E6]/50 bg-[#C3A6E6]/5' : ''}`}
-              >
-                <img 
-                  src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=3E3160&color=fff`}
-                  alt={comment.authorName}
-                  className="w-10 h-10 rounded-full border border-[#5C4B8B]/50 shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="font-bold text-white text-sm truncate flex items-center gap-2">
-                      {comment.authorName}
-                      {comment.isBot && <Shield size={12} className="text-[#C3A6E6]" />}
-                      {comment.isEdited && <span className="text-[10px] text-gray-500 font-normal">(изменено)</span>}
-                    </div>
-                    <div className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0">
-                      <TimeAgo date={comment.createdAt} lang={lang} />
-                    </div>
-                  </div>
-                  
-                  {editingCommentId === comment.id ? (
-                    <div className="mt-2 space-y-3">
-                      <textarea
-                        value={editCommentContent}
-                        onChange={(e) => setEditCommentContent(e.target.value)}
-                        className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[80px] resize-y text-sm"
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => setEditingCommentId(null)}
-                          className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
-                        >
-                          {lang === 'ru' ? 'Отмена' : 'Cancel'}
-                        </button>
-                        <button
-                          onClick={handleUpdateComment}
-                          disabled={!editCommentContent.trim() || isSubmitting}
-                          className="bg-[#C3A6E6] text-[#2F244F] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
-                        >
-                          {isSubmitting ? '...' : (lang === 'ru' ? 'Сохранить' : 'Save')}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-gray-300 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 bg-[#1A1625]/50 p-1 rounded-lg border border-[#5C4B8B]/30 w-fit">
-                          <button
-                            onClick={() => handleVote('comment', comment, 'up')}
-                            disabled={!user}
-                            className={`p-1 rounded transition-all ${comment.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
-                          >
-                            <ChevronUp size={16} />
-                          </button>
-                          <span className={`text-[10px] font-black px-2 min-w-[1.5rem] text-center ${((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                            {(comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)}
-                          </span>
-                          <button
-                            onClick={() => handleVote('comment', comment, 'down')}
-                            disabled={!user}
-                            className={`p-1 rounded transition-all ${comment.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
-                          >
-                            <ChevronDown size={16} />
-                          </button>
-                        </div>
-                        
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {user?.uid === comment.authorId && !comment.isBot && (
-                            <button 
-                              onClick={() => {
-                                setEditingCommentId(comment.id);
-                                setEditCommentContent(comment.content);
-                              }}
-                              className="p-1.5 text-gray-500 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                          )}
-                          {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator') && !comment.isBot && (
-                            <button 
-                              onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
-                              className="p-1.5 text-gray-500 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </motion.div>
+            {topLevelComments.map(comment => (
+              <React.Fragment key={comment.id}>
+                {renderComment(comment)}
+                {getReplies(comment.id).map(reply => renderComment(reply, true))}
+              </React.Fragment>
             ))}
           </div>
         </div>
