@@ -23,7 +23,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, l
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5 }}
-          className="fixed inset-0 z-[9999] bg-[#1a142e] flex flex-col items-center justify-center font-mono overflow-hidden"
+          className="fixed inset-0 z-[9999] bg-[#0d0b14] flex flex-col items-center justify-center font-mono overflow-hidden"
         >
           {/* Background Elements - Optimized */}
           {!lowPerfMode && (
@@ -39,7 +39,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, l
                     delay: Math.random() * 5,
                     ease: "linear"
                   }}
-                  className="absolute h-px w-24 bg-gradient-to-r from-transparent via-[#C3A6E6] to-transparent"
+                  className="absolute h-px w-24 bg-gradient-to-r from-transparent via-[#ff4d4d] to-transparent"
                 />
               ))}
             </div>
@@ -50,12 +50,12 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, l
             <motion.div 
               animate={lowPerfMode ? {} : { rotate: 360 }}
               transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-              className="w-40 h-40 rounded-full border border-[#5C4B8B]/30 border-t-[#C3A6E6] mb-12 flex items-center justify-center"
+              className="w-40 h-40 rounded-full border border-[#3d2b4f]/30 border-t-[#ff4d4d] mb-12 flex items-center justify-center"
             >
               <motion.div 
                 animate={lowPerfMode ? {} : { rotate: -360 }}
                 transition={{ duration: 16, repeat: Infinity, ease: "linear" }}
-                className="w-32 h-32 rounded-full border border-[#5C4B8B]/20 border-b-[#C3A6E6]/40"
+                className="w-32 h-32 rounded-full border border-[#3d2b4f]/20 border-b-[#ff4d4d]/40"
               />
             </motion.div>
 
@@ -70,7 +70,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, l
                 animate={lowPerfMode ? {} : { y: [0, -5, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               >
-                <Train size={40} className="text-[#C3A6E6] drop-shadow-md" />
+                <Train size={40} className="text-[#ff4d4d] drop-shadow-md" />
               </motion.div>
             </motion.div>
             
@@ -79,7 +79,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, l
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-xl sm:text-2xl font-bold text-[#C3A6E6] tracking-[0.2em] sm:tracking-[0.3em] mb-4 uppercase"
+                className="text-xl sm:text-2xl font-bold text-[#ff4d4d] tracking-[0.2em] sm:tracking-[0.3em] mb-4 uppercase"
               >
                 {t.siteName}
               </motion.h2>
@@ -90,29 +90,29 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, l
                 <motion.div 
                   animate={lowPerfMode ? {} : { opacity: [0.3, 1, 0.3] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
-                  className="w-1.5 h-1.5 bg-[#C3A6E6] rounded-full"
+                  className="w-1.5 h-1.5 bg-[#ff4d4d] rounded-full"
                 />
                 <motion.div 
                   animate={lowPerfMode ? {} : { opacity: [0.3, 1, 0.3] }}
                   transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
-                  className="w-1.5 h-1.5 bg-[#C3A6E6] rounded-full"
+                  className="w-1.5 h-1.5 bg-[#ff4d4d] rounded-full"
                 />
                 <motion.div 
                   animate={lowPerfMode ? {} : { opacity: [0.3, 1, 0.3] }}
                   transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}
-                  className="w-1.5 h-1.5 bg-[#C3A6E6] rounded-full"
+                  className="w-1.5 h-1.5 bg-[#ff4d4d] rounded-full"
                 />
               </div>
             </div>
           </div>
 
           {/* Bottom Loading Bar */}
-          <div className="absolute bottom-12 w-64 h-1 bg-[#2F244F] rounded-full overflow-hidden border border-[#5C4B8B]/30">
+          <div className="absolute bottom-12 w-64 h-1 bg-[#15101e] rounded-full overflow-hidden border border-[#3d2b4f]/30">
             <motion.div 
               initial={{ x: '-100%' }}
               animate={{ x: '100%' }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="h-full w-1/2 bg-gradient-to-r from-transparent via-[#C3A6E6] to-transparent"
+              className="h-full w-1/2 bg-gradient-to-r from-transparent via-[#ff4d4d] to-transparent"
             />
           </div>
         </motion.div>

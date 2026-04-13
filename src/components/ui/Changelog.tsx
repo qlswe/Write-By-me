@@ -79,18 +79,18 @@ export const Changelog: React.FC<ChangelogProps> = ({ lang }) => {
   const data = getChangelogData(lang);
 
   return (
-    <div className="mt-8 p-6 rounded-2xl bg-[#2F244F]/50 border border-[#5C4B8B]/50">
+    <div className="mt-8 p-6 rounded-2xl bg-[#15101e]/50 border border-[#3d2b4f]/50">
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 rounded-lg bg-[#C3A6E6]/10 text-[#C3A6E6]">
+        <div className="p-2 rounded-lg bg-[#ff4d4d]/10 text-[#ff4d4d]">
           <GitCommit size={24} />
         </div>
-        <h3 className="text-2xl font-bold text-[#C3A6E6]">{t.changelogTitle}</h3>
+        <h3 className="text-2xl font-bold text-[#ff4d4d]">{t.changelogTitle}</h3>
       </div>
 
       <div className="space-y-8">
         {data.map((entry, index) => (
-          <div key={index} className="relative pl-6 border-l-2 border-[#5C4B8B]/30">
-            <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#3E3160] border-2 border-[#C3A6E6]" />
+          <div key={index} className="relative pl-6 border-l-2 border-[#3d2b4f]/30">
+            <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#251c35] border-2 border-[#ff4d4d]" />
             
             <div className="flex flex-wrap items-baseline gap-3 mb-4">
               <h4 className="text-lg font-bold text-white">{t.changelogVersion} {entry.version}</h4>

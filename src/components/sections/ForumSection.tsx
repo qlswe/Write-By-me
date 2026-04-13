@@ -160,7 +160,7 @@ Text to analyze:
         content: t.forumBotWelcome,
         authorId: 'system-bot',
         authorName: 'Aha Bot',
-        authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=C3A6E6&color=2F244F',
+        authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
         createdAt: serverTimestamp(),
         upvotes: [],
         downvotes: [],
@@ -364,19 +364,19 @@ Text to analyze:
         key={comment.id}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`bg-[#2F244F] border border-[#5C4B8B]/20 rounded-2xl p-4 sm:p-5 flex gap-4 group ${comment.isBot ? 'border-[#C3A6E6]/50 bg-[#C3A6E6]/5' : ''} ${isReply ? 'ml-8 sm:ml-12 mt-2 border-l-2 border-l-[#C3A6E6]/30' : ''}`}
+        className={`bg-[#15101e] border border-[#3d2b4f]/20 rounded-2xl p-4 sm:p-5 flex gap-4 group ${comment.isBot ? 'border-[#ff4d4d]/50 bg-[#ff4d4d]/5' : ''} ${isReply ? 'ml-8 sm:ml-12 mt-2 border-l-2 border-l-[#ff4d4d]/30' : ''}`}
       >
         <img 
-          src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=3E3160&color=fff`}
+          src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=1c1528&color=fff`}
           alt={comment.authorName}
-          className="w-10 h-10 rounded-full border border-[#5C4B8B]/50 shrink-0"
+          className="w-10 h-10 rounded-full border border-[#3d2b4f]/50 shrink-0"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="font-bold text-white text-sm truncate flex items-center gap-2">
               {comment.authorName}
-              {comment.isBot && <Shield size={12} className="text-[#C3A6E6]" />}
-              {comment.isEdited && <span className="text-[10px] text-gray-500 font-normal">(изменено)</span>}
+              {comment.isBot && <Shield size={12} className="text-[#ff4d4d]" />}
+              {comment.isEdited && <span className="text-[10px] text-gray-500 font-normal">({t.edited || "edited"})</span>}
             </div>
             <div className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0">
               <TimeAgo date={comment.createdAt} lang={lang} />
@@ -388,7 +388,7 @@ Text to analyze:
               <textarea
                 value={editCommentContent}
                 onChange={(e) => setEditCommentContent(e.target.value)}
-                className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[80px] resize-y text-sm"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-y text-sm"
               />
               <div className="flex justify-end gap-2">
                 <button
@@ -400,7 +400,7 @@ Text to analyze:
                 <button
                   onClick={handleUpdateComment}
                   disabled={!editCommentContent.trim() || isSubmitting}
-                  className="bg-[#C3A6E6] text-[#2F244F] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
+                  className="bg-[#ff4d4d] text-[#15101e] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
                 >
                   {isSubmitting ? '...' : t.forumSave}
                 </button>
@@ -411,7 +411,7 @@ Text to analyze:
               <p className="text-gray-300 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
               <div className="flex items-center justify-between">
                 {!comment.isBot && (
-                  <div className="flex items-center gap-1 bg-[#1A1625]/50 p-1 rounded-lg border border-[#5C4B8B]/30 w-fit">
+                  <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-lg border border-[#3d2b4f]/30 w-fit">
                     <button
                       onClick={() => handleVote('comment', comment, 'up')}
                       disabled={!user}
@@ -436,7 +436,7 @@ Text to analyze:
                   {user && !comment.isBot && !isReply && (
                     <button 
                       onClick={() => setReplyingToCommentId(comment.id)}
-                      className="p-1.5 text-gray-500 hover:text-[#C3A6E6] transition-all rounded-md hover:bg-[#C3A6E6]/10 text-xs font-bold uppercase tracking-widest"
+                      className="p-1.5 text-gray-500 hover:text-[#ff4d4d] transition-all rounded-md hover:bg-[#ff4d4d]/10 text-xs font-bold uppercase tracking-widest"
                     >
                       {t.forumReply}
                     </button>
@@ -466,7 +466,7 @@ Text to analyze:
           )}
 
           {replyingToCommentId === comment.id && (
-            <div className="mt-4 bg-[#1A1625] rounded-xl p-3 border border-[#5C4B8B]/30">
+            <div className="mt-4 bg-[#0d0b14] rounded-xl p-3 border border-[#3d2b4f]/30">
               <textarea
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
@@ -486,7 +486,7 @@ Text to analyze:
                 <button
                   onClick={() => handleCreateComment(comment.id)}
                   disabled={!replyContent.trim() || isSubmitting}
-                  className="bg-[#C3A6E6] text-[#2F244F] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs flex items-center gap-2"
+                  className="bg-[#ff4d4d] text-[#15101e] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs flex items-center gap-2"
                 >
                   {isSubmitting ? '...' : (
                     <>
@@ -512,18 +512,18 @@ Text to analyze:
           <span className="font-bold uppercase tracking-widest text-sm">{t.forumBack}</span>
         </button>
 
-        <div className="bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-6 sm:p-8">
+        <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 sm:p-8">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <img 
-                src={selectedThread.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedThread.authorName)}&background=3E3160&color=fff`}
+                src={selectedThread.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedThread.authorName)}&background=1c1528&color=fff`}
                 alt={selectedThread.authorName}
-                className="w-12 h-12 rounded-full border-2 border-[#5C4B8B]/50"
+                className="w-12 h-12 rounded-full border-2 border-[#3d2b4f]/50"
               />
               <div>
                 <div className="font-black text-white flex items-center gap-2">
                   {selectedThread.authorName}
-                  {selectedThread.isEdited && <span className="text-[10px] text-gray-500 font-normal">(изменено)</span>}
+                  {selectedThread.isEdited && <span className="text-[10px] text-gray-500 font-normal">({t.edited || "edited"})</span>}
                 </div>
                 <div className="text-xs text-gray-400 flex items-center gap-2">
                   <Clock size={12} />
@@ -561,12 +561,12 @@ Text to analyze:
                 type="text"
                 value={editThreadTitle}
                 onChange={(e) => setEditThreadTitle(e.target.value)}
-                className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] font-bold"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] font-bold"
               />
               <textarea
                 value={editThreadContent}
                 onChange={(e) => setEditThreadContent(e.target.value)}
-                className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[150px] resize-y"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] min-h-[150px] resize-y"
               />
               <div className="flex justify-end gap-2">
                 <button
@@ -578,7 +578,7 @@ Text to analyze:
                 <button
                   onClick={handleUpdateThread}
                   disabled={!editThreadTitle.trim() || !editThreadContent.trim() || isSubmitting}
-                  className="bg-[#C3A6E6] text-[#2F244F] px-6 py-2 rounded-xl font-bold transition-colors disabled:opacity-50 text-sm"
+                  className="bg-[#ff4d4d] text-[#15101e] px-6 py-2 rounded-xl font-bold transition-colors disabled:opacity-50 text-sm"
                 >
                   {isSubmitting ? '...' : t.forumSave}
                 </button>
@@ -589,7 +589,7 @@ Text to analyze:
               <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">{selectedThread.title}</h2>
               <p className="text-gray-300 whitespace-pre-wrap leading-relaxed mb-6">{selectedThread.content}</p>
               
-              <div className="flex items-center gap-1 bg-[#1A1625]/50 p-1 rounded-xl border border-[#5C4B8B]/30 w-fit">
+              <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-xl border border-[#3d2b4f]/30 w-fit">
                 <button
                   onClick={() => handleVote('thread', selectedThread, 'up')}
                   disabled={!user}
@@ -614,29 +614,29 @@ Text to analyze:
 
         <div className="space-y-4">
           <h3 className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
-            <MessageSquare size={20} className="text-[#C3A6E6]" />
+            <MessageSquare size={20} className="text-[#ff4d4d]" />
             {t.forumDiscussion} ({comments.length})
           </h3>
 
           {user ? (
-            <div className="bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-4 flex gap-4">
+            <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-4 flex gap-4">
               <img 
-                src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=3E3160&color=fff`}
+                src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`}
                 alt={user.displayName}
-                className="w-10 h-10 rounded-full border border-[#5C4B8B]/50 hidden sm:block"
+                className="w-10 h-10 rounded-full border border-[#3d2b4f]/50 hidden sm:block"
               />
               <div className="flex-1 flex flex-col gap-2">
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder={t.forumWriteComment}
-                  className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[80px] resize-none"
+                  className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-none"
                 />
                 <div className="flex justify-end">
                   <button
                     onClick={() => handleCreateComment()}
                     disabled={!newComment.trim() || isSubmitting}
-                    className="bg-[#C3A6E6] text-[#2F244F] px-6 py-2 rounded-xl font-bold uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 flex items-center gap-2"
+                    className="bg-[#ff4d4d] text-[#15101e] px-6 py-2 rounded-xl font-bold uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
                     {isSubmitting ? <span className="animate-pulse">...</span> : <><Send size={16} /> {t.forumSend}</>}
                   </button>
@@ -644,7 +644,7 @@ Text to analyze:
               </div>
             </div>
           ) : (
-            <div className="bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-3xl p-6 text-center text-gray-400">
+            <div className="bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-3xl p-6 text-center text-gray-400">
               {t.forumLoginToComment}
             </div>
           )}
@@ -664,7 +664,7 @@ Text to analyze:
 
   if (isCreating) {
     return (
-      <div className="bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-6 sm:p-8">
+      <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-black text-white uppercase tracking-widest">
             {t.forumNewThread}
@@ -679,13 +679,13 @@ Text to analyze:
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
             placeholder={t.forumThreadTitle}
-            className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] font-bold"
+            className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] font-bold"
           />
           <textarea
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
             placeholder={t.forumMessageContent}
-            className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[200px] resize-y"
+            className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] min-h-[200px] resize-y"
           />
           <div className="flex justify-end gap-4 pt-4">
             <button
@@ -697,7 +697,7 @@ Text to analyze:
             <button
               onClick={handleCreateThread}
               disabled={!newTitle.trim() || !newContent.trim() || isSubmitting}
-              className="bg-[#C3A6E6] text-[#2F244F] px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 shadow-[0_0_20px_rgba(195,166,230,0.3)]"
+              className="bg-[#ff4d4d] text-[#15101e] px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 shadow-[0_0_20px_rgba(255,77,77,0.3)]"
             >
               {isSubmitting ? '...' : t.forumCreate}
             </button>
@@ -711,13 +711,13 @@ Text to analyze:
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-3xl font-black text-white uppercase tracking-widest flex items-center gap-3">
-          <MessageSquare className="text-[#C3A6E6]" size={32} />
+          <MessageSquare className="text-[#ff4d4d]" size={32} />
           {t.forumTitle}
         </h2>
         {user && (
           <button
             onClick={() => setIsCreating(true)}
-            className="bg-[#C3A6E6] text-[#2F244F] px-6 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-all active:scale-95 shadow-[0_0_20px_rgba(195,166,230,0.3)] flex items-center gap-2 justify-center"
+            className="bg-[#ff4d4d] text-[#15101e] px-6 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-all active:scale-95 shadow-[0_0_20px_rgba(255,77,77,0.3)] flex items-center gap-2 justify-center"
           >
             <Plus size={20} />
             {t.forumCreateThread}
@@ -732,13 +732,13 @@ Text to analyze:
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={t.forumSearch}
-          className="w-full bg-[#2F244F] border border-[#5C4B8B]/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] transition-colors"
+          className="w-full bg-[#15101e] border border-[#3d2b4f]/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] transition-colors"
         />
       </div>
 
       <div className="space-y-4">
         {filteredThreads.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 bg-[#2F244F]/30 rounded-3xl border border-[#5C4B8B]/20">
+          <div className="text-center py-12 text-gray-400 bg-[#15101e]/30 rounded-3xl border border-[#3d2b4f]/20">
             {t.forumNoThreads}
           </div>
         ) : (
@@ -750,14 +750,14 @@ Text to analyze:
               onClick={() => {
                 setSelectedThread(thread);
               }}
-              className="bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-5 sm:p-6 hover:border-[#C3A6E6]/50 hover:bg-[#3E3160] transition-all cursor-pointer group"
+              className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 sm:p-6 hover:border-[#ff4d4d]/50 hover:bg-[#251c35] transition-all cursor-pointer group"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
-                <h3 className="text-xl font-black text-white group-hover:text-[#C3A6E6] transition-colors line-clamp-2">
+                <h3 className="text-xl font-black text-white group-hover:text-[#ff4d4d] transition-colors line-clamp-2">
                   {thread.title}
                 </h3>
                 <div className="flex items-center gap-4 shrink-0">
-                  <div className="flex items-center gap-1.5 text-gray-400 text-sm bg-[#1A1625] px-3 py-1.5 rounded-lg">
+                  <div className="flex items-center gap-1.5 text-gray-400 text-sm bg-[#0d0b14] px-3 py-1.5 rounded-lg">
                     <MessageSquare size={14} />
                     <span className="font-bold">{thread.commentCount || 0}</span>
                   </div>
@@ -779,7 +779,7 @@ Text to analyze:
               </p>
               <div className="flex items-center gap-3">
                 <img 
-                  src={thread.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(thread.authorName)}&background=3E3160&color=fff`}
+                  src={thread.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(thread.authorName)}&background=1c1528&color=fff`}
                   alt={thread.authorName}
                   className="w-6 h-6 rounded-full"
                 />

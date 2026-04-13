@@ -138,9 +138,9 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsOpen(!isOpen)}
             className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-2xl border transition-all duration-500 ${
-              isOpen ? 'bg-[#C3A6E6] text-[#2F244F] border-white scale-110' : 
-              productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 
-              'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'
+              isOpen ? 'bg-[#ff4d4d] text-[#15101e] border-white scale-110' : 
+              productionMode ? 'bg-[#ff4d4d] text-[#15101e] border-white' : 
+              'bg-[#15101e] text-[#ff4d4d] border-[#3d2b4f]'
             }`}
             title={translations[lang].sdkMinistryPanel}
           >
@@ -157,17 +157,17 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`fixed z-40 bg-[#1a142e] border border-[#5C4B8B]/50 shadow-2xl rounded-2xl flex flex-col overflow-hidden ${
+            className={`fixed z-40 bg-[#0d0b14] border border-[#3d2b4f]/50 shadow-2xl rounded-2xl flex flex-col overflow-hidden ${
               isExpanded 
                 ? 'inset-4 md:inset-10' 
                 : 'bottom-24 right-6 w-[90vw] md:w-[450px] h-[60vh] max-h-[600px]'
             }`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#2F244F]/80 border-b border-[#5C4B8B]/30">
+            <div className="flex items-center justify-between px-4 py-3 bg-[#15101e]/80 border-b border-[#3d2b4f]/30">
               <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-[#C3A6E6]" />
-                <span className="font-black text-sm tracking-widest text-[#C3A6E6] uppercase">
+                <Sparkles size={16} className="text-[#ff4d4d]" />
+                <span className="font-black text-sm tracking-widest text-[#ff4d4d] uppercase">
                   {translations[lang].sdkAhaRadio}
                 </span>
               </div>
@@ -188,11 +188,11 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-[#5C4B8B]/30">
+            <div className="flex border-b border-[#3d2b4f]/30">
               <button
                 onClick={() => setActiveTab('chat')}
                 className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === 'chat' ? 'bg-[#C3A6E6]/10 text-[#C3A6E6] border-b-2 border-[#C3A6E6]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                  activeTab === 'chat' ? 'bg-[#ff4d4d]/10 text-[#ff4d4d] border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
                 }`}
               >
                 <MessageSquare size={14} />
@@ -201,7 +201,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
               <button
                 onClick={() => setActiveTab('sdk')}
                 className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === 'sdk' ? 'bg-[#C3A6E6]/10 text-[#C3A6E6] border-b-2 border-[#C3A6E6]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                  activeTab === 'sdk' ? 'bg-[#ff4d4d]/10 text-[#ff4d4d] border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
                 }`}
               >
                 <Settings size={14} />
@@ -223,8 +223,8 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
               {activeTab === 'chat' ? (
                 !user ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4">
-                    <div className="w-16 h-16 bg-[#C3A6E6]/10 rounded-full flex items-center justify-center border border-[#C3A6E6]/20">
-                      <Lock className="w-8 h-8 text-[#C3A6E6]" />
+                    <div className="w-16 h-16 bg-[#ff4d4d]/10 rounded-full flex items-center justify-center border border-[#ff4d4d]/20">
+                      <Lock className="w-8 h-8 text-[#ff4d4d]" />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white mb-2">
@@ -236,7 +236,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                     </div>
                     <button
                       onClick={loginWithGoogle}
-                      className="bg-white text-[#2F244F] px-6 py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors"
+                      className="bg-white text-[#15101e] px-6 py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors"
                     >
                       {translations[lang].maintenanceLoginGoogle}
                     </button>
@@ -245,17 +245,17 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                 <div className="absolute inset-0 flex flex-col">
                   <div 
                     ref={scrollRef}
-                    className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-[#5C4B8B] scrollbar-track-transparent"
+                    className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-[#3d2b4f] scrollbar-track-transparent"
                   >
                     {history.map((item, i) => (
                       <div key={i} className={`flex flex-col ${item.type === 'cmd' ? 'items-end' : 'items-start'}`}>
                         {item.type === 'cmd' && (
-                          <div className="bg-[#C3A6E6] text-[#2F244F] px-4 py-2 rounded-2xl rounded-tr-sm max-w-[85%] text-sm">
+                          <div className="bg-[#ff4d4d] text-[#15101e] px-4 py-2 rounded-2xl rounded-tr-sm max-w-[85%] text-sm">
                             {item.text}
                           </div>
                         )}
                         {item.type === 'res' && (
-                          <div className="bg-[#2F244F]/80 border border-[#5C4B8B]/50 text-gray-200 px-4 py-3 rounded-2xl rounded-tl-sm max-w-[90%] text-sm whitespace-pre-wrap">
+                          <div className="bg-[#15101e]/80 border border-[#3d2b4f]/50 text-gray-200 px-4 py-3 rounded-2xl rounded-tl-sm max-w-[90%] text-sm whitespace-pre-wrap">
                             {item.text}
                           </div>
                         )}
@@ -268,15 +268,15 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                     ))}
                     {isProcessing && (
                       <div className="flex items-start">
-                        <div className="bg-[#2F244F]/80 border border-[#5C4B8B]/50 text-[#C3A6E6] px-4 py-3 rounded-2xl rounded-tl-sm text-sm flex items-center gap-2">
+                        <div className="bg-[#15101e]/80 border border-[#3d2b4f]/50 text-[#ff4d4d] px-4 py-3 rounded-2xl rounded-tl-sm text-sm flex items-center gap-2">
                           <Sparkles size={14} className="animate-pulse" />
                           {translations[lang].sdkThinking}
                         </div>
                       </div>
                     )}
                   </div>
-                  <form onSubmit={handleExecute} className="p-3 border-t border-[#5C4B8B]/30 bg-black/20">
-                    <div className="flex items-center gap-2 bg-[#2F244F]/50 border border-[#5C4B8B]/50 rounded-xl p-1 focus-within:border-[#C3A6E6]/50 transition-colors">
+                  <form onSubmit={handleExecute} className="p-3 border-t border-[#3d2b4f]/30 bg-black/20">
+                    <div className="flex items-center gap-2 bg-[#15101e]/50 border border-[#3d2b4f]/50 rounded-xl p-1 focus-within:border-[#ff4d4d]/50 transition-colors">
                       <input
                         ref={inputRef}
                         type="text"
@@ -288,7 +288,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       <button 
                         type="submit"
                         disabled={!input.trim() || isProcessing}
-                        className="shrink-0 p-2 bg-[#C3A6E6] text-[#2F244F] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white transition-colors"
+                        className="shrink-0 p-2 bg-[#ff4d4d] text-[#15101e] rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white transition-colors"
                       >
                         <ChevronRight size={18} />
                       </button>
@@ -297,13 +297,13 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                 </div>
                 )
               ) : (
-                <div className="absolute inset-0 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-[#5C4B8B] scrollbar-track-transparent">
+                <div className="absolute inset-0 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-[#3d2b4f] scrollbar-track-transparent">
                   <div className="space-y-4">
                     <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">
                       {translations[lang].sdkPerformance}
                     </h3>
                     
-                    <div className="flex items-center justify-between p-4 bg-[#2F244F]/40 rounded-xl border border-[#5C4B8B]/30">
+                    <div className="flex items-center justify-between p-4 bg-[#15101e]/40 rounded-xl border border-[#3d2b4f]/30">
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
                           {translations[lang].sdkProductionMode}
@@ -314,13 +314,13 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       </div>
                       <button 
                         onClick={toggleProductionMode}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${productionMode ? 'bg-[#C3A6E6]' : 'bg-gray-600'}`}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${productionMode ? 'bg-[#ff4d4d]' : 'bg-gray-600'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${productionMode ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-[#2F244F]/40 rounded-xl border border-[#5C4B8B]/30">
+                    <div className="flex items-center justify-between p-4 bg-[#15101e]/40 rounded-xl border border-[#3d2b4f]/30">
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
                           {translations[lang].sdkLowPerformanceMode}
@@ -331,13 +331,13 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       </div>
                       <button 
                         onClick={toggleLowPerfMode}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${lowPerfMode ? 'bg-[#C3A6E6]' : 'bg-gray-600'}`}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${lowPerfMode ? 'bg-[#ff4d4d]' : 'bg-gray-600'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${lowPerfMode ? 'left-7' : 'left-1'}`} />
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-[#2F244F]/40 rounded-xl border border-[#5C4B8B]/30">
+                    <div className="flex items-center justify-between p-4 bg-[#15101e]/40 rounded-xl border border-[#3d2b4f]/30">
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
                           {translations[lang].sdkLoadWidget}
@@ -348,7 +348,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       </div>
                       <button 
                         onClick={toggleLoadWidget}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${showLoadWidget ? 'bg-[#C3A6E6]' : 'bg-gray-600'}`}
+                        className={`w-12 h-6 rounded-full transition-colors relative ${showLoadWidget ? 'bg-[#ff4d4d]' : 'bg-gray-600'}`}
                       >
                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${showLoadWidget ? 'left-7' : 'left-1'}`} />
                       </button>
@@ -360,10 +360,10 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       {translations[lang].sdkSystem}
                     </h3>
                     
-                    <div className="p-4 bg-black/30 rounded-xl border border-[#5C4B8B]/30 font-mono text-xs text-gray-300 space-y-2">
+                    <div className="p-4 bg-black/30 rounded-xl border border-[#3d2b4f]/30 font-mono text-xs text-gray-300 space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-500">SDK Version:</span>
-                        <span className="text-[#C3A6E6]">v2.0.0-hsr</span>
+                        <span className="text-[#ff4d4d]">v2.0.0-hsr</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Environment:</span>

@@ -37,13 +37,13 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
   };
 
   return (
-    <div className="bg-[#2F244F] border border-[#5C4B8B] rounded-2xl p-6 relative overflow-hidden group">
+    <div className="bg-[#15101e] border border-[#3d2b4f] rounded-2xl p-6 relative overflow-hidden group">
       {/* Background decoration */}
-      <div className="absolute -right-10 -top-10 w-40 h-40 bg-[#C3A6E6]/10 rounded-full blur-3xl group-hover:bg-[#C3A6E6]/20 transition-colors duration-700"></div>
+      <div className="absolute -right-10 -top-10 w-40 h-40 bg-[#ff4d4d]/10 rounded-full blur-3xl group-hover:bg-[#ff4d4d]/20 transition-colors duration-700"></div>
       
       <div className="relative z-10 flex flex-col items-center text-center">
-        <div className="w-12 h-12 bg-[#3E3160] rounded-full flex items-center justify-center mb-4 border border-[#5C4B8B] shadow-[0_0_15px_rgba(195,166,230,0.2)]">
-          <Ticket className="text-[#C3A6E6]" size={24} />
+        <div className="w-12 h-12 bg-[#251c35] rounded-full flex items-center justify-center mb-4 border border-[#3d2b4f] shadow-[0_0_15px_rgba(255,77,77,0.2)]">
+          <Ticket className="text-[#ff4d4d]" size={24} />
         </div>
         
         <h3 className="text-lg font-bold text-white mb-2">
@@ -59,7 +59,7 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 onClick={revealFortune}
-                className="bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-6 py-2 rounded-full font-bold flex items-center gap-2 transition-colors"
+                className="bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-6 py-2 rounded-full font-bold flex items-center gap-2 transition-colors"
               >
                 <Sparkles size={16} />
                 {t.fortuneReveal}
@@ -70,7 +70,7 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-2 text-[#C3A6E6]"
+                className="flex items-center gap-2 text-[#ff4d4d]"
               >
                 <Star className="animate-spin" size={20} />
                 <span className="animate-pulse tracking-widest text-sm">

@@ -29,12 +29,12 @@ export class MinistrySDK {
       `%c Modules: %c Security, Data, UI, Analytics, Terminal\n` +
       `%c Mode:    %c ${this.sdkConfig.debug ? 'Development' : 'Production'}\n\n` +
       `%c "May the Aeons guide your path." %c`,
-      'background: #C3A6E6; color: #2F244F; font-size: 20px; font-weight: 900; padding: 8px 16px; border-radius: 8px;', '',
-      'color: #888; font-weight: bold; font-size: 14px;', 'color: #C3A6E6; font-size: 14px;',
+      'background: #ff4d4d; color: #15101e; font-size: 20px; font-weight: 900; padding: 8px 16px; border-radius: 8px;', '',
+      'color: #888; font-weight: bold; font-size: 14px;', 'color: #ff4d4d; font-size: 14px;',
       'color: #888; font-weight: bold; font-size: 14px;', 'color: #00FF00; font-size: 14px;',
       'color: #888; font-weight: bold; font-size: 14px;', 'color: #4A90E2; font-size: 14px;',
       'color: #888; font-weight: bold; font-size: 14px;', 'color: #F8E71C; font-size: 14px;',
-      'color: #C3A6E6; font-style: italic; font-size: 12px;', ''
+      'color: #ff4d4d; font-style: italic; font-size: 12px;', ''
     );
 
     this.logging.system(`Aha Radio Station SDK v${this.version} initialized.`, {
@@ -557,7 +557,7 @@ export class MinistrySDK {
    */
   public logging = {
     info: (message: string, data?: any) => {
-      // console.log(`%c[MINISTRY_INFO] %c${message}`, 'color: #C3A6E6; font-weight: bold;', 'color: white;', data || '');
+      // console.log(`%c[MINISTRY_INFO] %c${message}`, 'color: #ff4d4d; font-weight: bold;', 'color: white;', data || '');
       this.notifyLogSubscribers('info', message, data);
     },
     warn: (message: string, data?: any) => {

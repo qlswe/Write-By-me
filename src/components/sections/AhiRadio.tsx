@@ -286,9 +286,9 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center space-y-6 bg-[#2F244F]/40 rounded-3xl border border-[#5C4B8B]/30">
-        <div className="w-20 h-20 bg-[#C3A6E6]/10 rounded-full flex items-center justify-center border border-[#C3A6E6]/20">
-          <Lock className="w-10 h-10 text-[#C3A6E6]" />
+      <div className="flex flex-col items-center justify-center p-12 text-center space-y-6 bg-[#15101e]/40 rounded-3xl border border-[#3d2b4f]/30">
+        <div className="w-20 h-20 bg-[#ff4d4d]/10 rounded-full flex items-center justify-center border border-[#ff4d4d]/20">
+          <Lock className="w-10 h-10 text-[#ff4d4d]" />
         </div>
         <div>
           <h3 className="text-2xl font-bold text-white mb-2">
@@ -300,7 +300,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         </div>
         <button
           onClick={loginWithGoogle}
-          className="bg-[#C3A6E6] text-[#2F244F] px-8 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-white transition-colors shadow-[0_0_30px_rgba(195,166,230,0.3)]"
+          className="bg-[#ff4d4d] text-[#15101e] px-8 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-white transition-colors shadow-[0_0_30px_rgba(255,77,77,0.3)]"
         >
           {t.loginWithGoogle}
         </button>
@@ -309,10 +309,10 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-[#1A1625] to-[#2F244F] rounded-[2.5rem] border border-[#5C4B8B]/40 relative overflow-hidden shadow-2xl">
+    <div className="flex flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-[#0d0b14] to-[#15101e] rounded-[2.5rem] border border-[#3d2b4f]/40 relative overflow-hidden shadow-2xl">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-[#C3A6E6]/10 rounded-full blur-[100px] transition-all duration-1000 ${isPlaying ? 'opacity-100 scale-110' : 'opacity-30 scale-90'}`} />
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-[#ff4d4d]/10 rounded-full blur-[100px] transition-all duration-1000 ${isPlaying ? 'opacity-100 scale-110' : 'opacity-30 scale-90'}`} />
         
         {/* Floating music notes when playing */}
         <AnimatePresence>
@@ -324,7 +324,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                 className="absolute top-1/4 left-1/4"
               >
-                <Music className="w-8 h-8 text-[#C3A6E6]/30" />
+                <Music className="w-8 h-8 text-[#ff4d4d]/30" />
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, y: 50, x: 50 }}
@@ -332,7 +332,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                 transition={{ duration: 4, repeat: Infinity, ease: "linear", delay: 1 }}
                 className="absolute top-1/3 right-1/4"
               >
-                <Music className="w-6 h-6 text-[#C3A6E6]/20" />
+                <Music className="w-6 h-6 text-[#ff4d4d]/20" />
               </motion.div>
             </>
           )}
@@ -341,8 +341,8 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
 
       <div className="relative z-10 w-full max-w-2xl flex flex-col items-center">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-10 bg-[#1A1625]/50 px-6 py-3 rounded-full border border-[#5C4B8B]/30 backdrop-blur-sm">
-          <Radio className={`w-5 h-5 ${isPlaying ? 'text-[#C3A6E6] animate-pulse' : 'text-gray-400'}`} />
+        <div className="flex items-center gap-3 mb-10 bg-[#0d0b14]/50 px-6 py-3 rounded-full border border-[#3d2b4f]/30 backdrop-blur-sm">
+          <Radio className={`w-5 h-5 ${isPlaying ? 'text-[#ff4d4d] animate-pulse' : 'text-gray-400'}`} />
           <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">
             {t.radioTitle}
           </h2>
@@ -356,7 +356,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
             <motion.div 
               animate={{ rotate: isPlaying ? 360 : 0 }}
               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-              className={`w-48 h-48 sm:w-56 sm:h-56 rounded-full flex items-center justify-center border-4 border-[#1A1625] shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden ${isPlaying ? 'bg-[#2F244F]' : 'bg-[#1A1625]'}`}
+              className={`w-48 h-48 sm:w-56 sm:h-56 rounded-full flex items-center justify-center border-4 border-[#0d0b14] shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden ${isPlaying ? 'bg-[#15101e]' : 'bg-[#0d0b14]'}`}
             >
               {/* Vinyl grooves */}
               <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-2"></div>
@@ -365,21 +365,21 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
               <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-14"></div>
               
               {/* Center label */}
-              <div className="w-20 h-20 bg-gradient-to-br from-[#C3A6E6] to-[#5C4B8B] rounded-full flex items-center justify-center shadow-inner relative z-10">
-                <div className="w-4 h-4 bg-[#1A1625] rounded-full shadow-inner"></div>
+              <div className="w-20 h-20 bg-gradient-to-br from-[#ff4d4d] to-[#3d2b4f] rounded-full flex items-center justify-center shadow-inner relative z-10">
+                <div className="w-4 h-4 bg-[#0d0b14] rounded-full shadow-inner"></div>
                 <Disc className="absolute w-10 h-10 text-white/20" />
               </div>
             </motion.div>
             
             {/* Playback Controls Overlay */}
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#1A1625] p-2 rounded-full border border-[#5C4B8B]/50 shadow-xl z-20">
+            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#0d0b14] p-2 rounded-full border border-[#3d2b4f]/50 shadow-xl z-20">
               <button
                 onClick={toggleRadio}
                 disabled={isLoading}
                 className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
                   isPlaying 
-                    ? 'bg-[#C3A6E6] text-[#2F244F] shadow-[0_0_20px_rgba(195,166,230,0.4)] hover:scale-105' 
-                    : 'bg-[#3E3160] text-white hover:bg-[#C3A6E6] hover:text-[#2F244F]'
+                    ? 'bg-[#ff4d4d] text-[#15101e] shadow-[0_0_20px_rgba(255,77,77,0.4)] hover:scale-105' 
+                    : 'bg-[#251c35] text-white hover:bg-[#ff4d4d] hover:text-[#15101e]'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isLoading ? (
@@ -394,8 +394,8 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
               {isPlaying && (
                 <button
                   onClick={handleNextJoke}
-                  disabled={isLoading || statusText.includes('Думаю') || statusText.includes('Thinking')}
-                  className="w-10 h-10 rounded-full bg-[#2F244F] text-gray-400 hover:text-white hover:bg-[#3E3160] flex items-center justify-center transition-all disabled:opacity-50"
+                  disabled={isLoading || statusText.includes(t.radioThinking || 'Thinking')}
+                  className="w-10 h-10 rounded-full bg-[#15101e] text-gray-400 hover:text-white hover:bg-[#251c35] flex items-center justify-center transition-all disabled:opacity-50"
                   title={t.radioNextJoke}
                 >
                   <SkipForward className="w-4 h-4" />
@@ -407,7 +407,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
           {/* Text & Status Area */}
           <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full mt-8 md:mt-0">
             <div className="mb-4">
-              <p className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest mb-1">
+              <p className="text-xs font-bold text-[#ff4d4d] uppercase tracking-widest mb-1">
                 {t.radioNowPlaying}
               </p>
               <h3 className="text-xl sm:text-2xl font-black text-white">
@@ -415,7 +415,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
               </h3>
             </div>
 
-            <div className="bg-[#1A1625]/60 border border-[#5C4B8B]/30 rounded-2xl p-5 w-full min-h-[8rem] flex flex-col justify-center relative">
+            <div className="bg-[#0d0b14]/60 border border-[#3d2b4f]/30 rounded-2xl p-5 w-full min-h-[8rem] flex flex-col justify-center relative">
               {isPlaying && currentJoke ? (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
@@ -440,11 +440,11 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
             </div>
 
             <div className="mt-6 flex items-center justify-between w-full">
-              <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider bg-[#1A1625] px-3 py-1.5 rounded-lg border border-[#5C4B8B]/30">
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider bg-[#0d0b14] px-3 py-1.5 rounded-lg border border-[#3d2b4f]/30">
                 {isPlaying ? (
                   <>
-                    <Volume2 className="w-3.5 h-3.5 text-[#C3A6E6]" />
-                    <span className="text-[#C3A6E6]">{statusText}</span>
+                    <Volume2 className="w-3.5 h-3.5 text-[#ff4d4d]" />
+                    <span className="text-[#ff4d4d]">{statusText}</span>
                   </>
                 ) : (
                   <>
@@ -461,7 +461,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                     key={i}
                     animate={isPlaying ? { height: [4, 20, 4] } : { height: 4 }}
                     transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.15 }}
-                    className={`w-1.5 rounded-full ${isPlaying ? 'bg-[#C3A6E6]' : 'bg-[#5C4B8B]/50'}`}
+                    className={`w-1.5 rounded-full ${isPlaying ? 'bg-[#ff4d4d]' : 'bg-[#3d2b4f]/50'}`}
                   />
                 ))}
               </div>

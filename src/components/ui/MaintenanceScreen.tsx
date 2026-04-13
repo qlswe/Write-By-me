@@ -13,21 +13,21 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ lang }) =>
   const t = translations[lang];
 
   return (
-    <div className="min-h-screen bg-[#1a142e] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#0d0b14] flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#C3A6E6]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#5C4B8B]/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ff4d4d]/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#3d2b4f]/10 rounded-full blur-3xl" />
       </div>
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#2F244F]/80 backdrop-blur-xl border border-[#5C4B8B]/50 rounded-3xl p-8 sm:p-12 max-w-lg w-full text-center shadow-2xl relative z-10"
+        className="bg-[#15101e]/80 backdrop-blur-xl border border-[#3d2b4f]/50 rounded-3xl p-8 sm:p-12 max-w-lg w-full text-center shadow-2xl relative z-10"
       >
         <div className="flex justify-center mb-6">
-          <div className="p-4 bg-[#C3A6E6]/10 rounded-full">
-            <ShieldAlert size={48} className="text-[#C3A6E6]" />
+          <div className="p-4 bg-[#ff4d4d]/10 rounded-full">
+            <ShieldAlert size={48} className="text-[#ff4d4d]" />
           </div>
         </div>
         
@@ -56,7 +56,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ lang }) =>
           <button
             onClick={loginWithGoogle}
             disabled={isLoggingIn}
-            className="w-full bg-white text-[#1a142e] px-6 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-[#C3A6E6] transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+            className="w-full bg-white text-[#0d0b14] px-6 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-[#ff4d4d] transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
           >
             {isLoggingIn ? (
               <span className="animate-pulse">...</span>

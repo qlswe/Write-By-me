@@ -33,7 +33,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${fullScreen ? (isDestructive ? 'bg-red-950' : 'bg-[#1A1625]') : 'bg-black/80'}`}
+        className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${fullScreen ? (isDestructive ? 'bg-red-950' : 'bg-[#0d0b14]') : 'bg-black/80'}`}
         onClick={onClose}
       >
         <motion.div
@@ -43,7 +43,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           onClick={(e) => e.stopPropagation()}
           className={fullScreen 
             ? "flex flex-col items-center justify-center text-center w-full h-full max-w-4xl mx-auto p-8" 
-            : "bg-[#1A1625] border border-[#2F244F] rounded-[2.5rem] p-8 max-w-md w-full shadow-[0_0_50px_rgba(0,0,0,0.5)]"}
+            : "bg-[#0d0b14] border border-[#15101e] rounded-[2.5rem] p-8 max-w-md w-full shadow-[0_0_50px_rgba(0,0,0,0.5)]"}
         >
           <div className={`flex items-center gap-4 mb-6 ${fullScreen ? 'flex-col mb-10' : ''}`}>
             <div className={`p-4 rounded-2xl ${isDestructive ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20'} ${fullScreen ? 'p-8 mb-6' : ''}`}>
@@ -59,7 +59,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <div className={`flex gap-4 justify-end ${fullScreen ? 'w-full max-w-md flex-col-reverse sm:flex-row sm:justify-center gap-6' : ''}`}>
             <button
               onClick={onClose}
-              className={`rounded-2xl font-black uppercase tracking-widest text-gray-500 bg-[#2F244F]/50 hover:bg-[#2F244F] hover:text-white transition-all border border-[#5C4B8B]/20 ${fullScreen ? 'px-10 py-5 text-xl flex-1' : 'px-6 py-3 text-[10px]'}`}
+              className={`rounded-2xl font-black uppercase tracking-widest text-gray-500 bg-[#15101e]/50 hover:bg-[#15101e] hover:text-white transition-all border border-[#3d2b4f]/20 ${fullScreen ? 'px-10 py-5 text-xl flex-1' : 'px-6 py-3 text-[10px]'}`}
             >
               {cancelText}
             </button>

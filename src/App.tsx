@@ -389,10 +389,10 @@ export default function App() {
             exit={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: -20, scale: 0.98 }}
             transition={lowPerfMode ? { duration: 0 } : { duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
           >
-            <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#C3A6E6] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(195,166,230,0.3)]"></div></div>}>
+            <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(255,77,77,0.3)]"></div></div>}>
               {section === 'home' && (
-                <div className="bg-[#3E3160] rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
-                  <h2 className="text-3xl font-bold text-[#C3A6E6] mb-4">{t.homeTitle}</h2>
+                <div className="bg-[#251c35] rounded-2xl p-8 shadow-xl border border-[#3d2b4f]">
+                  <h2 className="text-3xl font-bold text-[#ff4d4d] mb-4">{t.homeTitle}</h2>
                   <p className="text-gray-300 mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: t.homeDesc }} />
                   <div className="flex items-center gap-2 text-xs text-gray-500 mb-8">
                     <RefreshCw size={14} />
@@ -400,19 +400,19 @@ export default function App() {
                   </div>
 
                   {/* SDK Info Section */}
-                  <div className="mt-12 p-6 rounded-xl bg-black/20 border border-[#C3A6E6]/20">
+                  <div className="mt-12 p-6 rounded-xl bg-black/20 border border-[#ff4d4d]/20">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 rounded-lg bg-[#C3A6E6]/10 text-[#C3A6E6]">
+                      <div className="p-2 rounded-lg bg-[#ff4d4d]/10 text-[#ff4d4d]">
                         <Sparkles size={20} />
                       </div>
-                      <h3 className="text-xl font-bold text-[#C3A6E6]">{sdk.help.getUsage(lang as Language).title}</h3>
+                      <h3 className="text-xl font-bold text-[#ff4d4d]">{sdk.help.getUsage(lang as Language).title}</h3>
                     </div>
                     <p className="text-sm text-gray-400 mb-6 leading-relaxed">
                       {sdk.help.getUsage(lang as Language).description}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{t.sdkFeatures}</h4>
+                        <h4 className="text-xs font-bold text-[#ff4d4d] uppercase tracking-widest">{t.sdkFeatures}</h4>
                         <ul className="text-xs text-gray-500 space-y-1 list-disc pl-4">
                           {sdk.help.getUsage(lang as Language).useCases.slice(0, 4).map((useCase, i) => (
                             <li key={i}>{useCase.split(':')[0]}</li>
@@ -420,7 +420,7 @@ export default function App() {
                         </ul>
                       </div>
                       <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{t.sdkHowToStart}</h4>
+                        <h4 className="text-xs font-bold text-[#ff4d4d] uppercase tracking-widest">{t.sdkHowToStart}</h4>
                         <p className="text-[10px] font-mono text-gray-500">
                           {sdk.help.getUsage(lang as Language).gettingStarted}
                         </p>
@@ -503,7 +503,7 @@ export default function App() {
               )}
               {section === 'users' && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-[#C3A6E6] mb-6">{t.navUsers}</h2>
+                  <h2 className="text-2xl font-bold text-[#ff4d4d] mb-6">{t.navUsers}</h2>
                   <UsersList 
                     lang={lang as Language} 
                     onOpenChat={(uid, name) => setActiveChat({ uid, displayName: name })} 
@@ -516,11 +516,11 @@ export default function App() {
               )}
               {section === 'chats' && (
                 <div className="max-w-2xl mx-auto">
-                  <h2 className="text-3xl font-black text-[#C3A6E6] uppercase tracking-widest mb-8 flex items-center gap-3">
+                  <h2 className="text-3xl font-black text-[#ff4d4d] uppercase tracking-widest mb-8 flex items-center gap-3">
                     <MessageSquare size={32} />
                     {t.navChats}
                   </h2>
-                  <div className="bg-[#3E3160] rounded-3xl p-6 border border-[#5C4B8B] shadow-2xl">
+                  <div className="bg-[#251c35] rounded-3xl p-6 border border-[#3d2b4f] shadow-2xl">
                     <ChatsList lang={lang as Language} onSelectChat={(id, name) => setActiveChat({ uid: id, displayName: name })} />
                   </div>
                 </div>
@@ -578,7 +578,7 @@ export default function App() {
             initial={{ opacity: 0, y: 50, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
             exit={{ opacity: 0, y: 50, x: '-50%' }}
-            className="fixed bottom-8 left-1/2 z-50 bg-[#C3A6E6] text-[#2F244F] px-8 py-4 rounded-2xl font-black shadow-2xl border-2 border-white/20 uppercase tracking-widest text-sm"
+            className="fixed bottom-8 left-1/2 z-50 bg-[#ff4d4d] text-[#15101e] px-8 py-4 rounded-2xl font-black shadow-2xl border-2 border-white/20 uppercase tracking-widest text-sm"
           >
             {toast}
           </motion.div>

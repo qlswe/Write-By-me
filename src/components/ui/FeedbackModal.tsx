@@ -50,13 +50,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-[#3E3160] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-[#5C4B8B]"
+        className="relative bg-[#251c35] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-[#3d2b4f]"
       >
-        <div className="p-6 border-b border-[#5C4B8B] flex justify-between items-center">
-          <h3 className="text-xl font-bold text-[#C3A6E6]">{t.feedbackTitle || "Feedback"}</h3>
+        <div className="p-6 border-b border-[#3d2b4f] flex justify-between items-center">
+          <h3 className="text-xl font-bold text-[#ff4d4d]">{t.feedbackTitle || "Feedback"}</h3>
           <button 
             onClick={() => setFeedbackOpen(false)}
-            className="p-2 hover:bg-[#5C4B8B] rounded-full transition-colors text-gray-400"
+            className="p-2 hover:bg-[#3d2b4f] rounded-full transition-colors text-gray-400"
           >
             <X size={20} />
           </button>
@@ -66,11 +66,11 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             <label className="block text-sm font-medium text-gray-300 mb-2">{t.feedbackType || "Type"}</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-gray-200 cursor-pointer">
-                <input type="radio" checked={feedbackType === 'bug'} onChange={() => setFeedbackType('bug')} className="accent-[#C3A6E6]" />
+                <input type="radio" checked={feedbackType === 'bug'} onChange={() => setFeedbackType('bug')} className="accent-[#ff4d4d]" />
                 {t.bug || "Bug"}
               </label>
               <label className="flex items-center gap-2 text-gray-200 cursor-pointer">
-                <input type="radio" checked={feedbackType === 'suggestion'} onChange={() => setFeedbackType('suggestion')} className="accent-[#C3A6E6]" />
+                <input type="radio" checked={feedbackType === 'suggestion'} onChange={() => setFeedbackType('suggestion')} className="accent-[#ff4d4d]" />
                 {t.suggestion || "Suggestion"}
               </label>
             </div>
@@ -80,7 +80,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
               placeholder={t.feedbackPlaceholder || "Describe..."}
-              className="w-full h-32 bg-[#2F244F] border border-[#5C4B8B] rounded-xl p-3 text-gray-200 focus:outline-none focus:border-[#C3A6E6] resize-none"
+              className="w-full h-32 bg-[#15101e] border border-[#3d2b4f] rounded-xl p-3 text-gray-200 focus:outline-none focus:border-[#ff4d4d] resize-none"
             />
           </div>
           <div>
@@ -93,13 +93,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             />
             <label 
               htmlFor="feedback-image"
-              className="flex items-center justify-center gap-2 w-full p-3 border border-dashed border-[#5C4B8B] rounded-xl text-gray-400 hover:text-[#C3A6E6] hover:border-[#C3A6E6] transition-colors cursor-pointer bg-[#2F244F]/50 text-center text-sm"
+              className="flex items-center justify-center gap-2 w-full p-3 border border-dashed border-[#3d2b4f] rounded-xl text-gray-400 hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-colors cursor-pointer bg-[#15101e]/50 text-center text-sm"
             >
               <ImagePlus size={20} className="shrink-0" />
               <span className="truncate">{feedbackImage ? (t.imageAttached || "Image attached") : (t.attachImage || "Attach Image")}</span>
             </label>
             {feedbackImage && (
-              <div className="mt-2 relative rounded-lg overflow-hidden border border-[#5C4B8B] inline-block">
+              <div className="mt-2 relative rounded-lg overflow-hidden border border-[#3d2b4f] inline-block">
                 <img src={feedbackImage} alt="Attachment preview" className="h-20 object-cover" />
                 <button 
                   onClick={() => setFeedbackImage(null)}
@@ -114,17 +114,17 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             </p>
           </div>
         </div>
-        <div className="p-6 border-t border-[#5C4B8B] bg-[#2F244F] flex justify-end gap-3">
+        <div className="p-6 border-t border-[#3d2b4f] bg-[#15101e] flex justify-end gap-3">
           <button 
             onClick={() => setFeedbackOpen(false)}
-            className="px-4 py-2 rounded-lg text-gray-300 hover:bg-[#3E3160] transition-colors"
+            className="px-4 py-2 rounded-lg text-gray-300 hover:bg-[#251c35] transition-colors"
           >
             {t.cancel || "Cancel"}
           </button>
           <button 
             onClick={handleFeedbackSubmit}
             disabled={!feedbackText.trim()}
-            className="px-4 py-2 rounded-lg bg-[#C3A6E6] text-[#2F244F] font-bold hover:bg-[#B094EB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-lg bg-[#ff4d4d] text-[#15101e] font-bold hover:bg-[#ff7a7a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t.submit || "Send"}
           </button>
