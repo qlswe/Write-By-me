@@ -82,8 +82,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   };
 
   const formatDateSeparator = (date: Date) => {
-    if (isToday(date)) return lang === 'ru' ? 'Сегодня' : 'Today';
-    if (isYesterday(date)) return lang === 'ru' ? 'Вчера' : 'Yesterday';
+    if (isToday(date)) return t.chatToday;
+    if (isYesterday(date)) return t.chatYesterday;
     return format(date, lang === 'ru' ? 'dd MMMM yyyy' : 'MMMM dd, yyyy');
   };
 
@@ -93,7 +93,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
 
     files.forEach(file => {
       if (file.size > 5 * 1024 * 1024) {
-        alert(lang === 'ru' ? 'Файл слишком большой. Максимум 5MB.' : 'File too large. Maximum 5MB.');
+        alert(t.chatFileTooLarge);
         return;
       }
 
@@ -230,12 +230,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                 {isUserOnline() ? (
                   <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                    {lang === 'ru' ? 'В сети' : 'Online'}
+                    {t.chatOnline}
                   </span>
                 ) : (
                   <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
-                    {lang === 'ru' ? 'Не в сети' : 'Offline'}
+                    {t.chatOffline}
                   </span>
                 )}
                 <span className="text-[8px] text-[#C3A6E6]/60 font-black uppercase tracking-tighter border border-[#C3A6E6]/20 px-1.5 py-0.5 rounded">Aha radio E/D</span>
@@ -257,19 +257,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             </div>
             <div className="space-y-2">
               <h3 className="text-xl font-black text-white uppercase tracking-tight">
-                {lang === 'ru' ? 'Требуется авторизация' : 'Authorization Required'}
+                {t.chatAuthRequired}
               </h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                {lang === 'ru' 
-                  ? 'Войдите в систему, чтобы просматривать сообщения и общаться с другими пользователями.' 
-                  : 'Log in to view messages and chat with other users.'}
+                {t.chatAuthDesc}
               </p>
             </div>
             <button
               onClick={loginWithGoogle}
               className="w-full bg-white text-[#2F244F] py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-100 transition-all active:scale-95 shadow-xl"
             >
-              {lang === 'ru' ? 'Войти через Google' : 'Login with Google'}
+              {t.maintenanceLoginGoogle}
             </button>
           </div>
         ) : (
@@ -289,7 +287,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                     <Send className="w-8 h-8 text-[#C3A6E6]" />
                   </div>
                   <p className="text-sm font-bold uppercase tracking-widest text-gray-400">
-                    {lang === 'ru' ? 'Начните общение' : 'Start a conversation'}
+                    {t.chatStartConversation}
                   </p>
                 </div>
               ) : (
@@ -338,24 +336,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <div className="px-4 py-3 border-b border-[#5C4B8B]/50 mb-1">
-                                    <h4 className="text-white font-bold text-center">Действия</h4>
+                                    <h4 className="text-white font-bold text-center">{t.chatActions}</h4>
                                   </div>
                                   <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
-                                    <Reply className="w-5 h-5 text-[#C3A6E6]" /> Ответить
+                                    <Reply className="w-5 h-5 text-[#C3A6E6]" /> {t.chatReply}
                                   </button>
                                   {msg.type !== 'sticker' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleCopy(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
-                                      <Copy className="w-5 h-5 text-[#C3A6E6]" /> Копировать
+                                      <Copy className="w-5 h-5 text-[#C3A6E6]" /> {t.chatCopy}
                                     </button>
                                   )}
                                   {isMe && msg.type !== 'sticker' && (
                                     <button onClick={(e) => { e.stopPropagation(); setEditingMessage(msg); setInputText(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#C3A6E6]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
-                                      <Pencil className="w-5 h-5 text-[#C3A6E6]" /> Изменить
+                                      <Pencil className="w-5 h-5 text-[#C3A6E6]" /> {t.chatEdit}
                                     </button>
                                   )}
                                   {isMe && (
                                     <button onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id, recipientId); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-red-500/10 rounded-xl text-red-400 hover:text-red-300 transition-colors text-base font-medium mt-1 border-t border-[#5C4B8B]/30">
-                                      <Trash2 className="w-5 h-5" /> Удалить
+                                      <Trash2 className="w-5 h-5" /> {t.chatDelete}
                                     </button>
                                   )}
                                 </motion.div>
@@ -381,10 +379,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             {repliedMsg && msg.type !== 'sticker' && !msg.isDeleted && (
                               <div className={`mb-2 p-2 rounded-lg text-xs border-l-2 ${isMe ? 'bg-[#2F244F]/10 border-[#2F244F]/30' : 'bg-[#2F244F]/30 border-[#C3A6E6]/50'}`}>
                                 <span className="font-bold opacity-70 block mb-0.5">
-                                  {repliedMsg.senderId === user?.uid ? 'Вы' : recipientName}
+                                  {repliedMsg.senderId === user?.uid ? t.chatYou : recipientName}
                                 </span>
                                 <span className="opacity-80 line-clamp-1">
-                                  {repliedMsg.isDeleted ? 'Сообщение удалено' : (repliedMsg.type === 'sticker' ? 'Sticker' : repliedMsg.text)}
+                                  {repliedMsg.isDeleted ? t.chatMessageDeleted : (repliedMsg.type === 'sticker' ? 'Sticker' : repliedMsg.text)}
                                 </span>
                               </div>
                             )}

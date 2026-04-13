@@ -38,7 +38,7 @@ const RoleSelector: React.FC<{
 
   const roles = [
     { value: 'user', label: t.roleUser },
-    { value: 'beta-tester', label: lang === 'ru' ? 'Бета-тестер' : 'Beta Tester' },
+    { value: 'beta-tester', label: t.roleBetaTester },
     { value: 'moderator', label: t.roleModerator },
     { value: 'admin', label: t.roleAdmin },
   ];
@@ -149,7 +149,7 @@ const UserListItem = React.memo(({
         <button
           onClick={() => onViewProfile?.(user)}
           className="p-2.5 sm:p-3 bg-[#5C4B8B]/30 hover:bg-[#C3A6E6] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#C3A6E6]/30 shadow-lg"
-          title={lang === 'ru' ? 'Профиль' : 'Profile'}
+          title={t.adminProfile}
         >
           <User className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
@@ -231,10 +231,10 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
             </div>
             <div>
               <h3 className="font-black text-white uppercase tracking-widest text-sm">
-                {lang === 'ru' ? 'Режим обслуживания' : 'Maintenance Mode'}
+                {t.adminMaintenanceMode}
               </h3>
               <p className="text-xs text-gray-400">
-                {lang === 'ru' ? 'Закрыть сайт для обычных пользователей' : 'Close site for regular users'}
+                {t.adminMaintenanceDesc}
               </p>
             </div>
           </div>
@@ -262,7 +262,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={lang === 'ru' ? 'Поиск пользователей...' : 'Search users...'}
+            placeholder={t.adminSearchUsers}
             className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/50 rounded-2xl py-3 pl-10 pr-10 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C3A6E6] focus:bg-[#2F244F]/80 transition-all"
           />
           <AnimatePresence>
@@ -290,7 +290,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
           >
             <Search className="mx-auto mb-4 opacity-20" size={32} />
             <p className="text-sm font-bold uppercase tracking-widest">
-              {lang === 'ru' ? 'Ничего не найдено' : 'No users found'}
+              {t.adminNoUsersFound}
             </p>
           </motion.div>
         ) : (

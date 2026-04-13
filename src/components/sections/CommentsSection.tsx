@@ -130,7 +130,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(content);
       if (!isApproved) {
-        alert(lang === 'ru' ? 'Ваш комментарий был отклонен автоматической модерацией.' : 'Your comment was rejected by automatic moderation.');
+        alert(t.forumModerationRejectedComment);
         setIsSubmitting(false);
         return;
       }

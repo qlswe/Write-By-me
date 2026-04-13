@@ -73,7 +73,7 @@ const ChatItem = React.memo(({
         <div className="flex items-center gap-2">
           {isTyping ? (
             <p className="text-xs text-[#C3A6E6] font-bold italic truncate">
-              {lang === 'ru' ? 'печатает...' : 'typing...'}
+              {t.chatTyping}
             </p>
           ) : (
             <p className={`text-xs truncate font-medium ${isUnread ? 'text-white' : 'text-gray-400'}`}>
@@ -159,7 +159,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
       <div className="text-center py-16 bg-[#2F244F]/20 rounded-3xl border border-[#5C4B8B]/20">
         <User className="mx-auto mb-6 text-gray-600" size={48} />
         <p className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">
-          {lang === 'ru' ? "Войдите, чтобы просматривать сообщения" : "Log in to view your chats"}
+          {t.chatLoginToView}
         </p>
         <button
           onClick={loginWithGoogle}
@@ -193,12 +193,10 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
             </div>
             <div>
               <h4 className="text-white font-bold text-sm mb-1">
-                {lang === 'ru' ? 'Включить уведомления?' : 'Enable notifications?'}
+                {t.chatEnableNotifs}
               </h4>
               <p className="text-gray-300 text-xs leading-relaxed">
-                {lang === 'ru' 
-                  ? 'Это нужно, чтобы вы не пропустили новые сообщения, когда сайт свернут или вы находитесь в другом разделе.' 
-                  : 'This is needed so you don\'t miss new messages when the site is minimized or you are in another section.'}
+                {t.chatEnableNotifsDesc}
               </p>
             </div>
           </div>
@@ -207,13 +205,13 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
               onClick={() => setShowNotifPrompt(false)}
               className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-[#5C4B8B]/30 transition-colors"
             >
-              {lang === 'ru' ? 'Позже' : 'Later'}
+              {t.chatLater}
             </button>
             <button 
               onClick={requestNotifications}
               className="flex-1 sm:flex-none bg-[#C3A6E6] text-[#2F244F] px-4 py-2 rounded-xl text-xs font-bold hover:bg-white transition-colors shadow-[0_0_15px_rgba(195,166,230,0.3)]"
             >
-              {lang === 'ru' ? 'Включить' : 'Enable'}
+              {t.chatEnable}
             </button>
           </div>
         </motion.div>
@@ -229,7 +227,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={lang === 'ru' ? 'Поиск чатов...' : 'Search chats...'}
+            placeholder={t.chatSearchChats}
             className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/50 rounded-2xl py-3 pl-10 pr-10 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C3A6E6] focus:bg-[#2F244F]/80 transition-all"
           />
           <AnimatePresence>
@@ -263,7 +261,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
           >
             <Search className="mx-auto mb-4 opacity-20" size={32} />
             <p className="text-sm font-bold uppercase tracking-widest">
-              {lang === 'ru' ? 'Ничего не найдено' : 'No chats found'}
+              {t.chatNoChatsFound}
             </p>
           </motion.div>
         ) : (

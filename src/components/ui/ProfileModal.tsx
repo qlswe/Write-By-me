@@ -68,12 +68,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
         }, { merge: true });
         
         setIsEditingName(false);
-        setToast(lang === 'ru' ? 'Имя успешно обновлено!' : 'Name updated successfully!');
+        setToast(t.profileNameUpdated);
         setTimeout(() => setToast(null), 3000);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      setToast(lang === 'ru' ? 'Ошибка при обновлении имени' : 'Error updating name');
+      setToast(t.profileNameError);
       setTimeout(() => setToast(null), 3000);
     } finally {
       setIsUpdating(false);
@@ -99,12 +99,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
         }, { merge: true });
         
         setIsEditingPhoto(false);
-        setToast(lang === 'ru' ? 'Фото успешно обновлено!' : 'Photo updated successfully!');
+        setToast(t.profilePhotoUpdated);
         setTimeout(() => setToast(null), 3000);
       }
     } catch (error) {
       console.error('Error updating photo:', error);
-      setToast(lang === 'ru' ? 'Ошибка при обновлении фото' : 'Error updating photo');
+      setToast(t.profilePhotoError);
       setTimeout(() => setToast(null), 3000);
     } finally {
       setIsUpdating(false);
@@ -125,7 +125,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(user.uid);
-    setToast(lang === 'ru' ? 'ID скопирован!' : 'ID copied!');
+    setToast(t.profileIdCopied);
     setTimeout(() => setToast(null), 3000);
   };
 
@@ -141,19 +141,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
           month: 'long',
           day: 'numeric'
         })
-      : (lang === 'ru' ? 'Неизвестно' : 'Unknown');
+      : t.profileUnknown;
 
   const stats = [
-    { label: lang === 'ru' ? 'Уровень' : 'Level', value: level.toString(), icon: Zap, color: 'text-yellow-400' },
-    { label: lang === 'ru' ? 'Опыт' : 'EXP', value: `${xpInLevel}/${xpNeeded}`, icon: Star, color: 'text-[#C3A6E6]' },
-    { label: lang === 'ru' ? 'Репутация' : 'Reputation', value: reputation.toString(), icon: Award, color: 'text-green-400' },
+    { label: t.profileLevel, value: level.toString(), icon: Zap, color: 'text-yellow-400' },
+    { label: t.profileExp, value: `${xpInLevel}/${xpNeeded}`, icon: Star, color: 'text-[#C3A6E6]' },
+    { label: t.profileReputation, value: reputation.toString(), icon: Award, color: 'text-green-400' },
   ];
 
   const getRoleDisplay = () => {
-    if (userRole === 'admin') return lang === 'ru' ? 'Администратор' : 'Administrator';
-    if (userRole === 'moderator') return lang === 'ru' ? 'Модератор' : 'Moderator';
-    if (userRole === 'beta-tester') return lang === 'ru' ? 'Бета-тестер' : 'Beta Tester';
-    return lang === 'ru' ? 'Активный Путешественник' : 'Active Trailblazer';
+    if (userRole === 'admin') return t.profileAdmin;
+    if (userRole === 'moderator') return t.profileModerator;
+    if (userRole === 'beta-tester') return t.profileBetaTester;
+    return t.profileActiveTrailblazer;
   };
 
   const canSeeEmail = isOwnProfile || isAdmin;
@@ -209,7 +209,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
               {isEditingPhoto && isOwnProfile && (
                 <div className="mb-6 p-4 bg-[#3E3160]/50 rounded-2xl border border-[#C3A6E6]/30">
                   <div className="text-[10px] font-black text-[#C3A6E6] uppercase tracking-widest mb-2">
-                    {lang === 'ru' ? 'Ссылка на фото' : 'Photo URL'}
+                    {t.profilePhotoUrl}
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -245,7 +245,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
                         className="flex-1 min-w-0 bg-[#2F244F] border border-[#C3A6E6] rounded-xl px-4 py-2 text-white focus:outline-none text-xl font-bold"
-                        placeholder={lang === 'ru' ? 'Введите имя' : 'Enter name'}
+                        placeholder={t.profileEnterName}
                         maxLength={30}
                         autoFocus
                       />
@@ -309,7 +309,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       className="col-span-2 flex items-center justify-center gap-2 bg-[#C3A6E6] text-[#2F244F] border border-white/20 px-2 py-4 rounded-2xl font-black uppercase tracking-tight hover:bg-[#B094EB] transition-all active:scale-95 text-[10px] sm:text-xs shadow-[0_0_20px_rgba(195,166,230,0.3)]"
                     >
                       <MessageSquare size={16} className="shrink-0" />
-                      <span className="truncate">{lang === 'ru' ? 'Написать сообщение' : 'Send Message'}</span>
+                      <span className="truncate">{t.profileSendMessage}</span>
                     </button>
                 )}
               </div>
@@ -320,13 +320,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                   onClick={() => { setShowPosts(false); setShowChats(false); }}
                   className={`px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${!showPosts && !showChats ? 'border-[#C3A6E6] text-[#C3A6E6]' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
                 >
-                  {lang === 'ru' ? 'Инфо' : 'Info'}
+                  {t.profileInfo}
                 </button>
                 <button
                   onClick={() => { setShowPosts(true); setShowChats(false); }}
                   className={`px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${showPosts ? 'border-[#C3A6E6] text-[#C3A6E6]' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
                 >
-                  {lang === 'ru' ? 'Юзы' : 'Uses'}
+                  {t.profileUses}
                 </button>
               </div>
 
@@ -361,7 +361,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                         <textarea
                           value={newPostText}
                           onChange={(e) => setNewPostText(e.target.value)}
-                          placeholder={lang === 'ru' ? 'Что нового?' : "What's new?"}
+                          placeholder={t.profileWhatsNew}
                           className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-2xl p-4 text-sm text-white outline-none focus:border-[#C3A6E6] transition-colors resize-none h-24"
                         />
                         <div className="flex justify-end">
@@ -370,7 +370,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                             disabled={!newPostText.trim()}
                             className="bg-[#C3A6E6] text-[#2F244F] px-6 py-2 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-[#B094EB] transition-colors disabled:opacity-50"
                           >
-                            {lang === 'ru' ? 'Опубликовать' : 'Post'}
+                            {t.profilePost}
                           </button>
                         </div>
                       </form>
@@ -382,7 +382,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       </div>
                     ) : posts.length === 0 ? (
                       <div className="text-center py-12 text-gray-500 italic text-sm">
-                        {lang === 'ru' ? 'Пока нет юзов' : 'No uses yet'}
+                        {t.profileNoUses}
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -396,12 +396,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                                   className="w-full bg-[#1a142e] border border-[#C3A6E6] rounded-xl p-3 text-sm text-white outline-none h-20"
                                 />
                                 <div className="flex justify-end gap-2">
-                                  <button onClick={() => setEditingPostId(null)} className="text-xs text-gray-500 uppercase font-bold">{lang === 'ru' ? 'Отмена' : 'Cancel'}</button>
+                                  <button onClick={() => setEditingPostId(null)} className="text-xs text-gray-500 uppercase font-bold">{t.profileCancel}</button>
                                   <button 
                                     onClick={() => handleUpdatePost(post.id, (document.getElementById(`edit-${post.id}`) as HTMLTextAreaElement).value)}
                                     className="text-xs text-[#C3A6E6] uppercase font-bold"
                                   >
-                                    {lang === 'ru' ? 'Сохранить' : 'Save'}
+                                    {t.profileSave}
                                   </button>
                                 </div>
                               </div>
@@ -452,7 +452,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                             <Mail size={20} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">{lang === 'ru' ? 'Почта' : 'Email'}</div>
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">{t.profileEmail}</div>
                             <div className="text-sm text-gray-200 truncate">{user.email}</div>
                           </div>
                         </div>
@@ -463,7 +463,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                           <Calendar size={20} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">{lang === 'ru' ? 'В игре с' : 'Member Since'}</div>
+                          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">{t.profileMemberSince}</div>
                           <div className="text-sm text-gray-200">{creationDate}</div>
                         </div>
                       </div>

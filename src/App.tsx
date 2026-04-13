@@ -47,6 +47,8 @@ type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 
 
 let hasPrintedStopWarning = false;
 
+import { Changelog } from './components/ui/Changelog';
+
 export default function App() {
   const { trackRender } = usePerfLogger('App');
   trackRender();
@@ -176,13 +178,13 @@ export default function App() {
       if (lastMessageAt > lastNotified && lastMessageAt > lastReadAt) {
         const otherUserId = chat.participants.find(id => id !== user.uid);
         if (activeChat?.uid !== otherUserId) {
-          const title = lang === 'ru' ? 'Новое сообщение!' : 'New message!';
+          const title = t.newMessageTitle;
           setToast(title);
           
           // OS Notification
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(title, {
-              body: lang === 'ru' ? 'У вас новое непрочитанное сообщение.' : 'You have a new unread message.',
+              body: t.newMessageBody,
               icon: '/favicon.ico'
             });
           }
@@ -268,8 +270,8 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
-    { id: 'forum' as const, label: lang === 'ru' ? 'Форум Ахи' : 'Aha Forum', icon: MessageSquare },
-    { id: 'radio' as const, label: lang === 'ru' ? 'Радио Ахи' : 'Aha Radio', icon: Radio },
+    { id: 'forum' as const, label: t.navForum, icon: MessageSquare },
+    { id: 'radio' as const, label: t.navRadio, icon: Radio },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
     { id: 'chronicle', label: t.navChronicle, icon: RefreshCw },
@@ -410,7 +412,7 @@ export default function App() {
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{lang === 'ru' ? 'Возможности' : 'Features'}</h4>
+                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{t.sdkFeatures}</h4>
                         <ul className="text-xs text-gray-500 space-y-1 list-disc pl-4">
                           {sdk.help.getUsage(lang as Language).useCases.slice(0, 4).map((useCase, i) => (
                             <li key={i}>{useCase.split(':')[0]}</li>
@@ -418,13 +420,16 @@ export default function App() {
                         </ul>
                       </div>
                       <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{lang === 'ru' ? 'Как начать?' : 'How to start?'}</h4>
+                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{t.sdkHowToStart}</h4>
                         <p className="text-[10px] font-mono text-gray-500">
                           {sdk.help.getUsage(lang as Language).gettingStarted}
                         </p>
                       </div>
                     </div>
                   </div>
+
+                  {/* Changelog Section */}
+                  <Changelog lang={lang as Language} />
                 </div>
               )}
 

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Terminal, X, Settings, Cpu, ChevronRight, MessageSquare, Maximize2, Minimize2, Lock, Trash2 } from 'lucide-react';
 import { sdk } from '../sdk';
-import { Language } from '../data/translations';
+import { Language, translations } from '../data/translations';
 import { useAuth } from '../hooks/useAuth';
 
 interface SDKPanelProps {
@@ -40,8 +40,8 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
   const { user, loginWithGoogle } = useAuth();
 
   const initialHistory = [
-    { type: 'info' as const, text: lang === 'ru' ? 'Радиостанция Ахи ИИ v2.0' : 'Aha Radio Station AI v2.0' },
-    { type: 'info' as const, text: lang === 'ru' ? 'Спросите меня о лоре HSR или используйте команды SDK (начните с /).' : 'Ask me about HSR lore or use SDK commands (start with /).' }
+    { type: 'info' as const, text: translations[lang].sdkAhaRadioAI },
+    { type: 'info' as const, text: translations[lang].sdkAskMe }
   ];
 
   useEffect(() => {
@@ -142,7 +142,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
               productionMode ? 'bg-[#C3A6E6] text-[#2F244F] border-white' : 
               'bg-[#2F244F] text-[#C3A6E6] border-[#5C4B8B]'
             }`}
-            title={lang === 'ru' ? 'Панель Министерства' : 'Ministry Panel'}
+            title={translations[lang].sdkMinistryPanel}
           >
             <Sparkles size={24} />
           </motion.button>
@@ -168,7 +168,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-[#C3A6E6]" />
                 <span className="font-black text-sm tracking-widest text-[#C3A6E6] uppercase">
-                  {lang === 'ru' ? 'Радиостанция Ахи' : 'Aha Radio Station'}
+                  {translations[lang].sdkAhaRadio}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -196,7 +196,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                 }`}
               >
                 <MessageSquare size={14} />
-                {lang === 'ru' ? 'ИИ Ассистент' : 'AI Assistant'}
+                {translations[lang].sdkAIAssistant}
               </button>
               <button
                 onClick={() => setActiveTab('sdk')}
@@ -205,13 +205,13 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                 }`}
               >
                 <Settings size={14} />
-                {lang === 'ru' ? 'SDK Настройки' : 'SDK Settings'}
+                {translations[lang].sdkSettings}
               </button>
               {activeTab === 'chat' && user && (
                 <button
                   onClick={clearHistory}
                   className="px-4 py-2.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors border-b-2 border-transparent"
-                  title={lang === 'ru' ? 'Очистить историю' : 'Clear history'}
+                  title={translations[lang].sdkClearHistory}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -228,17 +228,17 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white mb-2">
-                        {lang === 'ru' ? 'Требуется авторизация' : 'Authorization Required'}
+                        {translations[lang].sdkAuthRequired}
                       </h3>
                       <p className="text-sm text-gray-400 mb-6">
-                        {lang === 'ru' ? 'Использование ИИ доступно только после авторизации через Google.' : 'AI usage is only available after logging in with Google.'}
+                        {translations[lang].sdkAuthDesc}
                       </p>
                     </div>
                     <button
                       onClick={loginWithGoogle}
                       className="bg-white text-[#2F244F] px-6 py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors"
                     >
-                      {lang === 'ru' ? 'Войти через Google' : 'Login with Google'}
+                      {translations[lang].maintenanceLoginGoogle}
                     </button>
                   </div>
                 ) : (
@@ -270,7 +270,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       <div className="flex items-start">
                         <div className="bg-[#2F244F]/80 border border-[#5C4B8B]/50 text-[#C3A6E6] px-4 py-3 rounded-2xl rounded-tl-sm text-sm flex items-center gap-2">
                           <Sparkles size={14} className="animate-pulse" />
-                          {lang === 'ru' ? 'Думает...' : 'Thinking...'}
+                          {translations[lang].sdkThinking}
                         </div>
                       </div>
                     )}
@@ -282,7 +282,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={lang === 'ru' ? 'Спросите ИИ (или /команда)...' : 'Ask AI (or /command)...'}
+                        placeholder={translations[lang].sdkAskAI}
                         className="flex-1 min-w-0 bg-transparent border-none outline-none px-3 py-2 text-sm text-white placeholder-gray-500"
                       />
                       <button 
@@ -300,16 +300,16 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                 <div className="absolute inset-0 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-[#5C4B8B] scrollbar-track-transparent">
                   <div className="space-y-4">
                     <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">
-                      {lang === 'ru' ? 'Производительность' : 'Performance'}
+                      {translations[lang].sdkPerformance}
                     </h3>
                     
                     <div className="flex items-center justify-between p-4 bg-[#2F244F]/40 rounded-xl border border-[#5C4B8B]/30">
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
-                          {lang === 'ru' ? 'Продакшн Режим' : 'Production Mode'}
+                          {translations[lang].sdkProductionMode}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {lang === 'ru' ? 'Высокое качество графики и эффектов' : 'High fidelity graphics and effects'}
+                          {translations[lang].sdkHighFidelity}
                         </div>
                       </div>
                       <button 
@@ -323,10 +323,10 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                     <div className="flex items-center justify-between p-4 bg-[#2F244F]/40 rounded-xl border border-[#5C4B8B]/30">
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
-                          {lang === 'ru' ? 'Режим низкой производительности' : 'Low Performance Mode'}
+                          {translations[lang].sdkLowPerformanceMode}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {lang === 'ru' ? 'Отключает тяжелые анимации' : 'Disables heavy animations'}
+                          {translations[lang].sdkDisableHeavyAnimations}
                         </div>
                       </div>
                       <button 
@@ -340,10 +340,10 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                     <div className="flex items-center justify-between p-4 bg-[#2F244F]/40 rounded-xl border border-[#5C4B8B]/30">
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
-                          {lang === 'ru' ? 'Виджет нагрузки' : 'Load Widget'}
+                          {translations[lang].sdkLoadWidget}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {lang === 'ru' ? 'Показывать виджет производительности' : 'Show performance widget'}
+                          {translations[lang].sdkShowPerformanceWidget}
                         </div>
                       </div>
                       <button 
@@ -357,7 +357,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
 
                   <div className="space-y-4">
                     <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">
-                      {lang === 'ru' ? 'Система' : 'System'}
+                      {translations[lang].sdkSystem}
                     </h3>
                     
                     <div className="p-4 bg-black/30 rounded-xl border border-[#5C4B8B]/30 font-mono text-xs text-gray-300 space-y-2">

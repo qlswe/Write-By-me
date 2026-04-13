@@ -203,7 +203,7 @@ export const Header: React.FC<HeaderProps> = ({
                           <div className="flex items-start gap-2 text-sm text-gray-300 mb-4">
                             <UserIcon size={16} className="text-[#C3A6E6] shrink-0 mt-0.5" />
                             <div>
-                              <div className="font-bold text-white mb-1">{t.profileInfo || "Profile Information"}</div>
+                              <div className="font-bold text-white mb-1">{t.headerProfileInfo || "Profile Information"}</div>
                               <p className="text-xs text-gray-400 leading-relaxed">
                                 {t.profileDesc || "Your language preferences and favorite articles are stored here. They sync across your devices."}
                               </p>
@@ -215,7 +215,7 @@ export const Header: React.FC<HeaderProps> = ({
                             className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-[#5C4B8B] text-white border border-[#5C4B8B] hover:border-[#C3A6E6] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
                           >
                             <UserIcon size={16} />
-                            {lang === 'ru' ? 'Настройки профиля' : 'Profile Settings'}
+                            {t.headerProfileSettings}
                           </button>
 
                           <button 
@@ -319,7 +319,7 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                   </div>
                   <div className="text-sm text-gray-300 bg-[#3E3160]/50 p-3 rounded-xl border border-[#5C4B8B]/50">
-                    <div className="font-bold text-[#C3A6E6] mb-1">{t.profileInfo || "Profile Information"}</div>
+                    <div className="font-bold text-[#C3A6E6] mb-1">{t.headerProfileInfo || "Profile Information"}</div>
                     <p className="text-xs opacity-80">{t.profileDesc || "Your language preferences and favorite articles are stored here. They sync across your devices."}</p>
                   </div>
                   
@@ -328,7 +328,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-[#5C4B8B] text-white border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"
                   >
                     <UserIcon size={20} />
-                    {lang === 'ru' ? 'Настройки профиля' : 'Profile Settings'}
+                    {t.headerProfileSettings}
                   </button>
 
                   <button 
@@ -359,7 +359,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="w-full flex items-center justify-center gap-3 bg-[#2F244F] border border-[#5C4B8B] text-white px-4 py-4 rounded-xl font-black transition-all active:scale-95"
                   >
                     <Mail size={24} className="text-[#C3A6E6]" />
-                    {lang === 'ru' ? 'Вход через почту' : 'Login with Email'}
+                    {t.headerLoginEmail}
                   </button>
                 </>
               )}

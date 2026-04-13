@@ -135,7 +135,7 @@ const PromoCard = React.memo(({
             {promo.isActive !== false && <div className="absolute inset-0 w-2.5 h-2.5 bg-green-500 rounded-full animate-ping opacity-75" />}
           </div>
           <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${promo.isActive === false ? 'text-red-500' : 'text-green-500'}`}>
-            {promo.isActive === false ? (lang === 'ru' ? 'Неактивен' : 'Inactive') : t.statusActive}
+            {promo.isActive === false ? t.statusInactive : t.statusActive}
           </span>
         </div>
         <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest bg-[#2F244F]/40 px-3 py-1 rounded-full border border-[#5C4B8B]/30">

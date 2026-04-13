@@ -24,6 +24,8 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
   const [fortuneIndex, setFortuneIndex] = useState<number | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
 
+  const t = translations[lang];
+
   const revealFortune = () => {
     if (fortuneIndex !== null || isRevealing) return;
     setIsRevealing(true);
@@ -45,9 +47,7 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
         </div>
         
         <h3 className="text-lg font-bold text-white mb-2">
-          {lang === 'ru' ? 'Астральное предсказание' : 
-           lang === 'en' ? 'Astral Fortune' : 
-           lang === 'by' ? 'Астральнае прадказанне' : 'Astral Fortune'}
+          {t.fortuneTitle}
         </h3>
         
         <div className="min-h-[60px] flex items-center justify-center w-full">
@@ -62,9 +62,7 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
                 className="bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-6 py-2 rounded-full font-bold flex items-center gap-2 transition-colors"
               >
                 <Sparkles size={16} />
-                {lang === 'ru' ? 'Узнать судьбу' : 
-                 lang === 'en' ? 'Reveal Fortune' : 
-                 lang === 'by' ? 'Даведацца лёс' : 'Reveal Fortune'}
+                {t.fortuneReveal}
               </motion.button>
             ) : isRevealing ? (
               <motion.div
@@ -76,9 +74,7 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
               >
                 <Star className="animate-spin" size={20} />
                 <span className="animate-pulse tracking-widest text-sm">
-                  {lang === 'ru' ? 'ЧТЕНИЕ ЗВЕЗД...' : 
-                   lang === 'en' ? 'READING STARS...' : 
-                   lang === 'by' ? 'ЧЫТАННЕ ЗОРАК...' : 'READING STARS...'}
+                  {t.fortuneReading}
                 </span>
               </motion.div>
             ) : (

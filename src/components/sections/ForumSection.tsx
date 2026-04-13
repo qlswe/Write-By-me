@@ -138,7 +138,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(newTitle + " " + newContent);
       if (!isApproved) {
-        alert(lang === 'ru' ? 'Ваш пост был отклонен автоматической модерацией.' : 'Your post was rejected by automatic moderation.');
+        alert(t.forumModerationRejectedPost);
         setIsSubmitting(false);
         return;
       }
@@ -157,9 +157,7 @@ Text to analyze:
 
       await addDoc(collection(db, 'forum_comments'), {
         threadId: threadRef.id,
-        content: lang === 'ru' 
-          ? 'Добро пожаловать в обсуждение! Пожалуйста, соблюдайте правила: уважайте других участников, не используйте ненормативную лексику и не публикуйте запрещенный контент. Нарушители будут заблокированы.'
-          : 'Welcome to the discussion! Please follow the rules: respect other members, do not use profanity, and do not post illegal content. Violators will be banned.',
+        content: t.forumBotWelcome,
         authorId: 'system-bot',
         authorName: 'Aha Bot',
         authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=C3A6E6&color=2F244F',
@@ -186,7 +184,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(contentToSubmit);
       if (!isApproved) {
-        alert(lang === 'ru' ? 'Ваш комментарий был отклонен автоматической модерацией.' : 'Your comment was rejected by automatic moderation.');
+        alert(t.forumModerationRejectedComment);
         setIsSubmitting(false);
         return;
       }
@@ -257,7 +255,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(editThreadTitle + " " + editThreadContent);
       if (!isApproved) {
-        alert(lang === 'ru' ? 'Ваш пост был отклонен автоматической модерацией.' : 'Your post was rejected by automatic moderation.');
+        alert(t.forumModerationRejectedPost);
         setIsSubmitting(false);
         return;
       }
@@ -280,7 +278,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(editCommentContent);
       if (!isApproved) {
-        alert(lang === 'ru' ? 'Ваш комментарий был отклонен автоматической модерацией.' : 'Your comment was rejected by automatic moderation.');
+        alert(t.forumModerationRejectedComment);
         setIsSubmitting(false);
         return;
       }
@@ -397,14 +395,14 @@ Text to analyze:
                   onClick={() => setEditingCommentId(null)}
                   className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
                 >
-                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                  {t.forumCancel}
                 </button>
                 <button
                   onClick={handleUpdateComment}
                   disabled={!editCommentContent.trim() || isSubmitting}
                   className="bg-[#C3A6E6] text-[#2F244F] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
                 >
-                  {isSubmitting ? '...' : (lang === 'ru' ? 'Сохранить' : 'Save')}
+                  {isSubmitting ? '...' : t.forumSave}
                 </button>
               </div>
             </div>
@@ -440,7 +438,7 @@ Text to analyze:
                       onClick={() => setReplyingToCommentId(comment.id)}
                       className="p-1.5 text-gray-500 hover:text-[#C3A6E6] transition-all rounded-md hover:bg-[#C3A6E6]/10 text-xs font-bold uppercase tracking-widest"
                     >
-                      {lang === 'ru' ? 'Ответить' : 'Reply'}
+                      {t.forumReply}
                     </button>
                   )}
                   {user?.uid === comment.authorId && !comment.isBot && (
@@ -472,7 +470,7 @@ Text to analyze:
               <textarea
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
-                placeholder={lang === 'ru' ? 'Ваш ответ...' : 'Your reply...'}
+                placeholder={t.forumYourReply}
                 className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none min-h-[60px] resize-y text-sm mb-2"
               />
               <div className="flex justify-end gap-2">
@@ -483,7 +481,7 @@ Text to analyze:
                   }}
                   className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
                 >
-                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                  {t.forumCancel}
                 </button>
                 <button
                   onClick={() => handleCreateComment(comment.id)}
@@ -493,7 +491,7 @@ Text to analyze:
                   {isSubmitting ? '...' : (
                     <>
                       <Send size={12} />
-                      {lang === 'ru' ? 'Ответить' : 'Reply'}
+                      {t.forumReply}
                     </>
                   )}
                 </button>
@@ -511,7 +509,7 @@ Text to analyze:
           className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
         >
           <ArrowLeft size={20} />
-          <span className="font-bold uppercase tracking-widest text-sm">{lang === 'ru' ? 'Назад к форуму' : 'Back to forum'}</span>
+          <span className="font-bold uppercase tracking-widest text-sm">{t.forumBack}</span>
         </button>
 
         <div className="bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-6 sm:p-8">
@@ -575,14 +573,14 @@ Text to analyze:
                   onClick={() => setEditingThreadId(null)}
                   className="px-4 py-2 rounded-xl text-gray-400 hover:text-white transition-colors text-sm font-bold"
                 >
-                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                  {t.forumCancel}
                 </button>
                 <button
                   onClick={handleUpdateThread}
                   disabled={!editThreadTitle.trim() || !editThreadContent.trim() || isSubmitting}
                   className="bg-[#C3A6E6] text-[#2F244F] px-6 py-2 rounded-xl font-bold transition-colors disabled:opacity-50 text-sm"
                 >
-                  {isSubmitting ? '...' : (lang === 'ru' ? 'Сохранить' : 'Save')}
+                  {isSubmitting ? '...' : t.forumSave}
                 </button>
               </div>
             </div>
@@ -617,7 +615,7 @@ Text to analyze:
         <div className="space-y-4">
           <h3 className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
             <MessageSquare size={20} className="text-[#C3A6E6]" />
-            {lang === 'ru' ? 'Обсуждение' : 'Discussion'} ({comments.length})
+            {t.forumDiscussion} ({comments.length})
           </h3>
 
           {user ? (
@@ -631,7 +629,7 @@ Text to analyze:
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder={lang === 'ru' ? 'Написать комментарий...' : 'Write a comment...'}
+                  placeholder={t.forumWriteComment}
                   className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[80px] resize-none"
                 />
                 <div className="flex justify-end">
@@ -640,14 +638,14 @@ Text to analyze:
                     disabled={!newComment.trim() || isSubmitting}
                     className="bg-[#C3A6E6] text-[#2F244F] px-6 py-2 rounded-xl font-bold uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
-                    {isSubmitting ? <span className="animate-pulse">...</span> : <><Send size={16} /> {lang === 'ru' ? 'Отправить' : 'Send'}</>}
+                    {isSubmitting ? <span className="animate-pulse">...</span> : <><Send size={16} /> {t.forumSend}</>}
                   </button>
                 </div>
               </div>
             </div>
           ) : (
             <div className="bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-3xl p-6 text-center text-gray-400">
-              {lang === 'ru' ? 'Войдите, чтобы оставить комментарий' : 'Log in to leave a comment'}
+              {t.forumLoginToComment}
             </div>
           )}
 
@@ -669,7 +667,7 @@ Text to analyze:
       <div className="bg-[#2F244F] border border-[#5C4B8B]/30 rounded-3xl p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-black text-white uppercase tracking-widest">
-            {lang === 'ru' ? 'Новая тема' : 'New Thread'}
+            {t.forumNewThread}
           </h2>
           <button onClick={() => setIsCreating(false)} className="text-gray-400 hover:text-white">
             <ArrowLeft size={24} />
@@ -680,13 +678,13 @@ Text to analyze:
             type="text"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            placeholder={lang === 'ru' ? 'Заголовок темы' : 'Thread title'}
+            placeholder={t.forumThreadTitle}
             className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] font-bold"
           />
           <textarea
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
-            placeholder={lang === 'ru' ? 'Текст сообщения...' : 'Message content...'}
+            placeholder={t.forumMessageContent}
             className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] min-h-[200px] resize-y"
           />
           <div className="flex justify-end gap-4 pt-4">
@@ -694,14 +692,14 @@ Text to analyze:
               onClick={() => setIsCreating(false)}
               className="px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
             >
-              {lang === 'ru' ? 'Отмена' : 'Cancel'}
+              {t.forumCancel}
             </button>
             <button
               onClick={handleCreateThread}
               disabled={!newTitle.trim() || !newContent.trim() || isSubmitting}
               className="bg-[#C3A6E6] text-[#2F244F] px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 shadow-[0_0_20px_rgba(195,166,230,0.3)]"
             >
-              {isSubmitting ? '...' : (lang === 'ru' ? 'Создать' : 'Create')}
+              {isSubmitting ? '...' : t.forumCreate}
             </button>
           </div>
         </div>
@@ -714,7 +712,7 @@ Text to analyze:
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-3xl font-black text-white uppercase tracking-widest flex items-center gap-3">
           <MessageSquare className="text-[#C3A6E6]" size={32} />
-          {lang === 'ru' ? 'Форум Ахи' : 'Aha Forum'}
+          {t.forumTitle}
         </h2>
         {user && (
           <button
@@ -722,7 +720,7 @@ Text to analyze:
             className="bg-[#C3A6E6] text-[#2F244F] px-6 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-all active:scale-95 shadow-[0_0_20px_rgba(195,166,230,0.3)] flex items-center gap-2 justify-center"
           >
             <Plus size={20} />
-            {lang === 'ru' ? 'Создать тему' : 'Create Thread'}
+            {t.forumCreateThread}
           </button>
         )}
       </div>
@@ -733,7 +731,7 @@ Text to analyze:
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={lang === 'ru' ? 'Поиск по форуму...' : 'Search forum...'}
+          placeholder={t.forumSearch}
           className="w-full bg-[#2F244F] border border-[#5C4B8B]/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6] transition-colors"
         />
       </div>
@@ -741,7 +739,7 @@ Text to analyze:
       <div className="space-y-4">
         {filteredThreads.length === 0 ? (
           <div className="text-center py-12 text-gray-400 bg-[#2F244F]/30 rounded-3xl border border-[#5C4B8B]/20">
-            {lang === 'ru' ? 'Темы не найдены' : 'No threads found'}
+            {t.forumNoThreads}
           </div>
         ) : (
           filteredThreads.map(thread => (
@@ -800,20 +798,20 @@ Text to analyze:
         isOpen={!!threadToDelete}
         onClose={() => setThreadToDelete(null)}
         onConfirm={confirmDeleteThread}
-        title={lang === 'ru' ? 'Удалить тему?' : 'Delete thread?'}
-        message={lang === 'ru' ? 'Вы уверены, что хотите удалить эту тему? Это действие нельзя отменить.' : 'Are you sure you want to delete this thread? This action cannot be undone.'}
-        confirmText={lang === 'ru' ? 'Удалить' : 'Delete'}
-        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        title={t.forumDeleteThreadTitle}
+        message={t.forumDeleteThreadMessage}
+        confirmText={t.forumDelete}
+        cancelText={t.forumCancel}
       />
 
       <ConfirmModal
         isOpen={!!commentToDelete}
         onClose={() => setCommentToDelete(null)}
         onConfirm={confirmDeleteComment}
-        title={lang === 'ru' ? 'Удалить комментарий?' : 'Delete comment?'}
-        message={lang === 'ru' ? 'Вы уверены, что хотите удалить этот комментарий? Это действие нельзя отменить.' : 'Are you sure you want to delete this comment? This action cannot be undone.'}
-        confirmText={lang === 'ru' ? 'Удалить' : 'Delete'}
-        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        title={t.forumDeleteCommentTitle}
+        message={t.forumDeleteCommentMessage}
+        confirmText={t.forumDelete}
+        cancelText={t.forumCancel}
       />
     </div>
   );

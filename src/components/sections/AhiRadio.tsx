@@ -25,7 +25,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   const t = translations[lang];
 
   const generateSingleJoke = async () => {
-    setStatusText(lang === 'ru' ? 'Ищу шутку...' : 'Finding a joke...');
+    setStatusText(t.radioFindingJoke);
     
     // Add a random seed to prevent caching and ensure unique jokes
     const seed = Math.floor(Math.random() * 1000000);
@@ -128,7 +128,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
 
   const playJokeTTS = async (jokeText: string) => {
     try {
-      setStatusText(lang === 'ru' ? 'Озвучивание...' : 'Voicing...');
+      setStatusText(t.radioVoicing);
       
       // Sanitize text for TTS: remove emojis, markdown, and ensure it ends with punctuation
       let cleanJoke = jokeText
@@ -211,7 +211,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   const handleNextJoke = async () => {
     if (!isPlayingRef.current) return;
     
-    setStatusText(lang === 'ru' ? 'Думаю...' : 'Thinking...');
+    setStatusText(t.radioThinking);
     
     // Add a 2.5-second pause to simulate thinking and give a break between jokes
     setTimeout(async () => {
@@ -221,11 +221,11 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       
       if (nextJoke && isPlayingRef.current) {
         setCurrentJoke(nextJoke);
-        setStatusText(lang === 'ru' ? 'Воспроизведение...' : 'Playing...');
+        setStatusText(t.radioPlaying);
         await playJokeTTS(nextJoke);
       } else if (isPlayingRef.current) {
         setIsPlaying(false);
-        setStatusText(lang === 'ru' ? 'Ошибка радио' : 'Radio Error');
+        setStatusText(t.radioError);
       }
     }, 2500);
   };
@@ -238,7 +238,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         utteranceRef.current.onerror = null;
       }
       window.speechSynthesis.cancel();
-      setStatusText(lang === 'ru' ? 'Радио выключено' : 'Radio off');
+      setStatusText(t.radioOff);
       setCurrentJoke('');
     } else {
       // Synchronously unlock speech synthesis on user interaction
@@ -255,7 +255,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         
         if (firstJoke && isPlayingRef.current) {
           setCurrentJoke(firstJoke);
-          setStatusText(lang === 'ru' ? 'Воспроизведение...' : 'Playing...');
+          setStatusText(t.radioPlaying);
           await playJokeTTS(firstJoke);
         }
       } catch (error) {
@@ -292,19 +292,17 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         </div>
         <div>
           <h3 className="text-2xl font-bold text-white mb-2">
-            {lang === 'ru' ? 'Радиостанция Ахи' : 'Aha Radio Station'}
+            {t.radioTitle}
           </h3>
           <p className="text-gray-400 max-w-md mx-auto">
-            {lang === 'ru' 
-              ? 'Доступ к самым несмешным шуткам во вселенной возможен только после авторизации через Google.' 
-              : 'Access to the least funny jokes in the universe is only available after logging in with Google.'}
+            {t.radioAuthRequired}
           </p>
         </div>
         <button
           onClick={loginWithGoogle}
           className="bg-[#C3A6E6] text-[#2F244F] px-8 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-white transition-colors shadow-[0_0_30px_rgba(195,166,230,0.3)]"
         >
-          {lang === 'ru' ? 'Войти через Google' : 'Login with Google'}
+          {t.loginWithGoogle}
         </button>
       </div>
     );
@@ -346,7 +344,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         <div className="flex items-center gap-3 mb-10 bg-[#1A1625]/50 px-6 py-3 rounded-full border border-[#5C4B8B]/30 backdrop-blur-sm">
           <Radio className={`w-5 h-5 ${isPlaying ? 'text-[#C3A6E6] animate-pulse' : 'text-gray-400'}`} />
           <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">
-            {lang === 'ru' ? 'Радиостанция Ахи' : 'Aha Radio Station'}
+            {t.radioTitle}
           </h2>
         </div>
 
@@ -398,7 +396,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                   onClick={handleNextJoke}
                   disabled={isLoading || statusText.includes('Думаю') || statusText.includes('Thinking')}
                   className="w-10 h-10 rounded-full bg-[#2F244F] text-gray-400 hover:text-white hover:bg-[#3E3160] flex items-center justify-center transition-all disabled:opacity-50"
-                  title={lang === 'ru' ? 'Следующая шутка' : 'Next joke'}
+                  title={t.radioNextJoke}
                 >
                   <SkipForward className="w-4 h-4" />
                 </button>
@@ -410,10 +408,10 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
           <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full mt-8 md:mt-0">
             <div className="mb-4">
               <p className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest mb-1">
-                {lang === 'ru' ? 'Сейчас в эфире' : 'Now Playing'}
+                {t.radioNowPlaying}
               </p>
               <h3 className="text-xl sm:text-2xl font-black text-white">
-                {lang === 'ru' ? 'Стендап от ИИ' : 'AI Stand-up'}
+                {t.radioAiStandup}
               </h3>
             </div>
 
@@ -432,10 +430,10 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                   {isPlaying ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      {lang === 'ru' ? 'Подготовка материала...' : 'Preparing material...'}
+                      {t.radioPreparing}
                     </>
                   ) : (
-                    lang === 'ru' ? 'Нажмите Play, чтобы начать трансляцию' : 'Press Play to start broadcasting'
+                    t.radioPressPlay
                   )}
                 </div>
               )}
@@ -451,7 +449,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                 ) : (
                   <>
                     <Volume2 className="w-3.5 h-3.5 opacity-50" />
-                    <span>{lang === 'ru' ? 'Офлайн' : 'Offline'}</span>
+                    <span>{t.radioOffline}</span>
                   </>
                 )}
               </div>
