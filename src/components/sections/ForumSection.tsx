@@ -378,8 +378,31 @@ Text to analyze:
               {comment.isBot && <Shield size={12} className="text-[#ff4d4d]" />}
               {comment.isEdited && <span className="text-[10px] text-gray-500 font-normal">({t.edited || "edited"})</span>}
             </div>
-            <div className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0">
-              <TimeAgo date={comment.createdAt} lang={lang} />
+            <div className="flex items-center gap-2">
+              <div className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0">
+                <TimeAgo date={comment.createdAt} lang={lang} />
+              </div>
+              <div className={`flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${comment.isBot ? 'hidden' : ''}`}>
+                {user?.uid === comment.authorId && !comment.isBot && (
+                  <button 
+                    onClick={() => {
+                      setEditingCommentId(comment.id);
+                      setEditCommentContent(comment.content);
+                    }}
+                    className="p-1.5 text-gray-500 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+                {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator' || role === 'beta-tester') && !comment.isBot && (
+                  <button 
+                    onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
+                    className="p-1.5 text-gray-500 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           
@@ -439,25 +462,6 @@ Text to analyze:
                       className="p-1.5 text-gray-500 hover:text-[#ff4d4d] transition-all rounded-md hover:bg-[#ff4d4d]/10 text-xs font-bold uppercase tracking-widest"
                     >
                       {t.forumReply}
-                    </button>
-                  )}
-                  {user?.uid === comment.authorId && !comment.isBot && (
-                    <button 
-                      onClick={() => {
-                        setEditingCommentId(comment.id);
-                        setEditCommentContent(comment.content);
-                      }}
-                      className="p-1.5 text-gray-500 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  )}
-                  {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator' || role === 'beta-tester') && !comment.isBot && (
-                    <button 
-                      onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
-                      className="p-1.5 text-gray-500 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
-                    >
-                      <Trash2 size={14} />
                     </button>
                   )}
                 </div>

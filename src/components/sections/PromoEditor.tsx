@@ -215,7 +215,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                      className={`w-12 h-6 rounded-full transition-all relative ${formData.isActive ? 'bg-[#ff4d4d]' : 'bg-gray-700'}`}
+                      className={`w-12 h-6 rounded-full transition-all relative ${formData.isActive ? 'bg-[#ff4d4d]' : 'bg-[#3d2b4f]'}`}
                     >
                       <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isActive ? 'left-7' : 'left-1'}`} />
                     </button>
@@ -255,7 +255,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border-2 transition-all ${
                     promo.isActive 
                       ? 'bg-[#ff4d4d]/5 border-[#ff4d4d]/20 text-[#ff4d4d] group-hover:bg-[#ff4d4d]/10' 
-                      : 'bg-gray-500/5 border-gray-500/20 text-gray-500'
+                      : 'bg-[#3d2b4f]/30 border-[#3d2b4f]/50 text-gray-400'
                   }`}>
                     <Gift size={28} />
                   </div>

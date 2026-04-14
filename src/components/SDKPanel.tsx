@@ -236,7 +236,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                     </div>
                     <button
                       onClick={loginWithGoogle}
-                      className="bg-white text-[#15101e] px-6 py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-gray-200 transition-colors"
+                      className="bg-white text-[#15101e] px-6 py-3 rounded-xl font-bold uppercase tracking-wider hover:bg-white/90 transition-colors"
                     >
                       {translations[lang].maintenanceLoginGoogle}
                     </button>
@@ -303,7 +303,10 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       {translations[lang].sdkPerformance}
                     </h3>
                     
-                    <div className="flex items-center justify-between p-4 bg-[#15101e]/40 rounded-xl border border-[#3d2b4f]/30">
+                    <button 
+                      onClick={toggleProductionMode}
+                      className="w-full flex items-center justify-between p-4 bg-[#15101e]/40 hover:bg-[#15101e]/60 rounded-xl border border-[#3d2b4f]/30 transition-colors text-left"
+                    >
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
                           {translations[lang].sdkProductionMode}
@@ -312,15 +315,15 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                           {translations[lang].sdkHighFidelity}
                         </div>
                       </div>
-                      <button 
-                        onClick={toggleProductionMode}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${productionMode ? 'bg-[#ff4d4d]' : 'bg-gray-600'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${productionMode ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
+                      <div className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${productionMode ? 'bg-[#ff4d4d]' : 'bg-[#3d2b4f]'}`}>
+                        <div className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full bg-white transition-transform ${productionMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </div>
+                    </button>
 
-                    <div className="flex items-center justify-between p-4 bg-[#15101e]/40 rounded-xl border border-[#3d2b4f]/30">
+                    <button 
+                      onClick={toggleLowPerfMode}
+                      className="w-full flex items-center justify-between p-4 bg-[#15101e]/40 hover:bg-[#15101e]/60 rounded-xl border border-[#3d2b4f]/30 transition-colors text-left"
+                    >
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
                           {translations[lang].sdkLowPerformanceMode}
@@ -329,15 +332,15 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                           {translations[lang].sdkDisableHeavyAnimations}
                         </div>
                       </div>
-                      <button 
-                        onClick={toggleLowPerfMode}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${lowPerfMode ? 'bg-[#ff4d4d]' : 'bg-gray-600'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${lowPerfMode ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
+                      <div className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${lowPerfMode ? 'bg-[#ff4d4d]' : 'bg-[#3d2b4f]'}`}>
+                        <div className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full bg-white transition-transform ${lowPerfMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </div>
+                    </button>
 
-                    <div className="flex items-center justify-between p-4 bg-[#15101e]/40 rounded-xl border border-[#3d2b4f]/30">
+                    <button 
+                      onClick={toggleLoadWidget}
+                      className="w-full flex items-center justify-between p-4 bg-[#15101e]/40 hover:bg-[#15101e]/60 rounded-xl border border-[#3d2b4f]/30 transition-colors text-left"
+                    >
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
                           {translations[lang].sdkLoadWidget}
@@ -346,13 +349,10 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                           {translations[lang].sdkShowPerformanceWidget}
                         </div>
                       </div>
-                      <button 
-                        onClick={toggleLoadWidget}
-                        className={`w-12 h-6 rounded-full transition-colors relative ${showLoadWidget ? 'bg-[#ff4d4d]' : 'bg-gray-600'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${showLoadWidget ? 'left-7' : 'left-1'}`} />
-                      </button>
-                    </div>
+                      <div className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${showLoadWidget ? 'bg-[#ff4d4d]' : 'bg-[#3d2b4f]'}`}>
+                        <div className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full bg-white transition-transform ${showLoadWidget ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </div>
+                    </button>
                   </div>
 
                   <div className="space-y-4">

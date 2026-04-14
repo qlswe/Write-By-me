@@ -295,7 +295,7 @@ Text to analyze:
         />
         <div className="flex-1 min-w-0">
           <div className={`bg-[#15101e] rounded-[1.5rem] rounded-tl-none p-4 sm:p-5 border border-[#3d2b4f]/20 shadow-xl transition-all group-hover:border-[#ff4d4d]/30 group-hover:bg-[#251c35]`}>
-            <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
+            <div className="flex flex-col gap-1 mb-3 pr-16 relative">
               <div className="flex items-center flex-wrap gap-3">
                 <span className="font-black text-white text-sm uppercase tracking-wider">{comment.authorName}</span>
                 {user && user.uid !== comment.authorUid && onOpenChat && (
@@ -307,15 +307,15 @@ Text to analyze:
                     <MessageCircle size={12} />
                   </button>
                 )}
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                  {formatDistanceToNow(new Date(comment.createdAt), {
-                    addSuffix: true,
-                    locale: locales[lang] || locales.en
-                  })}
-                  {comment.isEdited && <span className="ml-1 italic opacity-70">({t.edited || "edited"})</span>}
-                </span>
               </div>
-              <div className="flex items-center gap-1 ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                {formatDistanceToNow(new Date(comment.createdAt), {
+                  addSuffix: true,
+                  locale: locales[lang] || locales.en
+                })}
+                {comment.isEdited && <span className="ml-1 italic opacity-70">({t.edited || "edited"})</span>}
+              </span>
+              <div className="absolute top-0 right-0 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 {user && (user.uid === comment.authorUid || isModerator) && (
                 <>
                   {user.uid === comment.authorUid && (

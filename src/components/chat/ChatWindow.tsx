@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useChat, Message } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
@@ -234,7 +235,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   </span>
                 ) : (
                   <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#3d2b4f]"></span>
                     {t.chatOffline}
                   </span>
                 )}
@@ -265,7 +266,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             </div>
             <button
               onClick={loginWithGoogle}
-              className="w-full bg-white text-[#15101e] py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-gray-100 transition-all active:scale-95 shadow-xl"
+              className="w-full bg-white text-[#15101e] py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 shadow-xl"
             >
               {t.maintenanceLoginGoogle}
             </button>
@@ -321,7 +322,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                         <motion.div
                           initial={{ opacity: 0, x: isMe ? 20 : -20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group`}
+                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group ${msg.reactions && Object.keys(msg.reactions).some(k => msg.reactions![k].length > 0) ? 'mb-4' : ''}`}
                         >
                           {/* Modern Action Menu - Centered Modal */}
                           <AnimatePresence>
@@ -337,6 +338,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                 >
                                   <div className="px-4 py-3 border-b border-[#3d2b4f]/50 mb-1">
                                     <h4 className="text-white font-bold text-center">{t.chatActions}</h4>
+                                  </div>
+                                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#3d2b4f]/50 bg-[#15101e]/50">
+                                    {CHAT_REACTIONS.map(emoji => (
+                                      <button
+                                        key={emoji}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleReaction(msg.id, recipientId, emoji);
+                                          setActiveMessageId(null);
+                                        }}
+                                        className={`text-2xl hover:scale-125 transition-transform p-1 ${msg.reactions?.[emoji]?.includes(user?.uid || '') ? 'bg-[#ff4d4d]/20 rounded-full' : ''}`}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
                                   </div>
                                   <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#ff4d4d]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
                                     <Reply className="w-5 h-5 text-[#ff4d4d]" /> {t.chatReply}
@@ -397,7 +413,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             ) : msg.type === 'image' ? (
                               <div className="flex flex-col gap-2">
                                 {msg.images && msg.images.length > 0 ? (
-                                  <div className="grid grid-cols-2 gap-2">
+                                  <div className={`grid ${msg.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
                                     {msg.images.map((img, i) => (
                                       <img key={i} src={img} alt="Sent image" className="max-w-full rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setFullscreenImage(img)} />
                                     ))}
@@ -420,6 +436,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                 isRead ? <CheckCheck className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-blue-400' : 'text-[#0d0b14]'}`} /> : <Check className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-gray-400' : 'opacity-60'}`} />
                               )}
                             </div>
+
+                            {msg.reactions && Object.keys(msg.reactions).length > 0 && !msg.isDeleted && (
+                              <div className={`absolute -bottom-3 ${isMe ? 'right-2' : 'left-2'} flex items-center gap-1 bg-[#251c35] border border-[#3d2b4f] rounded-full px-2 py-0.5 shadow-lg z-10`}>
+                                {Object.entries(msg.reactions).map(([emoji, users]) => users.length > 0 && (
+                                  <button
+                                    key={emoji}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleReaction(msg.id, recipientId, emoji);
+                                    }}
+                                    className={`flex items-center gap-1 text-xs ${users.includes(user?.uid || '') ? 'text-[#ff4d4d]' : 'text-gray-400'}`}
+                                  >
+                                    <span>{emoji}</span>
+                                    <span className="font-bold">{users.length}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </motion.div>
                       </React.Fragment>
@@ -609,12 +643,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     
     {/* Fullscreen Image Modal */}
     <AnimatePresence>
-      {fullscreenImage && (
+      {fullscreenImage && createPortal(
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4"
           onClick={() => setFullscreenImage(null)}
         >
           <button className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-white/20 text-white rounded-full transition-colors">
@@ -628,7 +662,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
-        </motion.div>
+        </motion.div>,
+        document.body
       )}
     </AnimatePresence>
     </>

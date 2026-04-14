@@ -25,8 +25,8 @@ const getChangelogData = (lang: Language): ChangelogEntry[] => {
         lang === 'ru' ? "Добавлен раздел истории изменений (Changelog) на главную страницу" :
         lang === 'en' ? "Added Changelog section to the home page" :
         lang === 'by' ? "Дададзены раздзел гісторыі змен (Changelog) на галоўную старонку" :
-        lang === 'de' ? "Änderungsprotokoll-Bereich zur Startseite hinzugefügt" :
-        lang === 'fr' ? "Ajout de la section Journal des modifications sur la page d'accueil" :
+        lang === 'de' ? "Changelog-Bereich zur Startseite hinzugefügt" :
+        lang === 'fr' ? "Ajout de la section Changelog sur la page d'accueil" :
         "在主页添加了更新日志部分",
         
         lang === 'ru' ? "Полная локализация всех новых ресурсов на 6 языков" :
