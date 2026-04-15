@@ -95,8 +95,8 @@ export const ReactionsBar: React.FC<ReactionsBarProps> = ({ targetId, lang, coll
               hasReacted 
                 ? 'bg-[#ff4d4d]/20 border-[#ff4d4d]/50 text-white shadow-[0_0_15px_rgba(255,77,77,0.15)] scale-105' 
                 : count > 0
-                  ? 'bg-[#15101e]/60 border-[#3d2b4f]/50 text-gray-300 hover:border-[#ff4d4d]/40'
-                  : 'bg-[#0d0b14]/40 border-[#3d2b4f]/20 text-gray-500 hover:border-[#3d2b4f]/50 hover:text-gray-400'
+                  ? 'bg-[#15101e]/60 border-[#3d2b4f]/50 text-white/80 hover:border-[#ff4d4d]/40'
+                  : 'bg-[#0d0b14]/40 border-[#3d2b4f]/20 text-white/40 hover:border-[#3d2b4f]/50 hover:text-white/60'
             } ${!user ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110 active:scale-95'}`}
           >
             <span className={`text-base ${!hasReacted && count === 0 ? 'opacity-50 grayscale' : ''}`}>{emoji}</span>

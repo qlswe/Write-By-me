@@ -138,7 +138,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(newTitle + " " + newContent);
       if (!isApproved) {
-        alert(t.forumModerationRejectedPost);
+        alert((t as any).forumModerationRejectedPost || t.forumPostRejected);
         setIsSubmitting(false);
         return;
       }
@@ -157,7 +157,7 @@ Text to analyze:
 
       await addDoc(collection(db, 'forum_comments'), {
         threadId: threadRef.id,
-        content: t.forumBotWelcome,
+        content: (t as any).forumBotWelcome || "Welcome to the forum!",
         authorId: 'system-bot',
         authorName: 'Aha Bot',
         authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
@@ -184,7 +184,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(contentToSubmit);
       if (!isApproved) {
-        alert(t.forumModerationRejectedComment);
+        alert((t as any).forumModerationRejectedComment || t.forumCommentRejected);
         setIsSubmitting(false);
         return;
       }
@@ -255,7 +255,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(editThreadTitle + " " + editThreadContent);
       if (!isApproved) {
-        alert(t.forumModerationRejectedPost);
+        alert((t as any).forumModerationRejectedPost || t.forumPostRejected);
         setIsSubmitting(false);
         return;
       }
@@ -278,7 +278,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(editCommentContent);
       if (!isApproved) {
-        alert(t.forumModerationRejectedComment);
+        alert((t as any).forumModerationRejectedComment || t.forumCommentRejected);
         setIsSubmitting(false);
         return;
       }
@@ -376,10 +376,10 @@ Text to analyze:
             <div className="font-bold text-white text-sm truncate flex items-center gap-2">
               {comment.authorName}
               {comment.isBot && <Shield size={12} className="text-[#ff4d4d]" />}
-              {comment.isEdited && <span className="text-[10px] text-gray-500 font-normal">({t.edited || "edited"})</span>}
+              {comment.isEdited && <span className="text-[10px] text-white/40 font-normal">({t.edited || "edited"})</span>}
             </div>
             <div className="flex items-center gap-2">
-              <div className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0">
+              <div className="text-[10px] text-white/40 flex items-center gap-1 shrink-0">
                 <TimeAgo date={comment.createdAt} lang={lang} />
               </div>
               <div className={`flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${comment.isBot ? 'hidden' : ''}`}>
@@ -389,7 +389,7 @@ Text to analyze:
                       setEditingCommentId(comment.id);
                       setEditCommentContent(comment.content);
                     }}
-                    className="p-1.5 text-gray-500 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
+                    className="p-1.5 text-white/40 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
                   >
                     <Pencil size={14} />
                   </button>
@@ -397,7 +397,7 @@ Text to analyze:
                 {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator' || role === 'beta-tester') && !comment.isBot && (
                   <button 
                     onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
-                    className="p-1.5 text-gray-500 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
+                    className="p-1.5 text-white/40 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -411,44 +411,44 @@ Text to analyze:
               <textarea
                 value={editCommentContent}
                 onChange={(e) => setEditCommentContent(e.target.value)}
-                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-y text-sm"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-y text-sm"
               />
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setEditingCommentId(null)}
                   className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
                 >
-                  {t.forumCancel}
+                  {(t as any).forumCancel || t.profileCancel}
                 </button>
                 <button
                   onClick={handleUpdateComment}
                   disabled={!editCommentContent.trim() || isSubmitting}
                   className="bg-[#ff4d4d] text-[#15101e] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
                 >
-                  {isSubmitting ? '...' : t.forumSave}
+                  {isSubmitting ? '...' : ((t as any).forumSave || t.profileSave)}
                 </button>
               </div>
             </div>
           ) : (
             <>
-              <p className="text-gray-300 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
+              <p className="text-white/80 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
               <div className="flex items-center justify-between">
                 {!comment.isBot && (
                   <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-lg border border-[#3d2b4f]/30 w-fit">
                     <button
                       onClick={() => handleVote('comment', comment, 'up')}
                       disabled={!user}
-                      className={`p-1 rounded transition-all ${comment.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
+                      className={`p-1 rounded transition-all ${comment.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-white/40 hover:text-green-500 hover:bg-green-500/5'}`}
                     >
                       <ChevronUp size={16} />
                     </button>
-                    <span className={`text-[10px] font-black px-2 min-w-[1.5rem] text-center ${((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                    <span className={`text-[10px] font-black px-2 min-w-[1.5rem] text-center ${((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-white/40'}`}>
                       {(comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)}
                     </span>
                     <button
                       onClick={() => handleVote('comment', comment, 'down')}
                       disabled={!user}
-                      className={`p-1 rounded transition-all ${comment.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
+                      className={`p-1 rounded transition-all ${comment.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-white/40 hover:text-red-500 hover:bg-red-500/5'}`}
                     >
                       <ChevronDown size={16} />
                     </button>
@@ -459,9 +459,9 @@ Text to analyze:
                   {user && !comment.isBot && !isReply && (
                     <button 
                       onClick={() => setReplyingToCommentId(comment.id)}
-                      className="p-1.5 text-gray-500 hover:text-[#ff4d4d] transition-all rounded-md hover:bg-[#ff4d4d]/10 text-xs font-bold uppercase tracking-widest"
+                      className="p-1.5 text-white/40 hover:text-[#ff4d4d] transition-all rounded-md hover:bg-[#ff4d4d]/10 text-xs font-bold uppercase tracking-widest"
                     >
-                      {t.forumReply}
+                      {(t as any).forumReply || "Reply"}
                     </button>
                   )}
                 </div>
@@ -474,8 +474,8 @@ Text to analyze:
               <textarea
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
-                placeholder={t.forumYourReply}
-                className="w-full bg-transparent text-white placeholder-gray-500 focus:outline-none min-h-[60px] resize-y text-sm mb-2"
+                placeholder={(t as any).forumYourReply || "Your reply..."}
+                className="w-full bg-transparent text-white placeholder-white/40 focus:outline-none min-h-[60px] resize-y text-sm mb-2"
               />
               <div className="flex justify-end gap-2">
                 <button
@@ -485,7 +485,7 @@ Text to analyze:
                   }}
                   className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
                 >
-                  {t.forumCancel}
+                  {(t as any).forumCancel || t.profileCancel}
                 </button>
                 <button
                   onClick={() => handleCreateComment(comment.id)}
@@ -495,7 +495,7 @@ Text to analyze:
                   {isSubmitting ? '...' : (
                     <>
                       <Send size={12} />
-                      {t.forumReply}
+                      {(t as any).forumReply || "Reply"}
                     </>
                   )}
                 </button>
@@ -577,14 +577,14 @@ Text to analyze:
                   onClick={() => setEditingThreadId(null)}
                   className="px-4 py-2 rounded-xl text-gray-400 hover:text-white transition-colors text-sm font-bold"
                 >
-                  {t.forumCancel}
+                  {(t as any).forumCancel || t.profileCancel}
                 </button>
                 <button
                   onClick={handleUpdateThread}
                   disabled={!editThreadTitle.trim() || !editThreadContent.trim() || isSubmitting}
                   className="bg-[#ff4d4d] text-[#15101e] px-6 py-2 rounded-xl font-bold transition-colors disabled:opacity-50 text-sm"
                 >
-                  {isSubmitting ? '...' : t.forumSave}
+                  {isSubmitting ? '...' : ((t as any).forumSave || t.profileSave)}
                 </button>
               </div>
             </div>
@@ -633,7 +633,7 @@ Text to analyze:
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder={t.forumWriteComment}
+                  placeholder={(t as any).forumWriteComment || "Write a comment..."}
                   className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-none"
                 />
                 <div className="flex justify-end">
@@ -642,14 +642,14 @@ Text to analyze:
                     disabled={!newComment.trim() || isSubmitting}
                     className="bg-[#ff4d4d] text-[#15101e] px-6 py-2 rounded-xl font-bold uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 flex items-center gap-2"
                   >
-                    {isSubmitting ? <span className="animate-pulse">...</span> : <><Send size={16} /> {t.forumSend}</>}
+                    {isSubmitting ? <span className="animate-pulse">...</span> : <><Send size={16} /> {(t as any).forumSend || "Send"}</>}
                   </button>
                 </div>
               </div>
             </div>
           ) : (
             <div className="bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-3xl p-6 text-center text-gray-400">
-              {t.forumLoginToComment}
+              {(t as any).forumLoginToComment || "Login to comment"}
             </div>
           )}
 
@@ -696,14 +696,14 @@ Text to analyze:
               onClick={() => setIsCreating(false)}
               className="px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
             >
-              {t.forumCancel}
+              {(t as any).forumCancel || t.profileCancel}
             </button>
             <button
               onClick={handleCreateThread}
               disabled={!newTitle.trim() || !newContent.trim() || isSubmitting}
               className="bg-[#ff4d4d] text-[#15101e] px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 shadow-[0_0_20px_rgba(255,77,77,0.3)]"
             >
-              {isSubmitting ? '...' : t.forumCreate}
+              {isSubmitting ? '...' : ((t as any).forumCreate || t.profileSave)}
             </button>
           </div>
         </div>
@@ -716,7 +716,7 @@ Text to analyze:
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-3xl font-black text-white uppercase tracking-widest flex items-center gap-3">
           <MessageSquare className="text-[#ff4d4d]" size={32} />
-          {t.forumTitle}
+          {(t as any).forumTitle || "Forum"}
         </h2>
         {user && (
           <button
@@ -724,7 +724,7 @@ Text to analyze:
             className="bg-[#ff4d4d] text-[#15101e] px-6 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-all active:scale-95 shadow-[0_0_20px_rgba(255,77,77,0.3)] flex items-center gap-2 justify-center"
           >
             <Plus size={20} />
-            {t.forumCreateThread}
+            {(t as any).forumCreateThread || "Create Thread"}
           </button>
         )}
       </div>
@@ -735,7 +735,7 @@ Text to analyze:
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={t.forumSearch}
+          placeholder={(t as any).forumSearch || "Search threads..."}
           className="w-full bg-[#15101e] border border-[#3d2b4f]/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] transition-colors"
         />
       </div>
@@ -743,7 +743,7 @@ Text to analyze:
       <div className="space-y-4">
         {filteredThreads.length === 0 ? (
           <div className="text-center py-12 text-gray-400 bg-[#15101e]/30 rounded-3xl border border-[#3d2b4f]/20">
-            {t.forumNoThreads}
+            {(t as any).forumNoThreads || "No threads found."}
           </div>
         ) : (
           filteredThreads.map(thread => (
@@ -802,20 +802,20 @@ Text to analyze:
         isOpen={!!threadToDelete}
         onClose={() => setThreadToDelete(null)}
         onConfirm={confirmDeleteThread}
-        title={t.forumDeleteThreadTitle}
-        message={t.forumDeleteThreadMessage}
-        confirmText={t.forumDelete}
-        cancelText={t.forumCancel}
+        title={(t as any).forumDeleteThreadTitle || "Delete Thread"}
+        message={(t as any).forumDeleteThreadMessage || t.forumDeleteThreadMsg}
+        confirmText={(t as any).forumDelete || "Delete"}
+        cancelText={(t as any).forumCancel || t.profileCancel}
       />
 
       <ConfirmModal
         isOpen={!!commentToDelete}
         onClose={() => setCommentToDelete(null)}
         onConfirm={confirmDeleteComment}
-        title={t.forumDeleteCommentTitle}
-        message={t.forumDeleteCommentMessage}
-        confirmText={t.forumDelete}
-        cancelText={t.forumCancel}
+        title={(t as any).forumDeleteCommentTitle || "Delete Comment"}
+        message={(t as any).forumDeleteCommentMessage || t.forumDeleteCommentMsg}
+        confirmText={(t as any).forumDelete || "Delete"}
+        cancelText={(t as any).forumCancel || t.profileCancel}
       />
     </div>
   );

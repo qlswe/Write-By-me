@@ -84,7 +84,7 @@ const EventCard = React.memo(({
                 <span className="px-3 py-1 bg-[#ff4d4d]/10 text-[10px] font-black text-[#ff4d4d] rounded-lg uppercase tracking-widest whitespace-nowrap">
                   {event.type === 'daily' ? t.daily : t.weekly}
                 </span>
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap">
+                <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] whitespace-nowrap">
                   {event.type === 'daily' ? t.cycle24h : (event.weekOffset !== undefined ? t.cycle14d : t.cycle7d)}
                 </span>
               </div>
@@ -95,14 +95,14 @@ const EventCard = React.memo(({
             <div className="flex gap-3 self-end sm:self-start">
               <button 
                 onClick={() => onEdit?.(event)} 
-                className="w-12 h-12 rounded-xl bg-white/5 hover:bg-blue-400/10 text-gray-500 hover:text-blue-400 flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-blue-400/20"
+                className="w-12 h-12 rounded-xl bg-white/5 hover:bg-blue-400/10 text-white/40 hover:text-blue-400 flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-blue-400/20"
               >
                 <Edit size={20} />
               </button>
               {isAdmin && (
                 <button 
                   onClick={() => onDelete(event.id)} 
-                  className="w-12 h-12 rounded-xl bg-white/5 hover:bg-red-500/10 text-gray-500 hover:text-red-500 flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-red-500/20"
+                  className="w-12 h-12 rounded-xl bg-white/5 hover:bg-red-500/10 text-white/40 hover:text-red-500 flex items-center justify-center transition-all active:scale-90 border border-transparent hover:border-red-500/20"
                 >
                   <Trash2 size={20} />
                 </button>
@@ -117,7 +117,7 @@ const EventCard = React.memo(({
               <Clock size={28} className="text-[#ff4d4d]" />
             </div>
             <div>
-              <div className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-black mb-1">{t.timeRemaining || "Time Remaining"}</div>
+              <div className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-black mb-1">{t.timeRemaining || "Time Remaining"}</div>
               <div className="text-lg sm:text-xl md:text-2xl font-black text-[#ff4d4d] tracking-tighter italic">
                 {countdown}
               </div>
@@ -125,7 +125,7 @@ const EventCard = React.memo(({
           </div>
 
           <div className="lg:col-span-3 bg-[#15101e]/30 rounded-3xl p-6 flex items-center">
-            <p className="text-gray-400 text-sm leading-relaxed font-medium">
+            <p className="text-white/60 text-sm leading-relaxed font-medium">
               {event.description[lang] || event.description['en']}
             </p>
           </div>
@@ -173,7 +173,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
             </div>
             {t.navChronicle}
           </h2>
-          <p className="text-gray-400 text-sm mt-3 font-medium tracking-wide ml-1">{t.chronicleDesc}</p>
+          <p className="text-white/60 text-sm mt-3 font-medium tracking-wide ml-1">{t.chronicleDesc}</p>
         </div>
         {isModerator && (
           <button 

@@ -36,6 +36,7 @@ const ChatItem = React.memo(({
   const lastMsg = chat.lastMessageAt?.toMillis() || 0;
   const isUnread = lastMsg > lastRead && chat.lastMessage;
 
+  const t = translations[lang];
   return (
     <motion.button
       whileHover={{ scale: 1.02 }}
@@ -73,7 +74,7 @@ const ChatItem = React.memo(({
         <div className="flex items-center gap-2">
           {isTyping ? (
             <p className="text-xs text-[#ff4d4d] font-bold italic truncate">
-              {t.chatTyping}
+              {(t as any).chatTyping || t.chatsTyping}
             </p>
           ) : (
             <p className={`text-xs truncate font-medium ${isUnread ? 'text-white' : 'text-gray-400'}`}>
@@ -159,7 +160,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
       <div className="text-center py-16 bg-[#15101e]/20 rounded-3xl border border-[#3d2b4f]/20">
         <User className="mx-auto mb-6 text-gray-600" size={48} />
         <p className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">
-          {t.chatLoginToView}
+          {(t as any).chatLoginToView || t.chatsLoginToView}
         </p>
         <button
           onClick={loginWithGoogle}
@@ -193,10 +194,10 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
             </div>
             <div>
               <h4 className="text-white font-bold text-sm mb-1">
-                {t.chatEnableNotifs}
+                {(t as any).chatEnableNotifs || t.chatsEnableNotif}
               </h4>
               <p className="text-gray-300 text-xs leading-relaxed">
-                {t.chatEnableNotifsDesc}
+                {(t as any).chatEnableNotifsDesc || "Enable notifications to not miss messages."}
               </p>
             </div>
           </div>
@@ -205,13 +206,13 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
               onClick={() => setShowNotifPrompt(false)}
               className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-[#3d2b4f]/30 transition-colors"
             >
-              {t.chatLater}
+              {(t as any).chatLater || t.chatsLater}
             </button>
             <button 
               onClick={requestNotifications}
               className="flex-1 sm:flex-none bg-[#ff4d4d] text-[#15101e] px-4 py-2 rounded-xl text-xs font-bold hover:bg-white transition-colors shadow-[0_0_15px_rgba(255,77,77,0.3)]"
             >
-              {t.chatEnable}
+              {(t as any).chatEnable || t.chatsEnable}
             </button>
           </div>
         </motion.div>
@@ -227,7 +228,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t.chatSearchChats}
+            placeholder={(t as any).chatSearchChats || t.chatsSearch}
             className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/50 rounded-2xl py-3 pl-10 pr-10 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#ff4d4d] focus:bg-[#15101e]/80 transition-all"
           />
           <AnimatePresence>
@@ -261,7 +262,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
           >
             <Search className="mx-auto mb-4 opacity-20" size={32} />
             <p className="text-sm font-bold uppercase tracking-widest">
-              {t.chatNoChatsFound}
+              {(t as any).chatNoChatsFound || t.chatsNotFound}
             </p>
           </motion.div>
         ) : (

@@ -59,7 +59,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">Something went wrong</h1>
-            <p className="text-gray-300 mb-6">{errorMessage}</p>
+            <p className="text-white/80 mb-6">{errorMessage}</p>
             <button
               onClick={() => window.location.reload()}
               className="bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-6 py-2 rounded-xl font-bold transition-colors w-full"

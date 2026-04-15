@@ -107,12 +107,12 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
                 <h2 className="text-xl sm:text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
                   {event ? t.editEvent : t.createEvent}
                 </h2>
-                <p className="text-[8px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{t.eventProtocol}</p>
+                <p className="text-[8px] sm:text-xs text-white/40 font-bold uppercase tracking-widest mt-1">{t.eventProtocol}</p>
               </div>
             </div>
             <button 
               onClick={onClose} 
-              className="sm:hidden w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
+              className="sm:hidden w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90 shrink-0"
             >
               <X className="w-4.5 h-4.5" />
             </button>
@@ -124,7 +124,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
                   key={l}
                   onClick={() => setCurrentLang(l as Language)}
                   className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 flex-1 sm:flex-none ${
-                    currentLang === l ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-500 hover:text-white'
+                    currentLang === l ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-white/40 hover:text-white'
                   }`}
                 >
                   {l}
@@ -133,7 +133,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
             </div>
             <button 
               onClick={onClose} 
-              className="hidden sm:flex w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
+              className="hidden sm:flex w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 items-center justify-center text-white/60 hover:text-white transition-all active:scale-90 shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
@@ -144,7 +144,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
         <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto custom-scrollbar flex-1">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.typeLabel}</label>
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.typeLabel}</label>
               <select 
                 value={type}
                 onChange={(e) => setType(e.target.value)}
@@ -155,7 +155,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.iconLabel}</label>
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.iconLabel}</label>
               <select 
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
@@ -169,7 +169,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.resetTimeLabel}</label>
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.resetTimeLabel}</label>
               <input 
                 type="time"
                 value={resetTime}
@@ -186,7 +186,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
               className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-[#1A1528]/30 rounded-3xl border border-[#3d2b4f]/20"
             >
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.dayOfWeekLabel}</label>
+                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.dayOfWeekLabel}</label>
                 <select 
                   value={dayOfWeek}
                   onChange={(e) => setDayOfWeek(Number(e.target.value))}
@@ -196,7 +196,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">{t.weekOffsetLabel}</label>
+                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.weekOffsetLabel}</label>
                 <select 
                   value={weekOffset}
                   onChange={(e) => setWeekOffset(Number(e.target.value))}
@@ -211,26 +211,26 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">
                 {t.titleLabel} <span className="text-[#ff4d4d]">[{currentLang.toUpperCase()}]</span>
               </label>
               <input 
                 type="text"
                 value={title[currentLang] || ''}
                 onChange={(e) => setTitle(prev => ({ ...prev, [currentLang]: e.target.value }))}
-                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-2xl px-6 py-5 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all placeholder:text-gray-600"
+                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-2xl px-6 py-5 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all placeholder:text-white/40"
                 placeholder={t.placeholderTitle}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">
                 {t.summaryLabel} <span className="text-[#ff4d4d]">[{currentLang.toUpperCase()}]</span>
               </label>
               <textarea 
                 value={description[currentLang] || ''}
                 onChange={(e) => setDescription(prev => ({ ...prev, [currentLang]: e.target.value }))}
-                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-5 text-white font-medium focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[150px] resize-none placeholder:text-gray-600"
+                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-5 text-white font-medium focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[150px] resize-none placeholder:text-white/40"
                 placeholder={t.placeholderDescription}
               />
             </div>
@@ -241,7 +241,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
         <div className="p-4 sm:p-8 bg-[#251c35]/50 border-t border-[#3d2b4f]/30 flex flex-col sm:flex-row justify-end items-center gap-4 sm:gap-6 shrink-0">
           <button 
             onClick={onClose}
-            className="w-full sm:w-auto text-[10px] sm:text-xs font-black text-gray-400 hover:text-white uppercase tracking-[0.2em] transition-colors py-2"
+            className="w-full sm:w-auto text-[10px] sm:text-xs font-black text-white/60 hover:text-white uppercase tracking-[0.2em] transition-colors py-2"
           >
             {t.cancel}
           </button>

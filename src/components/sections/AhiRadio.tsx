@@ -292,10 +292,10 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         </div>
         <div>
           <h3 className="text-2xl font-bold text-white mb-2">
-            {t.radioTitle}
+            {(t as any).radioTitle || t.siteName}
           </h3>
-          <p className="text-gray-400 max-w-md mx-auto">
-            {t.radioAuthRequired}
+          <p className="text-white/40 max-w-md mx-auto">
+            {(t as any).radioAuthRequired || "Access to the most unfunny jokes in the universe is only possible after logging in with Google."}
           </p>
         </div>
         <button
@@ -342,9 +342,9 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       <div className="relative z-10 w-full max-w-2xl flex flex-col items-center">
         {/* Header */}
         <div className="flex items-center gap-3 mb-10 bg-[#0d0b14]/50 px-6 py-3 rounded-full border border-[#3d2b4f]/30 backdrop-blur-sm">
-          <Radio className={`w-5 h-5 ${isPlaying ? 'text-[#ff4d4d] animate-pulse' : 'text-gray-400'}`} />
+          <Radio className={`w-5 h-5 ${isPlaying ? 'text-[#ff4d4d] animate-pulse' : 'text-white/40'}`} />
           <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">
-            {t.radioTitle}
+            {(t as any).radioTitle || t.siteName}
           </h2>
         </div>
 
@@ -395,7 +395,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                 <button
                   onClick={handleNextJoke}
                   disabled={isLoading || statusText.includes(t.radioThinking || 'Thinking')}
-                  className="w-10 h-10 rounded-full bg-[#15101e] text-gray-400 hover:text-white hover:bg-[#251c35] flex items-center justify-center transition-all disabled:opacity-50"
+                  className="w-10 h-10 rounded-full bg-[#15101e] text-white/40 hover:text-white hover:bg-[#251c35] flex items-center justify-center transition-all disabled:opacity-50"
                   title={t.radioNextJoke}
                 >
                   <SkipForward className="w-4 h-4" />
@@ -421,12 +421,12 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   key={currentJoke}
-                  className="text-sm sm:text-base font-medium text-gray-200 italic leading-relaxed"
+                  className="text-sm sm:text-base font-medium text-white/90 italic leading-relaxed"
                 >
                   "{currentJoke}"
                 </motion.div>
               ) : (
-                <div className="text-gray-500 text-sm italic flex items-center justify-center md:justify-start gap-2">
+                <div className="text-white/40 text-sm italic flex items-center justify-center md:justify-start gap-2">
                   {isPlaying ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -440,7 +440,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
             </div>
 
             <div className="mt-6 flex items-center justify-between w-full">
-              <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider bg-[#0d0b14] px-3 py-1.5 rounded-lg border border-[#3d2b4f]/30">
+              <div className="flex items-center gap-2 text-xs font-bold text-white/40 uppercase tracking-wider bg-[#0d0b14] px-3 py-1.5 rounded-lg border border-[#3d2b4f]/30">
                 {isPlaying ? (
                   <>
                     <Volume2 className="w-3.5 h-3.5 text-[#ff4d4d]" />

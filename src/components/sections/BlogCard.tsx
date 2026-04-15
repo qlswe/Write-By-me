@@ -49,7 +49,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
           <div className="px-4 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20 self-start">
             {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
           </div>
-          <div className="flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold uppercase tracking-widest">
             <Calendar size={10} />
             <TimeAgo date={post.createdAt} lang={lang} />
           </div>
@@ -59,14 +59,14 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
             <>
               <button 
                 onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
-                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
+                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
                 title={t.editBtn}
               >
                 <Edit size={16} />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
-                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-400/30"
+                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-400/30"
                 title={t.deleteBtn}
               >
                 <Trash2 size={16} />
@@ -74,7 +74,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
             </>
           )}
           <button 
-            className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10 transition-all border border-transparent"
+            className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10 transition-all border border-transparent"
             title={t.shareBtn}
             onClick={(e) => {
               e.stopPropagation();
@@ -86,7 +86,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(e); }}
-            className={`p-2.5 rounded-xl bg-[#3d2b4f]/30 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+            className={`p-2.5 rounded-xl bg-[#3d2b4f]/30 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
             title={t.favoriteBtn}
           >
             <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
@@ -98,7 +98,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
         {post.title[lang] || post.title['en']}
       </h3>
       
-      <p className="text-gray-400 text-xs sm:text-sm line-clamp-2 mb-6 font-medium leading-relaxed group-hover:text-gray-300 transition-colors">
+      <p className="text-white/40 text-xs sm:text-sm line-clamp-2 mb-6 font-medium leading-relaxed group-hover:text-white/80 transition-colors">
         {post.summary[lang] || post.summary['en']}
       </p>
 

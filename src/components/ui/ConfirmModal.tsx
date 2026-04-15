@@ -52,14 +52,14 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <h3 className={`font-black text-white uppercase tracking-tighter ${fullScreen ? 'text-5xl md:text-7xl' : 'text-2xl'}`}>{title}</h3>
           </div>
           
-          <p className={`text-gray-400 font-medium leading-relaxed ${fullScreen ? 'text-xl md:text-3xl mb-16 max-w-2xl' : 'mb-8 text-sm'}`}>
+          <p className={`text-white/60 font-medium leading-relaxed ${fullScreen ? 'text-xl md:text-3xl mb-16 max-w-2xl' : 'mb-8 text-sm'}`}>
             {message}
           </p>
           
           <div className={`flex gap-4 justify-end ${fullScreen ? 'w-full max-w-md flex-col-reverse sm:flex-row sm:justify-center gap-6' : ''}`}>
             <button
               onClick={onClose}
-              className={`rounded-2xl font-black uppercase tracking-widest text-gray-500 bg-[#15101e]/50 hover:bg-[#15101e] hover:text-white transition-all border border-[#3d2b4f]/20 ${fullScreen ? 'px-10 py-5 text-xl flex-1' : 'px-6 py-3 text-[10px]'}`}
+              className={`rounded-2xl font-black uppercase tracking-widest text-white/40 bg-[#15101e]/50 hover:bg-[#15101e] hover:text-white transition-all border border-[#3d2b4f]/20 ${fullScreen ? 'px-10 py-5 text-xl flex-1' : 'px-6 py-3 text-[10px]'}`}
             >
               {cancelText}
             </button>

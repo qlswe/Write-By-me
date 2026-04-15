@@ -82,7 +82,7 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
                 key="result"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-gray-300 italic"
+                className="text-white/80 italic"
               >
                 "{fortunes[fortuneIndex!].text[lang] || fortunes[fortuneIndex!].text['en']}"
               </motion.div>

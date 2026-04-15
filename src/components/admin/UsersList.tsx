@@ -234,7 +234,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
                 {t.adminMaintenanceMode}
               </h3>
               <p className="text-xs text-gray-400">
-                {t.adminMaintenanceDesc}
+                {(t as any).adminMaintenanceDesc || t.adminCloseSite}
               </p>
             </div>
           </div>
@@ -290,7 +290,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
           >
             <Search className="mx-auto mb-4 opacity-20" size={32} />
             <p className="text-sm font-bold uppercase tracking-widest">
-              {t.adminNoUsersFound}
+              {(t as any).adminNoUsersFound || t.adminNoUsers}
             </p>
           </motion.div>
         ) : (

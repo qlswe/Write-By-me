@@ -40,8 +40,8 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
   const { user, loginWithGoogle } = useAuth();
 
   const initialHistory = [
-    { type: 'info' as const, text: translations[lang].sdkAhaRadioAI },
-    { type: 'info' as const, text: translations[lang].sdkAskMe }
+    { type: 'info' as const, text: (translations[lang] as any).sdkAhaRadioAI || translations[lang].sdkTitle },
+    { type: 'info' as const, text: (translations[lang] as any).sdkAskMe || translations[lang].sdkDesc }
   ];
 
   useEffect(() => {
@@ -168,7 +168,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-[#ff4d4d]" />
                 <span className="font-black text-sm tracking-widest text-[#ff4d4d] uppercase">
-                  {translations[lang].sdkAhaRadio}
+                  {(translations[lang] as any).sdkAhaRadio || translations[lang].siteName}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -196,7 +196,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                 }`}
               >
                 <MessageSquare size={14} />
-                {translations[lang].sdkAIAssistant}
+                {translations[lang].sdkAiAssistant || (translations[lang] as any).sdkAIAssistant}
               </button>
               <button
                 onClick={() => setActiveTab('sdk')}
@@ -228,10 +228,10 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-white mb-2">
-                        {translations[lang].sdkAuthRequired}
+                        {translations[lang].sdkAuthRequiredMsg || (translations[lang] as any).sdkAuthRequired}
                       </h3>
                       <p className="text-sm text-gray-400 mb-6">
-                        {translations[lang].sdkAuthDesc}
+                        {(translations[lang] as any).sdkAuthDesc || translations[lang].sdkAuthRequiredMsg}
                       </p>
                     </div>
                     <button
@@ -270,7 +270,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       <div className="flex items-start">
                         <div className="bg-[#15101e]/80 border border-[#3d2b4f]/50 text-[#ff4d4d] px-4 py-3 rounded-2xl rounded-tl-sm text-sm flex items-center gap-2">
                           <Sparkles size={14} className="animate-pulse" />
-                          {translations[lang].sdkThinking}
+                          {translations[lang].radioThinking || (translations[lang] as any).sdkThinking}
                         </div>
                       </div>
                     )}
@@ -282,7 +282,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder={translations[lang].sdkAskAI}
+                        placeholder={translations[lang].sdkAskAi || (translations[lang] as any).sdkAskAI}
                         className="flex-1 min-w-0 bg-transparent border-none outline-none px-3 py-2 text-sm text-white placeholder-gray-500"
                       />
                       <button 
@@ -326,10 +326,10 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                     >
                       <div>
                         <div className="font-bold text-white text-sm mb-1">
-                          {translations[lang].sdkLowPerformanceMode}
+                          {translations[lang].sdkLowPerfMode || (translations[lang] as any).sdkLowPerformanceMode}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {translations[lang].sdkDisableHeavyAnimations}
+                          {translations[lang].sdkDisableHeavy || (translations[lang] as any).sdkDisableHeavyAnimations}
                         </div>
                       </div>
                       <div className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${lowPerfMode ? 'bg-[#ff4d4d]' : 'bg-[#3d2b4f]'}`}>
@@ -346,7 +346,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                           {translations[lang].sdkLoadWidget}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {translations[lang].sdkShowPerformanceWidget}
+                          {translations[lang].sdkShowPerfWidget || (translations[lang] as any).sdkShowPerformanceWidget}
                         </div>
                       </div>
                       <div className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${showLoadWidget ? 'bg-[#ff4d4d]' : 'bg-[#3d2b4f]'}`}>

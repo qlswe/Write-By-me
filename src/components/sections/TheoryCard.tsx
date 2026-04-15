@@ -78,14 +78,14 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
             <>
               <button 
                 onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
-                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
+                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
                 title={t.editBtn}
               >
                 <Edit size={18} />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
-                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-400/30"
+                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-400/30"
                 title={t.deleteBtn}
               >
                 <Trash2 size={18} />
@@ -94,14 +94,14 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
           )}
           <button 
             onClick={handleShare}
-            className={`p-2.5 rounded-xl bg-[#3d2b4f]/30 transition-all border border-transparent ${copied ? 'text-green-400 bg-green-400/10 border-green-400/30' : 'text-gray-400 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10'}`}
+            className={`p-2.5 rounded-xl bg-[#3d2b4f]/30 transition-all border border-transparent ${copied ? 'text-green-400 bg-green-400/10 border-green-400/30' : 'text-white/40 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10'}`}
             title={t.shareBtn}
           >
             {copied ? <Check size={18} /> : <Share2 size={18} />}
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(e); }}
-            className={`p-2.5 rounded-xl bg-[#3d2b4f]/30 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+            className={`p-2.5 rounded-xl bg-[#3d2b4f]/30 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
             title={t.favoriteBtn}
           >
             <Star size={18} fill={isFavorite ? "currentColor" : "none"} />
@@ -113,7 +113,7 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
         {theory.title[lang] || theory.title['en']}
       </h3>
       
-      <p className="text-gray-400 text-xs sm:text-sm line-clamp-2 mb-6 font-medium leading-relaxed group-hover:text-gray-300 transition-colors">
+      <p className="text-white/40 text-xs sm:text-sm line-clamp-2 mb-6 font-medium leading-relaxed group-hover:text-white/80 transition-colors">
         {theory.summary[lang] || theory.summary['en']}
       </p>
 

@@ -35,14 +35,14 @@ export const ContentModal: React.FC<ContentModalProps> = ({ modalContent, setMod
           <h3 className="text-2xl font-bold text-[#ff4d4d] pr-8">{modalContent.title}</h3>
           <button 
             onClick={() => setModalContent(null)}
-            className="p-2 hover:bg-[#3d2b4f] rounded-full transition-colors text-gray-400 shrink-0"
+            className="p-2 hover:bg-[#3d2b4f] rounded-full transition-colors text-white/60 shrink-0"
           >
             <X size={24} />
           </button>
         </div>
         <div className="p-6 overflow-y-auto custom-scrollbar">
           <div 
-            className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none"
+            className="prose prose-invert prose-p:text-white/80 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none"
             dangerouslySetInnerHTML={{ __html: modalContent.content }}
           />
         </div>

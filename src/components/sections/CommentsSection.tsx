@@ -130,7 +130,7 @@ Text to analyze:
     try {
       const isApproved = await moderateContent(content);
       if (!isApproved) {
-        alert(t.forumModerationRejectedComment);
+        alert((t as any).forumModerationRejectedComment || t.forumCommentRejected);
         setIsSubmitting(false);
         return;
       }
@@ -308,7 +308,7 @@ Text to analyze:
                   </button>
                 )}
               </div>
-              <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">
                 {formatDistanceToNow(new Date(comment.createdAt), {
                   addSuffix: true,
                   locale: locales[lang] || locales.en
@@ -321,7 +321,7 @@ Text to analyze:
                   {user.uid === comment.authorUid && (
                     <button
                       onClick={() => handleEdit(comment)}
-                      className="p-1.5 bg-[#0d0b14] text-gray-400 hover:text-white hover:bg-[#ff4d4d] rounded-lg transition-all border border-[#3d2b4f]/30"
+                      className="p-1.5 bg-[#0d0b14] text-white/60 hover:text-white hover:bg-[#ff4d4d] rounded-lg transition-all border border-[#3d2b4f]/30"
                       title={t.edit || "Edit"}
                     >
                       <Edit2 size={12} />
@@ -329,7 +329,7 @@ Text to analyze:
                   )}
                   <button
                     onClick={() => setCommentToDelete(comment.id)}
-                    className="p-1.5 bg-[#0d0b14] text-gray-400 hover:text-white hover:bg-red-500 rounded-lg transition-all border border-[#3d2b4f]/30"
+                    className="p-1.5 bg-[#0d0b14] text-white/60 hover:text-white hover:bg-red-500 rounded-lg transition-all border border-[#3d2b4f]/30"
                     title={t.delete || "Удал."}
                   >
                     <Trash2 size={12} />
@@ -344,12 +344,12 @@ Text to analyze:
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-2xl p-4 text-sm text-gray-200 focus:outline-none focus:border-[#ff4d4d]/50 resize-none min-h-[100px] font-medium"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-2xl p-4 text-sm text-white/90 focus:outline-none focus:border-[#ff4d4d]/50 resize-none min-h-[100px] font-medium"
               />
               <div className="flex justify-end gap-2 mt-3">
                 <button
                   onClick={() => setEditingCommentId(null)}
-                  className="px-4 py-2 bg-[#15101e] text-gray-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#3d2b4f]/30 transition-all"
+                  className="px-4 py-2 bg-[#15101e] text-white/60 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#3d2b4f]/30 transition-all"
                 >
                   {t.cancelBtn}
                 </button>
@@ -363,7 +363,7 @@ Text to analyze:
             </div>
           ) : (
             <div>
-              <p className={`text-sm text-gray-200 whitespace-pre-wrap break-words leading-relaxed font-medium ${!isExpanded && isLong ? 'line-clamp-4' : ''}`}>
+              <p className={`text-sm text-white/90 whitespace-pre-wrap break-words leading-relaxed font-medium ${!isExpanded && isLong ? 'line-clamp-4' : ''}`}>
                 {comment.content}
               </p>
               {isLong && (
@@ -392,17 +392,17 @@ Text to analyze:
               <button
                 onClick={() => handleVote(comment, 'up')}
                 disabled={!user}
-                className={`p-1.5 rounded-lg transition-all ${hasUpvoted ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
+                className={`p-1.5 rounded-lg transition-all ${hasUpvoted ? 'text-green-500 bg-green-500/10' : 'text-white/40 hover:text-green-500 hover:bg-green-500/5'}`}
               >
                 <ChevronUp size={20} />
               </button>
-              <span className={`text-xs font-black px-2 min-w-[2rem] text-center ${score > 0 ? 'text-green-500' : score < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+              <span className={`text-xs font-black px-2 min-w-[2rem] text-center ${score > 0 ? 'text-green-500' : score < 0 ? 'text-red-500' : 'text-white/40'}`}>
                 {score > 0 ? `+${score}` : score}
               </span>
               <button
                 onClick={() => handleVote(comment, 'down')}
                 disabled={!user}
-                className={`p-1.5 rounded-lg transition-all ${hasDownvoted ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
+                className={`p-1.5 rounded-lg transition-all ${hasDownvoted ? 'text-red-500 bg-red-500/10' : 'text-white/40 hover:text-red-500 hover:bg-red-500/5'}`}
               >
                 <ChevronDown size={20} />
               </button>
@@ -411,7 +411,7 @@ Text to analyze:
             {user && (
               <button
                 onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-[#ff4d4d] transition-all px-4 py-2 rounded-xl hover:bg-[#ff4d4d]/10 border border-transparent hover:border-[#ff4d4d]/30"
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-[#ff4d4d] transition-all px-4 py-2 rounded-xl hover:bg-[#ff4d4d]/10 border border-transparent hover:border-[#ff4d4d]/30"
               >
                 <MessageCircle size={14} />
                 {t.reply || "Ответить"}
@@ -447,7 +447,7 @@ Text to analyze:
                     onChange={(e) => setReplyContent(e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, comment.id)}
                     placeholder={t.writeReply || "Написать ответ..."}
-                    className="w-full bg-[#15101e]/30 border border-[#3d2b4f]/20 rounded-2xl p-4 pr-14 text-gray-200 focus:outline-none focus:border-[#ff4d4d]/50 focus:bg-[#15101e]/50 transition-all resize-none min-h-[100px] text-sm font-medium"
+                    className="w-full bg-[#15101e]/30 border border-[#3d2b4f]/20 rounded-2xl p-4 pr-14 text-white/90 focus:outline-none focus:border-[#ff4d4d]/50 focus:bg-[#15101e]/50 transition-all resize-none min-h-[100px] text-sm font-medium"
                     maxLength={1000}
                   />
                   <button
@@ -470,7 +470,7 @@ Text to analyze:
     <div className="mt-12 pt-12 border-t border-[#15101e]">
       <h3 className="text-3xl font-black text-white mb-10 tracking-tighter uppercase flex items-center gap-4">
         <MessageCircle className="text-[#ff4d4d]" size={32} />
-        {t.comments || "Комментарии"} <span className="text-gray-500 text-xl">({comments.length})</span>
+        {t.comments || "Комментарии"} <span className="text-white/40 text-xl">({comments.length})</span>
       </h3>
 
       {user ? (
@@ -481,7 +481,7 @@ Text to analyze:
               onChange={(e) => setNewComment(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={hasReachedLimit ? (t.commentLimitReached || "You have reached the comment limit") : (t.writeComment || "Написать комментарий... (Enter для отправки)")}
-              className={`w-full bg-[#15101e]/30 border border-[#3d2b4f]/20 rounded-[2rem] p-6 pr-16 text-gray-200 focus:outline-none focus:border-[#ff4d4d]/50 focus:bg-[#15101e]/50 transition-all resize-none min-h-[150px] text-base font-medium ${hasReachedLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full bg-[#15101e]/30 border border-[#3d2b4f]/20 rounded-[2rem] p-6 pr-16 text-white/90 focus:outline-none focus:border-[#ff4d4d]/50 focus:bg-[#15101e]/50 transition-all resize-none min-h-[150px] text-base font-medium ${hasReachedLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
               maxLength={2000}
               disabled={hasReachedLimit}
             />
@@ -499,8 +499,8 @@ Text to analyze:
         </div>
       ) : (
         <div className="bg-[#15101e] border border-[#3d2b4f]/20 rounded-[2.5rem] p-12 text-center mb-12">
-          <MessageCircle size={48} className="mx-auto text-gray-600 mb-6" />
-          <p className="text-gray-400 mb-8 font-black uppercase tracking-widest text-sm">{t.loginToComment || "Войдите, чтобы оставить комментарий"}</p>
+          <MessageCircle size={48} className="mx-auto text-white/20 mb-6" />
+          <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-sm">{t.loginToComment || "Войдите, чтобы оставить комментарий"}</p>
           <button
             onClick={loginWithGoogle}
             className="inline-flex items-center gap-4 bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,77,77,0.3)] hover:scale-105 active:scale-95 border border-white/20"

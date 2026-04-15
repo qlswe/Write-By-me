@@ -84,7 +84,7 @@ export const Changelog: React.FC<ChangelogProps> = ({ lang }) => {
         <div className="p-2 rounded-lg bg-[#ff4d4d]/10 text-[#ff4d4d]">
           <GitCommit size={24} />
         </div>
-        <h3 className="text-2xl font-bold text-[#ff4d4d]">{t.changelogTitle}</h3>
+        <h3 className="text-2xl font-bold text-[#ff4d4d]">{(t as any).changelogTitle || "Changelog"}</h3>
       </div>
 
       <div className="space-y-8">
@@ -93,8 +93,8 @@ export const Changelog: React.FC<ChangelogProps> = ({ lang }) => {
             <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-[#251c35] border-2 border-[#ff4d4d]" />
             
             <div className="flex flex-wrap items-baseline gap-3 mb-4">
-              <h4 className="text-lg font-bold text-white">{t.changelogVersion} {entry.version}</h4>
-              <span className="text-sm text-gray-400">{entry.date}</span>
+              <h4 className="text-lg font-bold text-white">{(t as any).changelogVersion || "Version"} {entry.version}</h4>
+              <span className="text-sm text-white/60">{entry.date}</span>
             </div>
 
             <div className="space-y-4">
@@ -102,9 +102,9 @@ export const Changelog: React.FC<ChangelogProps> = ({ lang }) => {
                 <div>
                   <h5 className="flex items-center gap-2 text-sm font-bold text-green-400 mb-2 uppercase tracking-wider">
                     <Star size={14} />
-                    {t.changelogNew}
+                    {(t as any).changelogNew || "New"}
                   </h5>
-                  <ul className="list-disc list-inside text-sm text-gray-300 space-y-1 ml-1">
+                  <ul className="list-disc list-inside text-sm text-white/80 space-y-1 ml-1">
                     {entry.newFeatures.map((feature, i) => (
                       <li key={i}>{feature}</li>
                     ))}
@@ -116,9 +116,9 @@ export const Changelog: React.FC<ChangelogProps> = ({ lang }) => {
                 <div>
                   <h5 className="flex items-center gap-2 text-sm font-bold text-red-400 mb-2 uppercase tracking-wider">
                     <Bug size={14} />
-                    {t.changelogFixes}
+                    {(t as any).changelogFixes || "Fixes"}
                   </h5>
-                  <ul className="list-disc list-inside text-sm text-gray-300 space-y-1 ml-1">
+                  <ul className="list-disc list-inside text-sm text-white/80 space-y-1 ml-1">
                     {entry.fixes.map((fix, i) => (
                       <li key={i}>{fix}</li>
                     ))}
@@ -130,9 +130,9 @@ export const Changelog: React.FC<ChangelogProps> = ({ lang }) => {
                 <div>
                   <h5 className="flex items-center gap-2 text-sm font-bold text-blue-400 mb-2 uppercase tracking-wider">
                     <Zap size={14} />
-                    {t.changelogImprovements}
+                    {(t as any).changelogImprovements || "Improvements"}
                   </h5>
-                  <ul className="list-disc list-inside text-sm text-gray-300 space-y-1 ml-1">
+                  <ul className="list-disc list-inside text-sm text-white/80 space-y-1 ml-1">
                     {entry.improvements.map((imp, i) => (
                       <li key={i}>{imp}</li>
                     ))}

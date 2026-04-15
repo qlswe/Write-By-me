@@ -56,20 +56,20 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
           <h3 className="text-xl font-bold text-[#ff4d4d]">{t.feedbackTitle || "Feedback"}</h3>
           <button 
             onClick={() => setFeedbackOpen(false)}
-            className="p-2 hover:bg-[#3d2b4f] rounded-full transition-colors text-gray-400"
+            className="p-2 hover:bg-[#3d2b4f] rounded-full transition-colors text-white/60"
           >
             <X size={20} />
           </button>
         </div>
         <div className="p-6 flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">{t.feedbackType || "Type"}</label>
+            <label className="block text-sm font-medium text-white/80 mb-2">{t.feedbackType || "Type"}</label>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-gray-200 cursor-pointer">
+              <label className="flex items-center gap-2 text-white/90 cursor-pointer">
                 <input type="radio" checked={feedbackType === 'bug'} onChange={() => setFeedbackType('bug')} className="accent-[#ff4d4d]" />
                 {t.bug || "Bug"}
               </label>
-              <label className="flex items-center gap-2 text-gray-200 cursor-pointer">
+              <label className="flex items-center gap-2 text-white/90 cursor-pointer">
                 <input type="radio" checked={feedbackType === 'suggestion'} onChange={() => setFeedbackType('suggestion')} className="accent-[#ff4d4d]" />
                 {t.suggestion || "Suggestion"}
               </label>
@@ -80,7 +80,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
               placeholder={t.feedbackPlaceholder || "Describe..."}
-              className="w-full h-32 bg-[#15101e] border border-[#3d2b4f] rounded-xl p-3 text-gray-200 focus:outline-none focus:border-[#ff4d4d] resize-none"
+              className="w-full h-32 bg-[#15101e] border border-[#3d2b4f] rounded-xl p-3 text-white/90 focus:outline-none focus:border-[#ff4d4d] resize-none"
             />
           </div>
           <div>
@@ -93,7 +93,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
             />
             <label 
               htmlFor="feedback-image"
-              className="flex items-center justify-center gap-2 w-full p-3 border border-dashed border-[#3d2b4f] rounded-xl text-gray-400 hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-colors cursor-pointer bg-[#15101e]/50 text-center text-sm"
+              className="flex items-center justify-center gap-2 w-full p-3 border border-dashed border-[#3d2b4f] rounded-xl text-white/60 hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-colors cursor-pointer bg-[#15101e]/50 text-center text-sm"
             >
               <ImagePlus size={20} className="shrink-0" />
               <span className="truncate">{feedbackImage ? (t.imageAttached || "Image attached") : (t.attachImage || "Attach Image")}</span>
@@ -109,7 +109,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 </button>
               </div>
             )}
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-white/40 mt-2">
               {t.imageNote || "Note: Images cannot be sent directly via email client link. Please attach the image manually in your email client."}
             </p>
           </div>
@@ -117,7 +117,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         <div className="p-6 border-t border-[#3d2b4f] bg-[#15101e] flex justify-end gap-3">
           <button 
             onClick={() => setFeedbackOpen(false)}
-            className="px-4 py-2 rounded-lg text-gray-300 hover:bg-[#251c35] transition-colors"
+            className="px-4 py-2 rounded-lg text-white/80 hover:bg-[#251c35] transition-colors"
           >
             {t.cancel || "Cancel"}
           </button>

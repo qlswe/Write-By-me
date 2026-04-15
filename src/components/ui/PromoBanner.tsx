@@ -27,7 +27,7 @@ export const PromoBanner: React.FC<PromoBannerProps> = ({ showBanner, lang, setM
         >
           <button 
             onClick={onClose}
-            className="absolute top-2 right-2 p-1 text-gray-400 hover:text-white transition-colors"
+            className="absolute top-2 right-2 p-1 text-white/60 hover:text-white transition-colors"
           >
             <X size={18} />
           </button>
@@ -38,14 +38,14 @@ export const PromoBanner: React.FC<PromoBannerProps> = ({ showBanner, lang, setM
             <h3 className="text-lg font-bold text-white mb-1">
               {t.bannerTitle || "Установите приложение"}
             </h3>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-white/80">
               {t.bannerDesc || "Доступно как Web-App (через меню браузера) и как отдельное Android-приложение."}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <button 
               onClick={() => setModalContent({ id: 'promo-install', title: t.installGuideTitle || "Как установить Web-App", content: t.installGuideContent || "<p>1. Откройте меню браузера.</p><p>2. Выберите «Добавить на главный экран».</p>" })}
-              className="bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-200 px-4 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors"
+              className="bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-white/90 px-4 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors"
             >
               {t.bannerBtnWeb || "Как установить Web-App"}
             </button>

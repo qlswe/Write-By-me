@@ -258,10 +258,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             </div>
             <div className="space-y-2">
               <h3 className="text-xl font-black text-white uppercase tracking-tight">
-                {t.chatAuthRequired}
+                {(t as any).chatAuthRequired || t.chatAuthRequired}
               </h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                {t.chatAuthDesc}
+                {(t as any).chatAuthDesc || t.chatsLoginToView}
               </p>
             </div>
             <button
@@ -337,7 +337,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <div className="px-4 py-3 border-b border-[#3d2b4f]/50 mb-1">
-                                    <h4 className="text-white font-bold text-center">{t.chatActions}</h4>
+                                    <h4 className="text-white font-bold text-center">{(t as any).chatActions || t.profileUses}</h4>
                                   </div>
                                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#3d2b4f]/50 bg-[#15101e]/50">
                                     {CHAT_REACTIONS.map(emoji => (
@@ -355,21 +355,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                     ))}
                                   </div>
                                   <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#ff4d4d]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
-                                    <Reply className="w-5 h-5 text-[#ff4d4d]" /> {t.chatReply}
+                                    <Reply className="w-5 h-5 text-[#ff4d4d]" /> {(t as any).chatReply || "Reply"}
                                   </button>
                                   {msg.type !== 'sticker' && (
                                     <button onClick={(e) => { e.stopPropagation(); handleCopy(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#ff4d4d]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
-                                      <Copy className="w-5 h-5 text-[#ff4d4d]" /> {t.chatCopy}
+                                      <Copy className="w-5 h-5 text-[#ff4d4d]" /> {(t as any).chatCopy || "Copy"}
                                     </button>
                                   )}
                                   {isMe && msg.type !== 'sticker' && (
                                     <button onClick={(e) => { e.stopPropagation(); setEditingMessage(msg); setInputText(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-[#ff4d4d]/10 rounded-xl text-gray-300 hover:text-white transition-colors text-base font-medium">
-                                      <Pencil className="w-5 h-5 text-[#ff4d4d]" /> {t.chatEdit}
+                                      <Pencil className="w-5 h-5 text-[#ff4d4d]" /> {(t as any).chatEdit || t.profileSave}
                                     </button>
                                   )}
                                   {isMe && (
                                     <button onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id, recipientId); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3.5 hover:bg-red-500/10 rounded-xl text-red-400 hover:text-red-300 transition-colors text-base font-medium mt-1 border-t border-[#3d2b4f]/30">
-                                      <Trash2 className="w-5 h-5" /> {t.chatDelete}
+                                      <Trash2 className="w-5 h-5" /> {(t as any).chatDelete || "Delete"}
                                     </button>
                                   )}
                                 </motion.div>
@@ -395,10 +395,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             {repliedMsg && msg.type !== 'sticker' && !msg.isDeleted && (
                               <div className={`mb-2 p-2 rounded-lg text-xs border-l-2 ${isMe ? 'bg-[#15101e]/10 border-[#15101e]/30' : 'bg-[#15101e]/30 border-[#ff4d4d]/50'}`}>
                                 <span className="font-bold opacity-70 block mb-0.5">
-                                  {repliedMsg.senderId === user?.uid ? t.chatYou : recipientName}
+                                  {repliedMsg.senderId === user?.uid ? ((t as any).chatYou || "You") : recipientName}
                                 </span>
                                 <span className="opacity-80 line-clamp-1">
-                                  {repliedMsg.isDeleted ? t.chatMessageDeleted : (repliedMsg.type === 'sticker' ? 'Sticker' : repliedMsg.text)}
+                                  {repliedMsg.isDeleted ? ((t as any).chatMessageDeleted || "Deleted") : (repliedMsg.type === 'sticker' ? 'Sticker' : repliedMsg.text)}
                                 </span>
                               </div>
                             )}

@@ -163,7 +163,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                   <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30">
                     {selectedTheory.category}
                   </span>
-                  <div className="flex items-center gap-2 text-gray-400 text-xs font-medium">
+                  <div className="flex items-center gap-2 text-white/40 text-xs font-medium">
                     <Clock size={12} />
                     <TimeAgo date={selectedTheory.createdAt} lang={lang} />
                   </div>
@@ -177,7 +177,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                 {isModerator && (
                   <button 
                     onClick={() => onEdit?.(selectedTheory)}
-                    className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
+                    className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
                     title={t.editBtn}
                   >
                     <Edit size={18} />
@@ -189,14 +189,14 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                     selectedTheory.title[lang] || selectedTheory.title['en'], 
                     selectedTheory.summary[lang] || selectedTheory.summary['en']
                   )}
-                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent ${copied ? 'text-green-400 border-green-400/30 bg-green-400/10' : 'text-gray-400 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10'}`}
+                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent ${copied ? 'text-green-400 border-green-400/30 bg-green-400/10' : 'text-white/40 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10'}`}
                   title="Share"
                 >
                   {copied ? <Check size={18} /> : <Share2 size={18} />}
                 </button>
                 <button 
                   onClick={(e) => toggleFavorite(selectedTheory.id, e)}
-                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent ${favorites.includes(selectedTheory.id) ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent ${favorites.includes(selectedTheory.id) ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
                 >
                   <Star size={18} fill={favorites.includes(selectedTheory.id) ? "currentColor" : "none"} />
                 </button>
@@ -205,7 +205,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
 
             <div 
               ref={contentRef}
-              className="prose prose-invert prose-p:text-gray-300 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none mb-8 text-base sm:text-lg leading-relaxed"
+              className="prose prose-invert prose-p:text-white/80 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none mb-8 text-base sm:text-lg leading-relaxed"
               dangerouslySetInnerHTML={{ __html: selectedTheory.content[lang] || selectedTheory.content['en'] }}
             />
 
@@ -255,7 +255,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                     className={`px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                       theoryCategory === cat 
                         ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
-                        : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/30'
+                        : 'text-white/40 hover:text-white hover:bg-[#3d2b4f]/30'
                     }`}
                   >
                     {cat === 'all' ? t.filterAll : 
@@ -272,7 +272,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                   placeholder={t.searchPlaceholder}
                   value={theorySearch}
                   onChange={(e) => setTheorySearch(e.target.value)}
-                  className="w-full bg-[#15101e]/50 border border-[#3d2b4f] rounded-2xl pl-14 pr-6 py-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-[#ff4d4d] focus:ring-4 focus:ring-[#ff4d4d]/10 transition-all"
+                  className="w-full bg-[#15101e]/50 border border-[#3d2b4f] rounded-2xl pl-14 pr-6 py-4 text-white placeholder:text-white/40 focus:outline-none focus:border-[#ff4d4d] focus:ring-4 focus:ring-[#ff4d4d]/10 transition-all"
                 />
               </div>
             </div>
@@ -281,7 +281,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-24 text-gray-400 bg-[#15101e]/30 rounded-3xl border-2 border-dashed border-[#3d2b4f]/50 flex flex-col items-center gap-4"
+                className="text-center py-24 text-white/40 bg-[#15101e]/30 rounded-3xl border-2 border-dashed border-[#3d2b4f]/50 flex flex-col items-center gap-4"
               >
                 <Sparkles size={48} className="text-[#3d2b4f]" />
                 <p className="text-xl font-bold uppercase tracking-widest">{t.noResults}</p>

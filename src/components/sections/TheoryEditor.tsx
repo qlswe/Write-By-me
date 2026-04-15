@@ -88,12 +88,12 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
                 <h2 className="text-xl sm:text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
                   {theory ? t.editTheory : t.createTheory}
                 </h2>
-                <p className="text-[8px] sm:text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">{t.archiveProtocol}</p>
+                <p className="text-[8px] sm:text-xs text-white/40 font-bold uppercase tracking-widest mt-1">{t.archiveProtocol}</p>
               </div>
             </div>
             <button 
               onClick={onClose} 
-              className="sm:hidden w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
+              className="sm:hidden w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all active:scale-90 shrink-0"
             >
               <X className="w-4.5 h-4.5" />
             </button>
@@ -105,7 +105,7 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
                   key={l}
                   onClick={() => setCurrentLang(l as Language)}
                   className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 flex-1 sm:flex-none ${
-                    currentLang === l ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-500 hover:text-white'
+                    currentLang === l ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-white/40 hover:text-white'
                   }`}
                 >
                   {l}
@@ -114,7 +114,7 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
             </div>
             <button 
               onClick={onClose} 
-              className="hidden sm:flex w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 items-center justify-center text-gray-400 hover:text-white transition-all active:scale-90 shrink-0"
+              className="hidden sm:flex w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 items-center justify-center text-white/60 hover:text-white transition-all active:scale-90 shrink-0"
             >
               <X className="w-5 h-5" />
             </button>
@@ -125,7 +125,7 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
         <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto custom-scrollbar flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">{t.categoryLabel}</label>
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-4">{t.categoryLabel}</label>
               <select 
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
@@ -138,40 +138,40 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-4">
                 {t.titleLabel} <span className="text-[#ff4d4d]">[{currentLang.toUpperCase()}]</span>
               </label>
               <input 
                 type="text"
                 value={title[currentLang] || ''}
                 onChange={(e) => setTitle(prev => ({ ...prev, [currentLang]: e.target.value }))}
-                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all placeholder:text-gray-700"
+                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all placeholder:text-white/40"
                 placeholder={t.placeholderTitle}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">
+            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-4">
               {t.summaryLabel} <span className="text-[#ff4d4d]">[{currentLang.toUpperCase()}]</span>
             </label>
             <textarea 
               value={summary[currentLang] || ''}
               onChange={(e) => setSummary(prev => ({ ...prev, [currentLang]: e.target.value }))}
-              className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-4 text-white font-medium focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[100px] resize-none placeholder:text-gray-700"
+              className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-4 text-white font-medium focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[100px] resize-none placeholder:text-white/40"
               placeholder={t.placeholderSummary}
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-4">
+            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-4">
               {t.contentLabel} <span className="text-[#ff4d4d]">[{currentLang.toUpperCase()}]</span>
             </label>
             <div className="relative group">
               <textarea 
                 value={content[currentLang] || ''}
                 onChange={(e) => setContent(prev => ({ ...prev, [currentLang]: e.target.value }))}
-                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-[2rem] px-6 py-6 text-white font-mono text-sm leading-relaxed focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[350px] placeholder:text-gray-700"
+                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-[2rem] px-6 py-6 text-white font-mono text-sm leading-relaxed focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[350px] placeholder:text-white/40"
                 placeholder={t.placeholderContent}
               />
             </div>
@@ -182,7 +182,7 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
         <div className="p-4 sm:p-8 bg-[#251c35]/50 border-t border-[#3d2b4f]/30 flex flex-col sm:flex-row justify-end items-center gap-4 sm:gap-6 shrink-0">
           <button 
             onClick={onClose}
-            className="w-full sm:w-auto text-[10px] sm:text-xs font-black text-gray-400 hover:text-white uppercase tracking-[0.2em] transition-colors py-2"
+            className="w-full sm:w-auto text-[10px] sm:text-xs font-black text-white/60 hover:text-white uppercase tracking-[0.2em] transition-colors py-2"
           >
             {t.cancel}
           </button>

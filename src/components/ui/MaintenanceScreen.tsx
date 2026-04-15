@@ -35,13 +35,13 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ lang }) =>
           {t.maintenanceSiteClosed}
         </h1>
         
-        <p className="text-gray-300 mb-8 leading-relaxed">
+        <p className="text-white/80 mb-8 leading-relaxed">
           {t.maintenanceDesc}
         </p>
 
         {user ? (
           <div className="space-y-4">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-white/60">
               {t.maintenanceNoAccess.replace('{name}', user.displayName || '')}
             </p>
             <button

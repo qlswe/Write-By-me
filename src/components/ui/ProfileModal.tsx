@@ -228,7 +228,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                     </button>
                     <button
                       onClick={() => setIsEditingPhoto(false)}
-                      className="p-2.5 bg-[#15101e] text-gray-400 rounded-xl hover:text-white transition-colors"
+                      className="p-2.5 bg-[#15101e] text-white/60 rounded-xl hover:text-white transition-colors"
                     >
                       <X size={20} />
                     </button>
@@ -263,7 +263,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       {isOwnProfile && (
                         <button
                           onClick={() => setIsEditingName(true)}
-                          className="p-1.5 text-gray-400 hover:text-[#ff4d4d] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded-lg hover:bg-[#15101e]"
+                          className="p-1.5 text-white/60 hover:text-[#ff4d4d] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all rounded-lg hover:bg-[#15101e]"
                         >
                           <Edit2 size={18} />
                         </button>
@@ -318,13 +318,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
               <div className="flex border-b border-[#15101e] mb-6">
                 <button
                   onClick={() => { setShowPosts(false); setShowChats(false); }}
-                  className={`px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${!showPosts && !showChats ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                  className={`px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${!showPosts && !showChats ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
                 >
                   {t.profileInfo}
                 </button>
                 <button
                   onClick={() => { setShowPosts(true); setShowChats(false); }}
-                  className={`px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${showPosts ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                  className={`px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${showPosts ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
                 >
                   {t.profileUses}
                 </button>
@@ -381,7 +381,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                         <div className="w-6 h-6 border-2 border-[#ff4d4d] border-t-transparent rounded-full animate-spin"></div>
                       </div>
                     ) : posts.length === 0 ? (
-                      <div className="text-center py-12 text-gray-500 italic text-sm">
+                      <div className="text-center py-12 text-white/40 italic text-sm">
                         {t.profileNoUses}
                       </div>
                     ) : (
@@ -396,7 +396,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                                   className="w-full bg-[#0d0b14] border border-[#ff4d4d] rounded-xl p-3 text-sm text-white outline-none h-20"
                                 />
                                 <div className="flex justify-end gap-2">
-                                  <button onClick={() => setEditingPostId(null)} className="text-xs text-gray-500 uppercase font-bold">{t.profileCancel}</button>
+                                  <button onClick={() => setEditingPostId(null)} className="text-xs text-white/40 uppercase font-bold">{t.profileCancel}</button>
                                   <button 
                                     onClick={() => handleUpdatePost(post.id, (document.getElementById(`edit-${post.id}`) as HTMLTextAreaElement).value)}
                                     className="text-xs text-[#ff4d4d] uppercase font-bold"
@@ -407,15 +407,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                               </div>
                             ) : (
                               <>
-                                <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">{post.text}</p>
+                                <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed">{post.text}</p>
                                 <div className="flex justify-between items-center mt-3">
-                                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                                  <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
                                     {new Date(post.createdAt).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                                   </span>
                                   {isOwnProfile && (
                                     <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                      <button onClick={() => setEditingPostId(post.id)} className="text-gray-500 hover:text-[#ff4d4d]"><Edit2 size={14} /></button>
-                                      <button onClick={() => deletePost(post.id)} className="text-gray-500 hover:text-red-400"><X size={14} /></button>
+                                      <button onClick={() => setEditingPostId(post.id)} className="text-white/40 hover:text-[#ff4d4d]"><Edit2 size={14} /></button>
+                                      <button onClick={() => deletePost(post.id)} className="text-white/40 hover:text-red-400"><X size={14} /></button>
                                     </div>
                                   )}
                                 </div>
@@ -438,7 +438,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       {stats.map((stat, i) => (
                         <div key={i} className="bg-[#15101e]/50 p-4 rounded-2xl border border-[#3d2b4f]/30 flex flex-col items-center text-center">
                           <stat.icon size={20} className={`${stat.color} mb-2`} />
-                          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{stat.label}</div>
+                          <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">{stat.label}</div>
                           <div className="text-sm font-black text-white">{stat.value}</div>
                         </div>
                       ))}
@@ -452,8 +452,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                             <Mail size={20} />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">{t.profileEmail}</div>
-                            <div className="text-sm text-gray-200 truncate">{user.email}</div>
+                            <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-0.5">{t.profileEmail}</div>
+                            <div className="text-sm text-white/90 truncate">{user.email}</div>
                           </div>
                         </div>
                       )}
@@ -463,8 +463,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                           <Calendar size={20} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">{t.profileMemberSince}</div>
-                          <div className="text-sm text-gray-200">{creationDate}</div>
+                          <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-0.5">{t.profileMemberSince}</div>
+                          <div className="text-sm text-white/90">{creationDate}</div>
                         </div>
                       </div>
 
@@ -473,12 +473,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                           <Hash size={20} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">UID</div>
-                          <div className="text-xs font-mono text-gray-400 truncate">{user.uid}</div>
+                          <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-0.5">UID</div>
+                          <div className="text-xs font-mono text-white/60 truncate">{user.uid}</div>
                         </div>
                         <button 
                           onClick={handleCopyId}
-                          className="p-2 hover:bg-[#3d2b4f] rounded-xl transition-colors text-gray-400 hover:text-white"
+                          className="p-2 hover:bg-[#3d2b4f] rounded-xl transition-colors text-white/60 hover:text-white"
                         >
                           <Copy size={16} />
                         </button>

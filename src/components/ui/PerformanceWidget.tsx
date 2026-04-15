@@ -47,7 +47,7 @@ export const PerformanceWidget: React.FC = () => {
         <Activity size={14} />
         System Load
       </div>
-      <div className="flex flex-col gap-1 text-[10px] text-gray-300 font-mono pointer-events-none">
+      <div className="flex flex-col gap-1 text-[10px] text-white/80 font-mono pointer-events-none">
         <div className="flex justify-between gap-4">
           <span>FPS:</span>
           <span className={fps < 30 ? 'text-red-400' : fps < 50 ? 'text-yellow-400' : 'text-green-400'}>

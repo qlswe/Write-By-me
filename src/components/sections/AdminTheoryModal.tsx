@@ -110,7 +110,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
             <h3 className="text-xl font-bold text-white">
               {theoryToEdit ? 'Редактировать запись' : 'Создать запись'}
             </h3>
-            <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-[#3d2b4f] transition-colors">
+            <button onClick={onClose} className="p-2 text-white/60 hover:text-white rounded-full hover:bg-[#3d2b4f] transition-colors">
               <X size={20} />
             </button>
           </div>
@@ -131,7 +131,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
                 <h4 className="text-[#ff4d4d] font-bold border-b border-[#3d2b4f] pb-2">Russian (RU)</h4>
                 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Заголовок</label>
+                  <label className="block text-sm text-white/60 mb-1">Заголовок</label>
                   <input 
                     type="text" 
                     value={titleRu} 
@@ -141,7 +141,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Краткое описание</label>
+                  <label className="block text-sm text-white/60 mb-1">Краткое описание</label>
                   <textarea 
                     value={summaryRu} 
                     onChange={e => setSummaryRu(e.target.value)}
@@ -150,7 +150,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Контент (HTML поддерживается)</label>
+                  <label className="block text-sm text-white/60 mb-1">Контент (HTML поддерживается)</label>
                   <textarea 
                     value={contentRu} 
                     onChange={e => setContentRu(e.target.value)}
@@ -164,7 +164,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
                 <h4 className="text-[#ff4d4d] font-bold border-b border-[#3d2b4f] pb-2">English (EN)</h4>
                 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Title</label>
+                  <label className="block text-sm text-white/60 mb-1">Title</label>
                   <input 
                     type="text" 
                     value={titleEn} 
@@ -174,7 +174,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Summary</label>
+                  <label className="block text-sm text-white/60 mb-1">Summary</label>
                   <textarea 
                     value={summaryEn} 
                     onChange={e => setSummaryEn(e.target.value)}
@@ -183,7 +183,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
                 </div>
                 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Content (HTML supported)</label>
+                  <label className="block text-sm text-white/60 mb-1">Content (HTML supported)</label>
                   <textarea 
                     value={contentEn} 
                     onChange={e => setContentEn(e.target.value)}
@@ -196,7 +196,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#3d2b4f]">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Категория</label>
+                <label className="block text-sm text-white/60 mb-1">Категория</label>
                 <select 
                   value={category} 
                   onChange={e => setCategory(e.target.value)}
@@ -212,7 +212,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
               </div>
               
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Автор</label>
+                <label className="block text-sm text-white/60 mb-1">Автор</label>
                 <input 
                   type="text" 
                   value={author} 
@@ -227,7 +227,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
           <div className="p-4 border-t border-[#3d2b4f] bg-[#251c35] shrink-0 flex justify-end gap-3">
             <button 
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-[#3d2b4f] transition-colors"
+              className="px-4 py-2 rounded-lg text-white/80 hover:text-white hover:bg-[#3d2b4f] transition-colors"
             >
               Отмена
             </button>
