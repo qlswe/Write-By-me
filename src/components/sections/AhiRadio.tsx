@@ -25,7 +25,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   const t = translations[lang];
 
   const generateSingleJoke = async () => {
-    setStatusText(t.radioFindingJoke);
+    setStatusText("Radio Aha Protocol Connect...");
     
     // Add a random seed to prevent caching and ensure unique jokes
     const seed = Math.floor(Math.random() * 1000000);
@@ -42,35 +42,52 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
     // Use a specific model that is less prone to chain-of-thought leaks if possible, or just rely on the strict prompt
     const targetUrl = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${seed}&model=openai`;
     
-    // Advanced proxy list that handles different response formats to bypass CORS
+    // Aha Stealth Protocol - Traffic Spoofing & Proxy Routing
     const proxyList = [
       {
-        url: (target: string) => target, // 1. Direct connection
+        name: "Aha Stealth Node (Direct)",
+        url: (target: string) => target,
         parse: async (res: Response) => res.text()
       },
       {
-        url: (target: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(target)}`, // 2. AllOrigins (JSON mode bypasses CORS)
+        name: "Aha Relay Alpha (EU)",
+        url: (target: string) => `https://corsproxy.io/?${encodeURIComponent(target)}`,
+        parse: async (res: Response) => res.text()
+      },
+      {
+        name: "Aha Relay Beta (US)",
+        url: (target: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(target)}`,
         parse: async (res: Response) => {
           const data = await res.json();
           return data.contents;
         }
       },
       {
-        url: (target: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`, // 3. CodeTabs Proxy
+        name: "Aha Relay Gamma (ASIA)",
+        url: (target: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`,
         parse: async (res: Response) => res.text()
       }
     ];
 
     let lastError = null;
 
+    console.log('[Aha Stealth Protocol] Initiating radio transmission sequence...');
+
     for (const proxy of proxyList) {
       try {
+        console.log(`[Aha Stealth Protocol] Connecting via ${proxy.name}...`);
+        
+        // Add a slight random delay to mimic human traffic
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 50));
+
         const proxiedUrl = proxy.url(targetUrl);
+        
+        // Simple GET request without custom headers to avoid triggering CORS preflight (OPTIONS)
         const response = await fetch(proxiedUrl);
         
         // If we hit rate limits or header errors, try the next proxy
         if (response.status === 429 || response.status === 431 || response.status === 403) {
-          console.warn(`Endpoint returned ${response.status}, switching proxy...`);
+          console.warn(`[Aha Stealth Protocol] ${proxy.name} returned ${response.status}, switching node...`);
           continue;
         }
         
@@ -97,12 +114,12 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
           return text.trim();
         }
       } catch (error) {
-        console.warn('Proxy attempt failed:', error);
+        console.warn(`[Aha Stealth Protocol] ${proxy.name} attempt failed:`, error);
         lastError = error;
       }
     }
 
-    console.error('All proxies failed, using local fallback:', lastError);
+    console.error('[Aha Stealth Protocol] All proxies failed, using local fallback:', lastError);
     
     // Local fallback array if all network requests fail (e.g. strict rate limit)
     const fallbackRu = [

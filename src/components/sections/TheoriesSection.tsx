@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { TimeAgo } from '../ui/TimeAgo';
 
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { SafeHtml } from '../security/AhaSecurity';
 
 interface TheoriesSectionProps {
   lang: Language;

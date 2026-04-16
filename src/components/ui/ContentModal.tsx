@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import { usePerfLogger } from '../../utils/logger';
 import { Language } from '../../data/translations';
+import { SafeHtml } from '../security/AhaSecurity';
 
 interface ContentModalProps {
   modalContent: { id?: string; title: string; content: string } | null;
@@ -41,9 +42,9 @@ export const ContentModal: React.FC<ContentModalProps> = ({ modalContent, setMod
           </button>
         </div>
         <div className="p-6 overflow-y-auto custom-scrollbar">
-          <div 
+          <SafeHtml 
+            html={modalContent.content}
             className="prose prose-invert prose-p:text-white/80 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none"
-            dangerouslySetInnerHTML={{ __html: modalContent.content }}
           />
         </div>
       </motion.div>

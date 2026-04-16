@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { TimeAgo } from '../ui/TimeAgo';
 
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { SafeHtml } from '../security/AhaSecurity';
 
 interface BlogSectionProps {
   lang: Language;
@@ -167,10 +168,9 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               </div>
             </div>
 
-            <div 
-              ref={contentRef}
+            <SafeHtml 
+              html={selectedPost.content[lang] || selectedPost.content['en']}
               className="prose prose-invert prose-p:text-white/80 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none mb-8 text-base sm:text-lg leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: selectedPost.content[lang] || selectedPost.content['en'] }}
             />
 
             <div className="mb-12">

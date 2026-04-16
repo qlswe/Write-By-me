@@ -27,6 +27,8 @@ interface Comment {
   createdAt: string;
 }
 
+import { moderateContentWithProxy } from '../../utils/geminiProxy';
+
 interface CommentsSectionProps {
   targetId: string;
   lang: Language;
@@ -95,26 +97,18 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
 
   const moderateContent = async (text: string): Promise<boolean> => {
     try {
-      if (!(import.meta as any).env.VITE_GEMINI_API_KEY && !process.env.GEMINI_API_KEY) return true;
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: `You are an automated moderation bot for a forum called "Форум Ахи". 
+      const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      if (!apiKey) return true;
+      
+      const prompt = `You are an automated moderation bot for a forum called "Форум Ахи". 
 Analyze the following text and determine if it contains severe profanity, hate speech, illegal content, or extreme toxicity.
 Respond ONLY with a JSON object in the following format:
 {"isApproved": true/false}
 
 Text to analyze:
-"${text}"`
-      });
-      const resultText = response.text;
-      if (resultText) {
-        const match = resultText.match(/\{.*\}/s);
-        if (match) {
-          const parsed = JSON.parse(match[0]);
-          return parsed.isApproved;
-        }
-      }
-      return true;
+"${text}"`;
+
+      return await moderateContentWithProxy(prompt, apiKey);
     } catch (error) {
       console.error('Moderation error:', error);
       return true; // fail open
@@ -315,7 +309,7 @@ Text to analyze:
                 })}
                 {comment.isEdited && <span className="ml-1 italic opacity-70">({t.edited || "edited"})</span>}
               </span>
-              <div className="absolute top-0 right-0 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-0 right-0 flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
                 {user && (user.uid === comment.authorUid || isModerator) && (
                 <>
                   {user.uid === comment.authorUid && (

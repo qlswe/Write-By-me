@@ -32,6 +32,7 @@ import { ChatWindow } from './components/chat/ChatWindow';
 import { UserData } from './hooks/useUsers';
 
 import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
+import { AhaSecurityBadge, SafeHtml } from './components/security/AhaSecurity';
 
 // Lazy load sections for better performance
 const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
@@ -97,6 +98,22 @@ export default function App() {
   // Feedback state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackType, setFeedbackType] = useState<'bug' | 'suggestion'>('bug');
+  
+  // Offline state
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
 
@@ -378,6 +395,21 @@ export default function App() {
         role={role}
       />
 
+      {/* Offline Banner */}
+      <AnimatePresence>
+        {isOffline && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-yellow-500/20 border-b border-yellow-500/50 text-yellow-500 px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2 relative z-20"
+          >
+            <RefreshCw className="w-4 h-4 animate-spin-slow" />
+            {lang === 'ru' ? 'Нет подключения к интернету. Приложение работает в автономном режиме.' : 'No internet connection. App is running in offline mode.'}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 relative z-10">
         <PromoBanner showBanner={showBanner} lang={lang as Language} setModalContent={setModalContent} onClose={handleCloseBanner} />
 
@@ -393,7 +425,7 @@ export default function App() {
               {section === 'home' && (
                 <div className="bg-[#251c35] rounded-2xl p-8 shadow-xl border border-[#3d2b4f]">
                   <h2 className="text-3xl font-bold text-[#ff4d4d] mb-4">{t.homeTitle}</h2>
-                  <p className="text-gray-300 mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: t.homeDesc }} />
+                  <SafeHtml html={t.homeDesc} className="text-gray-300 mb-6 leading-relaxed" />
                   <div className="flex items-center gap-2 text-xs text-gray-500 mb-8">
                     <RefreshCw size={14} />
                     {t.lastUpdate}
@@ -632,6 +664,8 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      <AhaSecurityBadge />
     </div>
   );
 }

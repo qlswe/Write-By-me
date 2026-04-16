@@ -39,6 +39,8 @@ interface ForumComment {
   replyToId?: string;
 }
 
+import { moderateContentWithProxy } from '../../utils/geminiProxy';
+
 interface ForumSectionProps {
   lang: Language;
   onOpenChat: (uid: string, name: string, photoURL?: string) => void;
@@ -103,10 +105,10 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
 
   const moderateContent = async (text: string): Promise<boolean> => {
     try {
-      if (!(import.meta as any).env.VITE_GEMINI_API_KEY && !process.env.GEMINI_API_KEY) return true;
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: `You are a strict automated moderation bot for a forum called "Aha Forum". 
+      const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      if (!apiKey) return true;
+      
+      const prompt = `You are a strict automated moderation bot for a forum called "Aha Forum". 
 Analyze the following text and determine if it contains ANY profanity, hate speech, illegal content, or extreme toxicity.
 You MUST catch all variations of Russian swear words (mat), including misspellings, transliterations, and symbol substitutions (e.g., пиздец, пiздец, p1zdec, хуй, xyu, бля, blya, ебать, etc.). ANY variation of these words is COMPLETELY FORBIDDEN.
 If there is even a hint of profanity or offensive language, return {"isApproved": false}.
@@ -115,17 +117,9 @@ Respond ONLY with a JSON object in the following format:
 {"isApproved": true/false}
 
 Text to analyze:
-"${text}"`
-      });
-      const resultText = response.text;
-      if (resultText) {
-        const match = resultText.match(/\{.*\}/s);
-        if (match) {
-          const parsed = JSON.parse(match[0]);
-          return parsed.isApproved;
-        }
-      }
-      return true;
+"${text}"`;
+
+      return await moderateContentWithProxy(prompt, apiKey);
     } catch (error) {
       console.error('Moderation error:', error);
       return true; // fail open
@@ -382,14 +376,14 @@ Text to analyze:
               <div className="text-[10px] text-white/40 flex items-center gap-1 shrink-0">
                 <TimeAgo date={comment.createdAt} lang={lang} />
               </div>
-              <div className={`flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ${comment.isBot ? 'hidden' : ''}`}>
+              <div className={`flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity ${comment.isBot ? 'hidden' : ''}`}>
                 {user?.uid === comment.authorId && !comment.isBot && (
                   <button 
                     onClick={() => {
                       setEditingCommentId(comment.id);
                       setEditCommentContent(comment.content);
                     }}
-                    className="p-1.5 text-white/40 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
+                    className="p-1.5 text-white/60 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
                   >
                     <Pencil size={14} />
                   </button>
@@ -397,7 +391,7 @@ Text to analyze:
                 {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator' || role === 'beta-tester') && !comment.isBot && (
                   <button 
                     onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
-                    className="p-1.5 text-white/40 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
+                    className="p-1.5 text-white/60 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -416,7 +410,7 @@ Text to analyze:
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setEditingCommentId(null)}
-                  className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
+                  className="px-3 py-1.5 rounded-lg text-white/40 hover:text-white transition-colors text-xs font-bold"
                 >
                   {(t as any).forumCancel || t.profileCancel}
                 </button>
@@ -483,7 +477,7 @@ Text to analyze:
                     setReplyingToCommentId(null);
                     setReplyContent('');
                   }}
-                  className="px-3 py-1.5 rounded-lg text-gray-400 hover:text-white transition-colors text-xs font-bold"
+                  className="px-3 py-1.5 rounded-lg text-white/40 hover:text-white transition-colors text-xs font-bold"
                 >
                   {(t as any).forumCancel || t.profileCancel}
                 </button>
@@ -510,7 +504,7 @@ Text to analyze:
       <div className="space-y-6">
         <button 
           onClick={() => setSelectedThread(null)}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-white/40 hover:text-white transition-colors"
         >
           <ArrowLeft size={20} />
           <span className="font-bold uppercase tracking-widest text-sm">{t.forumBack}</span>
@@ -527,9 +521,9 @@ Text to analyze:
               <div>
                 <div className="font-black text-white flex items-center gap-2">
                   {selectedThread.authorName}
-                  {selectedThread.isEdited && <span className="text-[10px] text-gray-500 font-normal">({t.edited || "edited"})</span>}
+                  {selectedThread.isEdited && <span className="text-[10px] text-white/40 font-normal">({t.edited || "edited"})</span>}
                 </div>
-                <div className="text-xs text-gray-400 flex items-center gap-2">
+                <div className="text-xs text-white/40 flex items-center gap-2">
                   <Clock size={12} />
                   <TimeAgo date={selectedThread.createdAt} lang={lang} />
                 </div>
@@ -544,14 +538,14 @@ Text to analyze:
                       setEditThreadTitle(selectedThread.title);
                       setEditThreadContent(selectedThread.content);
                     }}
-                    className="p-2 text-gray-500 hover:text-blue-400 transition-all rounded-lg hover:bg-blue-400/10"
+                    className="p-2 text-white/40 hover:text-blue-400 transition-all rounded-lg hover:bg-blue-400/10"
                   >
                     <Pencil size={18} />
                   </button>
                 )}
                 <button 
                   onClick={() => setThreadToDelete(selectedThread.id)}
-                  className="p-2 text-gray-500 hover:text-red-400 transition-all rounded-lg hover:bg-red-400/10"
+                  className="p-2 text-white/40 hover:text-red-400 transition-all rounded-lg hover:bg-red-400/10"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -565,17 +559,17 @@ Text to analyze:
                 type="text"
                 value={editThreadTitle}
                 onChange={(e) => setEditThreadTitle(e.target.value)}
-                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] font-bold"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] font-bold"
               />
               <textarea
                 value={editThreadContent}
                 onChange={(e) => setEditThreadContent(e.target.value)}
-                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] min-h-[150px] resize-y"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[150px] resize-y"
               />
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setEditingThreadId(null)}
-                  className="px-4 py-2 rounded-xl text-gray-400 hover:text-white transition-colors text-sm font-bold"
+                  className="px-4 py-2 rounded-xl text-white/40 hover:text-white transition-colors text-sm font-bold"
                 >
                   {(t as any).forumCancel || t.profileCancel}
                 </button>
@@ -591,23 +585,23 @@ Text to analyze:
           ) : (
             <>
               <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">{selectedThread.title}</h2>
-              <p className="text-gray-300 whitespace-pre-wrap leading-relaxed mb-6">{selectedThread.content}</p>
+              <p className="text-white/80 whitespace-pre-wrap leading-relaxed mb-6">{selectedThread.content}</p>
               
               <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-xl border border-[#3d2b4f]/30 w-fit">
                 <button
                   onClick={() => handleVote('thread', selectedThread, 'up')}
                   disabled={!user}
-                  className={`p-1.5 rounded-lg transition-all ${selectedThread.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
+                  className={`p-1.5 rounded-lg transition-all ${selectedThread.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-white/40 hover:text-green-500 hover:bg-green-500/5'}`}
                 >
                   <ChevronUp size={20} />
                 </button>
-                <span className={`text-xs font-black px-2 min-w-[2rem] text-center ${((selectedThread.upvotes?.length || 0) - (selectedThread.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((selectedThread.upvotes?.length || 0) - (selectedThread.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                <span className={`text-xs font-black px-2 min-w-[2rem] text-center ${((selectedThread.upvotes?.length || 0) - (selectedThread.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((selectedThread.upvotes?.length || 0) - (selectedThread.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-white/40'}`}>
                   {(selectedThread.upvotes?.length || 0) - (selectedThread.downvotes?.length || 0)}
                 </span>
                 <button
                   onClick={() => handleVote('thread', selectedThread, 'down')}
                   disabled={!user}
-                  className={`p-1.5 rounded-lg transition-all ${selectedThread.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
+                  className={`p-1.5 rounded-lg transition-all ${selectedThread.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-white/40 hover:text-red-500 hover:bg-red-500/5'}`}
                 >
                   <ChevronDown size={20} />
                 </button>
@@ -634,7 +628,7 @@ Text to analyze:
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder={(t as any).forumWriteComment || "Write a comment..."}
-                  className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-none"
+                  className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-none"
                 />
                 <div className="flex justify-end">
                   <button
@@ -648,7 +642,7 @@ Text to analyze:
               </div>
             </div>
           ) : (
-            <div className="bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-3xl p-6 text-center text-gray-400">
+            <div className="bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-3xl p-6 text-center text-white/40">
               {(t as any).forumLoginToComment || "Login to comment"}
             </div>
           )}
@@ -673,7 +667,7 @@ Text to analyze:
           <h2 className="text-2xl font-black text-white uppercase tracking-widest">
             {t.forumNewThread}
           </h2>
-          <button onClick={() => setIsCreating(false)} className="text-gray-400 hover:text-white">
+          <button onClick={() => setIsCreating(false)} className="text-white/40 hover:text-white">
             <ArrowLeft size={24} />
           </button>
         </div>
@@ -689,12 +683,12 @@ Text to analyze:
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
             placeholder={t.forumMessageContent}
-            className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] min-h-[200px] resize-y"
+            className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[200px] resize-y"
           />
           <div className="flex justify-end gap-4 pt-4">
             <button
               onClick={() => setIsCreating(false)}
-              className="px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
+              className="px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors"
             >
               {(t as any).forumCancel || t.profileCancel}
             </button>
@@ -730,19 +724,19 @@ Text to analyze:
       </div>
 
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={(t as any).forumSearch || "Search threads..."}
-          className="w-full bg-[#15101e] border border-[#3d2b4f]/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] transition-colors"
+          className="w-full bg-[#15101e] border border-[#3d2b4f]/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] transition-colors"
         />
       </div>
 
       <div className="space-y-4">
         {filteredThreads.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 bg-[#15101e]/30 rounded-3xl border border-[#3d2b4f]/20">
+          <div className="text-center py-12 text-white/40 bg-[#15101e]/30 rounded-3xl border border-[#3d2b4f]/20">
             {(t as any).forumNoThreads || "No threads found."}
           </div>
         ) : (
@@ -761,7 +755,7 @@ Text to analyze:
                   {thread.title}
                 </h3>
                 <div className="flex items-center gap-4 shrink-0">
-                  <div className="flex items-center gap-1.5 text-gray-400 text-sm bg-[#0d0b14] px-3 py-1.5 rounded-lg">
+                  <div className="flex items-center gap-1.5 text-white/40 text-sm bg-[#0d0b14] px-3 py-1.5 rounded-lg">
                     <MessageSquare size={14} />
                     <span className="font-bold">{thread.commentCount || 0}</span>
                   </div>
@@ -771,14 +765,14 @@ Text to analyze:
                         e.stopPropagation();
                         setThreadToDelete(thread.id);
                       }}
-                      className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                      className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                     >
                       <Trash2 size={18} />
                     </button>
                   )}
                 </div>
               </div>
-              <p className="text-gray-400 text-sm line-clamp-2 mb-4">
+              <p className="text-white/40 text-sm line-clamp-2 mb-4">
                 {thread.content}
               </p>
               <div className="flex items-center gap-3">
@@ -787,8 +781,8 @@ Text to analyze:
                   alt={thread.authorName}
                   className="w-6 h-6 rounded-full"
                 />
-                <span className="text-xs font-bold text-gray-300">{thread.authorName}</span>
-                <span className="text-xs text-gray-500 flex items-center gap-1">
+                <span className="text-xs font-bold text-white/80">{thread.authorName}</span>
+                <span className="text-xs text-white/40 flex items-center gap-1">
                   <Clock size={10} />
                   <TimeAgo date={thread.createdAt} lang={lang} />
                 </span>
@@ -806,6 +800,7 @@ Text to analyze:
         message={(t as any).forumDeleteThreadMessage || t.forumDeleteThreadMsg}
         confirmText={(t as any).forumDelete || "Delete"}
         cancelText={(t as any).forumCancel || t.profileCancel}
+        isDestructive={true}
       />
 
       <ConfirmModal
@@ -816,6 +811,7 @@ Text to analyze:
         message={(t as any).forumDeleteCommentMessage || t.forumDeleteCommentMsg}
         confirmText={(t as any).forumDelete || "Delete"}
         cancelText={(t as any).forumCancel || t.profileCancel}
+        isDestructive={true}
       />
     </div>
   );
