@@ -1,0 +1,111 @@
+const fs = require('fs');
+
+const translationsToAdd = {
+  maintenanceSiteClosed: { ru: "Сайт закрыт", en: "Site Closed", by: "Сайт закрыты", de: "Seite geschlossen", fr: "Site fermé", zh: "网站关闭" },
+  maintenanceNoAccess: { ru: "Вы вошли как {name}, но у вас нет доступа.", en: "You are logged in as {name}, but you don't have access.", by: "Вы ўвайшлі як {name}, але ў вас няма доступу.", de: "Sie sind als {name} angemeldet, haben aber keinen Zugriff.", fr: "Vous êtes connecté en tant que {name}, mais vous n'avez pas accès.", zh: "您已作为 {name} 登录，但没有访问权限。" },
+  profileNameUpdated: { ru: "Имя успешно обновлено!", en: "Name updated successfully!", by: "Імя паспяхова абноўлена!", de: "Name erfolgreich aktualisiert!", fr: "Nom mis à jour avec succès!", zh: "名称更新成功！" },
+  profileNameError: { ru: "Ошибка при обновлении имени", en: "Error updating name", by: "Памылка пры абнаўленні імя", de: "Fehler beim Aktualisieren des Namens", fr: "Erreur lors de la mise à jour du nom", zh: "更新名称时出错" },
+  profilePhotoUpdated: { ru: "Фото успешно обновлено!", en: "Photo updated successfully!", by: "Фота паспяхова абноўлена!", de: "Foto erfolgreich aktualisiert!", fr: "Photo mise à jour avec succès!", zh: "照片更新成功！" },
+  profilePhotoError: { ru: "Ошибка при обновлении фото", en: "Error updating photo", by: "Памылка пры абнаўленні фота", de: "Fehler beim Aktualisieren des Fotos", fr: "Erreur lors de la mise à jour de la photo", zh: "更新照片时出错" },
+  profileIdCopied: { ru: "ID скопирован!", en: "ID copied!", by: "ID скапіяваны!", de: "ID kopiert!", fr: "ID copié!", zh: "ID已复制！" },
+  profileUnknown: { ru: "Неизвестно", en: "Unknown", by: "Невядома", de: "Unbekannt", fr: "Inconnu", zh: "未知" },
+  profileLevel: { ru: "Уровень", en: "Level", by: "Узровень", de: "Level", fr: "Niveau", zh: "等级" },
+  profileExp: { ru: "Опыт", en: "EXP", by: "Вопыт", de: "EXP", fr: "EXP", zh: "经验" },
+  profileReputation: { ru: "Репутация", en: "Reputation", by: "Рэпутацыя", de: "Ruf", fr: "Réputation", zh: "声望" },
+  profileAdmin: { ru: "Администратор", en: "Administrator", by: "Адміністратар", de: "Administrator", fr: "Administrateur", zh: "管理员" },
+  profileModerator: { ru: "Модератор", en: "Moderator", by: "Мадэратар", de: "Moderator", fr: "Modérateur", zh: "版主" },
+  profileBetaTester: { ru: "Бета-тестер", en: "Beta Tester", by: "Бэта-тэстар", de: "Beta-Tester", fr: "Bêta-testeur", zh: "Beta测试员" },
+  profileActiveTrailblazer: { ru: "Активный Путешественник", en: "Active Trailblazer", by: "Актыўны Падарожнік", de: "Aktiver Trailblazer", fr: "Pionnier actif", zh: "活跃开拓者" },
+  profilePhotoUrl: { ru: "Ссылка на фото", en: "Photo URL", by: "Спасылка на фота", de: "Foto-URL", fr: "URL de la photo", zh: "照片URL" },
+  profileEnterName: { ru: "Введите имя", en: "Enter name", by: "Увядзіце імя", de: "Name eingeben", fr: "Entrez le nom", zh: "输入名称" },
+  profileSendMessage: { ru: "Написать сообщение", en: "Send Message", by: "Напісаць паведамленне", de: "Nachricht senden", fr: "Envoyer un message", zh: "发送消息" },
+  profileInfo: { ru: "Инфо", en: "Info", by: "Інфа", de: "Info", fr: "Info", zh: "信息" },
+  profileUses: { ru: "Юзы", en: "Uses", by: "Юзы", de: "Verwendungen", fr: "Utilisations", zh: "用途" },
+  profileWhatsNew: { ru: "Что нового?", en: "What's new?", by: "Што новага?", de: "Was gibt's Neues?", fr: "Quoi de neuf?", zh: "有什么新消息？" },
+  profilePost: { ru: "Опубликовать", en: "Post", by: "Апублікаваць", de: "Posten", fr: "Publier", zh: "发布" },
+  profileNoUses: { ru: "Пока нет юзов", en: "No uses yet", by: "Пакуль няма юзаў", de: "Noch keine Verwendungen", fr: "Aucune utilisation pour le moment", zh: "暂无用途" },
+  profileEmail: { ru: "Почта", en: "Email", by: "Пошта", de: "E-Mail", fr: "E-mail", zh: "电子邮件" },
+  profileMemberSince: { ru: "В игре с", en: "Member Since", by: "У гульні з", de: "Mitglied seit", fr: "Membre depuis", zh: "加入时间" },
+  fortuneTitle: { ru: "Астральное предсказание", en: "Astral Fortune", by: "Астральнае прадказанне", de: "Astrales Schicksal", fr: "Destin Astral", zh: "星穹占卜" },
+  fortuneReveal: { ru: "Узнать судьбу", en: "Reveal Fortune", by: "Даведацца лёс", de: "Schicksal enthüllen", fr: "Révéler le destin", zh: "揭示命运" },
+  fortuneReading: { ru: "ЧТЕНИЕ ЗВЕЗД...", en: "READING STARS...", by: "ЧЫТАННЕ ЗОРАК...", de: "STERNE LESEN...", fr: "LECTURE DES ÉTOILES...", zh: "读取星辰..." },
+  radioFindingJoke: { ru: "Ищу шутку...", en: "Finding a joke...", by: "Шукаю жарт...", de: "Suche einen Witz...", fr: "Recherche d'une blague...", zh: "寻找笑话..." },
+  radioVoicing: { ru: "Озвучивание...", en: "Voicing...", by: "Агучванне...", de: "Vertonung...", fr: "Voix en cours...", zh: "配音中..." },
+  radioThinking: { ru: "Думаю...", en: "Thinking...", by: "Думаю...", de: "Denke nach...", fr: "Réflexion...", zh: "思考中..." },
+  radioPlaying: { ru: "Воспроизведение...", en: "Playing...", by: "Прайграванне...", de: "Spielt ab...", fr: "Lecture...", zh: "播放中..." },
+  radioError: { ru: "Ошибка радио", en: "Radio Error", by: "Памылка радыё", de: "Radiofehler", fr: "Erreur radio", zh: "广播错误" },
+  radioOff: { ru: "Радио выключено", en: "Radio off", by: "Радыё выключана", de: "Radio aus", fr: "Radio éteinte", zh: "广播已关闭" },
+  radioNextJoke: { ru: "Следующая шутка", en: "Next joke", by: "Наступны жарт", de: "Nächster Witz", fr: "Blague suivante", zh: "下一个笑话" },
+  radioNowPlaying: { ru: "Сейчас в эфире", en: "Now Playing", by: "Зараз у эфіры", de: "Läuft jetzt", fr: "En cours de lecture", zh: "正在播放" },
+  radioAiStandup: { ru: "Стендап от ИИ", en: "AI Stand-up", by: "Стэндап ад ШІ", de: "KI-Stand-up", fr: "Stand-up IA", zh: "AI脱口秀" },
+  radioPreparing: { ru: "Подготовка материала...", en: "Preparing material...", by: "Падрыхтоўка матэрыялу...", de: "Material wird vorbereitet...", fr: "Préparation du matériel...", zh: "准备材料..." },
+  radioPressPlay: { ru: "Нажмите Play, чтобы начать трансляцию", en: "Press Play to start broadcasting", by: "Націсніце Play, каб пачаць трансляцыю", de: "Drücken Sie Play, um die Übertragung zu starten", fr: "Appuyez sur Play pour commencer la diffusion", zh: "按播放键开始广播" },
+  radioOffline: { ru: "Офлайн", en: "Offline", by: "Афлайн", de: "Offline", fr: "Hors ligne", zh: "离线" },
+  forumPostRejected: { ru: "Ваш пост был отклонен автоматической модерацией.", en: "Your post was rejected by automatic moderation.", by: "Ваш пост быў адхілены аўтаматычнай мадэрацыяй.", de: "Ihr Beitrag wurde durch automatische Moderation abgelehnt.", fr: "Votre message a été rejeté par la modération automatique.", zh: "您的帖子被自动审核拒绝。" },
+  forumCommentRejected: { ru: "Ваш комментарий был отклонен автоматической модерацией.", en: "Your comment was rejected by automatic moderation.", by: "Ваш каментарый быў адхілены аўтаматычнай мадэрацыяй.", de: "Ihr Kommentar wurde durch automatische Moderation abgelehnt.", fr: "Votre commentaire a été rejeté par la modération automatique.", zh: "您的评论被自动审核拒绝。" },
+  forumBack: { ru: "Назад к форуму", en: "Back to forum", by: "Назад да форуму", de: "Zurück zum Forum", fr: "Retour au forum", zh: "返回论坛" },
+  forumDiscussion: { ru: "Обсуждение", en: "Discussion", by: "Абмеркаванне", de: "Diskussion", fr: "Discussion", zh: "讨论" },
+  forumNewThread: { ru: "Новая тема", en: "New Thread", by: "Новая тэма", de: "Neues Thema", fr: "Nouveau fil", zh: "新主题" },
+  forumThreadTitle: { ru: "Заголовок темы", en: "Thread title", by: "Загаловак тэмы", de: "Thementitel", fr: "Titre du fil", zh: "主题标题" },
+  forumMessageContent: { ru: "Текст сообщения...", en: "Message content...", by: "Тэкст паведамлення...", de: "Nachrichteninhalt...", fr: "Contenu du message...", zh: "消息内容..." },
+  forumCreate: { ru: "Создать", en: "Create", by: "Стварыць", de: "Erstellen", fr: "Créer", zh: "创建" },
+  forumCreateThread: { ru: "Создать тему", en: "Create Thread", by: "Стварыць тэму", de: "Thema erstellen", fr: "Créer un fil", zh: "创建主题" },
+  forumSearch: { ru: "Поиск по форуму...", en: "Search forum...", by: "Пошук па форуму...", de: "Forum durchsuchen...", fr: "Rechercher dans le forum...", zh: "搜索论坛..." },
+  forumNoThreads: { ru: "Темы не найдены", en: "No threads found", by: "Тэмы не знойдзены", de: "Keine Themen gefunden", fr: "Aucun fil trouvé", zh: "未找到主题" },
+  forumDeleteThreadTitle: { ru: "Удалить тему?", en: "Delete thread?", by: "Выдаліць тэму?", de: "Thema löschen?", fr: "Supprimer le fil?", zh: "删除主题？" },
+  forumDeleteThreadMsg: { ru: "Вы уверены, что хотите удалить эту тему? Это действие нельзя отменить.", en: "Are you sure you want to delete this thread? This action cannot be undone.", by: "Вы ўпэўнены, што хочаце выдаліць гэту тэму? Гэта дзеянне нельга адмяніць.", de: "Sind Sie sicher, dass Sie dieses Thema löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.", fr: "Êtes-vous sûr de vouloir supprimer ce fil ? Cette action ne peut pas être annulée.", zh: "您确定要删除此主题吗？此操作无法撤销。" },
+  forumDeleteCommentTitle: { ru: "Удалить комментарий?", en: "Delete comment?", by: "Выдаліць каментарый?", de: "Kommentar löschen?", fr: "Supprimer le commentaire?", zh: "删除评论？" },
+  forumDeleteCommentMsg: { ru: "Вы уверены, что хотите удалить этот комментарий? Это действие нельзя отменить.", en: "Are you sure you want to delete this comment? This action cannot be undone.", by: "Вы ўпэўнены, што хочаце выдаліць гэты каментарый? Гэта дзеянне нельга адмяніць.", de: "Sind Sie sicher, dass Sie diesen Kommentar löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.", fr: "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action ne peut pas être annulée.", zh: "您确定要删除此评论吗？此操作无法撤销。" },
+  chatToday: { ru: "Сегодня", en: "Today", by: "Сёння", de: "Heute", fr: "Aujourd'hui", zh: "今天" },
+  chatYesterday: { ru: "Вчера", en: "Yesterday", by: "Учора", de: "Gestern", fr: "Hier", zh: "昨天" },
+  chatFileTooLarge: { ru: "Файл слишком большой. Максимум 5MB.", en: "File too large. Maximum 5MB.", by: "Файл занадта вялікі. Максімум 5MB.", de: "Datei zu groß. Maximal 5MB.", fr: "Fichier trop volumineux. Maximum 5 Mo.", zh: "文件太大。最大5MB。" },
+  chatOnline: { ru: "В сети", en: "Online", by: "У сетцы", de: "Online", fr: "En ligne", zh: "在线" },
+  chatOffline: { ru: "Не в сети", en: "Offline", by: "Не ў сетцы", de: "Offline", fr: "Hors ligne", zh: "离线" },
+  chatAuthRequired: { ru: "Требуется авторизация", en: "Authorization Required", by: "Патрабуецца аўтарызацыя", de: "Autorisierung erforderlich", fr: "Autorisation requise", zh: "需要授权" },
+  chatStartConversation: { ru: "Начните общение", en: "Start a conversation", by: "Пачніце зносіны", de: "Beginnen Sie ein Gespräch", fr: "Commencer une conversation", zh: "开始对话" },
+  chatsTyping: { ru: "печатает...", en: "typing...", by: "друкуе...", de: "tippt...", fr: "en train d'écrire...", zh: "正在输入..." },
+  chatsLoginToView: { ru: "Войдите, чтобы просматривать сообщения", en: "Log in to view your chats", by: "Увайдзіце, каб праглядаць паведамленні", de: "Melden Sie sich an, um Ihre Chats anzuzeigen", fr: "Connectez-vous pour voir vos discussions", zh: "登录以查看您的聊天" },
+  chatsEnableNotif: { ru: "Включить уведомления?", en: "Enable notifications?", by: "Уключыць апавяшчэнні?", de: "Benachrichtigungen aktivieren?", fr: "Activer les notifications?", zh: "启用通知？" },
+  chatsLater: { ru: "Позже", en: "Later", by: "Пазней", de: "Später", fr: "Plus tard", zh: "稍后" },
+  chatsEnable: { ru: "Включить", en: "Enable", by: "Уключыць", de: "Aktivieren", fr: "Activer", zh: "启用" },
+  chatsSearch: { ru: "Поиск чатов...", en: "Search chats...", by: "Пошук чатаў...", de: "Chats durchsuchen...", fr: "Rechercher des discussions...", zh: "搜索聊天..." },
+  chatsNotFound: { ru: "Ничего не найдено", en: "No chats found", by: "Нічога не знойдзена", de: "Keine Chats gefunden", fr: "Aucune discussion trouvée", zh: "未找到聊天" },
+  headerProfileSettings: { ru: "Настройки профиля", en: "Profile Settings", by: "Налады профілю", de: "Profileinstellungen", fr: "Paramètres du profil", zh: "配置文件设置" },
+  headerLoginEmail: { ru: "Вход через почту", en: "Login with Email", by: "Уваход праз пошту", de: "Mit E-Mail anmelden", fr: "Connexion avec e-mail", zh: "使用电子邮件登录" },
+  adminMaintenanceMode: { ru: "Режим обслуживания", en: "Maintenance Mode", by: "Рэжым абслугоўвання", de: "Wartungsmodus", fr: "Mode maintenance", zh: "维护模式" },
+  adminCloseSite: { ru: "Закрыть сайт для обычных пользователей", en: "Close site for regular users", by: "Закрыць сайт для звычайных карыстальнікаў", de: "Seite für normale Benutzer schließen", fr: "Fermer le site pour les utilisateurs réguliers", zh: "对普通用户关闭网站" },
+  adminSearchUsers: { ru: "Поиск пользователей...", en: "Search users...", by: "Пошук карыстальнікаў...", de: "Benutzer durchsuchen...", fr: "Rechercher des utilisateurs...", zh: "搜索用户..." },
+  adminNoUsers: { ru: "Ничего не найдено", en: "No users found", by: "Нічога не знойдзена", de: "Keine Benutzer gefunden", fr: "Aucun utilisateur trouvé", zh: "未找到用户" },
+  sdkTitle: { ru: "Радиостанция Ахи ИИ v2.0", en: "Aha Radio Station AI v2.0", by: "Радыёстанцыя Ахі ШІ v2.0", de: "Aha Radiosender KI v2.0", fr: "Station de Radio Aha IA v2.0", zh: "阿哈广播站AI v2.0" },
+  sdkDesc: { ru: "Спросите меня о лоре HSR или используйте команды SDK (начните с /).", en: "Ask me about HSR lore or use SDK commands (start with /).", by: "Спытайце мяне пра лор HSR або выкарыстоўвайце каманды SDK (пачніце з /).", de: "Fragen Sie mich nach HSR-Lore oder verwenden Sie SDK-Befehle (beginnen Sie mit /).", fr: "Demandez-moi sur le lore de HSR ou utilisez les commandes SDK (commencez par /).", zh: "问我关于HSR的传说或使用SDK命令（以/开始）。" },
+  sdkMinistryPanel: { ru: "Панель Министерства", en: "Ministry Panel", by: "Панэль Міністэрства", de: "Ministeriumspanel", fr: "Panneau du Ministère", zh: "部委面板" },
+  sdkAiAssistant: { ru: "ИИ Ассистент", en: "AI Assistant", by: "ШІ Асістэнт", de: "KI-Assistent", fr: "Assistant IA", zh: "AI助手" },
+  sdkSettings: { ru: "SDK Настройки", en: "SDK Settings", by: "SDK Налады", de: "SDK-Einstellungen", fr: "Paramètres SDK", zh: "SDK设置" },
+  sdkClearHistory: { ru: "Очистить историю", en: "Clear history", by: "Ачысціць гісторыю", de: "Verlauf löschen", fr: "Effacer l'historique", zh: "清除历史记录" },
+  sdkAuthRequiredMsg: { ru: "Использование ИИ доступно только после авторизации через Google.", en: "AI usage is only available after logging in with Google.", by: "Выкарыстанне ШІ даступна толькі пасля аўтарызацыі праз Google.", de: "Die KI-Nutzung ist nur nach der Anmeldung mit Google verfügbar.", fr: "L'utilisation de l'IA n'est disponible qu'après connexion avec Google.", zh: "只有在使用Google登录后才能使用AI。" },
+  sdkAskAi: { ru: "Спросите ИИ (или /команда)...", en: "Ask AI (or /command)...", by: "Спытайце ШІ (або /каманда)...", de: "KI fragen (oder /Befehl)...", fr: "Demander à l'IA (ou /commande)...", zh: "询问AI（或/命令）..." },
+  sdkPerformance: { ru: "Производительность", en: "Performance", by: "Прадукцыйнасць", de: "Leistung", fr: "Performance", zh: "性能" },
+  sdkProductionMode: { ru: "Продакшн Режим", en: "Production Mode", by: "Прадакшн Рэжым", de: "Produktionsmodus", fr: "Mode Production", zh: "生产模式" },
+  sdkHighFidelity: { ru: "Высокое качество графики и эффектов", en: "High fidelity graphics and effects", by: "Высокая якасць графікі і эфектаў", de: "Hohe Grafik- und Effektqualität", fr: "Graphismes et effets haute fidélité", zh: "高保真图形和效果" },
+  sdkLowPerfMode: { ru: "Режим низкой производительности", en: "Low Performance Mode", by: "Рэжым нізкай прадукцыйнасці", de: "Niedriger Leistungsmodus", fr: "Mode basse performance", zh: "低性能模式" },
+  sdkDisableHeavy: { ru: "Отключает тяжелые анимации", en: "Disables heavy animations", by: "Адключае цяжкія анімацыі", de: "Deaktiviert schwere Animationen", fr: "Désactive les animations lourdes", zh: "禁用繁重的动画" },
+  sdkLoadWidget: { ru: "Виджет нагрузки", en: "Load Widget", by: "Віджэт нагрузкі", de: "Last-Widget", fr: "Widget de charge", zh: "加载小部件" },
+  sdkShowPerfWidget: { ru: "Показывать виджет производительности", en: "Show performance widget", by: "Паказваць віджэт прадукцыйнасці", de: "Leistungs-Widget anzeigen", fr: "Afficher le widget de performance", zh: "显示性能小部件" },
+  sdkSystem: { ru: "Система", en: "System", by: "Сістэма", de: "System", fr: "Système", zh: "系统" }
+};
+
+let tsContent = fs.readFileSync('src/data/translations.ts', 'utf8');
+
+for (const lang of ['ru', 'en', 'by', 'de', 'fr', 'zh']) {
+  let langBlock = '';
+  for (const [k, v] of Object.entries(translationsToAdd)) {
+    langBlock += '    ' + k + ': ' + JSON.stringify(v[lang]) + ',\\n';
+  }
+  
+  // Find the start of the language block
+  const regex = new RegExp('(' + lang + ': \\{\\n)');
+  tsContent = tsContent.replace(regex, '$1' + langBlock);
+}
+
+fs.writeFileSync('src/data/translations.ts', tsContent);
+console.log('translations.ts updated!');

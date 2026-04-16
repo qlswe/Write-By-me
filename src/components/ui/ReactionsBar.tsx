@@ -6,7 +6,7 @@ import { Heart, ThumbsUp, Laugh, MessageCircle, Flame, Sparkles, Ghost } from 'l
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { Language, translations } from '../../data/translations';
 
-export const STANDARD_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '✨'];
+import { POST_REACTIONS as STANDARD_REACTIONS } from '../../constants/reactions';
 
 interface ReactionsBarProps {
   targetId: string;
@@ -49,20 +49,17 @@ export const ReactionsBar: React.FC<ReactionsBarProps> = ({ targetId, lang, coll
       const currentReactions = docSnap.exists() ? (docSnap.data().reactions || {}) : {};
       const updates: Record<string, any> = {};
       
-      let previousKey: string | null = null;
-      for (const [k, users] of Object.entries(currentReactions)) {
-        if ((users as string[]).includes(user.uid)) {
-          previousKey = k;
-          break;
-        }
-      }
+      const usersForEmoji = currentReactions[key] || [];
 
-      if (previousKey === key) {
+      if (usersForEmoji.includes(user.uid)) {
         updates[`reactions.${key}`] = arrayRemove(user.uid);
       } else {
-        if (previousKey) {
-          updates[`reactions.${previousKey}`] = arrayRemove(user.uid);
-        }
+        // Enforce 1 reaction per user: remove from all other emojis
+        Object.keys(currentReactions).forEach(existingKey => {
+          if (existingKey !== key && currentReactions[existingKey].includes(user.uid)) {
+            updates[`reactions.${existingKey}`] = arrayRemove(user.uid);
+          }
+        });
         updates[`reactions.${key}`] = arrayUnion(user.uid);
       }
       
@@ -96,10 +93,10 @@ export const ReactionsBar: React.FC<ReactionsBarProps> = ({ targetId, lang, coll
             disabled={!user}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-all border shrink-0 ${
               hasReacted 
-                ? 'bg-[#C3A6E6]/20 border-[#C3A6E6]/50 text-white shadow-[0_0_15px_rgba(195,166,230,0.15)] scale-105' 
+                ? 'bg-[#ff4d4d]/20 border-[#ff4d4d]/50 text-white shadow-[0_0_15px_rgba(255,77,77,0.15)] scale-105' 
                 : count > 0
-                  ? 'bg-[#2F244F]/60 border-[#5C4B8B]/50 text-gray-300 hover:border-[#C3A6E6]/40'
-                  : 'bg-[#1a142e]/40 border-[#5C4B8B]/20 text-gray-500 hover:border-[#5C4B8B]/50 hover:text-gray-400'
+                  ? 'bg-[#15101e]/60 border-[#3d2b4f]/50 text-white/80 hover:border-[#ff4d4d]/40'
+                  : 'bg-[#0d0b14]/40 border-[#3d2b4f]/20 text-white/40 hover:border-[#3d2b4f]/50 hover:text-white/60'
             } ${!user ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110 active:scale-95'}`}
           >
             <span className={`text-base ${!hasReacted && count === 0 ? 'opacity-50 grayscale' : ''}`}>{emoji}</span>

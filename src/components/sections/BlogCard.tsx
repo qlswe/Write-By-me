@@ -3,8 +3,8 @@ import { motion } from 'motion/react';
 import { Star, Edit, Trash2, ArrowRight, Calendar, Share2 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
-import { sdk } from '../../sdk';
-import { ReactionsBar } from '../ui/ReactionsBar';
+import { TimeAgo } from '../ui/TimeAgo';
+
 
 interface BlogCardProps {
   post: any;
@@ -39,19 +39,19 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.4, delay: index * 0.05, type: "spring", damping: 20 }}
       onClick={onClick}
-      className="group relative bg-[#2F244F]/50 hover:bg-[#3E3160] p-6 sm:p-8 rounded-3xl border border-[#5C4B8B]/30 hover:border-[#C3A6E6]/30 transition-all cursor-pointer hsr-card-hover overflow-hidden"
+      className="group relative bg-[#15101e]/50 hover:bg-[#251c35] p-6 sm:p-8 rounded-3xl border border-[#3d2b4f]/30 hover:border-[#ff4d4d]/30 transition-all cursor-pointer hsr-card-hover overflow-hidden"
     >
       {/* Decorative background element */}
-      <div className="absolute -top-10 -left-10 w-32 h-32 bg-[#C3A6E6]/5 rounded-full blur-2xl group-hover:bg-[#C3A6E6]/10 transition-all" />
+      <div className="absolute -top-10 -left-10 w-32 h-32 bg-[#ff4d4d]/5 rounded-full blur-2xl group-hover:bg-[#ff4d4d]/10 transition-all" />
       
       <div className="flex justify-between items-start mb-6">
         <div className="flex flex-col gap-2">
-          <div className="px-4 py-1.5 rounded-full bg-[#C3A6E6]/10 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest border border-[#C3A6E6]/20 self-start">
+          <div className="px-4 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20 self-start">
             {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
           </div>
-          <div className="flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+          <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold uppercase tracking-widest">
             <Calendar size={10} />
-            {sdk.data.formatDate(post.createdAt, lang)}
+            <TimeAgo date={post.createdAt} lang={lang} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0 justify-end">
@@ -59,14 +59,14 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
             <>
               <button 
                 onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
-                className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
+                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
                 title={t.editBtn}
               >
                 <Edit size={16} />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
-                className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-400/30"
+                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-400/30"
                 title={t.deleteBtn}
               >
                 <Trash2 size={16} />
@@ -74,7 +74,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
             </>
           )}
           <button 
-            className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-[#C3A6E6] hover:border-[#C3A6E6]/30 hover:bg-[#C3A6E6]/10 transition-all border border-transparent"
+            className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10 transition-all border border-transparent"
             title={t.shareBtn}
             onClick={(e) => {
               e.stopPropagation();
@@ -86,7 +86,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onToggleFavorite(e); }}
-            className={`p-2.5 rounded-xl bg-[#5C4B8B]/30 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' : 'text-gray-400 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+            className={`p-2.5 rounded-xl bg-[#3d2b4f]/30 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
             title={t.favoriteBtn}
           >
             <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
@@ -94,19 +94,19 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
         </div>
       </div>
 
-      <h3 className="text-xl sm:text-2xl font-black text-white mb-3 leading-tight tracking-tight group-hover:text-[#C3A6E6] transition-colors uppercase">
+      <h3 className="text-xl sm:text-2xl font-black text-white mb-3 leading-tight tracking-tight group-hover:text-[#ff4d4d] transition-colors uppercase">
         {post.title[lang] || post.title['en']}
       </h3>
       
-      <p className="text-gray-400 text-xs sm:text-sm line-clamp-2 mb-6 font-medium leading-relaxed group-hover:text-gray-300 transition-colors">
+      <p className="text-white/40 text-xs sm:text-sm line-clamp-2 mb-6 font-medium leading-relaxed group-hover:text-white/80 transition-colors">
         {post.summary[lang] || post.summary['en']}
       </p>
 
       <div className="flex flex-col gap-4 mt-auto">
         <div className="flex items-center justify-between">
-          <ReactionsBar targetId={post.id} lang={lang} />
+
           
-          <div className="flex items-center gap-2 text-[#C3A6E6] text-[10px] font-black uppercase tracking-widest opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-x-0 sm:translate-x-[-10px] sm:group-hover:translate-x-0">
+          <div className="flex items-center gap-2 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-x-0 sm:translate-x-[-10px] sm:group-hover:translate-x-0">
             {t.readArticle} <ArrowRight size={12} />
           </div>
         </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio } from 'lucide-react';
+import { collection, addDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
 import { handleFirestoreError, OperationType } from './utils/errorHandlers';
@@ -31,6 +31,9 @@ import { SDKPanel } from './components/SDKPanel';
 import { ChatWindow } from './components/chat/ChatWindow';
 import { UserData } from './hooks/useUsers';
 
+import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
+import { AhaSecurityBadge, SafeHtml } from './components/security/AhaSecurity';
+
 // Lazy load sections for better performance
 const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
 const BlogSection = lazy(() => import('./components/sections/BlogSection').then(m => ({ default: m.BlogSection })));
@@ -38,10 +41,14 @@ const ChronicleSection = lazy(() => import('./components/sections/ChronicleSecti
 const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
 const UsersList = lazy(() => import('./components/admin/UsersList').then(m => ({ default: m.UsersList })));
 const ChatsList = lazy(() => import('./components/chat/ChatsList').then(m => ({ default: m.ChatsList })));
+const AhiRadio = lazy(() => import('./components/sections/AhiRadio').then(m => ({ default: m.AhiRadio })));
+const ForumSection = lazy(() => import('./components/sections/ForumSection').then(m => ({ default: m.ForumSection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum';
 
 let hasPrintedStopWarning = false;
+
+import { Changelog } from './components/ui/Changelog';
 
 export default function App() {
   const { trackRender } = usePerfLogger('App');
@@ -91,11 +98,37 @@ export default function App() {
   // Feedback state
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackType, setFeedbackType] = useState<'bug' | 'suggestion'>('bug');
+  
+  // Offline state
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
 
   // Filters
   const [theoryCategory, setTheoryCategory] = useState('all');
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+      if (docSnap.exists()) {
+        setMaintenanceMode(docSnap.data().maintenanceMode || false);
+      }
+    });
+    return () => unsub();
+  }, []);
   const [theorySearch, setTheorySearch] = useState('');
   const [blogCategory, setBlogCategory] = useState('all');
   const [blogSearch, setBlogSearch] = useState('');
@@ -121,15 +154,27 @@ export default function App() {
   const notifiedChats = useRef<Record<string, number>>({});
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    // Request notification permission on load
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
+  const [showLoadWidget, setShowLoadWidget] = useState(() => {
+    const saved = localStorage.getItem('showLoadWidget');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  const toggleLoadWidget = () => {
+    setShowLoadWidget((prev: boolean) => {
+      const next = !prev;
+      localStorage.setItem('showLoadWidget', JSON.stringify(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const isAuthorizedForMaintenance = role === 'admin' || role === 'moderator' || role === 'beta-tester';
+    if (maintenanceMode && !isAuthorizedForMaintenance) {
       setUnreadCount(0);
       return;
     }
@@ -150,13 +195,13 @@ export default function App() {
       if (lastMessageAt > lastNotified && lastMessageAt > lastReadAt) {
         const otherUserId = chat.participants.find(id => id !== user.uid);
         if (activeChat?.uid !== otherUserId) {
-          const title = lang === 'ru' ? 'Новое сообщение!' : 'New message!';
+          const title = t.newMessageTitle;
           setToast(title);
           
           // OS Notification
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(title, {
-              body: lang === 'ru' ? 'У вас новое непрочитанное сообщение.' : 'You have a new unread message.',
+              body: t.newMessageBody,
               icon: '/favicon.ico'
             });
           }
@@ -242,6 +287,8 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
+    { id: 'forum' as const, label: t.navForum, icon: MessageSquare },
+    { id: 'radio' as const, label: t.navRadio, icon: Radio },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
     { id: 'chronicle', label: t.navChronicle, icon: RefreshCw },
@@ -311,8 +358,14 @@ export default function App() {
     localStorage.setItem('hideInstallBanner', 'true');
   };
 
+  const isAuthorizedForMaintenance = role === 'admin' || role === 'moderator' || role === 'beta-tester';
+
+  if (!isLoading && maintenanceMode && !isAuthorizedForMaintenance) {
+    return <MaintenanceScreen lang={lang as Language} />;
+  }
+
   return (
-    <div className={`min-h-screen flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0] ${productionMode ? 'production-visuals' : ''}`}>
+    <div className={`min-h-[100dvh] flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0] ${productionMode ? 'production-visuals' : ''}`}>
       <LoadingScreen isLoading={isLoading} lang={lang as Language} lowPerfMode={lowPerfMode} />
       <SDKPanel 
         lang={lang as Language} 
@@ -320,9 +373,12 @@ export default function App() {
         toggleProductionMode={toggleProductionMode}
         lowPerfMode={lowPerfMode}
         toggleLowPerfMode={toggleLowPerfMode}
+        showLoadWidget={showLoadWidget}
+        toggleLoadWidget={toggleLoadWidget}
+        mobileMenuOpen={mobileMenuOpen}
       />
       <Starfield lowPerfMode={lowPerfMode || !productionMode} />
-      <PerformanceWidget />
+      {showLoadWidget && <PerformanceWidget />}
       
       <Header 
         lang={lang as Language} 
@@ -339,6 +395,21 @@ export default function App() {
         role={role}
       />
 
+      {/* Offline Banner */}
+      <AnimatePresence>
+        {isOffline && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-yellow-500/20 border-b border-yellow-500/50 text-yellow-500 px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2 relative z-20"
+          >
+            <RefreshCw className="w-4 h-4 animate-spin-slow" />
+            {lang === 'ru' ? 'Нет подключения к интернету. Приложение работает в автономном режиме.' : 'No internet connection. App is running in offline mode.'}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 relative z-10">
         <PromoBanner showBanner={showBanner} lang={lang as Language} setModalContent={setModalContent} onClose={handleCloseBanner} />
 
@@ -350,30 +421,30 @@ export default function App() {
             exit={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: -20, scale: 0.98 }}
             transition={lowPerfMode ? { duration: 0 } : { duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
           >
-            <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#C3A6E6] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(195,166,230,0.3)]"></div></div>}>
+            <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(255,77,77,0.3)]"></div></div>}>
               {section === 'home' && (
-                <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-[#5C4B8B]">
-                  <h2 className="text-3xl font-bold text-[#C3A6E6] mb-4">{t.homeTitle}</h2>
-                  <p className="text-gray-300 mb-6 leading-relaxed" dangerouslySetInnerHTML={{ __html: t.homeDesc }} />
+                <div className="bg-[#251c35] rounded-2xl p-8 shadow-xl border border-[#3d2b4f]">
+                  <h2 className="text-3xl font-bold text-[#ff4d4d] mb-4">{t.homeTitle}</h2>
+                  <SafeHtml html={t.homeDesc} className="text-gray-300 mb-6 leading-relaxed" />
                   <div className="flex items-center gap-2 text-xs text-gray-500 mb-8">
                     <RefreshCw size={14} />
                     {t.lastUpdate}
                   </div>
 
                   {/* SDK Info Section */}
-                  <div className="mt-12 p-6 rounded-xl bg-black/20 border border-[#C3A6E6]/20">
+                  <div className="mt-12 p-6 rounded-xl bg-black/20 border border-[#ff4d4d]/20">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 rounded-lg bg-[#C3A6E6]/10 text-[#C3A6E6]">
+                      <div className="p-2 rounded-lg bg-[#ff4d4d]/10 text-[#ff4d4d]">
                         <Sparkles size={20} />
                       </div>
-                      <h3 className="text-xl font-bold text-[#C3A6E6]">{sdk.help.getUsage(lang as Language).title}</h3>
+                      <h3 className="text-xl font-bold text-[#ff4d4d]">{sdk.help.getUsage(lang as Language).title}</h3>
                     </div>
                     <p className="text-sm text-gray-400 mb-6 leading-relaxed">
                       {sdk.help.getUsage(lang as Language).description}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{lang === 'ru' ? 'Возможности' : 'Features'}</h4>
+                        <h4 className="text-xs font-bold text-[#ff4d4d] uppercase tracking-widest">{t.sdkFeatures}</h4>
                         <ul className="text-xs text-gray-500 space-y-1 list-disc pl-4">
                           {sdk.help.getUsage(lang as Language).useCases.slice(0, 4).map((useCase, i) => (
                             <li key={i}>{useCase.split(':')[0]}</li>
@@ -381,14 +452,29 @@ export default function App() {
                         </ul>
                       </div>
                       <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-[#C3A6E6] uppercase tracking-widest">{lang === 'ru' ? 'Как начать?' : 'How to start?'}</h4>
+                        <h4 className="text-xs font-bold text-[#ff4d4d] uppercase tracking-widest">{t.sdkHowToStart}</h4>
                         <p className="text-[10px] font-mono text-gray-500">
                           {sdk.help.getUsage(lang as Language).gettingStarted}
                         </p>
                       </div>
                     </div>
                   </div>
+
+                  {/* Changelog Section */}
+                  <Changelog lang={lang as Language} />
                 </div>
+              )}
+
+              {section === 'forum' && (
+                <ForumSection 
+                  lang={lang as Language}
+                  onOpenChat={(uid, name) => setActiveChat({ uid, displayName: name })}
+                  role={role}
+                />
+              )}
+
+              {section === 'radio' && (
+                <AhiRadio lang={lang as Language} />
               )}
 
               {section === 'theories' && (
@@ -449,7 +535,7 @@ export default function App() {
               )}
               {section === 'users' && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-[#C3A6E6] mb-6">{t.navUsers}</h2>
+                  <h2 className="text-2xl font-bold text-[#ff4d4d] mb-6">{t.navUsers}</h2>
                   <UsersList 
                     lang={lang as Language} 
                     onOpenChat={(uid, name) => setActiveChat({ uid, displayName: name })} 
@@ -462,11 +548,11 @@ export default function App() {
               )}
               {section === 'chats' && (
                 <div className="max-w-2xl mx-auto">
-                  <h2 className="text-3xl font-black text-[#C3A6E6] uppercase tracking-widest mb-8 flex items-center gap-3">
+                  <h2 className="text-3xl font-black text-[#ff4d4d] uppercase tracking-widest mb-8 flex items-center gap-3">
                     <MessageSquare size={32} />
                     {t.navChats}
                   </h2>
-                  <div className="bg-[#3E3160]/90 backdrop-blur-sm rounded-3xl p-6 border border-[#5C4B8B] shadow-2xl">
+                  <div className="bg-[#251c35] rounded-3xl p-6 border border-[#3d2b4f] shadow-2xl">
                     <ChatsList lang={lang as Language} onSelectChat={(id, name) => setActiveChat({ uid: id, displayName: name })} />
                   </div>
                 </div>
@@ -524,7 +610,7 @@ export default function App() {
             initial={{ opacity: 0, y: 50, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
             exit={{ opacity: 0, y: 50, x: '-50%' }}
-            className="fixed bottom-8 left-1/2 z-50 bg-[#C3A6E6] text-[#2F244F] px-8 py-4 rounded-2xl font-black shadow-2xl border-2 border-white/20 uppercase tracking-widest text-sm"
+            className="fixed bottom-8 left-1/2 z-50 bg-[#ff4d4d] text-[#15101e] px-8 py-4 rounded-2xl font-black shadow-2xl border-2 border-white/20 uppercase tracking-widest text-sm"
           >
             {toast}
           </motion.div>
@@ -578,6 +664,8 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      <AhaSecurityBadge />
     </div>
   );
 }

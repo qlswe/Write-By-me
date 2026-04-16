@@ -110,19 +110,19 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
   if (!isAdmin) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-[#2F244F]/90 backdrop-blur-2xl rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-hidden border border-[#5C4B8B]/30 shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col"
+        className="bg-[#15101e] rounded-[3rem] w-full max-w-4xl max-h-[90vh] overflow-hidden border border-[#3d2b4f]/30 shadow-[0_0_100px_rgba(0,0,0,0.5)] flex flex-col"
       >
         {/* Header */}
-        <div className="bg-[#3E3160]/50 p-4 sm:p-8 border-b border-[#5C4B8B]/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+        <div className="bg-[#251c35]/50 p-4 sm:p-8 border-b border-[#3d2b4f]/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
           <div className="flex items-center justify-between w-full sm:w-auto gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#C3A6E6]/10 flex items-center justify-center border border-[#C3A6E6]/20">
-                <Tag className="text-[#C3A6E6] w-5 h-5 sm:w-6 sm:h-6" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#ff4d4d]/10 flex items-center justify-center border border-[#ff4d4d]/20">
+                <Tag className="text-[#ff4d4d] w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
                 <h2 className="text-xl sm:text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
@@ -142,7 +142,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
             {!isAdding && (
               <button
                 onClick={() => setIsAdding(true)}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 sm:gap-3 bg-[#C3A6E6] text-[#2F244F] px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-black uppercase tracking-widest text-[8px] sm:text-[10px] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] border border-white/20 shrink-0"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 sm:gap-3 bg-[#ff4d4d] text-[#15101e] px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-black uppercase tracking-widest text-[8px] sm:text-[10px] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,77,77,0.3)] border border-white/20 shrink-0"
               >
                 <Plus size={16} />
                 {t.addPromoBtn}
@@ -166,7 +166,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -20, scale: 0.95 }}
                 onSubmit={handleSubmit}
-                className="bg-[#1A1528]/50 rounded-[2.5rem] p-8 border border-[#C3A6E6]/30 mb-12 space-y-8 shadow-2xl"
+                className="bg-[#1A1528]/50 rounded-[2.5rem] p-8 border border-[#ff4d4d]/30 mb-12 space-y-8 shadow-2xl"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
@@ -175,7 +175,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                       type="text"
                       value={formData.code}
                       onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                      className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-2xl px-6 py-4 text-white font-black tracking-widest focus:outline-none focus:border-[#C3A6E6] transition-all placeholder:text-gray-700"
+                      className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-2xl px-6 py-4 text-white font-black tracking-widest focus:outline-none focus:border-[#ff4d4d] transition-all placeholder:text-gray-700"
                       placeholder="HSR2026"
                     />
                   </div>
@@ -185,7 +185,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                       type="text"
                       value={formData.reward}
                       onChange={e => setFormData({ ...formData, reward: e.target.value })}
-                      className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all placeholder:text-gray-700"
+                      className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all placeholder:text-gray-700"
                       placeholder="60 Stellar Jades"
                     />
                   </div>
@@ -196,7 +196,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                   <textarea
                     value={formData.description}
                     onChange={e => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-3xl px-6 py-4 text-white font-medium focus:outline-none focus:border-[#C3A6E6] transition-all resize-none h-24 placeholder:text-gray-700"
+                    className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-4 text-white font-medium focus:outline-none focus:border-[#ff4d4d] transition-all resize-none h-24 placeholder:text-gray-700"
                     placeholder="Special reward for Ministry members..."
                   />
                 </div>
@@ -208,14 +208,14 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                       type="datetime-local"
                       value={formData.expiresAt}
                       onChange={e => setFormData({ ...formData, expiresAt: e.target.value })}
-                      className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#C3A6E6] transition-all"
+                      className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all"
                     />
                   </div>
                   <div className="flex items-center gap-4 pt-8 ml-4">
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-                      className={`w-12 h-6 rounded-full transition-all relative ${formData.isActive ? 'bg-[#C3A6E6]' : 'bg-gray-700'}`}
+                      className={`w-12 h-6 rounded-full transition-all relative ${formData.isActive ? 'bg-[#ff4d4d]' : 'bg-[#3d2b4f]'}`}
                     >
                       <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isActive ? 'left-7' : 'left-1'}`} />
                     </button>
@@ -233,7 +233,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                   </button>
                   <button
                     type="submit"
-                    className="w-full sm:w-auto bg-[#C3A6E6] text-[#2F244F] px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] border border-white/20"
+                    className="w-full sm:w-auto bg-[#ff4d4d] text-[#15101e] px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,77,77,0.3)] border border-white/20"
                   >
                     {editingId ? t.updatePromoBtn : t.addPromoBtn}
                   </button>
@@ -248,14 +248,14 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                 layout
                 key={promo.id}
                 className={`bg-[#1A1528]/40 rounded-[2rem] p-6 border transition-all group ${
-                  promo.isActive ? 'border-[#5C4B8B]/20 hover:border-[#C3A6E6]/40' : 'border-red-500/20 opacity-60'
+                  promo.isActive ? 'border-[#3d2b4f]/20 hover:border-[#ff4d4d]/40' : 'border-red-500/20 opacity-60'
                 } flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6`}
               >
                 <div className="flex items-center gap-6">
                   <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border-2 transition-all ${
                     promo.isActive 
-                      ? 'bg-[#C3A6E6]/5 border-[#C3A6E6]/20 text-[#C3A6E6] group-hover:bg-[#C3A6E6]/10' 
-                      : 'bg-gray-500/5 border-gray-500/20 text-gray-500'
+                      ? 'bg-[#ff4d4d]/5 border-[#ff4d4d]/20 text-[#ff4d4d] group-hover:bg-[#ff4d4d]/10' 
+                      : 'bg-[#3d2b4f]/30 border-[#3d2b4f]/50 text-gray-400'
                   }`}>
                     <Gift size={28} />
                   </div>
@@ -266,7 +266,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                         <span className="text-[8px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full uppercase font-black tracking-tighter">Inactive</span>
                       )}
                     </div>
-                    <p className="text-sm text-[#C3A6E6] font-bold">{promo.reward}</p>
+                    <p className="text-sm text-[#ff4d4d] font-bold">{promo.reward}</p>
                     {promo.expiresAt && (
                       <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-500 font-black uppercase tracking-widest">
                         <Calendar size={12} />
@@ -278,14 +278,14 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                 <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0">
                   <button
                     onClick={() => startEdit(promo)}
-                    className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-[#C3A6E6] hover:bg-[#C3A6E6]/10 transition-all border border-transparent hover:border-[#C3A6E6]/20"
+                    className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 transition-all border border-transparent hover:border-[#ff4d4d]/20"
                     title={t.editBtn}
                   >
                     <Edit2 size={18} />
                   </button>
                   <button
                     onClick={() => setPromoToDelete(promo.id)}
-                    className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-500/20"
+                    className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-500/20"
                     title={t.delete}
                   >
                     <Trash2 size={18} />
@@ -295,19 +295,19 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                       const text = `${promo.code} - ${promo.reward}\n${promo.description}`;
                       navigator.clipboard.writeText(text);
                     }}
-                    className="p-2.5 rounded-xl bg-[#5C4B8B]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/20"
+                    className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/20"
                     title={t.share}
                   >
                     <Plus size={18} className="rotate-45" />
                   </button>
-                  <div className="p-2.5 rounded-xl bg-[#5C4B8B]/10 text-gray-600 flex items-center justify-center border border-transparent">
+                  <div className="p-2.5 rounded-xl bg-[#3d2b4f]/10 text-gray-600 flex items-center justify-center border border-transparent">
                     <Tag size={18} />
                   </div>
                 </div>
               </motion.div>
             ))}
             {promoCodes.length === 0 && (
-              <div className="text-center py-20 bg-[#1A1528]/20 rounded-[2.5rem] border border-[#5C4B8B]/10">
+              <div className="text-center py-20 bg-[#1A1528]/20 rounded-[2.5rem] border border-[#3d2b4f]/10">
                 <Tag className="mx-auto mb-4 text-gray-700" size={48} />
                 <p className="text-sm font-black uppercase tracking-widest text-gray-600">{t.noResults}</p>
               </div>

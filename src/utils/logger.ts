@@ -48,11 +48,11 @@ class Logger {
   private getStyles(level: LogLevel) {
     const base = 'padding: 2px 6px; border-radius: 4px; font-weight: bold; font-family: "JetBrains Mono", monospace; font-size: 11px;';
     switch (level) {
-      case 'info': return `${base} background: #3E3160; color: #C3A6E6; border: 1px solid #5C4B8B;`;
+      case 'info': return `${base} background: #251c35; color: #ff4d4d; border: 1px solid #3d2b4f;`;
       case 'warn': return `${base} background: #4A3B22; color: #FFB86C; border: 1px solid #8A6B32;`;
       case 'error': return `${base} background: #4A2222; color: #FF5555; border: 1px solid #8A3232;`;
       case 'perf': return `${base} background: #224A32; color: #50FA7B; border: 1px solid #328A4A;`;
-      case 'system': return `${base} background: #2F244F; color: #8BE9FD; border: 1px solid #5C4B8B; text-transform: uppercase; letter-spacing: 1px;`;
+      case 'system': return `${base} background: #15101e; color: #8BE9FD; border: 1px solid #3d2b4f; text-transform: uppercase; letter-spacing: 1px;`;
       case 'action': return `${base} background: #6272A4; color: #F8F8F2; border: 1px solid #44475A;`;
       default: return base;
     }
@@ -97,9 +97,9 @@ class Logger {
       
       if (data) {
         console.groupCollapsed(`${prefix}%c${message}%c+${uptime}`, style, componentStyle, msgStyle, timeStyle);
-        console.log('%cTimestamp:', 'color: #C3A6E6; font-weight: bold;', timestamp);
-        if (component) console.log('%cComponent:', 'color: #C3A6E6; font-weight: bold;', component);
-        console.log('%cPayload:', 'color: #C3A6E6; font-weight: bold;', data);
+        console.log('%cTimestamp:', 'color: #ff4d4d; font-weight: bold;', timestamp);
+        if (component) console.log('%cComponent:', 'color: #ff4d4d; font-weight: bold;', component);
+        console.log('%cPayload:', 'color: #ff4d4d; font-weight: bold;', data);
         console.groupEnd();
       } else {
         console.log(`${prefix}%c${message}%c+${uptime}`, style, componentStyle, msgStyle, timeStyle);

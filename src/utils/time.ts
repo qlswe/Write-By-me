@@ -3,8 +3,7 @@ import { GameEvent } from '../data/content';
 // Reference date for alternating weeks: March 2, 2026 was a Monday.
 const REFERENCE_DATE = new Date(2026, 2, 2, 0, 0, 0);
 
-export function getNextEventDate(event: GameEvent): Date | null {
-  const now = new Date();
+export function getNextEventDate(event: GameEvent, now: Date = new Date()): Date | null {
   
   // Parse custom reset time or default to 03:00 UTC
   let resetHour = 3;
@@ -65,11 +64,9 @@ export function getNextEventDate(event: GameEvent): Date | null {
   return null;
 }
 
-export function getEventProgress(event: GameEvent): { nextDate: Date | null, progress: number } {
-  const nextDate = getNextEventDate(event);
+export function getEventProgress(event: GameEvent, now: Date = new Date()): { nextDate: Date | null, progress: number } {
+  const nextDate = getNextEventDate(event, now);
   if (!nextDate) return { nextDate: null, progress: 0 };
-
-  const now = new Date();
   let totalDuration = 0;
 
   if (event.type === 'daily') {
@@ -109,10 +106,9 @@ export function pluralize(count: number, forms: string | string[], lang: string)
   return forms[0];
 }
 
-export function formatCountdown(targetDate: Date | null, t: any, lang: string): string {
+export function formatCountdown(targetDate: Date | null, t: any, lang: string, now: Date = new Date()): string {
   if (!targetDate) return t.ended;
   
-  const now = new Date();
   const diff = targetDate.getTime() - now.getTime();
   
   if (diff <= 0) return t.ended;

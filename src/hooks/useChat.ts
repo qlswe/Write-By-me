@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, getDoc, where, limit } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, getDoc, where, limit, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
 import { encrypt, decrypt } from '../utils/encryption';
@@ -10,6 +10,7 @@ export interface Message {
   text: string;
   createdAt: any;
   type?: 'text' | 'sticker' | 'image';
+  images?: string[];
   replyTo?: string; // ID of the message being replied to
   reactions?: Record<string, string[]>; // emoji -> array of user IDs
   isEdited?: boolean;
@@ -94,14 +95,14 @@ export function useChat(otherUserId?: string) {
     return unsubscribe;
   }, [user, otherUserId]);
 
-  const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' | 'image' = 'text', replyTo?: string) => {
-    if (!user || (!text.trim() && type !== 'image')) return;
+  const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' | 'image' = 'text', replyTo?: string, images?: string[]) => {
+    if (!user || (!text.trim() && type !== 'image' && (!images || images.length === 0))) return;
 
     const chatId = [user.uid, recipientId].sort().join('_');
     const chatRef = doc(db, 'chats', chatId);
     const messagesRef = collection(db, 'chats', chatId, 'messages');
 
-    const encryptedText = encrypt(text.trim());
+    const encryptedText = text ? encrypt(text.trim()) : '';
 
     try {
       // Ensure chat document exists
@@ -121,6 +122,7 @@ export function useChat(otherUserId?: string) {
         type
       };
       if (replyTo) messageData.replyTo = replyTo;
+      if (images && images.length > 0) messageData.images = images;
 
       await addDoc(messagesRef, messageData);
 
@@ -147,14 +149,31 @@ export function useChat(otherUserId?: string) {
         const reactions = data.reactions || {};
         const usersForEmoji = reactions[emoji] || [];
         
+        const updates: any = {};
+        
         if (usersForEmoji.includes(user.uid)) {
-          reactions[emoji] = usersForEmoji.filter((id: string) => id !== user.uid);
-          if (reactions[emoji].length === 0) delete reactions[emoji];
+          const newUsers = usersForEmoji.filter((id: string) => id !== user.uid);
+          if (newUsers.length === 0) {
+            updates[`reactions.${emoji}`] = deleteField();
+          } else {
+            updates[`reactions.${emoji}`] = newUsers;
+          }
         } else {
-          reactions[emoji] = [...usersForEmoji, user.uid];
+          // Remove user from all other reactions
+          Object.keys(reactions).forEach(existingKey => {
+            if (existingKey !== emoji && reactions[existingKey].includes(user.uid)) {
+              const remainingUsers = reactions[existingKey].filter((id: string) => id !== user.uid);
+              if (remainingUsers.length === 0) {
+                updates[`reactions.${existingKey}`] = deleteField();
+              } else {
+                updates[`reactions.${existingKey}`] = remainingUsers;
+              }
+            }
+          });
+          updates[`reactions.${emoji}`] = [...usersForEmoji, user.uid];
         }
         
-        await setDoc(messageRef, { reactions }, { merge: true });
+        await updateDoc(messageRef, updates);
       }
     } catch (error) {
       console.error('Error toggling reaction:', error);
@@ -199,7 +218,10 @@ export function useChat(otherUserId?: string) {
     const chatId = [user.uid, recipientId].sort().join('_');
     const chatRef = doc(db, 'chats', chatId);
     try {
-      await setDoc(chatRef, { [`lastReadAt.${user.uid}`]: serverTimestamp() }, { merge: true });
+      const chatDoc = await getDoc(chatRef);
+      if (chatDoc.exists()) {
+        await updateDoc(chatRef, { [`lastReadAt.${user.uid}`]: serverTimestamp() });
+      }
     } catch (error) {
       console.error('Error marking chat as read:', error);
     }

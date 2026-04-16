@@ -2,10 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useChat, Chat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
-import { MessageSquare, Clock, User, Search, X, Circle } from 'lucide-react';
+import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
-import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
+import { ru, enUS, be, de, fr, zhCN } from 'date-fns/locale';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
@@ -14,7 +14,7 @@ interface ChatsListProps {
   onSelectChat: (recipientId: string, name: string, photoURL?: string) => void;
 }
 
-const locales = { ru, en: enUS, by: be, jp: ja, de, fr, zh: zhCN };
+const locales = { ru, en: enUS, by: be, de, fr, zh: zhCN };
 
 const ChatItem = React.memo(({ 
   chat, 
@@ -36,33 +36,34 @@ const ChatItem = React.memo(({
   const lastMsg = chat.lastMessageAt?.toMillis() || 0;
   const isUnread = lastMsg > lastRead && chat.lastMessage;
 
+  const t = translations[lang];
   return (
     <motion.button
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={() => onSelect(recipientId || '', profile?.name || 'User', profile?.photo)}
-      className={`w-full border rounded-2xl p-4 flex items-center gap-4 transition-all text-left group relative overflow-hidden ${isUnread ? 'bg-[#3E3160]/60 border-[#C3A6E6]/50 hover:bg-[#3E3160]/80' : 'bg-[#2F244F]/30 border-[#5C4B8B]/30 hover:bg-[#2F244F]/60'}`}
+      className={`w-full border rounded-2xl p-4 flex items-center gap-4 transition-all text-left group relative overflow-hidden ${isUnread ? 'bg-[#251c35]/60 border-[#ff4d4d]/50 hover:bg-[#251c35]/80' : 'bg-[#15101e]/30 border-[#3d2b4f]/30 hover:bg-[#15101e]/60'}`}
     >
       {isUnread && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#C3A6E6] shadow-[0_0_10px_#C3A6E6]" />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#ff4d4d] shadow-[0_0_10px_#ff4d4d]" />
       )}
       <div className="relative shrink-0">
         {profile?.photo ? (
-          <img src={profile.photo} alt="" className="w-12 h-12 rounded-2xl object-cover border-2 border-[#5C4B8B]/50 group-hover:border-[#C3A6E6] transition-colors" />
+          <img src={profile.photo} alt="" className="w-12 h-12 rounded-2xl object-cover border-2 border-[#3d2b4f]/50 group-hover:border-[#ff4d4d] transition-colors" />
         ) : (
-          <div className="w-12 h-12 rounded-2xl bg-[#C3A6E6]/20 flex items-center justify-center border-2 border-[#5C4B8B]/50 group-hover:border-[#C3A6E6] transition-colors">
-            <User className="w-6 h-6 text-[#C3A6E6]" />
+          <div className="w-12 h-12 rounded-2xl bg-[#ff4d4d]/20 flex items-center justify-center border-2 border-[#3d2b4f]/50 group-hover:border-[#ff4d4d] transition-colors">
+            <User className="w-6 h-6 text-[#ff4d4d]" />
           </div>
         )}
-        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-4 border-[#2F244F] rounded-full shadow-lg" />
+        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-4 border-[#15101e] rounded-full shadow-lg" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
-          <span className={`font-black text-sm truncate uppercase tracking-wider ${isUnread ? 'text-[#C3A6E6]' : 'text-white'}`}>
+          <span className={`font-black text-sm truncate uppercase tracking-wider ${isUnread ? 'text-[#ff4d4d]' : 'text-white'}`}>
             {profile?.name || '...'}
           </span>
           {chat.lastMessageAt && (
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnread ? 'text-[#C3A6E6]' : 'text-gray-500'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnread ? 'text-[#ff4d4d]' : 'text-gray-500'}`}>
               {formatDistanceToNow(chat.lastMessageAt.toDate(), {
                 addSuffix: true,
                 locale: locales[lang] || locales.en
@@ -72,8 +73,8 @@ const ChatItem = React.memo(({
         </div>
         <div className="flex items-center gap-2">
           {isTyping ? (
-            <p className="text-xs text-[#C3A6E6] font-bold italic truncate">
-              {lang === 'ru' ? 'печатает...' : 'typing...'}
+            <p className="text-xs text-[#ff4d4d] font-bold italic truncate">
+              {(t as any).chatTyping || t.chatsTyping}
             </p>
           ) : (
             <p className={`text-xs truncate font-medium ${isUnread ? 'text-white' : 'text-gray-400'}`}>
@@ -81,7 +82,7 @@ const ChatItem = React.memo(({
             </p>
           )}
           {isUnread && !isTyping && (
-            <Circle className="w-2 h-2 fill-[#C3A6E6] text-[#C3A6E6] shrink-0" />
+            <Circle className="w-2 h-2 fill-[#ff4d4d] text-[#ff4d4d] shrink-0" />
           )}
         </div>
       </div>
@@ -96,6 +97,18 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [profiles, setProfiles] = useState<Record<string, { name: string, photo?: string }>>({});
+  const [showNotifPrompt, setShowNotifPrompt] = useState(
+    typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default'
+  );
+
+  const requestNotifications = async () => {
+    if ('Notification' in window) {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'default') {
+        setShowNotifPrompt(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (!user || chats.length === 0) return;
@@ -144,14 +157,14 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
 
   if (!user) {
     return (
-      <div className="text-center py-16 bg-[#2F244F]/20 rounded-3xl border border-[#5C4B8B]/20 backdrop-blur-xl">
+      <div className="text-center py-16 bg-[#15101e]/20 rounded-3xl border border-[#3d2b4f]/20">
         <User className="mx-auto mb-6 text-gray-600" size={48} />
         <p className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">
-          {lang === 'ru' ? "Войдите, чтобы просматривать сообщения" : "Log in to view your chats"}
+          {(t as any).chatLoginToView || t.chatsLoginToView}
         </p>
         <button
           onClick={loginWithGoogle}
-          className="inline-flex items-center gap-4 bg-[#C3A6E6] hover:bg-[#B396D6] text-[#2F244F] px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] hover:scale-105 active:scale-95 border border-white/20"
+          className="inline-flex items-center gap-4 bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,77,77,0.3)] hover:scale-105 active:scale-95 border border-white/20"
         >
           {t.loginWithGoogle || "Login with Google"}
         </button>
@@ -162,13 +175,49 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#C3A6E6] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(195,166,230,0.3)]"></div>
+        <div className="w-8 h-8 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(255,77,77,0.3)]"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {showNotifPrompt && user && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[#3d2b4f]/20 border border-[#ff4d4d]/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg"
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-[#ff4d4d]/20 rounded-xl shrink-0">
+              <Bell className="w-5 h-5 text-[#ff4d4d]" />
+            </div>
+            <div>
+              <h4 className="text-white font-bold text-sm mb-1">
+                {(t as any).chatEnableNotifs || t.chatsEnableNotif}
+              </h4>
+              <p className="text-gray-300 text-xs leading-relaxed">
+                {(t as any).chatEnableNotifsDesc || "Enable notifications to not miss messages."}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            <button 
+              onClick={() => setShowNotifPrompt(false)}
+              className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-[#3d2b4f]/30 transition-colors"
+            >
+              {(t as any).chatLater || t.chatsLater}
+            </button>
+            <button 
+              onClick={requestNotifications}
+              className="flex-1 sm:flex-none bg-[#ff4d4d] text-[#15101e] px-4 py-2 rounded-xl text-xs font-bold hover:bg-white transition-colors shadow-[0_0_15px_rgba(255,77,77,0.3)]"
+            >
+              {(t as any).chatEnable || t.chatsEnable}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Search Bar */}
       {chats.length > 0 && (
         <div className="relative">
@@ -179,8 +228,8 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={lang === 'ru' ? 'Поиск чатов...' : 'Search chats...'}
-            className="w-full bg-[#2F244F]/50 border border-[#5C4B8B]/50 rounded-2xl py-3 pl-10 pr-10 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C3A6E6] focus:bg-[#2F244F]/80 transition-all"
+            placeholder={(t as any).chatSearchChats || t.chatsSearch}
+            className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/50 rounded-2xl py-3 pl-10 pr-10 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#ff4d4d] focus:bg-[#15101e]/80 transition-all"
           />
           <AnimatePresence>
             {searchQuery && (
@@ -201,7 +250,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
       {/* Chat List */}
       <div className="space-y-3">
         {chats.length === 0 ? (
-          <div className="text-center py-16 text-gray-500 bg-[#2F244F]/20 rounded-3xl border border-[#5C4B8B]/20">
+          <div className="text-center py-16 text-gray-500 bg-[#15101e]/20 rounded-3xl border border-[#3d2b4f]/20">
             <MessageSquare className="mx-auto mb-4 opacity-10" size={48} />
             <p className="text-sm font-black uppercase tracking-widest">{t.noChats}</p>
           </div>
@@ -209,11 +258,11 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center py-12 text-gray-500 bg-[#2F244F]/10 rounded-3xl border border-[#5C4B8B]/10"
+            className="text-center py-12 text-gray-500 bg-[#15101e]/10 rounded-3xl border border-[#3d2b4f]/10"
           >
             <Search className="mx-auto mb-4 opacity-20" size={32} />
             <p className="text-sm font-bold uppercase tracking-widest">
-              {lang === 'ru' ? 'Ничего не найдено' : 'No chats found'}
+              {(t as any).chatNoChatsFound || t.chatsNotFound}
             </p>
           </motion.div>
         ) : (

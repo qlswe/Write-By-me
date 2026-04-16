@@ -9,6 +9,9 @@ import { Trash2, Send, Heart, Edit2, X, Check, MessageCircle, ChevronDown, Chevr
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { GoogleGenAI } from '@google/genai';
+
+const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || 'dummy' });
 
 interface Comment {
   id: string;
@@ -24,11 +27,13 @@ interface Comment {
   createdAt: string;
 }
 
+import { moderateContentWithProxy } from '../../utils/geminiProxy';
+
 interface CommentsSectionProps {
   targetId: string;
   lang: Language;
   lowPerfMode?: boolean;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
   onOpenChat?: (uid: string, name: string) => void;
 }
 
@@ -90,6 +95,26 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     return () => unsubscribe();
   }, [targetId]);
 
+  const moderateContent = async (text: string): Promise<boolean> => {
+    try {
+      const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+      if (!apiKey) return true;
+      
+      const prompt = `You are an automated moderation bot for a forum called "Форум Ахи". 
+Analyze the following text and determine if it contains severe profanity, hate speech, illegal content, or extreme toxicity.
+Respond ONLY with a JSON object in the following format:
+{"isApproved": true/false}
+
+Text to analyze:
+"${text}"`;
+
+      return await moderateContentWithProxy(prompt, apiKey);
+    } catch (error) {
+      console.error('Moderation error:', error);
+      return true; // fail open
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent, parentId?: string) => {
     e.preventDefault();
     const content = parentId ? replyContent : newComment;
@@ -97,6 +122,13 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
 
     setIsSubmitting(true);
     try {
+      const isApproved = await moderateContent(content);
+      if (!isApproved) {
+        alert((t as any).forumModerationRejectedComment || t.forumCommentRejected);
+        setIsSubmitting(false);
+        return;
+      }
+
       await addDoc(collection(db, 'comments'), {
         targetId,
         parentId: parentId || null,
@@ -250,48 +282,48 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     return (
       <div key={comment.id} className={`flex gap-2 sm:gap-4 group ${isReply ? 'mt-4' : 'mt-8'}`}>
         <img
-          src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=3E3160&color=fff&size=${lowPerfMode ? '32' : '64'}`}
+          src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=1c1528&color=fff&size=${lowPerfMode ? '32' : '64'}`}
           alt={comment.authorName}
           loading="lazy"
-          className={`${isReply ? 'w-8 h-8' : 'w-10 h-10'} rounded-2xl border-2 border-[#5C4B8B]/50 shrink-0 mt-1 shadow-lg group-hover:border-[#C3A6E6] transition-colors object-cover`}
+          className={`${isReply ? 'w-8 h-8' : 'w-10 h-10'} rounded-2xl border-2 border-[#3d2b4f]/50 shrink-0 mt-1 shadow-lg group-hover:border-[#ff4d4d] transition-colors object-cover`}
         />
         <div className="flex-1 min-w-0">
-          <div className={`bg-[#2F244F]/30 backdrop-blur-xl rounded-[1.5rem] rounded-tl-none p-4 sm:p-5 border border-[#5C4B8B]/20 shadow-xl transition-all group-hover:border-[#C3A6E6]/30 group-hover:bg-[#2F244F]/50`}>
-            <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
+          <div className={`bg-[#15101e] rounded-[1.5rem] rounded-tl-none p-4 sm:p-5 border border-[#3d2b4f]/20 shadow-xl transition-all group-hover:border-[#ff4d4d]/30 group-hover:bg-[#251c35]`}>
+            <div className="flex flex-col gap-1 mb-3 pr-16 relative">
               <div className="flex items-center flex-wrap gap-3">
                 <span className="font-black text-white text-sm uppercase tracking-wider">{comment.authorName}</span>
                 {user && user.uid !== comment.authorUid && onOpenChat && (
                   <button
                     onClick={() => onOpenChat(comment.authorUid, comment.authorName)}
-                    className="p-1.5 bg-[#1A1625] text-[#C3A6E6] hover:text-white hover:bg-[#C3A6E6] rounded-lg transition-all active:scale-90 border border-[#5C4B8B]/30"
+                    className="p-1.5 bg-[#0d0b14] text-[#ff4d4d] hover:text-white hover:bg-[#ff4d4d] rounded-lg transition-all active:scale-90 border border-[#3d2b4f]/30"
                     title={t.sendMessage}
                   >
                     <MessageCircle size={12} />
                   </button>
                 )}
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                  {formatDistanceToNow(new Date(comment.createdAt), {
-                    addSuffix: true,
-                    locale: locales[lang] || locales.en
-                  })}
-                  {comment.isEdited && <span className="ml-1 italic opacity-70">(изм.)</span>}
-                </span>
               </div>
-              <div className="flex items-center gap-1 ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">
+                {formatDistanceToNow(new Date(comment.createdAt), {
+                  addSuffix: true,
+                  locale: locales[lang] || locales.en
+                })}
+                {comment.isEdited && <span className="ml-1 italic opacity-70">({t.edited || "edited"})</span>}
+              </span>
+              <div className="absolute top-0 right-0 flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
                 {user && (user.uid === comment.authorUid || isModerator) && (
                 <>
                   {user.uid === comment.authorUid && (
                     <button
                       onClick={() => handleEdit(comment)}
-                      className="p-1.5 bg-[#1A1625] text-gray-400 hover:text-white hover:bg-[#C3A6E6] rounded-lg transition-all border border-[#5C4B8B]/30"
-                      title="Ред."
+                      className="p-1.5 bg-[#0d0b14] text-white/60 hover:text-white hover:bg-[#ff4d4d] rounded-lg transition-all border border-[#3d2b4f]/30"
+                      title={t.edit || "Edit"}
                     >
                       <Edit2 size={12} />
                     </button>
                   )}
                   <button
                     onClick={() => setCommentToDelete(comment.id)}
-                    className="p-1.5 bg-[#1A1625] text-gray-400 hover:text-white hover:bg-red-500 rounded-lg transition-all border border-[#5C4B8B]/30"
+                    className="p-1.5 bg-[#0d0b14] text-white/60 hover:text-white hover:bg-red-500 rounded-lg transition-all border border-[#3d2b4f]/30"
                     title={t.delete || "Удал."}
                   >
                     <Trash2 size={12} />
@@ -306,18 +338,18 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="w-full bg-[#1A1625] border border-[#5C4B8B]/50 rounded-2xl p-4 text-sm text-gray-200 focus:outline-none focus:border-[#C3A6E6]/50 resize-none min-h-[100px] font-medium"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-2xl p-4 text-sm text-white/90 focus:outline-none focus:border-[#ff4d4d]/50 resize-none min-h-[100px] font-medium"
               />
               <div className="flex justify-end gap-2 mt-3">
                 <button
                   onClick={() => setEditingCommentId(null)}
-                  className="px-4 py-2 bg-[#2F244F] text-gray-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#5C4B8B]/30 transition-all"
+                  className="px-4 py-2 bg-[#15101e] text-white/60 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-[#3d2b4f]/30 transition-all"
                 >
                   {t.cancelBtn}
                 </button>
                 <button
                   onClick={() => handleUpdate(comment.id)}
-                  className="px-4 py-2 bg-[#C3A6E6] text-[#2F244F] rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/20 transition-all shadow-[0_0_15px_rgba(195,166,230,0.3)]"
+                  className="px-4 py-2 bg-[#ff4d4d] text-[#15101e] rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/20 transition-all shadow-[0_0_15px_rgba(255,77,77,0.3)]"
                 >
                   {t.saveBtn || "Save"}
                 </button>
@@ -325,13 +357,13 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
             </div>
           ) : (
             <div>
-              <p className={`text-sm text-gray-200 whitespace-pre-wrap break-words leading-relaxed font-medium ${!isExpanded && isLong ? 'line-clamp-4' : ''}`}>
+              <p className={`text-sm text-white/90 whitespace-pre-wrap break-words leading-relaxed font-medium ${!isExpanded && isLong ? 'line-clamp-4' : ''}`}>
                 {comment.content}
               </p>
               {isLong && (
                 <button
                   onClick={() => toggleExpand(comment.id)}
-                  className="text-[#C3A6E6] text-[10px] mt-2 hover:text-white focus:outline-none font-black uppercase tracking-widest flex items-center gap-1 transition-colors"
+                  className="text-[#ff4d4d] text-[10px] mt-2 hover:text-white focus:outline-none font-black uppercase tracking-widest flex items-center gap-1 transition-colors"
                 >
                   {isExpanded ? (
                     <>
@@ -349,31 +381,31 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
             </div>
           )}
 
-          <div className="mt-4 pt-4 border-t border-[#5C4B8B]/10 flex items-center justify-between">
-            <div className="flex items-center gap-1 bg-[#1A1625]/50 p-1 rounded-xl border border-[#5C4B8B]/30">
+          <div className="mt-4 pt-4 border-t border-[#3d2b4f]/10 flex items-center justify-between">
+            <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-xl border border-[#3d2b4f]/30">
               <button
                 onClick={() => handleVote(comment, 'up')}
                 disabled={!user}
-                className={`p-1.5 rounded-lg transition-all ${hasUpvoted ? 'text-green-500 bg-green-500/10' : 'text-gray-500 hover:text-green-500 hover:bg-green-500/5'}`}
+                className={`p-1.5 rounded-lg transition-all ${hasUpvoted ? 'text-green-500 bg-green-500/10' : 'text-white/40 hover:text-green-500 hover:bg-green-500/5'}`}
               >
                 <ChevronUp size={20} />
               </button>
-              <span className={`text-xs font-black px-2 min-w-[2rem] text-center ${score > 0 ? 'text-green-500' : score < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+              <span className={`text-xs font-black px-2 min-w-[2rem] text-center ${score > 0 ? 'text-green-500' : score < 0 ? 'text-red-500' : 'text-white/40'}`}>
                 {score > 0 ? `+${score}` : score}
               </span>
               <button
                 onClick={() => handleVote(comment, 'down')}
                 disabled={!user}
-                className={`p-1.5 rounded-lg transition-all ${hasDownvoted ? 'text-red-500 bg-red-500/10' : 'text-gray-500 hover:text-red-500 hover:bg-red-500/5'}`}
+                className={`p-1.5 rounded-lg transition-all ${hasDownvoted ? 'text-red-500 bg-red-500/10' : 'text-white/40 hover:text-red-500 hover:bg-red-500/5'}`}
               >
                 <ChevronDown size={20} />
               </button>
             </div>
 
-            {!isReply && user && (
+            {user && (
               <button
                 onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-[#C3A6E6] transition-all px-4 py-2 rounded-xl hover:bg-[#C3A6E6]/10 border border-transparent hover:border-[#C3A6E6]/30"
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-[#ff4d4d] transition-all px-4 py-2 rounded-xl hover:bg-[#ff4d4d]/10 border border-transparent hover:border-[#ff4d4d]/30"
               >
                 <MessageCircle size={14} />
                 {t.reply || "Ответить"}
@@ -386,11 +418,53 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     );
   };
 
+  const renderCommentTree = (parentId: string | null = null, depth: number = 0) => {
+    const commentsAtLevel = parentId ? (repliesMap[parentId] || []) : topLevelComments;
+    
+    if (commentsAtLevel.length === 0) return null;
+
+    return (
+      <div className={`space-y-4 ${depth > 0 ? 'ml-4 sm:ml-8 mt-4 border-l-2 border-[#3d2b4f]/30 pl-4 sm:pl-6' : ''}`}>
+        {commentsAtLevel.map(comment => (
+          <div key={comment.id} className="space-y-4">
+            {renderCommentContent(comment, depth > 0)}
+            
+            {/* Recursive Replies */}
+            {renderCommentTree(comment.id, depth + 1)}
+
+            {/* Reply Input */}
+            {replyingTo === comment.id && (
+              <div className={`mt-4 ${depth === 0 ? 'ml-4 sm:ml-8 pl-4 sm:pl-6 border-l-2 border-[#3d2b4f]/30' : ''}`}>
+                <form onSubmit={(e) => handleSubmit(e, comment.id)} className="relative group">
+                  <textarea
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, comment.id)}
+                    placeholder={t.writeReply || "Написать ответ..."}
+                    className="w-full bg-[#15101e]/30 border border-[#3d2b4f]/20 rounded-2xl p-4 pr-14 text-white/90 focus:outline-none focus:border-[#ff4d4d]/50 focus:bg-[#15101e]/50 transition-all resize-none min-h-[100px] text-sm font-medium"
+                    maxLength={1000}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!replyContent.trim() || isSubmitting}
+                    className="absolute bottom-4 right-4 p-2.5 bg-[#ff4d4d] text-[#15101e] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#ff7a7a] hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(255,77,77,0.3)]"
+                  >
+                    <Send size={16} />
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="mt-12 pt-12 border-t border-[#2F244F]">
+    <div className="mt-12 pt-12 border-t border-[#15101e]">
       <h3 className="text-3xl font-black text-white mb-10 tracking-tighter uppercase flex items-center gap-4">
-        <MessageCircle className="text-[#C3A6E6]" size={32} />
-        {t.comments || "Комментарии"} <span className="text-gray-500 text-xl">({comments.length})</span>
+        <MessageCircle className="text-[#ff4d4d]" size={32} />
+        {t.comments || "Комментарии"} <span className="text-white/40 text-xl">({comments.length})</span>
       </h3>
 
       {user ? (
@@ -401,14 +475,14 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
               onChange={(e) => setNewComment(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={hasReachedLimit ? (t.commentLimitReached || "You have reached the comment limit") : (t.writeComment || "Написать комментарий... (Enter для отправки)")}
-              className={`w-full bg-[#2F244F]/30 border border-[#5C4B8B]/20 rounded-[2rem] p-6 pr-16 text-gray-200 focus:outline-none focus:border-[#C3A6E6]/50 focus:bg-[#2F244F]/50 transition-all resize-none min-h-[150px] text-base font-medium ${hasReachedLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`w-full bg-[#15101e]/30 border border-[#3d2b4f]/20 rounded-[2rem] p-6 pr-16 text-white/90 focus:outline-none focus:border-[#ff4d4d]/50 focus:bg-[#15101e]/50 transition-all resize-none min-h-[150px] text-base font-medium ${hasReachedLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
               maxLength={2000}
               disabled={hasReachedLimit}
             />
             <button
               type="submit"
               disabled={!newComment.trim() || isSubmitting || hasReachedLimit}
-              className="absolute bottom-6 right-6 p-4 bg-[#C3A6E6] text-[#2F244F] rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B396D6] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] border border-white/20"
+              className="absolute bottom-6 right-6 p-4 bg-[#ff4d4d] text-[#15101e] rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#ff7a7a] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,77,77,0.3)] border border-white/20"
             >
               <Send size={20} />
             </button>
@@ -418,12 +492,12 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
           )}
         </div>
       ) : (
-        <div className="bg-[#2F244F]/20 border border-[#5C4B8B]/20 rounded-[2.5rem] p-12 text-center mb-12 backdrop-blur-xl">
-          <MessageCircle size={48} className="mx-auto text-gray-600 mb-6" />
-          <p className="text-gray-400 mb-8 font-black uppercase tracking-widest text-sm">{t.loginToComment || "Войдите, чтобы оставить комментарий"}</p>
+        <div className="bg-[#15101e] border border-[#3d2b4f]/20 rounded-[2.5rem] p-12 text-center mb-12">
+          <MessageCircle size={48} className="mx-auto text-white/20 mb-6" />
+          <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-sm">{t.loginToComment || "Войдите, чтобы оставить комментарий"}</p>
           <button
             onClick={loginWithGoogle}
-            className="inline-flex items-center gap-4 bg-[#C3A6E6] hover:bg-[#B396D6] text-[#2F244F] px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(195,166,230,0.3)] hover:scale-105 active:scale-95 border border-white/20"
+            className="inline-flex items-center gap-4 bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,77,77,0.3)] hover:scale-105 active:scale-95 border border-white/20"
           >
             {t.loginWithGoogle || "Войти через Google"}
           </button>
@@ -431,45 +505,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
       )}
 
       <div className="space-y-10">
-        {topLevelComments.map((comment) => {
-          const replies = repliesMap[comment.id] || [];
-          
-          return (
-            <div key={comment.id} className="space-y-4">
-              {renderCommentContent(comment, false)}
-              
-              {/* Replies */}
-              {replies.length > 0 && (
-                <div className="ml-6 sm:ml-16 mt-4 space-y-0 border-l-2 border-[#2F244F] pl-4 sm:pl-8">
-                  {replies.map(reply => renderCommentContent(reply, true))}
-                </div>
-              )}
-
-              {/* Reply Input */}
-              {replyingTo === comment.id && (
-                <div className="ml-6 sm:ml-16 mt-6 pl-4 sm:pl-8 border-l-2 border-transparent">
-                  <form onSubmit={(e) => handleSubmit(e, comment.id)} className="relative group">
-                    <textarea
-                      value={replyContent}
-                      onChange={(e) => setReplyContent(e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, comment.id)}
-                      placeholder={t.writeReply || "Написать ответ..."}
-                      className="w-full bg-[#2F244F]/30 border border-[#5C4B8B]/20 rounded-2xl p-4 pr-14 text-gray-200 focus:outline-none focus:border-[#C3A6E6]/50 focus:bg-[#2F244F]/50 transition-all resize-none min-h-[100px] text-sm font-medium"
-                      maxLength={1000}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!replyContent.trim() || isSubmitting}
-                      className="absolute bottom-4 right-4 p-3 bg-[#C3A6E6] text-[#2F244F] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B396D6] hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(195,166,230,0.3)] border border-white/20"
-                    >
-                      <Send size={16} />
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {renderCommentTree(null, 0)}
       </div>
 
       <ConfirmModal

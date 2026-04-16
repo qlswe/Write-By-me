@@ -16,7 +16,7 @@ interface UserData {
   trailblazerLevel?: number;
   signature?: string;
   mainCharacter?: string;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
   reputation?: number;
   xp?: number;
   photoURL?: string;
@@ -33,7 +33,7 @@ export function useUserData(initialLang: string) {
   const [trailblazerLevel, setTrailblazerLevel] = useState<number>(1);
   const [signature, setSignature] = useState<string>('');
   const [mainCharacter, setMainCharacter] = useState<string>('Stelle');
-  const [role, setRole] = useState<'admin' | 'moderator' | 'user'>('user');
+  const [role, setRole] = useState<'admin' | 'moderator' | 'user' | 'beta-tester'>('user');
   const [reputation, setReputation] = useState<number>(0);
   const [xp, setXp] = useState<number>(0);
   const [photoURL, setPhotoURL] = useState<string>('');

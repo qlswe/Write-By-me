@@ -19,7 +19,7 @@ interface HeaderProps {
   clearFavorites: () => void;
   lowPerfMode?: boolean;
   toggleLowPerfMode?: () => void;
-  role?: 'admin' | 'moderator' | 'user';
+  role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -73,10 +73,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-[#2F244F]/80 backdrop-blur-xl border-b border-[#3E3160] shadow-2xl">
+      <header className="sticky top-0 z-50 bg-[#15101e] border-b border-[#251c35] shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
           <h1 className="text-xl md:text-2xl font-black text-white tracking-tighter shrink-0 flex items-center gap-2">
-            <Zap className="text-[#C3A6E6] fill-[#C3A6E6]" size={24} />
+            <Zap className="text-[#ff4d4d] fill-[#ff4d4d]" size={24} />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
               {t.siteName}
             </span>
@@ -85,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Desktop Nav */}
           <nav 
             ref={navRef}
-            className="hidden lg:flex items-center gap-1 bg-[#3E3160]/40 backdrop-blur-md p-1 rounded-2xl border border-[#5C4B8B]/30 overflow-x-auto no-scrollbar scroll-smooth"
+            className="hidden lg:flex items-center gap-1 bg-[#251c35] p-1 rounded-2xl border border-[#3d2b4f]/30 overflow-x-auto no-scrollbar scroll-smooth"
           >
             {navItems.map(item => (
               <button
@@ -94,8 +94,8 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setSection(item.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                   section === item.id 
-                    ? 'text-[#2F244F] bg-[#C3A6E6] shadow-[0_0_20px_rgba(195,166,230,0.3)]' 
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-[#3E3160]/50'
+                    ? 'text-[#15101e] bg-[#ff4d4d] shadow-[0_0_20px_rgba(255,77,77,0.3)]' 
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-[#251c35]/50'
                 }`}
               >
                 <item.icon size={16} className="shrink-0" />
@@ -109,9 +109,9 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button 
                 onClick={() => setLangOpen(!langOpen)}
-                className="flex items-center gap-2 bg-[#3E3160]/60 border border-[#5C4B8B]/50 hover:border-[#C3A6E6] text-gray-200 px-3 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest group"
+                className="flex items-center gap-2 bg-[#251c35]/60 border border-[#3d2b4f]/50 hover:border-[#ff4d4d] text-gray-200 px-3 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest group"
               >
-                <Globe size={14} className="text-[#C3A6E6] group-hover:rotate-12 transition-transform" />
+                <Globe size={14} className="text-[#ff4d4d] group-hover:rotate-12 transition-transform" />
                 {lang}
               </button>
               
@@ -121,14 +121,13 @@ export const Header: React.FC<HeaderProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute right-0 mt-3 w-40 bg-[#2F244F] border border-[#3E3160] rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5"
+                    className="absolute right-0 mt-3 w-40 bg-[#15101e] border border-[#251c35] rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5"
                   >
-                    {(['ru', 'en', 'by', 'jp', 'de', 'fr', 'zh'] as Language[]).map(l => {
+                    {(['ru', 'en', 'by', 'de', 'fr', 'zh'] as Language[]).map(l => {
                       const langNames: Record<Language, string> = {
                         ru: 'Русский',
                         en: 'English',
                         by: 'Беларуская',
-                        jp: '日本語',
                         de: 'Deutsch',
                         fr: 'Français',
                         zh: '中文'
@@ -139,8 +138,8 @@ export const Header: React.FC<HeaderProps> = ({
                         onClick={() => { setLang(l); setLangOpen(false); }}
                         className={`w-full text-left px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                           lang === l 
-                            ? 'bg-[#C3A6E6] text-[#2F244F] shadow-lg shadow-[#C3A6E6]/20' 
-                            : 'text-gray-400 hover:bg-[#3E3160] hover:text-white'
+                            ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
+                            : 'text-gray-400 hover:bg-[#251c35] hover:text-white'
                         }`}
                       >
                         {langNames[l]}
@@ -157,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className={`hidden lg:flex items-center justify-center p-1.5 rounded-lg border transition-colors ${
                   lowPerfMode 
                     ? 'bg-yellow-400/10 border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/20' 
-                    : 'bg-[#2F244F] border-[#5C4B8B] text-gray-300 hover:text-white hover:border-[#C3A6E6]'
+                    : 'bg-[#15101e] border-[#3d2b4f] text-gray-300 hover:text-white hover:border-[#ff4d4d]'
                 }`}
                 title={lowPerfMode ? (t.lowPerfModeOn || "Performance Mode: ON") : (t.lowPerfModeOff || "Performance Mode: OFF")}
               >
@@ -170,7 +169,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="relative">
                   <button 
                     onClick={() => setProfileOpen(!profileOpen)}
-                    className="flex items-center gap-2 bg-[#2F244F] border border-[#5C4B8B] hover:border-[#C3A6E6] text-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-2 bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                   >
                     <img src={user.photoURL || ''} alt="Avatar" className="w-5 h-5 rounded-full" />
                     <span className="max-w-[100px] truncate">{user.displayName}</span>
@@ -182,11 +181,11 @@ export const Header: React.FC<HeaderProps> = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute right-0 mt-2 w-64 bg-[#3E3160] border border-[#5C4B8B] rounded-xl shadow-xl overflow-hidden z-50"
+                        className="absolute right-0 mt-2 w-64 bg-[#251c35] border border-[#3d2b4f] rounded-xl shadow-xl overflow-hidden z-50"
                       >
-                        <div className="p-4 border-b border-[#5C4B8B] bg-[#2F244F]">
+                        <div className="p-4 border-b border-[#3d2b4f] bg-[#15101e]">
                           <div className="flex items-center gap-3 mb-2">
-                            <img src={user.photoURL || ''} alt="Avatar" className="w-10 h-10 rounded-full border border-[#5C4B8B]" />
+                            <img src={user.photoURL || ''} alt="Avatar" className="w-10 h-10 rounded-full border border-[#3d2b4f]" />
                             <div>
                               <div className="font-bold text-white truncate">{user.displayName}</div>
                               <div className="text-xs text-gray-400 truncate">{user.email}</div>
@@ -202,9 +201,9 @@ export const Header: React.FC<HeaderProps> = ({
                         </div>
                         <div className="p-4">
                           <div className="flex items-start gap-2 text-sm text-gray-300 mb-4">
-                            <UserIcon size={16} className="text-[#C3A6E6] shrink-0 mt-0.5" />
+                            <UserIcon size={16} className="text-[#ff4d4d] shrink-0 mt-0.5" />
                             <div>
-                              <div className="font-bold text-white mb-1">{t.profileInfo || "Profile Information"}</div>
+                              <div className="font-bold text-white mb-1">{t.headerProfileInfo || "Profile Information"}</div>
                               <p className="text-xs text-gray-400 leading-relaxed">
                                 {t.profileDesc || "Your language preferences and favorite articles are stored here. They sync across your devices."}
                               </p>
@@ -213,15 +212,15 @@ export const Header: React.FC<HeaderProps> = ({
                           
                           <button 
                             onClick={() => { setProfileModalOpen(true); setProfileOpen(false); }}
-                            className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-[#5C4B8B] text-white border border-[#5C4B8B] hover:border-[#C3A6E6] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
+                            className="w-full flex items-center justify-center gap-2 bg-[#15101e] hover:bg-[#3d2b4f] text-white border border-[#3d2b4f] hover:border-[#ff4d4d] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
                           >
                             <UserIcon size={16} />
-                            {lang === 'ru' ? 'Настройки профиля' : 'Profile Settings'}
+                            {t.headerProfileSettings}
                           </button>
 
                           <button 
                             onClick={() => { setLogoutConfirmOpen(true); setProfileOpen(false); }}
-                            className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-[#5C4B8B] hover:border-red-500/50 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                            className="w-full flex items-center justify-center gap-2 bg-[#15101e] hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-[#3d2b4f] hover:border-red-500/50 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                           >
                             <LogOut size={16} />
                             {t.logout || "Logout"}
@@ -235,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={loginWithGoogle}
-                    className="group relative flex items-center gap-2 bg-white hover:bg-gray-100 text-[#2F244F] px-4 py-1.5 rounded-lg text-sm font-black transition-all shadow-lg hover:shadow-white/10 active:scale-95"
+                    className="group relative flex items-center gap-2 bg-white hover:bg-white/90 text-[#15101e] px-4 py-1.5 rounded-lg text-sm font-black transition-all shadow-lg hover:shadow-white/10 active:scale-95"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -250,7 +249,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <button 
-              className="lg:hidden p-2 text-gray-300 hover:text-[#C3A6E6]"
+              className="lg:hidden p-2 text-gray-300 hover:text-[#ff4d4d]"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
@@ -266,7 +265,7 @@ export const Header: React.FC<HeaderProps> = ({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="md:hidden fixed inset-0 z-40 bg-[#2F244F] pt-20 px-4 flex flex-col overflow-y-auto pb-6"
+            className="md:hidden fixed inset-0 z-40 bg-[#15101e] pt-20 px-4 flex flex-col overflow-y-auto pb-6"
           >
             <div className="flex flex-col gap-4 flex-1 shrink-0">
               {navItems.map(item => (
@@ -278,7 +277,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }}
                   className={`flex items-center gap-4 p-4 rounded-xl text-xl font-semibold ${
                     section === item.id 
-                      ? 'bg-[#5C4B8B] text-[#C3A6E6]' 
+                      ? 'bg-[#3d2b4f] text-[#ff4d4d]' 
                       : 'text-gray-300'
                   }`}
                 >
@@ -288,14 +287,14 @@ export const Header: React.FC<HeaderProps> = ({
               ))}
             </div>
             
-            <div className="p-6 border-t border-[#5C4B8B] mt-auto shrink-0 flex flex-col gap-4">
+            <div className="p-6 border-t border-[#3d2b4f] mt-auto shrink-0 flex flex-col gap-4">
               {toggleLowPerfMode && (
                 <button 
                   onClick={toggleLowPerfMode}
-                  className={`w-full flex items-center justify-center gap-2 bg-[#2F244F] border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors ${
+                  className={`w-full flex items-center justify-center gap-2 bg-[#15101e] border border-[#3d2b4f] px-4 py-3 rounded-xl font-bold transition-colors ${
                     lowPerfMode 
                       ? 'text-yellow-400 hover:bg-yellow-400/10' 
-                      : 'text-gray-300 hover:bg-[#3E3160]'
+                      : 'text-gray-300 hover:bg-[#251c35]'
                   }`}
                 >
                   {lowPerfMode ? <ZapOff size={20} /> : <Zap size={20} />}
@@ -305,8 +304,8 @@ export const Header: React.FC<HeaderProps> = ({
 
               {user ? (
                 <>
-                  <div className="flex items-center gap-3 bg-[#3E3160] p-3 rounded-xl border border-[#5C4B8B]">
-                    <img src={user.photoURL || ''} alt="Avatar" className="w-12 h-12 rounded-full border border-[#5C4B8B]" />
+                  <div className="flex items-center gap-3 bg-[#251c35] p-3 rounded-xl border border-[#3d2b4f]">
+                    <img src={user.photoURL || ''} alt="Avatar" className="w-12 h-12 rounded-full border border-[#3d2b4f]" />
                     <div>
                       <div className="text-white font-bold">{user.displayName}</div>
                       <div className="text-xs text-gray-400">{user.email}</div>
@@ -319,22 +318,22 @@ export const Header: React.FC<HeaderProps> = ({
                       )}
                     </div>
                   </div>
-                  <div className="text-sm text-gray-300 bg-[#3E3160]/50 p-3 rounded-xl border border-[#5C4B8B]/50">
-                    <div className="font-bold text-[#C3A6E6] mb-1">{t.profileInfo || "Profile Information"}</div>
+                  <div className="text-sm text-gray-300 bg-[#251c35]/50 p-3 rounded-xl border border-[#3d2b4f]/50">
+                    <div className="font-bold text-[#ff4d4d] mb-1">{t.headerProfileInfo || "Profile Information"}</div>
                     <p className="text-xs opacity-80">{t.profileDesc || "Your language preferences and favorite articles are stored here. They sync across your devices."}</p>
                   </div>
                   
                   <button 
                     onClick={() => { setProfileModalOpen(true); setMobileMenuOpen(false); }}
-                    className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-[#5C4B8B] text-white border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"
+                    className="w-full flex items-center justify-center gap-2 bg-[#15101e] hover:bg-[#3d2b4f] text-white border border-[#3d2b4f] px-4 py-3 rounded-xl font-bold transition-colors"
                   >
                     <UserIcon size={20} />
-                    {lang === 'ru' ? 'Настройки профиля' : 'Profile Settings'}
+                    {t.headerProfileSettings}
                   </button>
 
                   <button 
                     onClick={() => { setLogoutConfirmOpen(true); setMobileMenuOpen(false); }}
-                    className="w-full flex items-center justify-center gap-2 bg-[#2F244F] hover:bg-red-500/20 text-red-400 border border-[#5C4B8B] px-4 py-3 rounded-xl font-bold transition-colors"
+                    className="w-full flex items-center justify-center gap-2 bg-[#15101e] hover:bg-red-500/20 text-red-400 border border-[#3d2b4f] px-4 py-3 rounded-xl font-bold transition-colors"
                   >
                     <LogOut size={20} />
                     {t.logout || "Logout"}
@@ -344,7 +343,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <>
                   <button 
                     onClick={() => { loginWithGoogle(); setMobileMenuOpen(false); }}
-                    className="w-full flex items-center justify-center gap-3 bg-white text-[#2F244F] px-4 py-4 rounded-xl font-black transition-all active:scale-95 shadow-xl"
+                    className="w-full flex items-center justify-center gap-3 bg-white text-[#15101e] px-4 py-4 rounded-xl font-black transition-all active:scale-95 shadow-xl"
                   >
                     <svg className="w-6 h-6" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -357,10 +356,10 @@ export const Header: React.FC<HeaderProps> = ({
                   
                   <button 
                     onClick={() => { /* Open email login */ setMobileMenuOpen(false); }}
-                    className="w-full flex items-center justify-center gap-3 bg-[#2F244F] border border-[#5C4B8B] text-white px-4 py-4 rounded-xl font-black transition-all active:scale-95"
+                    className="w-full flex items-center justify-center gap-3 bg-[#15101e] border border-[#3d2b4f] text-white px-4 py-4 rounded-xl font-black transition-all active:scale-95"
                   >
-                    <Mail size={24} className="text-[#C3A6E6]" />
-                    {lang === 'ru' ? 'Вход через почту' : 'Login with Email'}
+                    <Mail size={24} className="text-[#ff4d4d]" />
+                    {t.headerLoginEmail}
                   </button>
                 </>
               )}

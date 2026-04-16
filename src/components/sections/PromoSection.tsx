@@ -42,19 +42,19 @@ const PromoCard = React.memo(({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: index * 0.1, duration: 0.4 }}
       whileHover={{ y: -5, transition: { duration: 0.2 } }}
-      className={`group relative bg-[#3E3160]/80 backdrop-blur-md p-8 rounded-[2rem] shadow-2xl border transition-all duration-300 overflow-hidden ${
-        promo.isActive === false ? 'border-red-500/20 opacity-60' : 'border-[#5C4B8B] hover:border-[#C3A6E6]/50'
+      className={`group relative bg-[#251c35] p-8 rounded-[2rem] shadow-2xl border transition-all duration-300 overflow-hidden ${
+        promo.isActive === false ? 'border-red-500/20 opacity-60' : 'border-[#3d2b4f] hover:border-[#ff4d4d]/50'
       }`}
     >
       {/* Decorative background elements */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#C3A6E6]/5 rounded-full blur-3xl group-hover:bg-[#C3A6E6]/10 transition-all duration-500" />
-      <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-[#5C4B8B]/10 rounded-full blur-3xl group-hover:bg-[#5C4B8B]/20 transition-all duration-500" />
+      <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#ff4d4d]/5 rounded-full blur-3xl group-hover:bg-[#ff4d4d]/10 transition-all duration-500" />
+      <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-[#3d2b4f]/10 rounded-full blur-3xl group-hover:bg-[#3d2b4f]/20 transition-all duration-500" />
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10 relative z-10">
         <div className="space-y-2">
           <div className="text-[10px] font-mono text-gray-500 uppercase tracking-[0.2em] font-black">{t.activationCode}</div>
           <div className="flex items-center gap-3">
-            <code className="text-2xl sm:text-3xl font-mono font-black text-[#C3A6E6] tracking-tighter drop-shadow-[0_0_100px_rgba(195,166,230,0.3)] break-all">
+            <code className="text-2xl sm:text-3xl font-mono font-black text-[#ff4d4d] tracking-tighter drop-shadow-[0_0_100px_rgba(255,77,77,0.3)] break-all">
               {promo.code}
             </code>
           </div>
@@ -65,14 +65,14 @@ const PromoCard = React.memo(({
             <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0">
               <button 
                 onClick={() => onEdit?.(promo)}
-                className="p-2.5 rounded-xl bg-[#2F244F] text-gray-400 hover:text-[#C3A6E6] hover:bg-[#C3A6E6]/10 transition-all border border-[#5C4B8B] hover:border-[#C3A6E6]/30"
+                className="p-2.5 rounded-xl bg-[#15101e] text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 transition-all border border-[#3d2b4f] hover:border-[#ff4d4d]/30"
                 title={t.editBtn}
               >
                 <Edit2 size={18} />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete(promo.id); }}
-                className="p-2.5 rounded-xl bg-[#2F244F] text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-[#5C4B8B] hover:border-red-400/30"
+                className="p-2.5 rounded-xl bg-[#15101e] text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-[#3d2b4f] hover:border-red-400/30"
                 title={t.deleteBtn}
               >
                 <Trash2 size={18} />
@@ -82,14 +82,14 @@ const PromoCard = React.memo(({
                   const text = `${promo.code} - ${promo.reward}\n${promo.description}`;
                   navigator.clipboard.writeText(text);
                 }}
-                className="p-2.5 rounded-xl bg-[#2F244F] text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-[#5C4B8B] hover:border-blue-400/30"
+                className="p-2.5 rounded-xl bg-[#15101e] text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-[#3d2b4f] hover:border-blue-400/30"
                 title={t.shareBtn}
               >
                 <Share2 size={18} />
               </button>
               <button 
                 onClick={() => handleCopy(promo.code)}
-                className="p-2.5 rounded-xl bg-[#2F244F] text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10 transition-all border border-[#5C4B8B] hover:border-yellow-400/30"
+                className="p-2.5 rounded-xl bg-[#15101e] text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10 transition-all border border-[#3d2b4f] hover:border-yellow-400/30"
                 title={t.copyCode}
               >
                 <Copy size={18} />
@@ -100,7 +100,7 @@ const PromoCard = React.memo(({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleCopy(promo.code)}
-              className="flex items-center gap-2 px-4 py-3 bg-[#2F244F] hover:bg-[#C3A6E6] text-[#C3A6E6] hover:text-[#2F244F] rounded-2xl transition-all duration-300 border border-[#5C4B8B] hover:border-white shadow-xl group-hover:shadow-[#C3A6E6]/20 shrink-0"
+              className="flex items-center gap-2 px-4 py-3 bg-[#15101e] hover:bg-[#ff4d4d] text-[#ff4d4d] hover:text-[#15101e] rounded-2xl transition-all duration-300 border border-[#3d2b4f] hover:border-white shadow-xl group-hover:shadow-[#ff4d4d]/20 shrink-0"
               title={t.copyToClipboard}
             >
               <Copy size={18} />
@@ -119,7 +119,7 @@ const PromoCard = React.memo(({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 + i * 0.05 }}
-              className="px-4 py-2 bg-[#2F244F]/60 rounded-xl text-sm font-bold text-white border border-[#5C4B8B]/50 hover:border-[#C3A6E6]/30 transition-colors"
+              className="px-4 py-2 bg-[#15101e]/60 rounded-xl text-sm font-bold text-white border border-[#3d2b4f]/50 hover:border-[#ff4d4d]/30 transition-colors"
             >
               {reward.trim()}
             </motion.span>
@@ -128,18 +128,18 @@ const PromoCard = React.memo(({
       </div>
 
       {/* Status Footer */}
-      <div className="mt-10 pt-6 border-t border-[#5C4B8B]/30 flex items-center justify-between relative z-10">
+      <div className="mt-10 pt-6 border-t border-[#3d2b4f]/30 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className={`w-2.5 h-2.5 rounded-full ${promo.isActive === false ? 'bg-red-500' : 'bg-green-500'}`} />
             {promo.isActive !== false && <div className="absolute inset-0 w-2.5 h-2.5 bg-green-500 rounded-full animate-ping opacity-75" />}
           </div>
           <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${promo.isActive === false ? 'text-red-500' : 'text-green-500'}`}>
-            {promo.isActive === false ? (lang === 'ru' ? 'Неактивен' : 'Inactive') : t.statusActive}
+            {promo.isActive === false ? t.statusInactive : t.statusActive}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest bg-[#2F244F]/40 px-3 py-1 rounded-full border border-[#5C4B8B]/30">
-          <span className="w-1 h-1 bg-[#C3A6E6] rounded-full" />
+        <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest bg-[#15101e]/40 px-3 py-1 rounded-full border border-[#3d2b4f]/30">
+          <span className="w-1 h-1 bg-[#ff4d4d] rounded-full" />
           v2.7 {t.verified}
         </div>
       </div>
@@ -174,12 +174,12 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-4xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
-            <div className="p-3 bg-[#C3A6E6]/10 rounded-2xl border border-[#C3A6E6]/20 shadow-[0_0_20px_rgba(195,166,230,0.1)]">
-              <Ticket className="text-[#C3A6E6]" size={24} />
+            <div className="p-3 bg-[#ff4d4d]/10 rounded-2xl border border-[#ff4d4d]/20 shadow-[0_0_20px_rgba(255,77,77,0.1)]">
+              <Ticket className="text-[#ff4d4d]" size={24} />
             </div>
             {t.navPromo}
           </h2>
-          <p className="text-[#C3A6E6]/60 font-medium tracking-wide uppercase text-xs mt-2 ml-1">
+          <p className="text-[#ff4d4d]/60 font-medium tracking-wide uppercase text-xs mt-2 ml-1">
             {t.promoCodesSubtitle}
           </p>
         </motion.div>
@@ -189,7 +189,7 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onOpenEditor}
-            className="flex items-center gap-3 bg-[#C3A6E6]/10 hover:bg-[#C3A6E6]/20 text-[#C3A6E6] px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-[#C3A6E6]/30 transition-all"
+            className="flex items-center gap-3 bg-[#ff4d4d]/10 hover:bg-[#ff4d4d]/20 text-[#ff4d4d] px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] border border-[#ff4d4d]/30 transition-all"
           >
             <Settings size={16} />
             {t.manageBtn || 'Management'}

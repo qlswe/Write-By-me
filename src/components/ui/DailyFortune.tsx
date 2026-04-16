@@ -8,21 +8,23 @@ interface DailyFortuneProps {
 }
 
 const fortunes = [
-  { text: { ru: "Сегодня отличный день для прыжков! Золото уже близко.", en: "Great day for warping! Gold is near.", by: "Выдатны дзень для скачкоў! Золата ўжо блізка.", jp: "跳躍に最適な日です！金は近いです。", de: "Ein toller Tag zum Warpen! Gold ist nah.", fr: "Excellente journée pour les sauts ! L'or est proche.", zh: "今天是跃迁的好日子！金光就在眼前。" }, type: 'good' },
-  { text: { ru: "Звезды советуют поберечь звездный нефрит.", en: "The stars advise saving your Stellar Jade.", by: "Зоркі раяць паберагчы зорны нефрыт.", jp: "星々は星玉を節約することをお勧めします。", de: "Die Sterne raten, deine Stellare Jade zu sparen.", fr: "Les étoiles conseillent d'économiser votre Jade Stellaire.", zh: "群星建议保留星琼。" }, type: 'bad' },
-  { text: { ru: "Вас ждет неожиданная встреча на Пенаконии.", en: "An unexpected encounter awaits you in Penacony.", by: "Вас чакае нечаканая сустрэча на Пенаконіі.", jp: "ピノコニーで予期せぬ出会いが待っています。", de: "Eine unerwartete Begegnung erwartet dich in Penacony.", fr: "Une rencontre inattendue vous attend à Penacony.", zh: "匹诺康尼有一次意外的相遇在等着你。" }, type: 'neutral' },
-  { text: { ru: "Пом-Пом приготовила для вас что-то особенное!", en: "Pom-Pom has prepared something special for you!", by: "Пом-Пом падрыхтавала для вас нешта асаблівае!", jp: "パムがあなたのために特別なものを用意しました！", de: "Pom-Pom hat etwas Besonderes für dich vorbereitet!", fr: "Pom-Pom a préparé quelque chose de spécial pour vous !", zh: "帕姆为你准备了特别的东西！" }, type: 'good' },
-  { text: { ru: "Осторожно, Элио предвидит небольшие трудности.", en: "Careful, Elio foresees minor difficulties.", by: "Асцярожна, Эліо прадбачыць невялікія цяжкасці.", jp: "注意、エリオは小さな困難を予見しています。", de: "Vorsicht, Elio sieht kleinere Schwierigkeiten voraus.", fr: "Attention, Elio prévoit des difficultés mineures.", zh: "小心，艾利欧预见到了小麻烦。" }, type: 'bad' },
-  { text: { ru: "Вас обманули. Это не предсказание, а просто текст.", en: "You've been scammed. This is not a fortune, just text.", by: "Вас падманулі. Гэта не прадказанне, а проста тэкст.", jp: "騙されましたね。これは占いではなく、ただのテキストです。", de: "Du wurdest betrogen. Das ist keine Vorhersage, nur Text.", fr: "Vous avez été arnaqué. Ce n'est pas une prédiction, juste du texte.", zh: "你被骗了。这不是预言，只是文字。" }, type: 'troll' },
-  { text: { ru: "Вы проиграете 50/50. Снова.", en: "You will lose the 50/50. Again.", by: "Вы прайграеце 50/50. Зноў.", jp: "50/50に負けます。またしても。", de: "Du wirst das 50/50 verlieren. Schon wieder.", fr: "Vous allez perdre le 50/50. Encore.", zh: "你会输掉50/50。又一次。" }, type: 'troll' },
-  { text: { ru: "Вам выпадет лега! Но это будет Яньцин.", en: "You'll get a 5-star! But it will be Yanqing.", by: "Вам выпадзе лега! Але гэта будзе Яньцын.", jp: "星5が出ます！でも彦卿です。", de: "Du bekommst einen 5-Sterne-Charakter! Aber es wird Yanqing sein.", fr: "Vous aurez un 5 étoiles ! Mais ce sera Yanqing.", zh: "你会抽到五星！但会是彦卿。" }, type: 'troll' },
-  { text: { ru: "Сегодня вы случайно потратите весь нефрит на стандартный баннер.", en: "Today you will accidentally spend all your jade on the standard banner.", by: "Сёння вы выпадкова выдаткуеце ўвесь нефрыт на стандартны банер.", jp: "今日、あなたは誤ってすべての星玉を恒常ガチャに使ってしまいます。", de: "Heute wirst du versehentlich deine gesamte Jade für das Standard-Banner ausgeben.", fr: "Aujourd'hui, vous dépenserez accidentellement tout votre jade sur la bannière standard.", zh: "今天你会不小心把所有星琼花在常驻池上。" }, type: 'troll' },
-  { text: { ru: "Звезды говорят: иди потрогай траву.", en: "The stars say: go touch some grass.", by: "Зоркі кажуць: ідзі пакратай траву.", jp: "星々は言っています：草に触れなさい。", de: "Die Sterne sagen: Geh nach draußen und fass Gras an.", fr: "Les étoiles disent : va toucher de l'herbe.", zh: "群星说：去摸摸草吧。" }, type: 'troll' }
+  { text: { ru: "Сегодня отличный день для прыжков! Золото уже близко.", en: "Great day for warping! Gold is near.", by: "Выдатны дзень для скачкоў! Золата ўжо блізка.", de: "Ein toller Tag zum Warpen! Gold ist nah.", fr: "Excellente journée pour les sauts ! L'or est proche.", zh: "今天是跃迁的好日子！金光就在眼前。" }, type: 'good' },
+  { text: { ru: "Звезды советуют поберечь звездный нефрит.", en: "The stars advise saving your Stellar Jade.", by: "Зоркі раяць паберагчы зорны нефрыт.", de: "Die Sterne raten, deine Stellare Jade zu sparen.", fr: "Les étoiles conseillent d'économiser votre Jade Stellaire.", zh: "群星建议保留星琼。" }, type: 'bad' },
+  { text: { ru: "Вас ждет неожиданная встреча на Пенаконии.", en: "An unexpected encounter awaits you in Penacony.", by: "Вас чакае нечаканая сустрэча на Пенаконіі.", de: "Eine unerwartete Begegnung erwartet dich in Penacony.", fr: "Une rencontre inattendue vous attend à Penacony.", zh: "匹诺康尼有一次意外的相遇在等着你。" }, type: 'neutral' },
+  { text: { ru: "Пом-Пом приготовила для вас что-то особенное!", en: "Pom-Pom has prepared something special for you!", by: "Пом-Пом падрыхтавала для вас нешта асаблівае!", de: "Pom-Pom hat etwas Besonderes für dich vorbereitet!", fr: "Pom-Pom a préparé quelque chose de spécial pour vous !", zh: "帕姆为你准备了特别的东西！" }, type: 'good' },
+  { text: { ru: "Осторожно, Элио предвидит небольшие трудности.", en: "Careful, Elio foresees minor difficulties.", by: "Асцярожна, Эліо прадбачыць невялікія цяжкасці.", de: "Vorsicht, Elio sieht kleinere Schwierigkeiten voraus.", fr: "Attention, Elio prévoit des difficultés mineures.", zh: "小心，艾利欧预见到了小麻烦。" }, type: 'bad' },
+  { text: { ru: "Вас обманули. Это не предсказание, а просто текст.", en: "You've been scammed. This is not a fortune, just text.", by: "Вас падманулі. Гэта не прадказанне, а проста тэкст.", de: "Du wurdest betrogen. Das ist keine Vorhersage, nur Text.", fr: "Vous avez été arnaqué. Ce n'est pas une prédiction, juste du texte.", zh: "你被骗了。这不是预言，只是文字。" }, type: 'troll' },
+  { text: { ru: "Вы проиграете 50/50. Снова.", en: "You will lose the 50/50. Again.", by: "Вы прайграеце 50/50. Зноў.", de: "Du wirst das 50/50 verlieren. Schon wieder.", fr: "Vous allez perdre le 50/50. Encore.", zh: "你会输掉50/50。又一次。" }, type: 'troll' },
+  { text: { ru: "Вам выпадет лега! Но это будет Яньцин.", en: "You'll get a 5-star! But it will be Yanqing.", by: "Вам выпадзе лега! Але гэта будзе Яньцын.", de: "Du bekommst einen 5-Sterne-Charakter! Aber es wird Yanqing sein.", fr: "Vous aurez un 5 étoiles ! Mais ce sera Yanqing.", zh: "你会抽到五星！但会是彦卿。" }, type: 'troll' },
+  { text: { ru: "Сегодня вы случайно потратите весь нефрит на стандартный баннер.", en: "Today you will accidentally spend all your jade on the standard banner.", by: "Сёння вы выпадкова выдаткуеце ўвесь нефрыт на стандартны банер.", de: "Heute wirst du versehentlich deine gesamte Jade für das Standard-Banner ausgeben.", fr: "Aujourd'hui, vous dépenserez accidentellement tout votre jade sur la bannière standard.", zh: "今天你会不小心把所有星琼花在常驻池上。" }, type: 'troll' },
+  { text: { ru: "Звезды говорят: иди потрогай траву.", en: "The stars say: go touch some grass.", by: "Зоркі кажуць: ідзі пакратай траву.", de: "Die Sterne sagen: Geh nach draußen und fass Gras an.", fr: "Les étoiles disent : va toucher de l'herbe.", zh: "群星说：去摸摸草吧。" }, type: 'troll' }
 ];
 
 export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
   const [fortuneIndex, setFortuneIndex] = useState<number | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
+
+  const t = translations[lang];
 
   const revealFortune = () => {
     if (fortuneIndex !== null || isRevealing) return;
@@ -35,19 +37,17 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
   };
 
   return (
-    <div className="bg-[#2F244F]/80 backdrop-blur-md border border-[#5C4B8B] rounded-2xl p-6 relative overflow-hidden group">
+    <div className="bg-[#15101e] border border-[#3d2b4f] rounded-2xl p-6 relative overflow-hidden group">
       {/* Background decoration */}
-      <div className="absolute -right-10 -top-10 w-40 h-40 bg-[#C3A6E6]/10 rounded-full blur-3xl group-hover:bg-[#C3A6E6]/20 transition-colors duration-700"></div>
+      <div className="absolute -right-10 -top-10 w-40 h-40 bg-[#ff4d4d]/10 rounded-full blur-3xl group-hover:bg-[#ff4d4d]/20 transition-colors duration-700"></div>
       
       <div className="relative z-10 flex flex-col items-center text-center">
-        <div className="w-12 h-12 bg-[#3E3160] rounded-full flex items-center justify-center mb-4 border border-[#5C4B8B] shadow-[0_0_15px_rgba(195,166,230,0.2)]">
-          <Ticket className="text-[#C3A6E6]" size={24} />
+        <div className="w-12 h-12 bg-[#251c35] rounded-full flex items-center justify-center mb-4 border border-[#3d2b4f] shadow-[0_0_15px_rgba(255,77,77,0.2)]">
+          <Ticket className="text-[#ff4d4d]" size={24} />
         </div>
         
         <h3 className="text-lg font-bold text-white mb-2">
-          {lang === 'ru' ? 'Астральное предсказание' : 
-           lang === 'en' ? 'Astral Fortune' : 
-           lang === 'by' ? 'Астральнае прадказанне' : 'Astral Fortune'}
+          {t.fortuneTitle}
         </h3>
         
         <div className="min-h-[60px] flex items-center justify-center w-full">
@@ -59,12 +59,10 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 onClick={revealFortune}
-                className="bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-6 py-2 rounded-full font-bold flex items-center gap-2 transition-colors"
+                className="bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-6 py-2 rounded-full font-bold flex items-center gap-2 transition-colors"
               >
                 <Sparkles size={16} />
-                {lang === 'ru' ? 'Узнать судьбу' : 
-                 lang === 'en' ? 'Reveal Fortune' : 
-                 lang === 'by' ? 'Даведацца лёс' : 'Reveal Fortune'}
+                {t.fortuneReveal}
               </motion.button>
             ) : isRevealing ? (
               <motion.div
@@ -72,13 +70,11 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-2 text-[#C3A6E6]"
+                className="flex items-center gap-2 text-[#ff4d4d]"
               >
                 <Star className="animate-spin" size={20} />
                 <span className="animate-pulse tracking-widest text-sm">
-                  {lang === 'ru' ? 'ЧТЕНИЕ ЗВЕЗД...' : 
-                   lang === 'en' ? 'READING STARS...' : 
-                   lang === 'by' ? 'ЧЫТАННЕ ЗОРАК...' : 'READING STARS...'}
+                  {t.fortuneReading}
                 </span>
               </motion.div>
             ) : (
@@ -86,7 +82,7 @@ export const DailyFortune: React.FC<DailyFortuneProps> = ({ lang }) => {
                 key="result"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-gray-300 italic"
+                className="text-white/80 italic"
               >
                 "{fortunes[fortuneIndex!].text[lang] || fortunes[fortuneIndex!].text['en']}"
               </motion.div>

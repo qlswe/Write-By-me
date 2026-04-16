@@ -42,7 +42,7 @@ export const SDKReportUI: React.FC<SDKReportUIProps> = ({ lang }) => {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 p-4 bg-[#C3A6E6] text-[#2F244F] rounded-full shadow-2xl border-2 border-white/20 hover:bg-white transition-colors"
+        className="fixed bottom-6 right-6 z-50 p-4 bg-[#ff4d4d] text-[#15101e] rounded-full shadow-2xl border-2 border-white/20 hover:bg-white transition-colors"
       >
         <MessageSquare size={20} />
       </motion.button>
@@ -50,15 +50,15 @@ export const SDKReportUI: React.FC<SDKReportUIProps> = ({ lang }) => {
       {/* Modal */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-md bg-[#3E3160] rounded-3xl border border-[#5C4B8B] shadow-2xl overflow-hidden"
+              className="w-full max-w-md bg-[#251c35] rounded-3xl border border-[#3d2b4f] shadow-2xl overflow-hidden"
             >
-              <div className="p-6 border-b border-[#5C4B8B]/30 flex items-center justify-between bg-[#2F244F]/50">
-                <h3 className="text-xl font-bold text-[#C3A6E6] flex items-center gap-2">
+              <div className="p-6 border-b border-[#3d2b4f]/30 flex items-center justify-between bg-[#15101e]/50">
+                <h3 className="text-xl font-bold text-[#ff4d4d] flex items-center gap-2">
                   <MessageSquare size={20} />
                   {t.feedbackTitle}
                 </h3>
@@ -77,8 +77,8 @@ export const SDKReportUI: React.FC<SDKReportUIProps> = ({ lang }) => {
                     onClick={() => setType('feedback')}
                     className={`flex-1 p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
                       type === 'feedback' 
-                        ? 'bg-[#C3A6E6]/20 border-[#C3A6E6] text-[#C3A6E6]' 
-                        : 'bg-[#2F244F]/50 border-[#5C4B8B]/30 text-gray-400 hover:border-[#C3A6E6]/30'
+                        ? 'bg-[#ff4d4d]/20 border-[#ff4d4d] text-[#ff4d4d]' 
+                        : 'bg-[#15101e]/50 border-[#3d2b4f]/30 text-gray-400 hover:border-[#ff4d4d]/30'
                     }`}
                   >
                     <MessageSquare size={24} />
@@ -90,7 +90,7 @@ export const SDKReportUI: React.FC<SDKReportUIProps> = ({ lang }) => {
                     className={`flex-1 p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
                       type === 'bug' 
                         ? 'bg-red-500/20 border-red-500 text-red-400' 
-                        : 'bg-[#2F244F]/50 border-[#5C4B8B]/30 text-gray-400 hover:border-red-500/30'
+                        : 'bg-[#15101e]/50 border-[#3d2b4f]/30 text-gray-400 hover:border-red-500/30'
                     }`}
                   >
                     <Bug size={24} />
@@ -105,7 +105,7 @@ export const SDKReportUI: React.FC<SDKReportUIProps> = ({ lang }) => {
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    className="w-full h-32 bg-[#2F244F]/50 border border-[#5C4B8B]/30 rounded-2xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#C3A6E6]/50 transition-colors resize-none"
+                    className="w-full h-32 bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-2xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d]/50 transition-colors resize-none"
                     placeholder="..."
                   />
                 </div>
@@ -116,7 +116,7 @@ export const SDKReportUI: React.FC<SDKReportUIProps> = ({ lang }) => {
                   className={`w-full py-4 rounded-2xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
                     isSuccess 
                       ? 'bg-green-500 text-white' 
-                      : 'bg-[#C3A6E6] text-[#2F244F] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed'
+                      : 'bg-[#ff4d4d] text-[#15101e] hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed'
                   }`}
                 >
                   {isSuccess ? (

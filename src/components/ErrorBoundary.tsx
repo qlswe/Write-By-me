@@ -49,8 +49,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen bg-[#2F244F] flex items-center justify-center p-4 text-center">
-          <div className="bg-[#3E3160] border border-red-500/50 p-8 rounded-2xl max-w-md w-full shadow-2xl">
+        <div className="min-h-screen bg-[#15101e] flex items-center justify-center p-4 text-center">
+          <div className="bg-[#251c35] border border-red-500/50 p-8 rounded-2xl max-w-md w-full shadow-2xl">
             <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
@@ -59,10 +59,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">Something went wrong</h1>
-            <p className="text-gray-300 mb-6">{errorMessage}</p>
+            <p className="text-white/80 mb-6">{errorMessage}</p>
             <button
               onClick={() => window.location.reload()}
-              className="bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-6 py-2 rounded-xl font-bold transition-colors w-full"
+              className="bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-6 py-2 rounded-xl font-bold transition-colors w-full"
             >
               Reload Application
             </button>

@@ -23,35 +23,35 @@ export const PromoBanner: React.FC<PromoBannerProps> = ({ showBanner, lang, setM
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="relative bg-[#3E3160] border border-[#5C4B8B] border-l-4 border-l-[#C3A6E6] rounded-xl p-5 mb-8 flex flex-col sm:flex-row items-center gap-4 shadow-lg"
+          className="relative bg-[#251c35] border border-[#3d2b4f] border-l-4 border-l-[#ff4d4d] rounded-xl p-5 mb-8 flex flex-col sm:flex-row items-center gap-4 shadow-lg"
         >
           <button 
             onClick={onClose}
-            className="absolute top-2 right-2 p-1 text-gray-400 hover:text-white transition-colors"
+            className="absolute top-2 right-2 p-1 text-white/60 hover:text-white transition-colors"
           >
             <X size={18} />
           </button>
-          <div className="text-[#C3A6E6] shrink-0">
+          <div className="text-[#ff4d4d] shrink-0">
             <Download size={32} />
           </div>
           <div className="flex-1 text-center sm:text-left">
             <h3 className="text-lg font-bold text-white mb-1">
               {t.bannerTitle || "Установите приложение"}
             </h3>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-white/80">
               {t.bannerDesc || "Доступно как Web-App (через меню браузера) и как отдельное Android-приложение."}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <button 
               onClick={() => setModalContent({ id: 'promo-install', title: t.installGuideTitle || "Как установить Web-App", content: t.installGuideContent || "<p>1. Откройте меню браузера.</p><p>2. Выберите «Добавить на главный экран».</p>" })}
-              className="bg-[#2F244F] border border-[#5C4B8B] hover:border-[#C3A6E6] text-gray-200 px-4 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors"
+              className="bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-white/90 px-4 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors"
             >
               {t.bannerBtnWeb || "Как установить Web-App"}
             </button>
             <a 
               href="https://wbm-static.my1.ru/app-debug-inst.apk" 
-              className="bg-[#C3A6E6] hover:bg-[#B094EB] text-[#2F244F] px-6 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors text-center"
+              className="bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-6 py-2.5 rounded-lg font-bold whitespace-nowrap transition-colors text-center"
             >
               {t.bannerBtnAndroid || "Скачать Android APK"}
             </a>
