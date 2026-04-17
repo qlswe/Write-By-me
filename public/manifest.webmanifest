@@ -1,0 +1,16 @@
+{
+  "name": "Министерство Ахахи",
+  "short_name": "Aha Ministry",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0d0b14",
+  "theme_color": "#ff4d4d",
+  "description": "Приложение Министерства Ахахи",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import { ShieldCheck, X, Activity, EyeOff, Lock, ShieldAlert, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase';
 
 // Global threat counter
 let globalThreatsBlocked = parseInt(localStorage.getItem('aha_threats_blocked') || '0', 10);
@@ -40,6 +42,7 @@ export const SafeHtml: React.FC<{ html: string; className?: string }> = ({ html,
 export const AhaSecurityBadge: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
+  const [globalHidden, setGlobalHidden] = useState(false);
   const [threatsBlocked, setThreatsBlocked] = useState(globalThreatsBlocked);
   const [isStrict, setIsStrict] = useState(localStorage.getItem('aha_strict_mode') === 'true');
 
@@ -51,7 +54,19 @@ export const AhaSecurityBadge: React.FC = () => {
 
     const handleThreat = () => setThreatsBlocked(globalThreatsBlocked);
     window.addEventListener('aha_threat_blocked', handleThreat);
-    return () => window.removeEventListener('aha_threat_blocked', handleThreat);
+    
+    // Listen for global admin hidden state
+    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setGlobalHidden(data.securityHidden || false);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('aha_threat_blocked', handleThreat);
+      unsub();
+    };
   }, []);
 
   const handleHide = () => {
@@ -76,7 +91,7 @@ export const AhaSecurityBadge: React.FC = () => {
     }
   };
 
-  if (isHidden) return null;
+  if (isHidden || globalHidden) return null;
 
   return (
     <div className="fixed bottom-4 left-4 z-50">

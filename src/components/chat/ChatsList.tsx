@@ -26,7 +26,7 @@ const ChatItem = React.memo(({
   chat: Chat, 
   currentUserId: string, 
   lang: Language, 
-  profile: { name: string, photo?: string } | null,
+  profile: { name: string, photo?: string, lastSeen?: string } | null,
   onSelect: (id: string, name: string, photo?: string) => void 
 }) => {
   const recipientId = chat.participants.find(p => p !== currentUserId);
@@ -37,6 +37,8 @@ const ChatItem = React.memo(({
   const isUnread = lastMsg > lastRead && chat.lastMessage;
 
   const t = translations[lang];
+  const isOnline = profile?.lastSeen ? (Date.now() - new Date(profile.lastSeen).getTime() < 3 * 60 * 1000) : false;
+
   return (
     <motion.button
       whileHover={{ scale: 1.02 }}
@@ -55,7 +57,9 @@ const ChatItem = React.memo(({
             <User className="w-6 h-6 text-[#ff4d4d]" />
           </div>
         )}
-        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-4 border-[#15101e] rounded-full shadow-lg" />
+        <div className={`absolute -bottom-1 -right-1 w-4 h-4 border-4 border-[#15101e] rounded-full shadow-lg ${
+          isOnline ? 'bg-green-500' : 'bg-gray-500 shadow-none'
+        }`} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
@@ -96,7 +100,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
   const t = translations[lang];
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [profiles, setProfiles] = useState<Record<string, { name: string, photo?: string }>>({});
+  const [profiles, setProfiles] = useState<Record<string, { name: string, photo?: string, lastSeen?: string }>>({});
   const [showNotifPrompt, setShowNotifPrompt] = useState(
     typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default'
   );
@@ -114,7 +118,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
     if (!user || chats.length === 0) return;
     
     const fetchProfiles = async () => {
-      const newProfiles: Record<string, { name: string, photo?: string }> = {};
+      const newProfiles: Record<string, { name: string, photo?: string, lastSeen?: string }> = {};
       let hasNew = false;
       
       for (const chat of chats) {
@@ -126,7 +130,8 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
             const data = snap.data();
             newProfiles[recipientId] = {
               name: data.displayName || 'User',
-              photo: data.photoURL
+              photo: data.photoURL,
+              lastSeen: data.lastSeen
             };
           } else {
             newProfiles[recipientId] = { name: 'User' };

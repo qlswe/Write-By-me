@@ -92,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
                 key={item.id}
                 data-active={section === item.id}
                 onClick={() => setSection(item.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black tracking-wide transition-all whitespace-nowrap ${
                   section === item.id 
                     ? 'text-[#15101e] bg-[#ff4d4d] shadow-[0_0_20px_rgba(255,77,77,0.3)]' 
                     : 'text-gray-400 hover:text-gray-200 hover:bg-[#251c35]/50'

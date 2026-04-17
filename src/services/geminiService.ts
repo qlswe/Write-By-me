@@ -25,7 +25,7 @@ IMPORTANT: Return ONLY valid JSON. No markdown formatting, no backticks, no expl
     const response = await fetch(url.toString(), { credentials: "omit" });
 
     if (!response.ok) {
-      throw new Error(`Pollinations API error: ${response.statusText}`);
+      throw new Error(`Custom Neural Engine API error: ${response.statusText}`);
     }
 
     const textResponse = await response.text();

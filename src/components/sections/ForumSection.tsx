@@ -449,11 +449,11 @@ Text to analyze:
                   </div>
                 )}
                 
-                <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${comment.isBot ? 'ml-auto' : ''}`}>
+                <div className={`flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity ${comment.isBot ? 'ml-auto' : ''}`}>
                   {user && !comment.isBot && !isReply && (
                     <button 
                       onClick={() => setReplyingToCommentId(comment.id)}
-                      className="p-1.5 text-white/40 hover:text-[#ff4d4d] transition-all rounded-md hover:bg-[#ff4d4d]/10 text-xs font-bold uppercase tracking-widest"
+                      className="p-1.5 text-white/40 hover:text-[#ff4d4d] transition-all rounded-md hover:bg-[#ff4d4d]/10 text-xs font-bold tracking-widest"
                     >
                       {(t as any).forumReply || "Reply"}
                     </button>
@@ -507,7 +507,7 @@ Text to analyze:
           className="flex items-center gap-2 text-white/40 hover:text-white transition-colors"
         >
           <ArrowLeft size={20} />
-          <span className="font-bold uppercase tracking-widest text-sm">{t.forumBack}</span>
+          <span className="font-bold tracking-widest text-sm">{t.forumBack}</span>
         </button>
 
         <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 sm:p-8">
@@ -664,7 +664,7 @@ Text to analyze:
     return (
       <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-black text-white uppercase tracking-widest">
+          <h2 className="text-2xl font-black text-white tracking-widest">
             {t.forumNewThread}
           </h2>
           <button onClick={() => setIsCreating(false)} className="text-white/40 hover:text-white">
@@ -688,14 +688,14 @@ Text to analyze:
           <div className="flex justify-end gap-4 pt-4">
             <button
               onClick={() => setIsCreating(false)}
-              className="px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors"
+              className="px-6 py-3 rounded-xl font-bold tracking-widest text-white/40 hover:text-white transition-colors"
             >
               {(t as any).forumCancel || t.profileCancel}
             </button>
             <button
               onClick={handleCreateThread}
               disabled={!newTitle.trim() || !newContent.trim() || isSubmitting}
-              className="bg-[#ff4d4d] text-[#15101e] px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 shadow-[0_0_20px_rgba(255,77,77,0.3)]"
+              className="bg-[#ff4d4d] text-[#15101e] px-8 py-3 rounded-xl font-black tracking-widest hover:bg-white transition-colors disabled:opacity-50 shadow-[0_0_20px_rgba(255,77,77,0.3)]"
             >
               {isSubmitting ? '...' : ((t as any).forumCreate || t.profileSave)}
             </button>
@@ -708,14 +708,14 @@ Text to analyze:
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-3xl font-black text-white uppercase tracking-widest flex items-center gap-3">
+        <h2 className="text-3xl font-black text-white tracking-widest flex items-center gap-3">
           <MessageSquare className="text-[#ff4d4d]" size={32} />
           {(t as any).forumTitle || "Forum"}
         </h2>
         {user && (
           <button
             onClick={() => setIsCreating(true)}
-            className="bg-[#ff4d4d] text-[#15101e] px-6 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-white transition-all active:scale-95 shadow-[0_0_20px_rgba(255,77,77,0.3)] flex items-center gap-2 justify-center"
+            className="bg-[#ff4d4d] text-[#15101e] px-6 py-3 rounded-xl font-black tracking-widest hover:bg-white transition-all active:scale-95 shadow-[0_0_20px_rgba(255,77,77,0.3)] flex items-center gap-2 justify-center"
           >
             <Plus size={20} />
             {(t as any).forumCreateThread || "Create Thread"}

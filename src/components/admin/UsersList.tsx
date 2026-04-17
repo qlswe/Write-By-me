@@ -25,16 +25,15 @@ const RoleSelector: React.FC<{
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onClose]);
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const roles = [
     { value: 'user', label: t.roleUser },
@@ -57,16 +56,16 @@ const RoleSelector: React.FC<{
       
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="w-full max-w-xs bg-[#15101e] border border-[#3d2b4f] rounded-3xl shadow-2xl overflow-hidden"
+              className="bg-[#15101e] border border-[#3d2b4f] rounded-3xl overflow-hidden w-full max-w-[280px] shadow-[0_0_50px_rgba(0,0,0,0.5)]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-4 py-3 border-b border-[#3d2b4f]/50 bg-[#0d0b14]/50">
-                <h4 className="text-white font-bold text-center uppercase tracking-widest text-xs">{t.selectRole || "Select role"}</h4>
+              <div className="px-4 py-4 border-b border-[#3d2b4f]/50 bg-[#0d0b14]/50">
+                <h4 className="text-white font-black text-center tracking-widest text-xs uppercase">{t.selectRole || "Select role"}</h4>
               </div>
               <div className="flex flex-col p-2 gap-1">
                 {roles.map((role) => (
@@ -76,7 +75,7 @@ const RoleSelector: React.FC<{
                       updateUserRole(user.uid, role.value as any);
                       onClose();
                     }}
-                    className={`w-full text-left px-4 py-3.5 text-sm font-black uppercase tracking-widest transition-colors rounded-xl ${
+                    className={`w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors rounded-xl ${
                       user.role === role.value 
                         ? 'bg-[#ff4d4d] text-[#15101e]' 
                         : 'text-white hover:bg-[#3d2b4f]/50'
@@ -133,7 +132,9 @@ const UserListItem = React.memo(({
             referrerPolicy="no-referrer"
           />
           <div className={`absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-4 border-[#0d0b14] ${
-            user.role === 'admin' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : user.role === 'moderator' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : user.role === 'beta-tester' ? 'bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'
+            user.lastSeen && (Date.now() - new Date(user.lastSeen).getTime() < 3 * 60 * 1000)
+              ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' 
+              : 'bg-gray-500 shadow-none'
           }`} />
         </button>
         <div className="min-w-0 flex-1">
@@ -184,11 +185,14 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [securityHidden, setSecurityHidden] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
       if (docSnap.exists()) {
-        setMaintenanceMode(docSnap.data().maintenanceMode || false);
+        const data = docSnap.data();
+        setMaintenanceMode(data.maintenanceMode || false);
+        setSecurityHidden(data.securityHidden || false);
       }
     });
     return () => unsub();
@@ -201,6 +205,16 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
       await setDoc(docRef, { maintenanceMode: !maintenanceMode }, { merge: true });
     } catch (error) {
       console.error("Error toggling maintenance mode:", error);
+    }
+  };
+
+  const toggleSecurityHidden = async () => {
+    if (!isAdmin) return;
+    try {
+      const docRef = doc(db, 'settings', 'general');
+      await setDoc(docRef, { securityHidden: !securityHidden }, { merge: true });
+    } catch (error) {
+      console.error("Error toggling security hidden:", error);
     }
   };
 
@@ -224,32 +238,62 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
   return (
     <div className="space-y-4 pb-32">
       {isAdmin && (
-        <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg mb-6">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl ${maintenanceMode ? 'bg-red-500/20 text-red-400' : 'bg-[#3d2b4f]/30 text-[#ff4d4d]'}`}>
-              <Settings size={20} />
+        <div className="grid grid-cols-1 gap-4 mb-6">
+          <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${maintenanceMode ? 'bg-red-500/20 text-red-400' : 'bg-[#3d2b4f]/30 text-[#ff4d4d]'}`}>
+                <Settings size={20} />
+              </div>
+              <div>
+                <h3 className="font-black text-white uppercase tracking-widest text-sm">
+                  {t.adminMaintenanceMode}
+                </h3>
+                <p className="text-xs text-gray-400">
+                  {(t as any).adminMaintenanceDesc || t.adminCloseSite}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-black text-white uppercase tracking-widest text-sm">
-                {t.adminMaintenanceMode}
-              </h3>
-              <p className="text-xs text-gray-400">
-                {(t as any).adminMaintenanceDesc || t.adminCloseSite}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={toggleMaintenanceMode}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-              maintenanceMode ? 'bg-red-500' : 'bg-[#0d0b14]'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                maintenanceMode ? 'translate-x-6' : 'translate-x-1'
+            <button
+              onClick={toggleMaintenanceMode}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                maintenanceMode ? 'bg-red-500' : 'bg-[#0d0b14]'
               }`}
-            />
-          </button>
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  maintenanceMode ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${securityHidden ? 'bg-gray-500/20 text-gray-400' : 'bg-green-500/20 text-green-400'}`}>
+                <Shield size={20} />
+              </div>
+              <div>
+                <h3 className="font-black text-white uppercase tracking-widest text-sm">
+                  Hide Aha Security
+                </h3>
+                <p className="text-xs text-gray-400">
+                  Globally hide the Aha Security badge for all users
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleSecurityHidden}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                securityHidden ? 'bg-red-500' : 'bg-[#0d0b14]'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  securityHidden ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       )}
 

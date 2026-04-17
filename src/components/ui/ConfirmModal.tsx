@@ -49,7 +49,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <div className={`p-4 rounded-2xl ${isDestructive ? 'bg-[#ff4d4d]/10 text-[#ff4d4d] border border-[#ff4d4d]/20' : 'bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20'} ${fullScreen ? 'p-8 mb-6' : ''}`}>
               <AlertTriangle size={fullScreen ? 80 : 32} />
             </div>
-            <h3 className={`font-black text-white uppercase tracking-tighter ${fullScreen ? 'text-5xl md:text-7xl' : 'text-2xl'}`}>{title}</h3>
+            <h3 className={`font-black text-white tracking-tighter ${fullScreen ? 'text-5xl md:text-7xl' : 'text-2xl'}`}>{title}</h3>
           </div>
           
           <p className={`text-white/60 font-medium leading-relaxed ${fullScreen ? 'text-xl md:text-3xl mb-16 max-w-2xl' : 'mb-8 text-sm'}`}>
@@ -59,7 +59,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <div className={`flex gap-4 justify-end ${fullScreen ? 'w-full max-w-md flex-col-reverse sm:flex-row sm:justify-center gap-6' : ''}`}>
             <button
               onClick={onClose}
-              className={`rounded-2xl font-black uppercase tracking-widest text-white/40 bg-[#15101e]/50 hover:bg-[#15101e] hover:text-white transition-all border border-[#3d2b4f]/20 ${fullScreen ? 'px-10 py-5 text-xl flex-1' : 'px-6 py-3 text-[10px]'}`}
+              className={`rounded-2xl font-black tracking-widest text-white/40 bg-[#15101e]/50 hover:bg-[#15101e] hover:text-white transition-all border border-[#3d2b4f]/20 ${fullScreen ? 'px-10 py-5 text-xl flex-1' : 'px-6 py-3 text-[10px]'}`}
             >
               {cancelText}
             </button>
@@ -68,7 +68,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 onConfirm();
                 onClose();
               }}
-              className={`rounded-2xl font-black uppercase tracking-widest transition-all shadow-lg ${
+              className={`rounded-2xl font-black tracking-widest transition-all shadow-lg ${
                 isDestructive 
                   ? 'bg-[#ff4d4d] text-[#15101e] hover:bg-white hover:text-[#15101e] shadow-[0_0_20px_rgba(255,77,77,0.3)]' 
                   : 'bg-[#8B5CF6] text-white hover:bg-[#7C3AED] shadow-[#8B5CF6]/20'

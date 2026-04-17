@@ -228,11 +228,11 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
           >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
               <div>
-                <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tighter uppercase mb-2 flex items-center gap-4">
+                <h2 className="text-3xl font-black text-white tracking-widest flex items-center gap-3 mb-2">
                   <BookOpen className="text-[#ff4d4d]" size={32} />
                   {t.navTheories}
                 </h2>
-                <p className="text-[#ff4d4d]/60 font-medium tracking-wide uppercase text-xs">
+                <p className="text-[#ff4d4d]/60 font-medium tracking-wide text-xs">
                   {t.theoriesSubTitle}
                 </p>
               </div>

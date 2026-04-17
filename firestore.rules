@@ -72,7 +72,7 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'displayName', 'email', 'photoURL', 'favorites', 'lang', 'lowPerfMode', 'role', 'createdAt', 'lastLogin']) &&
+      return hasOnlyAllowedFields(['uid', 'displayName', 'email', 'photoURL', 'favorites', 'lang', 'lowPerfMode', 'role', 'createdAt', 'lastLogin', 'lastSeen']) &&
              (!('uid' in data) || data.uid is string) &&
              (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
              (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
@@ -80,9 +80,10 @@ service cloud.firestore {
              (!('favorites' in data) || (data.favorites is list && data.favorites.size() <= 1000)) &&
              (!('lang' in data) || (data.lang is string && data.lang.size() <= 10)) &&
              (!('lowPerfMode' in data) || data.lowPerfMode is bool) &&
-             (!('role' in data) || (data.role is string && data.role in ['admin', 'moderator', 'user'])) &&
+             (!('role' in data) || (data.role is string && data.role in ['admin', 'moderator', 'beta-tester', 'user'])) &&
              (!('createdAt' in data) || data.createdAt is string) &&
-             (!('lastLogin' in data) || data.lastLogin is string);
+             (!('lastLogin' in data) || data.lastLogin is string) &&
+             (!('lastSeen' in data) || data.lastSeen is string);
     }
 
     function isValidChat(data) {

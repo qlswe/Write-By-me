@@ -223,7 +223,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   <User className="w-5 h-5 text-[#ff4d4d]" />
                 </div>
               )}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#0d0b14] rounded-full shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+              <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-[#0d0b14] rounded-full ${
+                isUserOnline() 
+                  ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' 
+                  : 'bg-gray-500'
+              }`} />
             </div>
             <div>
               <span className="font-black text-white text-sm sm:text-base uppercase tracking-wider block leading-none mb-1">{recipientName}</span>
@@ -415,11 +419,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                 {msg.images && msg.images.length > 0 ? (
                                   <div className={`grid ${msg.images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
                                     {msg.images.map((img, i) => (
-                                      <img key={i} src={img} alt="Sent image" className="max-w-full rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setFullscreenImage(img)} />
+                                      <img key={i} src={img} alt="Sent image" className="max-w-full rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFullscreenImage(img); }} />
                                     ))}
                                   </div>
                                 ) : (
-                                  <img src={msg.text} alt="Sent image" className="max-w-[200px] sm:max-w-[250px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={() => setFullscreenImage(msg.text)} />
+                                  <img src={msg.text} alt="Sent image" className="max-w-[200px] sm:max-w-[250px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFullscreenImage(msg.text); }} />
                                 )}
                                 {msg.text && msg.images && msg.images.length > 0 && (
                                   <p className="break-words leading-relaxed mt-1">{msg.text}</p>

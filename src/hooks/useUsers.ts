@@ -11,6 +11,7 @@ export interface UserData {
   role: 'admin' | 'moderator' | 'user' | 'beta-tester';
   createdAt: string;
   lastLogin: string;
+  lastSeen?: string;
 }
 
 export function useUsers() {

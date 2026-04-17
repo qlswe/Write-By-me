@@ -85,8 +85,13 @@ export function useAuth() {
 
     const updateLastSeen = async () => {
       try {
+        const now = new Date().toISOString();
         await setDoc(doc(db, 'public_profiles', user.uid), {
-          lastSeen: new Date().toISOString()
+          lastSeen: now
+        }, { merge: true });
+        
+        await setDoc(doc(db, 'users', user.uid), {
+          lastSeen: now
         }, { merge: true });
       } catch (e) {
         console.error("Error updating last seen:", e);

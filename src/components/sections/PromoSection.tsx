@@ -173,8 +173,8 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-4xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
-            <div className="p-3 bg-[#ff4d4d]/10 rounded-2xl border border-[#ff4d4d]/20 shadow-[0_0_20px_rgba(255,77,77,0.1)]">
+          <h2 className="text-3xl font-black text-white tracking-widest flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#ff4d4d]/10 flex items-center justify-center border border-[#ff4d4d]/20 shadow-[0_0_20px_rgba(255,77,77,0.1)]">
               <Ticket className="text-[#ff4d4d]" size={24} />
             </div>
             {t.navPromo}

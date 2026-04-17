@@ -371,7 +371,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">AI Engine:</span>
-                        <span className="text-yellow-400">Pollinations API</span>
+                        <span className="text-yellow-400">Custom Neural Engine</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Local Time:</span>

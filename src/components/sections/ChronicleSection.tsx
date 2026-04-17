@@ -167,13 +167,13 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
     <div className="bg-[#15101e] rounded-[3rem] p-8 sm:p-12 border border-[#3d2b4f]/30 shadow-[0_0_50px_rgba(0,0,0,0.3)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-16">
         <div>
-          <h2 className="text-5xl font-black text-white uppercase tracking-tighter italic flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#ff4d4d]/10 flex items-center justify-center border border-[#ff4d4d]/20">
-              <Calendar className="text-[#ff4d4d]" size={32} />
+          <h2 className="text-3xl font-black text-white tracking-widest flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#ff4d4d]/10 flex items-center justify-center border border-[#ff4d4d]/20">
+              <Calendar className="text-[#ff4d4d]" size={24} />
             </div>
             {t.navChronicle}
           </h2>
-          <p className="text-white/60 text-sm mt-3 font-medium tracking-wide ml-1">{t.chronicleDesc}</p>
+          <p className="text-white/60 text-sm mt-3 font-medium tracking-wide">{t.chronicleDesc}</p>
         </div>
         {isModerator && (
           <button 
