@@ -191,7 +191,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
           >
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
               <div>
-                <h2 className="text-3xl font-black text-white tracking-widest flex items-center gap-3 mb-2">
+                <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4 mb-2">
                   <Newspaper className="text-[#ff4d4d]" size={32} />
                   {t.navBlog}
                 </h2>

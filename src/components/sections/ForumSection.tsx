@@ -708,7 +708,7 @@ Text to analyze:
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-3xl font-black text-white tracking-widest flex items-center gap-3">
+        <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
           <MessageSquare className="text-[#ff4d4d]" size={32} />
           {(t as any).forumTitle || "Forum"}
         </h2>

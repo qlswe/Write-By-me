@@ -36,111 +36,147 @@ const PromoCard = React.memo(({
   onEdit?: (promo: any) => void, 
   onDelete: (id: string) => void 
 }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+
+  const onCopyClick = () => {
+    handleCopy(promo.code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      initial={{ opacity: 0, y: 30, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ delay: index * 0.1, duration: 0.4 }}
-      whileHover={{ y: -5, transition: { duration: 0.2 } }}
-      className={`group relative bg-[#251c35] p-8 rounded-[2rem] shadow-2xl border transition-all duration-300 overflow-hidden ${
-        promo.isActive === false ? 'border-red-500/20 opacity-60' : 'border-[#3d2b4f] hover:border-[#ff4d4d]/50'
+      transition={{ delay: index * 0.1, duration: 0.5, type: 'spring', stiffness: 100 }}
+      whileHover={{ y: -8, scale: 1.02 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      className={`group relative bg-gradient-to-br from-[#2a1f3d] to-[#1c1528] p-8 rounded-[2rem] shadow-2xl border transition-all duration-300 overflow-hidden ${
+        promo.isActive === false ? 'border-red-500/20 opacity-60 grayscale-[0.3]' : 'border-[#3d2b4f] hover:border-[#ff4d4d]'
       }`}
     >
-      {/* Decorative background elements */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#ff4d4d]/5 rounded-full blur-3xl group-hover:bg-[#ff4d4d]/10 transition-all duration-500" />
-      <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-[#3d2b4f]/10 rounded-full blur-3xl group-hover:bg-[#3d2b4f]/20 transition-all duration-500" />
+      {/* Decorative MD3 Ripple Background elements */}
+      <motion.div 
+        animate={{ 
+          scale: isHovered ? [1, 1.2, 1.1] : 1,
+          opacity: isHovered ? 0.8 : 0.5
+        }}
+        transition={{ duration: 1.5, repeat: isHovered ? Infinity : 0, repeatType: 'reverse' }}
+        className="absolute -top-16 -right-16 w-64 h-64 bg-[#ff4d4d]/10 rounded-full blur-[60px]" 
+      />
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10 relative z-10">
-        <div className="space-y-2">
-          <div className="text-[10px] font-mono text-gray-500 uppercase tracking-[0.2em] font-black">{t.activationCode}</div>
+        <div className="space-y-4">
+          <motion.div 
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 + index * 0.1 }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#15101e]/60 border border-[#3d2b4f]/50 text-[10px] font-mono text-[#ff4d4d] uppercase tracking-[0.2em] font-black"
+          >
+            <Ticket size={12} />
+            {t.activationCode}
+          </motion.div>
           <div className="flex items-center gap-3">
-            <code className="text-2xl sm:text-3xl font-mono font-black text-[#ff4d4d] tracking-tighter drop-shadow-[0_0_100px_rgba(255,77,77,0.3)] break-all">
+            <code className="text-3xl sm:text-4xl font-mono font-black text-white tracking-tighter drop-shadow-[0_0_15px_rgba(255,77,77,0.4)] break-all relative group-hover:text-[#ff4d4d] transition-colors">
               {promo.code}
             </code>
           </div>
         </div>
         
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center gap-4 shrink-0 mt-4 sm:mt-0">
           {isAdmin ? (
-            <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2"
+            >
               <button 
                 onClick={() => onEdit?.(promo)}
-                className="p-2.5 rounded-xl bg-[#15101e] text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 transition-all border border-[#3d2b4f] hover:border-[#ff4d4d]/30"
+                className="p-3 rounded-2xl bg-black/40 text-gray-400 hover:text-white hover:bg-[#3d2b4f] transition-all border border-white/5 hover:border-white/20 hover:scale-110 active:scale-95 shadow-lg"
                 title={t.editBtn}
               >
                 <Edit2 size={18} />
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); onDelete(promo.id); }}
-                className="p-2.5 rounded-xl bg-[#15101e] text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-[#3d2b4f] hover:border-red-400/30"
+                className="p-3 rounded-2xl bg-black/40 text-gray-400 hover:text-red-400 hover:bg-red-400/20 transition-all border border-white/5 hover:border-red-400/30 hover:scale-110 active:scale-95 shadow-lg"
                 title={t.deleteBtn}
               >
                 <Trash2 size={18} />
               </button>
               <button 
-                onClick={() => {
-                  const text = `${promo.code} - ${promo.reward}\n${promo.description}`;
-                  navigator.clipboard.writeText(text);
-                }}
-                className="p-2.5 rounded-xl bg-[#15101e] text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-[#3d2b4f] hover:border-blue-400/30"
-                title={t.shareBtn}
-              >
-                <Share2 size={18} />
-              </button>
-              <button 
-                onClick={() => handleCopy(promo.code)}
-                className="p-2.5 rounded-xl bg-[#15101e] text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10 transition-all border border-[#3d2b4f] hover:border-yellow-400/30"
+                onClick={onCopyClick}
+                className="p-3 rounded-2xl bg-[#ff4d4d] text-[#15101e] hover:bg-white hover:text-[#15101e] transition-all border border-white/20 hover:scale-110 active:scale-95 shadow-[0_0_20px_rgba(255,77,77,0.3)]"
                 title={t.copyCode}
               >
                 <Copy size={18} />
               </button>
-            </div>
+            </motion.div>
           ) : (
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => handleCopy(promo.code)}
-              className="flex items-center gap-2 px-4 py-3 bg-[#15101e] hover:bg-[#ff4d4d] text-[#ff4d4d] hover:text-[#15101e] rounded-2xl transition-all duration-300 border border-[#3d2b4f] hover:border-white shadow-xl group-hover:shadow-[#ff4d4d]/20 shrink-0"
+              onClick={onCopyClick}
+              className={`flex items-center gap-2 px-6 py-4 rounded-2xl transition-all duration-300 border shadow-2xl shrink-0 ${
+                copied 
+                  ? 'bg-green-500 text-[#15101e] border-white' 
+                  : 'bg-[#ff4d4d] text-[#15101e] border-white/20 hover:bg-white hover:text-[#15101e]'
+              }`}
               title={t.copyToClipboard}
             >
-              <Copy size={18} />
-              <span className="text-xs font-bold uppercase tracking-wider">{t.copyToClipboard}</span>
+              <Copy size={20} />
+              <span className="text-sm font-black uppercase tracking-widest leading-none">
+                {copied ? 'Скопировано! / Copied!' : t.copyToClipboard}
+              </span>
             </motion.button>
           )}
         </div>
       </div>
 
-      <div className="space-y-4 relative z-10">
+      <div className="space-y-4 relative z-10 mb-8">
         <div className="text-[10px] font-mono text-gray-500 uppercase tracking-[0.2em] font-black">{t.rewards}</div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {(typeof promo.rewards === 'string' ? promo.rewards : (promo.rewards?.[lang] || promo.rewards?.['en'] || '')).split(',').map((reward: string, i: number) => (
             <motion.span 
               key={i} 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 + i * 0.05 }}
-              className="px-4 py-2 bg-[#15101e]/60 rounded-xl text-sm font-bold text-white border border-[#3d2b4f]/50 hover:border-[#ff4d4d]/30 transition-colors"
+              transition={{ delay: index * 0.1 + i * 0.1, type: "spring" }}
+              whileHover={{ scale: 1.05, y: -2 }}
+              className="px-5 py-3 bg-[#15101e]/80 rounded-2xl text-sm font-black text-white/90 border border-t-white/10 border-[#3d2b4f] hover:border-[#ff4d4d] shadow-lg transition-colors cursor-default"
             >
               {reward.trim()}
             </motion.span>
           ))}
         </div>
+        
+        {promo.description && (
+           <motion.div
+             initial={{ opacity: 0 }}
+             animate={{ opacity: 1 }}
+             className="text-white/60 text-sm mt-4 italic font-medium"
+           >
+             {promo.description}
+           </motion.div>
+        )}
       </div>
 
       {/* Status Footer */}
-      <div className="mt-10 pt-6 border-t border-[#3d2b4f]/30 flex items-center justify-between relative z-10">
+      <div className="mt-8 pt-6 border-t border-[#3d2b4f]/50 flex justify-between items-center relative z-10 bg-[#15101e]/30 -mx-8 -mb-8 px-8 pb-8 rounded-b-[2rem]">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className={`w-2.5 h-2.5 rounded-full ${promo.isActive === false ? 'bg-red-500' : 'bg-green-500'}`} />
-            {promo.isActive !== false && <div className="absolute inset-0 w-2.5 h-2.5 bg-green-500 rounded-full animate-ping opacity-75" />}
+          <div className="relative flex items-center justify-center w-4 h-4">
+            <div className={`absolute w-3 h-3 rounded-full ${promo.isActive === false ? 'bg-red-500' : 'bg-green-500'}`} />
+            {promo.isActive !== false && <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-50" />}
           </div>
-          <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${promo.isActive === false ? 'text-red-500' : 'text-green-500'}`}>
+          <span className={`text-xs font-black uppercase tracking-[0.2em] ${promo.isActive === false ? 'text-red-500' : 'text-green-500'}`}>
             {promo.isActive === false ? t.statusInactive : t.statusActive}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest bg-[#15101e]/40 px-3 py-1 rounded-full border border-[#3d2b4f]/30">
-          <span className="w-1 h-1 bg-[#ff4d4d] rounded-full" />
-          v2.7 {t.verified}
+        <div className="flex items-center gap-2 text-[10px] font-mono text-gray-400 uppercase tracking-widest bg-black/40 px-4 py-2 rounded-xl border border-white/5 shadow-inner">
+          <span className="w-1.5 h-1.5 bg-[#ff4d4d] rounded-full" />
+          {t.verified} ★
         </div>
       </div>
     </motion.div>
@@ -173,7 +209,7 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-3xl font-black text-white tracking-widest flex items-center gap-3">
+          <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-[#ff4d4d]/10 flex items-center justify-center border border-[#ff4d4d]/20 shadow-[0_0_20px_rgba(255,77,77,0.1)]">
               <Ticket className="text-[#ff4d4d]" size={24} />
             </div>

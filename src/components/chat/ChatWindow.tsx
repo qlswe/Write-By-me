@@ -465,6 +465,35 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   });
                 })()
               )}
+              {/* Typing Indicator as a message bubble */}
+              <AnimatePresence>
+                {isRecipientTyping && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="flex justify-start mb-2"
+                  >
+                    <div className="bg-[#15101e]/80 border border-[#3d2b4f]/50 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-3 shadow-lg">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden shrink-0 border border-[#ff4d4d]/30">
+                        {recipientPhoto ? (
+                          <img src={recipientPhoto} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          <div className="w-full h-full bg-[#ff4d4d]/20 flex items-center justify-center">
+                            <User className="w-3 h-3 sm:w-4 sm:h-4 text-[#ff4d4d]" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-1.5 items-center px-1">
+                        <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-1.5 h-1.5 bg-[#ff4d4d]/80 rounded-full" />
+                        <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} className="w-1.5 h-1.5 bg-[#ff4d4d]/80 rounded-full" />
+                        <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} className="w-1.5 h-1.5 bg-[#ff4d4d]/80 rounded-full" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
               <div ref={messagesEndRef} />
             </div>
 
@@ -565,24 +594,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                 )}
               </AnimatePresence>
 
-              {/* Typing Indicator */}
-              <AnimatePresence>
-                {isRecipientTyping && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute -top-8 left-6 bg-[#251c35] px-3 py-1.5 rounded-t-xl text-xs text-gray-300 flex items-center gap-2"
-                  >
-                    <span className="font-bold">{recipientName}</span> {t.isTyping || "is typing"}
-                    <span className="flex gap-0.5">
-                      <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}>.</motion.span>
-                      <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}>.</motion.span>
-                      <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}>.</motion.span>
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+
 
               <AnimatePresence>
                 {selectedImages.length > 0 && (
@@ -646,30 +658,32 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     </AnimatePresence>
     
     {/* Fullscreen Image Modal */}
-    <AnimatePresence>
-      {fullscreenImage && createPortal(
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setFullscreenImage(null)}
-        >
-          <button className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-white/20 text-white rounded-full transition-colors">
-            <X size={24} />
-          </button>
-          <motion.img
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.9 }}
-            src={fullscreenImage}
-            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </motion.div>,
-        document.body
-      )}
-    </AnimatePresence>
+    {createPortal(
+      <AnimatePresence>
+        {fullscreenImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4"
+            onClick={() => setFullscreenImage(null)}
+          >
+            <button className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-white/20 text-white rounded-full transition-colors">
+              <X size={24} />
+            </button>
+            <motion.img
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              src={fullscreenImage}
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>,
+      document.body
+    )}
     </>
   );
 };

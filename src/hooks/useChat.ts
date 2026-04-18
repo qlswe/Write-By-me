@@ -86,7 +86,8 @@ export function useChat(otherUserId?: string) {
         return {
           ...data,
           id: doc.id,
-          text: decrypt(data.text)
+          text: decrypt(data.text),
+          images: data.images ? data.images.map((img: string) => decrypt(img)) : undefined
         } as Message;
       });
       setMessages(messagesData);
@@ -122,7 +123,7 @@ export function useChat(otherUserId?: string) {
         type
       };
       if (replyTo) messageData.replyTo = replyTo;
-      if (images && images.length > 0) messageData.images = images;
+      if (images && images.length > 0) messageData.images = images.map(img => encrypt(img));
 
       await addDoc(messagesRef, messageData);
 

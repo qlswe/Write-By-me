@@ -98,17 +98,20 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
         {post.title[lang] || post.title['en']}
       </h3>
       
-      <p className="text-white/40 text-xs sm:text-sm line-clamp-2 mb-6 font-medium leading-relaxed group-hover:text-white/80 transition-colors">
-        {post.summary[lang] || post.summary['en']}
-      </p>
+      <div className="relative mb-6 group-hover:text-white/80 transition-colors">
+        <p className="text-white/40 text-xs sm:text-sm line-clamp-3 font-medium leading-relaxed">
+          {post.summary[lang] || post.summary['en']}
+        </p>
+      </div>
 
       <div className="flex flex-col gap-4 mt-auto">
         <div className="flex items-center justify-between">
-
-          
-          <div className="flex items-center gap-2 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-x-0 sm:translate-x-[-10px] sm:group-hover:translate-x-0">
-            {t.readArticle} <ArrowRight size={12} />
-          </div>
+          <button 
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="flex items-center gap-2 text-[#15101e] bg-[#ff4d4d] hover:bg-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-white/20 active:scale-95"
+          >
+            {t.readArticle || "Read More"} <ArrowRight size={14} />
+          </button>
         </div>
       </div>
     </motion.div>

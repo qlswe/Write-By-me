@@ -111,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setLangOpen(!langOpen)}
                 className="flex items-center gap-2 bg-[#251c35]/60 border border-[#3d2b4f]/50 hover:border-[#ff4d4d] text-gray-200 px-3 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest group"
               >
-                <Globe size={14} className="text-[#ff4d4d] group-hover:rotate-12 transition-transform" />
+                <Globe size={14} className="text-[#ff4d4d] transition-transform" />
                 {lang}
               </button>
               

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Terminal, X, Settings, Cpu, ChevronRight, MessageSquare, Maximize2, Minimize2, Lock, Trash2 } from 'lucide-react';
+import { Sparkles, Terminal, X, Settings, Cpu, ChevronRight, MessageSquare, Maximize2, Minimize2, Lock, Trash2, ShieldCheck } from 'lucide-react';
 import { sdk } from '../sdk';
 import { Language, translations } from '../data/translations';
 import { useAuth } from '../hooks/useAuth';
@@ -26,9 +26,9 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
   toggleLoadWidget,
   mobileMenuOpen
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'sdk'>('chat');
+  const [activePanel, setActivePanel] = useState<'none' | 'chat' | 'sdk'>('none');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [ahaSecurityHidden, setAhaSecurityHidden] = useState(localStorage.getItem('aha_security_hidden') === 'true');
   
   // Terminal/Chat state
   const [history, setHistory] = useState<{ type: 'cmd' | 'res' | 'info', text: string }[]>([]);
@@ -38,6 +38,17 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const [localTime, setLocalTime] = useState(new Date().toLocaleTimeString());
   const { user, loginWithGoogle } = useAuth();
+
+  const toggleAhaSecurity = () => {
+    const newValue = !ahaSecurityHidden;
+    setAhaSecurityHidden(newValue);
+    if (newValue) {
+      localStorage.setItem('aha_security_hidden', 'true');
+    } else {
+      localStorage.removeItem('aha_security_hidden');
+    }
+    window.location.reload();
+  };
 
   const initialHistory = [
     { type: 'info' as const, text: (translations[lang] as any).sdkAhaRadioAI || translations[lang].sdkTitle },
@@ -85,13 +96,13 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [history]);
+  }, [history, activePanel]);
 
   useEffect(() => {
-    if (isOpen && activeTab === 'chat' && inputRef.current) {
+    if (activePanel === 'chat' && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isOpen, activeTab]);
+  }, [activePanel]);
 
   const handleExecute = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +116,6 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
     try {
       let response;
       if (cmd.startsWith('/')) {
-        // Execute as normal command
         sdk.terminal.setMode('normal');
         response = await sdk.terminal.execute(cmd.substring(1), lang);
       } else {
@@ -127,31 +137,48 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Buttons */}
       <AnimatePresence>
-        {(!mobileMenuOpen || isOpen) && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setIsOpen(!isOpen)}
-            className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-2xl border transition-all duration-500 ${
-              isOpen ? 'bg-[#ff4d4d] text-[#15101e] border-white scale-110' : 
-              productionMode ? 'bg-[#ff4d4d] text-[#15101e] border-white' : 
-              'bg-[#15101e] text-[#ff4d4d] border-[#3d2b4f]'
-            }`}
-            title={translations[lang].sdkMinistryPanel}
-          >
-            <Sparkles size={24} />
-          </motion.button>
+        {!mobileMenuOpen && (
+          <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-4">
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setActivePanel(activePanel === 'sdk' ? 'none' : 'sdk')}
+              className={`p-4 rounded-full shadow-2xl border transition-all duration-500 ${
+                activePanel === 'sdk' ? 'bg-[#ff4d4d] text-[#15101e] border-white scale-110' : 
+                'bg-[#15101e] text-gray-400 border-[#3d2b4f] hover:text-white'
+              }`}
+              title={translations[lang].sdkSettings}
+            >
+              <Settings size={24} />
+            </motion.button>
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setActivePanel(activePanel === 'chat' ? 'none' : 'chat')}
+              className={`p-4 rounded-full shadow-2xl border transition-all duration-500 ${
+                activePanel === 'chat' ? 'bg-[#ff4d4d] text-[#15101e] border-white scale-110' : 
+                productionMode ? 'bg-[#ff4d4d] text-[#15101e] border-white' : 
+                'bg-[#15101e] text-[#ff4d4d] border-[#ff4d4d]/50'
+              }`}
+              title={translations[lang].sdkMinistryPanel}
+            >
+              <Sparkles size={24} />
+            </motion.button>
+          </div>
         )}
       </AnimatePresence>
 
       {/* Expandable Panel */}
       <AnimatePresence>
-        {isOpen && (
+        {activePanel !== 'none' && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.9, transformOrigin: 'bottom right' }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -160,18 +187,38 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
             className={`fixed z-40 bg-[#0d0b14] border border-[#3d2b4f]/50 shadow-2xl rounded-2xl flex flex-col overflow-hidden ${
               isExpanded 
                 ? 'inset-4 md:inset-10' 
-                : 'bottom-24 right-6 w-[90vw] md:w-[450px] h-[60vh] max-h-[600px]'
+                : 'bottom-24 right-24 w-[90vw] md:w-[450px] h-[60vh] max-h-[600px]'
             }`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#15101e]/80 border-b border-[#3d2b4f]/30">
+            <div className={`flex items-center justify-between px-4 py-3 border-b border-[#3d2b4f]/30 ${activePanel === 'chat' ? 'bg-[#15101e]/80' : 'bg-[#1a1525]/80'}`}>
               <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-[#ff4d4d]" />
-                <span className="font-black text-sm tracking-widest text-[#ff4d4d] uppercase">
-                  {(translations[lang] as any).sdkAhaRadio || translations[lang].siteName}
-                </span>
+                {activePanel === 'chat' ? (
+                  <>
+                    <Sparkles size={16} className="text-[#ff4d4d]" />
+                    <span className="font-black text-sm tracking-widest text-[#ff4d4d] uppercase">
+                      {(translations[lang] as any).sdkAhaRadio || translations[lang].siteName}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Settings size={16} className="text-gray-400" />
+                    <span className="font-black text-sm tracking-widest text-gray-300 uppercase">
+                      {translations[lang].sdkSettings}
+                    </span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-2">
+                {activePanel === 'chat' && user && (
+                  <button
+                    onClick={clearHistory}
+                    className="p-1.5 hover:bg-white/10 text-gray-400 hover:text-red-400 rounded-lg transition-colors mr-2"
+                    title={translations[lang].sdkClearHistory}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
                 <button 
                   onClick={() => setIsExpanded(!isExpanded)}
                   className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-gray-400"
@@ -179,7 +226,7 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                   {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                 </button>
                 <button 
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setActivePanel('none')}
                   className="p-1.5 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors text-gray-400"
                 >
                   <X size={14} />
@@ -187,40 +234,9 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
               </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-[#3d2b4f]/30">
-              <button
-                onClick={() => setActiveTab('chat')}
-                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === 'chat' ? 'bg-[#ff4d4d]/10 text-[#ff4d4d] border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                }`}
-              >
-                <MessageSquare size={14} />
-                {translations[lang].sdkAiAssistant || (translations[lang] as any).sdkAIAssistant}
-              </button>
-              <button
-                onClick={() => setActiveTab('sdk')}
-                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === 'sdk' ? 'bg-[#ff4d4d]/10 text-[#ff4d4d] border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                }`}
-              >
-                <Settings size={14} />
-                {translations[lang].sdkSettings}
-              </button>
-              {activeTab === 'chat' && user && (
-                <button
-                  onClick={clearHistory}
-                  className="px-4 py-2.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors border-b-2 border-transparent"
-                  title={translations[lang].sdkClearHistory}
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-
             {/* Content */}
             <div className="flex-1 overflow-hidden relative">
-              {activeTab === 'chat' ? (
+              {activePanel === 'chat' ? (
                 !user ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4">
                     <div className="w-16 h-16 bg-[#ff4d4d]/10 rounded-full flex items-center justify-center border border-[#ff4d4d]/20">
@@ -351,6 +367,24 @@ export const SDKPanel: React.FC<SDKPanelProps> = ({
                       </div>
                       <div className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${showLoadWidget ? 'bg-[#ff4d4d]' : 'bg-[#3d2b4f]'}`}>
                         <div className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full bg-white transition-transform ${showLoadWidget ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </div>
+                    </button>
+
+                    <button 
+                      onClick={toggleAhaSecurity}
+                      className="w-full flex items-center justify-between p-4 bg-[#15101e]/40 hover:bg-[#15101e]/60 rounded-xl border border-[#3d2b4f]/30 transition-colors text-left"
+                    >
+                      <div>
+                        <div className="font-bold text-white text-sm mb-1 flex items-center gap-2">
+                          <ShieldCheck size={16} className={!ahaSecurityHidden ? 'text-green-500' : 'text-gray-500'} />
+                          {(translations[lang] as any).securityWidgetTitle || "Aha Security Widget"}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {(translations[lang] as any).securityWidgetDesc || "Show actively blocked threats panel"}
+                        </div>
+                      </div>
+                      <div className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${!ahaSecurityHidden ? 'bg-green-500' : 'bg-[#3d2b4f]'}`}>
+                        <div className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full bg-white transition-transform ${!ahaSecurityHidden ? 'translate-x-5' : 'translate-x-0'}`} />
                       </div>
                     </button>
                   </div>
