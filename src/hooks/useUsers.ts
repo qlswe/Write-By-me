@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
 
@@ -28,7 +28,8 @@ export function useUsers() {
     // Admins can see full user data (including email)
     // Regular users see public profiles
     const collectionName = isAdmin ? 'users' : 'public_profiles';
-    const q = query(collection(db, collectionName));
+    // Limit to 200 users. If the app gets bigger, a proper search API (like Algolia or Typesense) is needed.
+    const q = query(collection(db, collectionName), limit(200));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const usersData = snapshot.docs.map(doc => ({

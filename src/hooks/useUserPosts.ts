@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
 
@@ -19,9 +19,17 @@ export function useUserPosts(userId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = userId 
-      ? query(collection(db, 'user_posts'), where('uid', '==', userId))
-      : query(collection(db, 'user_posts'));
+    if (!userId) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'user_posts'), 
+      where('uid', '==', userId),
+      limit(20) // Critical: prevent Quota exhaustion via mass-reads
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const postsData = snapshot.docs.map(doc => ({

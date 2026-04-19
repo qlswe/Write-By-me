@@ -56,6 +56,9 @@ export const Footer: React.FC<FooterProps> = ({ lang, setFeedbackOpen }) => {
               <MessageSquare size={16} />
               {t.feedback || "Feedback"}
             </button>
+            <a href="https://t.me/ministry_aha" target="_blank" rel="noreferrer" className="hover:text-[#ff4d4d] transition-colors">
+              Telegram
+            </a>
             <a href="https://github.com/qlswe" target="_blank" rel="noreferrer" className="hover:text-[#ff4d4d] transition-colors">
               GitHub
             </a>

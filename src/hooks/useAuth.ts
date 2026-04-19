@@ -3,109 +3,111 @@ import { auth, db } from '../firebase';
 import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+// --- GLOBAL SINGLETON STATE ---
+let globalUser: User | null = null;
+let globalLoading = true;
+let globalIsAdmin = false;
+let globalRole: 'admin' | 'moderator' | 'user' | 'beta-tester' = 'user';
+let authInitialized = false;
 
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [role, setRole] = useState<'admin' | 'moderator' | 'user' | 'beta-tester'>('user');
+const subscribers = new Set<() => void>();
 
-  useEffect(() => {
-    // Handle redirect result for WebViews
-    getRedirectResult(auth).catch((error) => {
-      console.error("Error getting redirect result", error);
-    });
+const notifySubscribers = () => {
+  subscribers.forEach(fn => fn());
+};
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      
-      if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setRole(userData.role || 'user');
-            setIsAdmin(userData.role === 'admin' || (user.email === 'semegladysev527@gmail.com' && user.emailVerified));
-            
-            // Sync public profile
-            await setDoc(doc(db, 'public_profiles', user.uid), {
-              uid: user.uid,
-              displayName: user.displayName,
-              photoURL: userData.photoURL || user.photoURL,
-              role: userData.role || 'user',
-              lastSeen: new Date().toISOString()
-            }, { merge: true });
-          } else {
-            // First time login - create user document
-            const initialRole = (user.email === 'semegladysev527@gmail.com' && user.emailVerified) ? 'admin' : 'user';
-            const userData = {
-              uid: user.uid,
-              displayName: user.displayName,
-              email: user.email,
-              photoURL: user.photoURL,
-              role: initialRole,
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString()
-            };
-            await setDoc(userDocRef, userData);
-            
-            // Create public profile
-            await setDoc(doc(db, 'public_profiles', user.uid), {
-              uid: user.uid,
-              displayName: user.displayName,
-              photoURL: user.photoURL,
-              role: initialRole,
-              lastSeen: new Date().toISOString()
-            });
-            
-            setRole(initialRole);
-            setIsAdmin(initialRole === 'admin');
-          }
-        } catch (e) {
-          console.error("Error fetching user role:", e);
-          setIsAdmin(user.email === 'semegladysev527@gmail.com' && user.emailVerified);
-          setRole('user');
-        }
-      } else {
-        setIsAdmin(false);
-        setRole('user');
-      }
-      
-      setLoading(false);
-    });
+const initAuth = () => {
+  if (authInitialized) return;
+  authInitialized = true;
 
-    return unsubscribe;
-  }, []);
+  getRedirectResult(auth).catch((error) => {
+    console.error("Error getting redirect result", error);
+  });
 
-  useEffect(() => {
-    if (!user) return;
-
-    const updateLastSeen = async () => {
+  onAuthStateChanged(auth, async (user) => {
+    globalUser = user;
+    
+    if (user) {
       try {
-        const now = new Date().toISOString();
-        await setDoc(doc(db, 'public_profiles', user.uid), {
-          lastSeen: now
-        }, { merge: true });
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
         
-        await setDoc(doc(db, 'users', user.uid), {
-          lastSeen: now
-        }, { merge: true });
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          globalRole = userData.role || 'user';
+          globalIsAdmin = globalRole === 'admin' || (user.email === 'semegladysev527@gmail.com' && user.emailVerified);
+          
+          await setDoc(doc(db, 'public_profiles', user.uid), {
+            uid: user.uid,
+            displayName: user.displayName,
+            photoURL: userData.photoURL || user.photoURL,
+            role: userData.role || 'user',
+          }, { merge: true });
+        } else {
+          const initialRole = (user.email === 'semegladysev527@gmail.com' && user.emailVerified) ? 'admin' : 'user';
+          const userData = {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL,
+            role: initialRole,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString()
+          };
+          await setDoc(userDocRef, userData);
+          
+          await setDoc(doc(db, 'public_profiles', user.uid), {
+            uid: user.uid,
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            role: initialRole,
+          });
+          
+          globalRole = initialRole;
+          globalIsAdmin = initialRole === 'admin';
+        }
       } catch (e) {
-        console.error("Error updating last seen:", e);
+        console.error("Error fetching user role:", e);
+        globalIsAdmin = user.email === 'semegladysev527@gmail.com' && user.emailVerified;
+        globalRole = 'user';
       }
-    };
+    } else {
+      globalIsAdmin = false;
+      globalRole = 'user';
+    }
+    
+    globalLoading = false;
+    notifySubscribers();
+  });
 
-    // Update immediately and then every 2 minutes
-    updateLastSeen();
-    const interval = setInterval(updateLastSeen, 2 * 60 * 1000);
+  // Last seen tracker - only runs ONCE globally, every 5 minutes
+  setInterval(async () => {
+    if (!globalUser) return;
+    try {
+      const now = new Date().toISOString();
+      await setDoc(doc(db, 'public_profiles', globalUser.uid), { lastSeen: now }, { merge: true });
+      await setDoc(doc(db, 'users', globalUser.uid), { lastSeen: now }, { merge: true });
+    } catch (e) {
+      console.error("Error updating last seen:", e);
+    }
+  }, 5 * 60 * 1000);
+};
 
-    return () => clearInterval(interval);
-  }, [user]);
+// Start initialization immediately
+initAuth();
 
+export function useAuth() {
+  const [stamp, setStamp] = useState(0);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const update = () => setStamp(prev => prev + 1);
+    subscribers.add(update);
+    return () => {
+      subscribers.delete(update);
+    };
+  }, []);
 
   const loginWithGoogle = async () => {
     if (isLoggingIn) return;
@@ -118,20 +120,14 @@ export function useAuth() {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
-        // User closed the popup, not a real error we need to log as an error
-        console.warn("Login popup closed by user");
         return;
       }
-      
       setError(error.message);
-      console.error("Error logging in", error);
-      
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
         try {
           await signInWithRedirect(auth, provider);
         } catch (redirectError: any) {
           setError(redirectError.message);
-          console.error("Error logging in with redirect fallback", redirectError);
         }
       }
     } finally {
@@ -141,7 +137,6 @@ export function useAuth() {
 
   const loginWithEmail = async (email: string) => {
     setError(null);
-    // This is a placeholder for email link or password login
     console.log("Email login requested for:", email);
   };
 
@@ -151,9 +146,18 @@ export function useAuth() {
       await signOut(auth);
     } catch (error: any) {
       setError(error.message);
-      console.error("Error logging out", error);
     }
   };
 
-  return { user, loading, isAdmin, role, error, loginWithGoogle, loginWithEmail, logout, isLoggingIn };
+  return { 
+    user: globalUser, 
+    loading: globalLoading, 
+    isAdmin: globalIsAdmin, 
+    role: globalRole, 
+    error, 
+    loginWithGoogle, 
+    loginWithEmail, 
+    logout, 
+    isLoggingIn 
+  };
 }

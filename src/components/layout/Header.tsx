@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
@@ -216,6 +216,22 @@ export const Header: React.FC<HeaderProps> = ({
                           >
                             <UserIcon size={16} />
                             {t.headerProfileSettings}
+                          </button>
+
+                          <button 
+                            onClick={() => { window.dispatchEvent(new CustomEvent('open-aha-sdk')); setProfileOpen(false); }}
+                            className="w-full flex items-center justify-center gap-2 bg-[#15101e] hover:bg-[#3d2b4f] text-white border border-[#3d2b4f] hover:border-[#ff4d4d] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
+                          >
+                            <Settings size={16} />
+                            {t.sdkSettings || "Настройки SDK"}
+                          </button>
+
+                          <button 
+                            onClick={() => { window.dispatchEvent(new CustomEvent('open-aha-ai')); setProfileOpen(false); }}
+                            className="w-full flex items-center justify-center gap-2 bg-[#15101e] hover:bg-[#3d2b4f] text-[#ff4d4d] border border-[#3d2b4f] hover:border-[#ff4d4d] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
+                          >
+                            <Sparkles size={16} />
+                            {t.sdkMinistryPanel || "ИИшка / Aha AI"}
                           </button>
 
                           <button 

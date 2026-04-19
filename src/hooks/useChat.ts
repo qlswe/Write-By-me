@@ -3,6 +3,7 @@ import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, s
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
 import { encrypt, decrypt } from '../utils/encryption';
+import { vercelFallback } from '../utils/vercelFallback';
 
 export interface Message {
   id: string;
@@ -106,6 +107,21 @@ export function useChat(otherUserId?: string) {
     const encryptedText = text ? encrypt(text.trim()) : '';
 
     try {
+      if (vercelFallback.isAvailable()) {
+         // Fallback explicitly enabled - write to KV instead of crashing Firebase
+         const messageData = {
+           id: Date.now().toString(),
+           senderId: user.uid,
+           text: encryptedText,
+           createdAt: new Date().toISOString(),
+           type,
+           replyTo,
+           images: images ? images.map(img => encrypt(img)) : undefined
+         };
+         await vercelFallback.lpush(`chat:${chatId}`, JSON.stringify(messageData));
+         return; // Skip firebase
+      }
+
       // Ensure chat document exists
       const chatDoc = await getDoc(chatRef);
       if (!chatDoc.exists()) {

@@ -4,7 +4,7 @@ import { MessageSquare, Plus, Search, User as UserIcon, Shield, Clock, ArrowLeft
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { db } from '../../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, serverTimestamp, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, serverTimestamp, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, limit, where } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { TimeAgo } from '../ui/TimeAgo';
 import { ConfirmModal } from '../ui/ConfirmModal';
@@ -76,7 +76,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
   const [replyContent, setReplyContent] = useState('');
 
   useEffect(() => {
-    const q = query(collection(db, 'forum_threads'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'forum_threads'), orderBy('createdAt', 'desc'), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const threadsData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -91,11 +91,15 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
 
   useEffect(() => {
     if (!selectedThread) return;
-    const q = query(collection(db, 'forum_comments'), orderBy('createdAt', 'asc'));
+    const q = query(
+      collection(db, 'forum_comments'), 
+      where('threadId', '==', selectedThread.id), 
+      orderBy('createdAt', 'asc'),
+      limit(100)
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const commentsData = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as ForumComment))
-        .filter(c => c.threadId === selectedThread.id);
+        .map(doc => ({ id: doc.id, ...doc.data() } as ForumComment));
       setComments(commentsData);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'forum_comments');

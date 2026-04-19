@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { theoriesData as localTheories, blogPostsData as localBlogPosts, eventsData as localEvents, promoCodesData as localPromoCodes } from '../data/content';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
@@ -11,7 +11,10 @@ export function useContent() {
   const [promoCodes, setPromoCodes] = useState<any[]>(localPromoCodes);
 
   useEffect(() => {
-    const qTheories = query(collection(db, 'theories'), orderBy('createdAt', 'desc'));
+    // SECURITY/QUOTA Optimization: Added limits to prevent boundless read spikes 
+    // when databases grow large.
+    
+    const qTheories = query(collection(db, 'theories'), orderBy('createdAt', 'desc'), limit(50));
     const unsubscribeTheories = onSnapshot(qTheories, (snapshot) => {
       const firestoreTheories = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -35,7 +38,7 @@ export function useContent() {
       handleFirestoreError(error, OperationType.GET, 'theories');
     });
 
-    const qBlogPosts = query(collection(db, 'blogPosts'), orderBy('createdAt', 'desc'));
+    const qBlogPosts = query(collection(db, 'blogPosts'), orderBy('createdAt', 'desc'), limit(50));
     const unsubscribeBlogPosts = onSnapshot(qBlogPosts, (snapshot) => {
       const firestoreBlogPosts = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -59,7 +62,7 @@ export function useContent() {
       handleFirestoreError(error, OperationType.GET, 'blogPosts');
     });
 
-    const qEvents = query(collection(db, 'events'), orderBy('createdAt', 'desc'));
+    const qEvents = query(collection(db, 'events'), orderBy('createdAt', 'desc'), limit(20));
     const unsubscribeEvents = onSnapshot(qEvents, (snapshot) => {
       const firestoreEvents = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -81,14 +84,14 @@ export function useContent() {
       handleFirestoreError(error, OperationType.GET, 'events');
     });
 
-    const qPromoCodes = query(collection(db, 'promo_codes'), orderBy('createdAt', 'desc'));
+    const qPromoCodes = query(collection(db, 'promo_codes'), orderBy('createdAt', 'desc'), limit(20));
     const unsubscribePromoCodes = onSnapshot(qPromoCodes, (snapshot) => {
       const firestorePromoCodes = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       const mappedFirestorePromoCodes = firestorePromoCodes.map((p: any) => {
-        const reward = typeof p.reward === 'string' ? { ru: p.reward, en: p.reward, by: p.reward, de: p.reward, fr: p.reward, zh: p.reward } : p.reward;
+        const reward = typeof p.reward === 'string' ? { ru: p.reward, en: p.reward, by: p.reward, de: p.reward, fr: p.reward, fr: p.reward, zh: p.reward } : p.reward;
         return {
           ...p,
           rewards: reward || { ru: '', en: '', by: '', de: '', fr: '', zh: '' }

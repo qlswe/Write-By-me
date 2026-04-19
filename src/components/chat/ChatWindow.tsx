@@ -48,10 +48,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
 
   useEffect(() => {
     scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
     if (messages.length > 0) {
       markChatAsRead(recipientId);
     }
-  }, [messages]);
+  }, [messages.length, recipientId]);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'public_profiles', recipientId), (doc) => {
