@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings } from 'lucide-react';
-import { collection, addDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash } from 'lucide-react';
+import { collection, addDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
 import { handleFirestoreError, OperationType } from './utils/errorHandlers';
@@ -28,6 +28,7 @@ import { TheoryEditor } from './components/sections/TheoryEditor';
 import { BlogEditor } from './components/sections/BlogEditor';
 import { EventEditor } from './components/sections/EventEditor';
 import { PromoEditor } from './components/sections/PromoEditor';
+import { SDKPanel } from './components/SDKPanel';
 import { ChatWindow } from './components/chat/ChatWindow';
 import { UserData } from './hooks/useUsers';
 
@@ -43,10 +44,8 @@ const UsersList = lazy(() => import('./components/admin/UsersList').then(m => ({
 const ChatsList = lazy(() => import('./components/chat/ChatsList').then(m => ({ default: m.ChatsList })));
 const AhiRadio = lazy(() => import('./components/sections/AhiRadio').then(m => ({ default: m.AhiRadio })));
 const ForumSection = lazy(() => import('./components/sections/ForumSection').then(m => ({ default: m.ForumSection })));
-const AhiAiSection = lazy(() => import('./components/sections/AhiAiSection').then(m => ({ default: m.AhiAiSection })));
-const SdkSettingsSection = lazy(() => import('./components/sections/SdkSettingsSection').then(m => ({ default: m.SdkSettingsSection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum';
 
 let hasPrintedStopWarning = false;
 
@@ -154,34 +153,6 @@ export default function App() {
   // Profile state
   const [profileOpen, setProfileOpen] = useState(false);
   const [viewingUser, setViewingUser] = useState<UserData | null>(null);
-
-  // Home Page Content
-  const [homeContent, setHomeContent] = useState<Record<string, string>>({});
-  const [sdkContent, setSdkContent] = useState<Record<string, string>>({});
-  const [changelogContent, setChangelogContent] = useState<Record<string, string>>({});
-  
-  const [isEditingHome, setIsEditingHome] = useState(false);
-  const [editedHomeContent, setEditedHomeContent] = useState('');
-  
-  const [isEditingSdk, setIsEditingSdk] = useState(false);
-  const [editedSdkContent, setEditedSdkContent] = useState('');
-  
-  const [isEditingChangelog, setIsEditingChangelog] = useState(false);
-  const [editedChangelogContent, setEditedChangelogContent] = useState('');
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'system_content', 'home_page'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setHomeContent(data.content || {});
-        setSdkContent(data.sdk_content || {});
-        setChangelogContent(data.changelog_content || {});
-      }
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'system_content/home_page');
-    });
-    return () => unsub();
-  }, []);
 
   // Chat state
   const [activeChat, setActiveChat] = useState<{ uid: string, displayName: string, photoURL?: string } | null>(null);
@@ -332,8 +303,6 @@ export default function App() {
     { id: 'promo', label: t.navPromo, icon: Ticket },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'users' as const, label: t.navUsers, icon: User },
-    { id: 'sdk', label: 'SDK', icon: Settings },
-    { id: 'ai', label: 'Aha AI', icon: Sparkles },
   ] as const;
 
   const handleCopy = (text: string) => {
@@ -397,57 +366,6 @@ export default function App() {
     localStorage.setItem('hideInstallBanner', 'true');
   };
 
-  const handleSaveHomeContent = async () => {
-    if (!role || (role !== 'admin' && role !== 'moderator')) return;
-    try {
-      await setDoc(doc(db, 'system_content', 'home_page'), {
-        content: {
-          ...homeContent,
-          [lang]: editedHomeContent
-        }
-      }, { merge: true });
-      setIsEditingHome(false);
-      setToast(t.successSaved || 'Saved successfully');
-    } catch (e) {
-      console.error(e);
-      setToast('Error saving changes');
-    }
-  };
-
-  const handleSaveSdkContent = async () => {
-    if (!role || (role !== 'admin' && role !== 'moderator')) return;
-    try {
-      await setDoc(doc(db, 'system_content', 'home_page'), {
-        sdk_content: {
-          ...sdkContent,
-          [lang]: editedSdkContent
-        }
-      }, { merge: true });
-      setIsEditingSdk(false);
-      setToast(t.successSaved || 'Saved successfully');
-    } catch (e) {
-      console.error(e);
-      setToast('Error saving changes');
-    }
-  };
-
-  const handleSaveChangelogContent = async () => {
-    if (!role || (role !== 'admin' && role !== 'moderator')) return;
-    try {
-      await setDoc(doc(db, 'system_content', 'home_page'), {
-        changelog_content: {
-          ...changelogContent,
-          [lang]: editedChangelogContent
-        }
-      }, { merge: true });
-      setIsEditingChangelog(false);
-      setToast(t.successSaved || 'Saved successfully');
-    } catch (e) {
-      console.error(e);
-      setToast('Error saving changes');
-    }
-  };
-
   const isAuthorizedForMaintenance = role === 'admin' || role === 'moderator' || role === 'beta-tester';
 
   if (!isLoading && maintenanceMode && !isAuthorizedForMaintenance) {
@@ -457,6 +375,16 @@ export default function App() {
   return (
     <div className={`min-h-[100dvh] flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0] ${productionMode ? 'production-visuals' : ''}`}>
       <LoadingScreen isLoading={isLoading} lang={lang as Language} lowPerfMode={lowPerfMode} />
+      <SDKPanel 
+        lang={lang as Language} 
+        productionMode={productionMode}
+        toggleProductionMode={toggleProductionMode}
+        lowPerfMode={lowPerfMode}
+        toggleLowPerfMode={toggleLowPerfMode}
+        showLoadWidget={showLoadWidget}
+        toggleLoadWidget={toggleLoadWidget}
+        mobileMenuOpen={mobileMenuOpen}
+      />
       <Starfield lowPerfMode={lowPerfMode || !productionMode} />
       {showLoadWidget && <PerformanceWidget />}
       
@@ -542,83 +470,44 @@ export default function App() {
             <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(255,77,77,0.3)]"></div></div>}>
               {section === 'home' && (
                 <div className="bg-[#251c35] rounded-2xl p-8 shadow-xl border border-[#3d2b4f]">
-                  <div className="flex justify-between items-start mb-4">
-                    <h2 className="text-3xl font-bold text-[#ff4d4d]">{t.homeTitle}</h2>
-                    {role && (role === 'admin' || role === 'moderator') && !isEditingHome && (
-                      <button 
-                        onClick={() => { setEditedHomeContent(homeContent[lang] || t.homeDesc); setIsEditingHome(true); }}
-                        className="p-2 bg-black/20 hover:bg-black/40 rounded-lg text-gray-400 hover:text-white border border-[#3d2b4f] transition-all"
-                        title="Edit Page Content"
-                      >
-                        <Edit size={16} />
-                      </button>
-                    )}
-                  </div>
-                  
-                  {isEditingHome ? (
-                    <div className="mb-6 space-y-4">
-                      <textarea
-                        value={editedHomeContent}
-                        onChange={(e) => setEditedHomeContent(e.target.value)}
-                        className="w-full bg-[#15101e] border border-[#3d2b4f] rounded-xl p-4 text-gray-200 min-h-[150px] focus:outline-none focus:border-[#ff4d4d]"
-                        placeholder="Page content (HTML allowed)..."
-                      />
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => setIsEditingHome(false)} className="px-4 py-2 hover:bg-[#3d2b4f] rounded-xl text-sm font-medium transition-colors text-white">
-                          <X size={16} className="inline mr-1 -mt-0.5" /> {t.cancelBtn || 'Cancel'}
-                        </button>
-                        <button onClick={handleSaveHomeContent} className="px-4 py-2 bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] rounded-xl text-sm font-black tracking-wide transition-colors">
-                          <Save size={16} className="inline mr-1 -mt-0.5" /> {t.saveBtn || 'Save'}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <SafeHtml html={homeContent[lang] || t.homeDesc} className="text-gray-300 mb-6 leading-relaxed" />
-                  )}
-                  
+                  <h2 className="text-3xl font-bold text-[#ff4d4d] mb-4">{t.homeTitle}</h2>
+                  <SafeHtml html={t.homeDesc} className="text-gray-300 mb-6 leading-relaxed" />
                   <div className="flex items-center gap-2 text-xs text-gray-500 mb-8">
                     <RefreshCw size={14} />
                     {t.lastUpdate}
                   </div>
 
-                  {/* Changelog Section */}
-                  <div className="relative group mt-12">
-                    <div className="flex justify-end mb-2 relative z-10 w-full h-0 top-12 right-6">
-                      {role && (role === 'admin' || role === 'moderator') && !isEditingChangelog && (
-                        <button 
-                          onClick={() => { setEditedChangelogContent(changelogContent[lang] || ''); setIsEditingChangelog(true); }}
-                          className="opacity-0 group-hover:opacity-100 p-2 bg-[#251c35] hover:bg-[#3d2b4f] rounded-lg text-gray-400 hover:text-white border border-[#ff4d4d]/20 transition-all absolute"
-                          title="Edit Changelog"
-                        >
-                          <Edit size={16} />
-                        </button>
-                      )}
+                  {/* SDK Info Section */}
+                  <div className="mt-12 p-6 rounded-xl bg-black/20 border border-[#ff4d4d]/20">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 rounded-lg bg-[#ff4d4d]/10 text-[#ff4d4d]">
+                        <Sparkles size={20} />
+                      </div>
+                      <h3 className="text-xl font-bold text-[#ff4d4d]">{sdk.help.getUsage(lang as Language).title}</h3>
                     </div>
-                    {isEditingChangelog ? (
-                      <div className="mt-8 space-y-4">
-                        <textarea
-                          value={editedChangelogContent}
-                          onChange={(e) => setEditedChangelogContent(e.target.value)}
-                          className="w-full bg-[#15101e] border border-[#ff4d4d]/30 rounded-xl p-4 text-gray-200 min-h-[250px] focus:outline-none focus:border-[#ff4d4d] font-mono text-sm"
-                          placeholder="HTML Changelog Content (Overrides Default)..."
-                        />
-                        <div className="flex justify-end gap-2 pb-4">
-                          <button onClick={() => setIsEditingChangelog(false)} className="px-4 py-2 hover:bg-[#3d2b4f] rounded-xl text-sm font-medium transition-colors text-white">
-                            <X size={16} className="inline mr-1 -mt-0.5" /> {t.cancelBtn || 'Cancel'}
-                          </button>
-                          <button onClick={handleSaveChangelogContent} className="px-4 py-2 bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] rounded-xl text-sm font-black tracking-wide transition-colors">
-                            <Save size={16} className="inline mr-1 -mt-0.5" /> {t.saveBtn || 'Save'}
-                          </button>
-                        </div>
+                    <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+                      {sdk.help.getUsage(lang as Language).description}
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold text-[#ff4d4d] uppercase tracking-widest">{t.sdkFeatures}</h4>
+                        <ul className="text-xs text-gray-500 space-y-1 list-disc pl-4">
+                          {sdk.help.getUsage(lang as Language).useCases.slice(0, 4).map((useCase, i) => (
+                            <li key={i}>{useCase.split(':')[0]}</li>
+                          ))}
+                        </ul>
                       </div>
-                    ) : changelogContent[lang] ? (
-                      <div className="mt-8 p-6 rounded-2xl bg-[#15101e]/50 border border-[#3d2b4f]/50 text-gray-300 leading-relaxed">
-                        <SafeHtml html={changelogContent[lang]} />
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold text-[#ff4d4d] uppercase tracking-widest">{t.sdkHowToStart}</h4>
+                        <p className="text-[10px] font-mono text-gray-500">
+                          {sdk.help.getUsage(lang as Language).gettingStarted}
+                        </p>
                       </div>
-                    ) : (
-                      <Changelog lang={lang as Language} />
-                    )}
+                    </div>
                   </div>
+
+                  {/* Changelog Section */}
+                  <Changelog lang={lang as Language} />
                 </div>
               )}
 
@@ -632,22 +521,6 @@ export default function App() {
 
               {section === 'radio' && (
                 <AhiRadio lang={lang as Language} />
-              )}
-
-              {section === 'ai' && (
-                <AhiAiSection lang={lang as Language} />
-              )}
-
-              {section === 'sdk' && (
-                <SdkSettingsSection 
-                  lang={lang as Language}
-                  productionMode={productionMode}
-                  toggleProductionMode={toggleProductionMode}
-                  lowPerfMode={lowPerfMode}
-                  toggleLowPerfMode={toggleLowPerfMode}
-                  showLoadWidget={showLoadWidget}
-                  toggleLoadWidget={toggleLoadWidget}
-                />
               )}
 
               {section === 'theories' && (
