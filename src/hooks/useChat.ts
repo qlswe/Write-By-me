@@ -94,7 +94,47 @@ export function useChat(otherUserId?: string) {
       setMessages(messagesData);
     });
 
-    return unsubscribe;
+    let fallbackInterval: ReturnType<typeof setInterval>;
+    const fetchFallbackMessages = async () => {
+      if (vercelFallback.isAvailable()) {
+         try {
+           const fallbackData = await vercelFallback.lrange(`chat:${chatId}`, 0, 100);
+           if (fallbackData && fallbackData.length > 0) {
+             const parsed = fallbackData.map((str: any) => {
+               const data = typeof str === 'string' ? JSON.parse(str) : str;
+               return {
+                 ...data,
+                 text: decrypt(data.text),
+                 images: data.images ? data.images.map((img: string) => decrypt(img)) : undefined
+               };
+             }).reverse() as Message[];
+             
+             setMessages(prev => {
+               const existing = new Set(prev.map(m => m.id));
+               const newMsgs = parsed.filter(m => !existing.has(m.id));
+               if (newMsgs.length > 0) {
+                 return [...prev, ...newMsgs].sort((a, b) => {
+                   const timeA = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : ((a.createdAt as any)?.toMillis?.() || 0);
+                   const timeB = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : ((b.createdAt as any)?.toMillis?.() || 0);
+                   return timeA - timeB;
+                 });
+               }
+               return prev;
+             });
+           }
+         } catch (e) {
+           console.error('Fallback read error', e);
+         }
+      }
+    };
+
+    fetchFallbackMessages();
+    fallbackInterval = setInterval(fetchFallbackMessages, 3000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(fallbackInterval);
+    };
   }, [user, otherUserId]);
 
   const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' | 'image' = 'text', replyTo?: string, images?: string[]) => {

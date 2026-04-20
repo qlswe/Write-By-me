@@ -9,9 +9,6 @@ import { Trash2, Send, Heart, Edit2, X, Check, MessageCircle, ChevronDown, Chevr
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
 import { ConfirmModal } from '../ui/ConfirmModal';
-import { GoogleGenAI } from '@google/genai';
-
-const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || 'dummy' });
 
 interface Comment {
   id: string;
@@ -26,8 +23,6 @@ interface Comment {
   isEdited?: boolean;
   createdAt: string;
 }
-
-import { moderateContentWithProxy } from '../../utils/geminiProxy';
 
 interface CommentsSectionProps {
   targetId: string;
@@ -95,26 +90,6 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     return () => unsubscribe();
   }, [targetId]);
 
-  const moderateContent = async (text: string): Promise<boolean> => {
-    try {
-      const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-      if (!apiKey) return true;
-      
-      const prompt = `You are an automated moderation bot for a forum called "Форум Ахи". 
-Analyze the following text and determine if it contains severe profanity, hate speech, illegal content, or extreme toxicity.
-Respond ONLY with a JSON object in the following format:
-{"isApproved": true/false}
-
-Text to analyze:
-"${text}"`;
-
-      return await moderateContentWithProxy(prompt, apiKey);
-    } catch (error) {
-      console.error('Moderation error:', error);
-      return true; // fail open
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent, parentId?: string) => {
     e.preventDefault();
     const content = parentId ? replyContent : newComment;
@@ -122,13 +97,6 @@ Text to analyze:
 
     setIsSubmitting(true);
     try {
-      const isApproved = await moderateContent(content);
-      if (!isApproved) {
-        alert((t as any).forumModerationRejectedComment || t.forumCommentRejected);
-        setIsSubmitting(false);
-        return;
-      }
-
       await addDoc(collection(db, 'comments'), {
         targetId,
         parentId: parentId || null,

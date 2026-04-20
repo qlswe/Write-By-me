@@ -501,7 +501,7 @@ export default function App() {
           >
             <div className="flex items-center gap-2">
               <ServerCrash className="w-4 h-4 animate-pulse" />
-              {lang === 'ru' ? 'Превышен лимит БД.' : 'Database Quota Exceeded.'}
+              {lang === 'ru' ? 'Сбой БД: превышен лимит или сервер недоступен.' : 'DB Error: Quota Exceeded or Offline.'}
             </div>
             
             {vercelFallback.isConfigured() ? (
@@ -647,6 +647,7 @@ export default function App() {
                   toggleLowPerfMode={toggleLowPerfMode}
                   showLoadWidget={showLoadWidget}
                   toggleLoadWidget={toggleLoadWidget}
+                  role={role}
                 />
               )}
 

@@ -52,8 +52,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
 
   // Auto-Fallback System: Prevent Denial of Service
-  if (errorMessage.includes('resource-exhausted') || errorMessage.includes('Quota exceeded')) {
-    console.warn(`[Aha Security] Quota Exceeded on ${path}. Activating Local Fallback Resources.`);
+  if (errorMessage.includes('resource-exhausted') || errorMessage.includes('Quota exceeded') || errorMessage.includes('offline') || errorMessage.includes('unavailable') || errorMessage.includes('network')) {
+    console.warn(`[Aha Security] Quota Exceeded or DB Offline on ${path}. Activating Local Fallback Resources.`);
     localStorage.setItem('aha_quota_fallback', Date.now().toString());
     window.dispatchEvent(new Event('aha_quota_fallback_active'));
     // Do NOT throw the error. Allow the component to gracefully fallback to local initial state

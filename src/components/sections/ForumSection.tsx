@@ -8,7 +8,6 @@ import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, serverTime
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { TimeAgo } from '../ui/TimeAgo';
 import { ConfirmModal } from '../ui/ConfirmModal';
-import { GoogleGenAI } from '@google/genai';
 
 interface ForumThread {
   id: string;
@@ -39,15 +38,11 @@ interface ForumComment {
   replyToId?: string;
 }
 
-import { moderateContentWithProxy } from '../../utils/geminiProxy';
-
 interface ForumSectionProps {
   lang: Language;
   onOpenChat: (uid: string, name: string, photoURL?: string) => void;
   role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
 }
-
-const ai = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || 'dummy' });
 
 export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, role }) => {
   const { user } = useAuth();
@@ -107,40 +102,10 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
     return () => unsubscribe();
   }, [selectedThread]);
 
-  const moderateContent = async (text: string): Promise<boolean> => {
-    try {
-      const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-      if (!apiKey) return true;
-      
-      const prompt = `You are a strict automated moderation bot for a forum called "Aha Forum". 
-Analyze the following text and determine if it contains ANY profanity, hate speech, illegal content, or extreme toxicity.
-You MUST catch all variations of Russian swear words (mat), including misspellings, transliterations, and symbol substitutions (e.g., пиздец, пiздец, p1zdec, хуй, xyu, бля, blya, ебать, etc.). ANY variation of these words is COMPLETELY FORBIDDEN.
-If there is even a hint of profanity or offensive language, return {"isApproved": false}.
-Otherwise, return {"isApproved": true}.
-Respond ONLY with a JSON object in the following format:
-{"isApproved": true/false}
-
-Text to analyze:
-"${text}"`;
-
-      return await moderateContentWithProxy(prompt, apiKey);
-    } catch (error) {
-      console.error('Moderation error:', error);
-      return true; // fail open
-    }
-  };
-
   const handleCreateThread = async () => {
     if (!user || !newTitle.trim() || !newContent.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const isApproved = await moderateContent(newTitle + " " + newContent);
-      if (!isApproved) {
-        alert((t as any).forumModerationRejectedPost || t.forumPostRejected);
-        setIsSubmitting(false);
-        return;
-      }
-
       const threadRef = await addDoc(collection(db, 'forum_threads'), {
         title: newTitle.trim(),
         content: newContent.trim(),
@@ -180,13 +145,6 @@ Text to analyze:
     if (!user || !selectedThread || !contentToSubmit.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const isApproved = await moderateContent(contentToSubmit);
-      if (!isApproved) {
-        alert((t as any).forumModerationRejectedComment || t.forumCommentRejected);
-        setIsSubmitting(false);
-        return;
-      }
-
       await addDoc(collection(db, 'forum_comments'), {
         threadId: selectedThread.id,
         content: contentToSubmit.trim(),
@@ -251,12 +209,6 @@ Text to analyze:
     if (!editingThreadId || !editThreadTitle.trim() || !editThreadContent.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const isApproved = await moderateContent(editThreadTitle + " " + editThreadContent);
-      if (!isApproved) {
-        alert((t as any).forumModerationRejectedPost || t.forumPostRejected);
-        setIsSubmitting(false);
-        return;
-      }
       await updateDoc(doc(db, 'forum_threads', editingThreadId), {
         title: editThreadTitle.trim(),
         content: editThreadContent.trim(),
@@ -274,12 +226,6 @@ Text to analyze:
     if (!editingCommentId || !editCommentContent.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const isApproved = await moderateContent(editCommentContent);
-      if (!isApproved) {
-        alert((t as any).forumModerationRejectedComment || t.forumCommentRejected);
-        setIsSubmitting(false);
-        return;
-      }
       await updateDoc(doc(db, 'forum_comments', editingCommentId), {
         content: editCommentContent.trim(),
         isEdited: true
