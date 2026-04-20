@@ -3,10 +3,13 @@ import { createClient } from '@vercel/kv';
 let kvClient: ReturnType<typeof createClient> | null = null;
 
 try {
-  if (import.meta.env.VITE_KV_REST_API_URL && import.meta.env.VITE_KV_REST_API_TOKEN) {
+  const kvUrl = import.meta.env.VITE_KV_REST_API_URL || import.meta.env.WBM_STATIC_KV_REST_API_URL;
+  const kvToken = import.meta.env.VITE_KV_REST_API_TOKEN || import.meta.env.WBM_STATIC_KV_REST_API_TOKEN;
+
+  if (kvUrl && kvToken) {
     kvClient = createClient({
-      url: import.meta.env.VITE_KV_REST_API_URL,
-      token: import.meta.env.VITE_KV_REST_API_TOKEN,
+      url: kvUrl,
+      token: kvToken,
     });
   }
 } catch (e) {
