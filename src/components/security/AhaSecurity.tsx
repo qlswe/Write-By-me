@@ -100,7 +100,7 @@ export const SafeHtml: React.FC<{ html: string; className?: string }> = ({ html,
 };
 
 // 3. Visual Badge & Control Panel
-export const AhaSecurityBadge: React.FC = () => {
+export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide }) => {
   const { logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
@@ -181,7 +181,7 @@ export const AhaSecurityBadge: React.FC = () => {
     }
   };
 
-  if (isHidden || globalHidden) return null;
+  if (isHidden || globalHidden || autoHide) return null;
 
   return (
     <div className="fixed bottom-4 left-4 z-50">
