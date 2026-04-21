@@ -219,7 +219,7 @@ export const Header: React.FC<HeaderProps> = ({
                           </button>
 
                           <button 
-                            onClick={() => { window.dispatchEvent(new CustomEvent('open-aha-sdk')); setProfileOpen(false); }}
+                            onClick={() => { setSection('sdk'); setProfileOpen(false); }}
                             className="w-full flex items-center justify-center gap-2 bg-[#15101e] hover:bg-[#3d2b4f] text-white border border-[#3d2b4f] hover:border-[#ff4d4d] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
                           >
                             <Settings size={16} />
@@ -227,7 +227,7 @@ export const Header: React.FC<HeaderProps> = ({
                           </button>
 
                           <button 
-                            onClick={() => { window.dispatchEvent(new CustomEvent('open-aha-ai')); setProfileOpen(false); }}
+                            onClick={() => { setSection('ai'); setProfileOpen(false); }}
                             className="w-full flex items-center justify-center gap-2 bg-[#15101e] hover:bg-[#3d2b4f] text-[#ff4d4d] border border-[#3d2b4f] hover:border-[#ff4d4d] px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-2"
                           >
                             <Sparkles size={16} />

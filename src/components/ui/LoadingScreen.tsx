@@ -227,7 +227,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, l
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                   className="font-black text-gray-100 tracking-[0.2em] md:tracking-[0.25em] uppercase text-sm sm:text-base drop-shadow-md"
                 >
-                  {translations[lang].loading || 'Loading...'}
+                  {(translations[lang] as any).loading || 'Loading...'}
                 </motion.span>
               </div>
             </motion.div>

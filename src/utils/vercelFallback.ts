@@ -1,42 +1,88 @@
-import { createClient } from '@vercel/kv';
+import { getDatabase, ref, push, get as rtdbGet, set as rtdbSet, query, limitToLast } from 'firebase/database';
+import { app } from '../firebase';
 
-let kvClient: ReturnType<typeof createClient> | null = null;
+let dbFallback: ReturnType<typeof getDatabase> | null = null;
+let consecutiveFailures = 0;
+let circuitBreakerTripped = false;
 
 try {
-  const kvUrl = import.meta.env.VITE_KV_REST_API_URL || import.meta.env.WBM_STATIC_KV_REST_API_URL;
-  const kvToken = import.meta.env.VITE_KV_REST_API_TOKEN || import.meta.env.WBM_STATIC_KV_REST_API_TOKEN;
-
-  if (kvUrl && kvToken) {
-    kvClient = createClient({
-      url: kvUrl,
-      token: kvToken,
-    });
-  }
+  // To avoid errors if RTDB is not enabled immediately, we still initialize it.
+  // We use a custom URL in case it's not present in the config, guessing by project ID.
+  const rtdbUrl = 'https://wbm-static-default-rtdb.europe-west1.firebasedatabase.app';
+  dbFallback = getDatabase(app, rtdbUrl);
 } catch (e) {
-  console.error("Failed to initialize Vercel KV fallback", e);
+  console.error("Failed to initialize RTDB fallback", e);
 }
 
+const handleDbError = (err: any) => {
+  console.warn("RTDB Fallback connection error:", err);
+  consecutiveFailures++;
+  if (consecutiveFailures >= 3) {
+    console.error("Fallback circuit breaker tripped. Disabling.");
+    circuitBreakerTripped = true;
+    window.dispatchEvent(new CustomEvent('aha_toast', { detail: 'Fallback is unavailable. Reverting to Firestore.' }));
+    localStorage.removeItem('aha_quota_fallback'); 
+  }
+};
+
 export const vercelFallback = {
-  isAvailable: () => !!kvClient && !!localStorage.getItem('aha_quota_fallback'),
-  isConfigured: () => !!kvClient,
+  isAvailable: () => !!dbFallback && !circuitBreakerTripped && !!localStorage.getItem('aha_quota_fallback'),
+  isConfigured: () => !!dbFallback && !circuitBreakerTripped,
   
   async get(key: string) {
-    if (!kvClient) return null;
-    return await kvClient.get(key);
+    if (!this.isAvailable()) return null;
+    try {
+      const dbRef = ref(dbFallback!, `fallback/${key.replace(/[:.#$[\]]/g, '_')}`);
+      const snapshot = await rtdbGet(dbRef);
+      consecutiveFailures = 0;
+      return snapshot.val();
+    } catch(e) {
+      handleDbError(e);
+      return null;
+    }
   },
   
   async set(key: string, value: any) {
-    if (!kvClient) return;
-    return await kvClient.set(key, value);
+    if (!this.isAvailable()) return;
+    try {
+      const dbRef = ref(dbFallback!, `fallback/${key.replace(/[:.#$[\]]/g, '_')}`);
+      await rtdbSet(dbRef, value);
+      consecutiveFailures = 0;
+    } catch(e) {
+      handleDbError(e);
+    }
   },
 
   async lpush(key: string, value: any) {
-    if (!kvClient) return;
-    return await kvClient.lpush(key, value);
+    if (!this.isAvailable()) return;
+    try {
+      const dbRef = ref(dbFallback!, `fallback/${key.replace(/[:.#$[\]]/g, '_')}`);
+      await push(dbRef, value);
+      consecutiveFailures = 0;
+    } catch(e) {
+      handleDbError(e);
+    }
   },
 
   async lrange(key: string, start: number, stop: number) {
-    if (!kvClient) return [];
-    return await kvClient.lrange(key, start, stop);
+    if (!this.isAvailable()) return [];
+    try {
+      const dbRef = ref(dbFallback!, `fallback/${key.replace(/[:.#$[\]]/g, '_')}`);
+      const q = query(dbRef, limitToLast(stop + 1));
+      const snapshot = await rtdbGet(q);
+      consecutiveFailures = 0;
+      if (!snapshot.exists()) return [];
+      
+      const results: any[] = [];
+      snapshot.forEach((child) => {
+        results.push(child.val());
+      });
+      // push appends to the end. lrange 0, stop from upstash returned newest first if we used lpush.
+      // So we reverse the chronological RTDB results.
+      return results.reverse();
+    } catch(e) {
+      handleDbError(e);
+      return [];
+    }
   }
 };

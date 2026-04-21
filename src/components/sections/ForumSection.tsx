@@ -9,6 +9,8 @@ import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { TimeAgo } from '../ui/TimeAgo';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
+import { vercelFallback } from '../../utils/vercelFallback';
+
 interface ForumThread {
   id: string;
   title: string;
@@ -81,7 +83,36 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'forum_threads');
     });
-    return () => unsubscribe();
+
+    let fallbackInterval: ReturnType<typeof setInterval>;
+    const fetchFallback = async () => {
+      if (vercelFallback.isAvailable()) {
+        try {
+          const fallbackData = await vercelFallback.lrange('forum_threads', 0, 100);
+          if (fallbackData && fallbackData.length > 0) {
+            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str) as ForumThread[];
+            
+            setThreads(prev => {
+              const mapped = new Map([...prev, ...parsed].map(t => [t.id, t]));
+              const sorted = Array.from(mapped.values()).sort((a, b) => {
+                  const timeA = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : ((a.createdAt as any)?.toMillis?.() || 0);
+                  const timeB = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : ((b.createdAt as any)?.toMillis?.() || 0);
+                  return timeB - timeA;
+              });
+              return sorted;
+            });
+          }
+        } catch (e) {}
+      }
+    };
+    
+    fetchFallback();
+    fallbackInterval = setInterval(fetchFallback, 5000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(fallbackInterval);
+    }
   }, []);
 
   useEffect(() => {
@@ -99,36 +130,95 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'forum_comments');
     });
-    return () => unsubscribe();
+
+    let fallbackInterval: ReturnType<typeof setInterval>;
+    const fetchFallback = async () => {
+      if (vercelFallback.isAvailable()) {
+        try {
+          const fallbackData = await vercelFallback.lrange(`forum_comments:${selectedThread.id}`, 0, 100);
+          if (fallbackData && fallbackData.length > 0) {
+            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str).reverse() as ForumComment[];
+            
+            setComments(prev => {
+              const mapped = new Map([...prev, ...parsed].map(c => [c.id, c]));
+              const sorted = Array.from(mapped.values()).sort((a, b) => {
+                  const timeA = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : ((a.createdAt as any)?.toMillis?.() || 0);
+                  const timeB = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : ((b.createdAt as any)?.toMillis?.() || 0);
+                  return timeA - timeB;
+              });
+              return sorted;
+            });
+          }
+        } catch (e) {}
+      }
+    };
+
+    fetchFallback();
+    fallbackInterval = setInterval(fetchFallback, 5000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(fallbackInterval);
+    };
   }, [selectedThread]);
 
   const handleCreateThread = async () => {
     if (!user || !newTitle.trim() || !newContent.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const threadRef = await addDoc(collection(db, 'forum_threads'), {
+      const threadData = {
         title: newTitle.trim(),
         content: newContent.trim(),
         authorId: user.uid,
         authorName: user.displayName || 'Anonymous',
         authorPhoto: user.photoURL || '',
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(), // Fallback ready format
         commentCount: 1,
         upvotes: [],
         downvotes: []
-      });
+      };
 
-      await addDoc(collection(db, 'forum_comments'), {
-        threadId: threadRef.id,
-        content: (t as any).forumBotWelcome || "Welcome to the forum!",
-        authorId: 'system-bot',
-        authorName: 'Aha Bot',
-        authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
-        createdAt: serverTimestamp(),
-        upvotes: [],
-        downvotes: [],
-        isBot: true
-      });
+      let threadId = Date.now().toString() + '_' + user.uid;
+
+      if (vercelFallback.isAvailable()) {
+        const payload = { ...threadData, id: threadId, createdAt: new Date().toISOString() };
+        await vercelFallback.lpush('forum_threads', JSON.stringify(payload));
+        
+        const botPayload = {
+          id: Date.now().toString() + '_bot',
+          threadId: threadId,
+          content: (t as any).forumBotWelcome || "Welcome to the forum!",
+          authorId: 'system-bot',
+          authorName: 'Aha Bot',
+          authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
+          createdAt: new Date().toISOString(),
+          upvotes: [],
+          downvotes: [],
+          isBot: true
+        };
+        await vercelFallback.lpush(`forum_comments:${threadId}`, JSON.stringify(botPayload));
+
+        setThreads(prev => [payload, ...prev]);
+      } else {
+        const threadRef = await addDoc(collection(db, 'forum_threads'), {
+          ...threadData,
+          createdAt: serverTimestamp()
+        });
+        
+        threadId = threadRef.id;
+
+        await addDoc(collection(db, 'forum_comments'), {
+          threadId: threadRef.id,
+          content: (t as any).forumBotWelcome || "Welcome to the forum!",
+          authorId: 'system-bot',
+          authorName: 'Aha Bot',
+          authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
+          createdAt: serverTimestamp(),
+          upvotes: [],
+          downvotes: [],
+          isBot: true
+        });
+      }
 
       setIsCreating(false);
       setNewTitle('');
@@ -145,22 +235,36 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
     if (!user || !selectedThread || !contentToSubmit.trim() || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'forum_comments'), {
+      const commentData = {
         threadId: selectedThread.id,
         content: contentToSubmit.trim(),
         authorId: user.uid,
         authorName: user.displayName || 'Anonymous',
         authorPhoto: user.photoURL || '',
-        createdAt: serverTimestamp(),
+        createdAt: new Date().toISOString(),
         upvotes: [],
         downvotes: [],
         ...(replyToId ? { replyToId } : {})
-      });
-      
-      const threadRef = doc(db, 'forum_threads', selectedThread.id);
-      await updateDoc(threadRef, {
-        commentCount: (selectedThread.commentCount || 0) + 1
-      });
+      };
+
+      if (vercelFallback.isAvailable()) {
+        const commentId = Date.now().toString() + '_' + user.uid;
+        const payload = { ...commentData, id: commentId, createdAt: new Date().toISOString() };
+        await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
+        setComments(prev => [...prev, payload]);
+        // Update local state for comment count since we can't do a partial update easily in KV array
+        setSelectedThread(prev => prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null);
+      } else {
+        await addDoc(collection(db, 'forum_comments'), {
+          ...commentData,
+          createdAt: serverTimestamp()
+        });
+        
+        const threadRef = doc(db, 'forum_threads', selectedThread.id);
+        await updateDoc(threadRef, {
+          commentCount: increment(1)
+        });
+      }
       
       if (replyToId) {
         setReplyContent('');

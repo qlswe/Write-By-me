@@ -110,16 +110,13 @@ export function useChat(otherUserId?: string) {
              }).reverse() as Message[];
              
              setMessages(prev => {
-               const existing = new Set(prev.map(m => m.id));
-               const newMsgs = parsed.filter(m => !existing.has(m.id));
-               if (newMsgs.length > 0) {
-                 return [...prev, ...newMsgs].sort((a, b) => {
+               const mapped = new Map([...prev, ...parsed].map(m => [m.id, m]));
+               const sorted = Array.from(mapped.values()).sort((a, b) => {
                    const timeA = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : ((a.createdAt as any)?.toMillis?.() || 0);
                    const timeB = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : ((b.createdAt as any)?.toMillis?.() || 0);
                    return timeA - timeB;
-                 });
-               }
-               return prev;
+               });
+               return sorted;
              });
            }
          } catch (e) {

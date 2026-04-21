@@ -63,6 +63,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   // Permissions errors shouldn't crash the whole app either, just log them
   if (errorMessage.includes('Missing or insufficient permissions')) {
     console.warn(`[Aha Security] Permission Denied on ${path}.`);
+    window.dispatchEvent(new CustomEvent('aha_toast', { detail: 'Permission Denied: Please update rules in Firebase Console' }));
     return;
   }
 

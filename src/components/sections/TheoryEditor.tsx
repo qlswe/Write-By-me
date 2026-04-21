@@ -6,6 +6,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
+import { vercelFallback } from '../../utils/vercelFallback';
 
 interface TheoryEditorProps {
   theory?: any;
@@ -50,16 +51,26 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
         updatedAt: new Date().toISOString()
       };
 
-      if (theory?.id) {
-        await setDoc(doc(db, 'theories', theory.id), {
-          ...theoryData,
-          createdAt: theory.createdAt || new Date().toISOString()
-        });
+      if (vercelFallback.isAvailable()) {
+        const uid = theory?.id || Date.now().toString() + '_' + user?.uid;
+        const payload = {
+            ...theoryData,
+            id: uid,
+            createdAt: theory?.createdAt || new Date().toISOString()
+        };
+        await vercelFallback.lpush('theories', JSON.stringify(payload));
       } else {
-        await addDoc(collection(db, 'theories'), {
-          ...theoryData,
-          createdAt: new Date().toISOString()
-        });
+        if (theory?.id) {
+          await setDoc(doc(db, 'theories', theory.id), {
+            ...theoryData,
+            createdAt: theory.createdAt || new Date().toISOString()
+          });
+        } else {
+          await addDoc(collection(db, 'theories'), {
+            ...theoryData,
+            createdAt: new Date().toISOString()
+          });
+        }
       }
       onClose();
     } catch (error) {

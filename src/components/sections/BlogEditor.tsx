@@ -6,6 +6,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
+import { vercelFallback } from '../../utils/vercelFallback';
 
 interface BlogEditorProps {
   post?: any;
@@ -50,16 +51,26 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
         updatedAt: new Date().toISOString()
       };
 
-      if (post?.id) {
-        await setDoc(doc(db, 'blogPosts', post.id), {
-          ...postData,
-          createdAt: post.createdAt || new Date().toISOString()
-        });
+      if (vercelFallback.isAvailable()) {
+        const uid = post?.id || Date.now().toString() + '_' + user?.uid;
+        const payload = {
+            ...postData,
+            id: uid,
+            createdAt: post?.createdAt || new Date().toISOString()
+        };
+        await vercelFallback.lpush('blogPosts', JSON.stringify(payload));
       } else {
-        await addDoc(collection(db, 'blogPosts'), {
-          ...postData,
-          createdAt: new Date().toISOString()
-        });
+        if (post?.id) {
+          await setDoc(doc(db, 'blogPosts', post.id), {
+            ...postData,
+            createdAt: post.createdAt || new Date().toISOString()
+          });
+        } else {
+          await addDoc(collection(db, 'blogPosts'), {
+            ...postData,
+            createdAt: new Date().toISOString()
+          });
+        }
       }
       onClose();
     } catch (error) {

@@ -133,7 +133,25 @@ export default function App() {
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
       if (docSnap.exists()) {
-        setMaintenanceMode(docSnap.data().maintenanceMode || false);
+        const data = docSnap.data();
+        setMaintenanceMode(data.maintenanceMode || false);
+        
+        // Listen for global fallback flag from admin
+        if (data.forceKVFallback) {
+          if (!localStorage.getItem('aha_quota_fallback')) {
+            localStorage.setItem('aha_quota_fallback', Date.now().toString());
+            setOfflineMode(true);
+            window.dispatchEvent(new Event('aha_quota_fallback_active'));
+            setTimeout(() => window.location.reload(), 500); // Reload to clean Firebase listeners
+          }
+        } else if (data.forceKVFallback === false) {
+          const fallbackCreated = localStorage.getItem('aha_quota_fallback');
+          if (fallbackCreated) {
+             localStorage.removeItem('aha_quota_fallback');
+             setOfflineMode(false);
+             setTimeout(() => window.location.reload(), 500);
+          }
+        }
       }
     });
     return () => unsub();
@@ -180,7 +198,27 @@ export default function App() {
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'system_content/home_page');
     });
-    return () => unsub();
+
+    const fetchFallback = async () => {
+      if (vercelFallback.isAvailable()) {
+        try {
+          const fallbackData = await vercelFallback.lrange('system_content_home_page', 0, 1);
+          if (fallbackData && fallbackData.length > 0) {
+            const data = typeof fallbackData[0] === 'string' ? JSON.parse(fallbackData[0]) : fallbackData[0];
+            if (data.content) setHomeContent(data.content);
+            if (data.sdk_content) setSdkContent(data.sdk_content);
+            if (data.changelog_content) setChangelogContent(data.changelog_content);
+          }
+        } catch (e) {}
+      }
+    };
+    fetchFallback();
+    const fallbackInterval = setInterval(fetchFallback, 15000);
+
+    return () => {
+      unsub();
+      clearInterval(fallbackInterval);
+    };
   }, []);
 
   // Chat state
@@ -316,6 +354,12 @@ export default function App() {
   }, [authLoading, isDataLoaded, lowPerfMode, productionMode]);
 
   useEffect(() => {
+    const handleToast = ((e: CustomEvent) => setToast(e.detail)) as EventListener;
+    window.addEventListener('aha_toast', handleToast);
+    return () => window.removeEventListener('aha_toast', handleToast);
+  }, []);
+
+  useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 3000);
       return () => clearTimeout(timer);
@@ -400,14 +444,24 @@ export default function App() {
   const handleSaveHomeContent = async () => {
     if (!role || (role !== 'admin' && role !== 'moderator')) return;
     try {
-      await setDoc(doc(db, 'system_content', 'home_page'), {
+      const payload = {
         content: {
           ...homeContent,
           [lang]: editedHomeContent
         }
-      }, { merge: true });
+      };
+      
+      if (vercelFallback.isAvailable()) {
+         await vercelFallback.lpush('system_content_home_page', JSON.stringify({
+            content: { ...homeContent, [lang]: editedHomeContent },
+            sdk_content: sdkContent,
+            changelog_content: changelogContent
+         }));
+      } else {
+        await setDoc(doc(db, 'system_content', 'home_page'), payload, { merge: true });
+      }
       setIsEditingHome(false);
-      setToast(t.successSaved || 'Saved successfully');
+      setToast('Saved successfully');
     } catch (e) {
       console.error(e);
       setToast('Error saving changes');
@@ -417,14 +471,24 @@ export default function App() {
   const handleSaveSdkContent = async () => {
     if (!role || (role !== 'admin' && role !== 'moderator')) return;
     try {
-      await setDoc(doc(db, 'system_content', 'home_page'), {
+      const payload = {
         sdk_content: {
           ...sdkContent,
           [lang]: editedSdkContent
         }
-      }, { merge: true });
+      };
+      
+      if (vercelFallback.isAvailable()) {
+         await vercelFallback.lpush('system_content_home_page', JSON.stringify({
+            content: homeContent,
+            sdk_content: { ...sdkContent, [lang]: editedSdkContent },
+            changelog_content: changelogContent
+         }));
+      } else {
+        await setDoc(doc(db, 'system_content', 'home_page'), payload, { merge: true });
+      }
       setIsEditingSdk(false);
-      setToast(t.successSaved || 'Saved successfully');
+      setToast('Saved successfully');
     } catch (e) {
       console.error(e);
       setToast('Error saving changes');
@@ -434,14 +498,24 @@ export default function App() {
   const handleSaveChangelogContent = async () => {
     if (!role || (role !== 'admin' && role !== 'moderator')) return;
     try {
-      await setDoc(doc(db, 'system_content', 'home_page'), {
+      const payload = {
         changelog_content: {
           ...changelogContent,
           [lang]: editedChangelogContent
         }
-      }, { merge: true });
+      };
+
+      if (vercelFallback.isAvailable()) {
+         await vercelFallback.lpush('system_content_home_page', JSON.stringify({
+            content: homeContent,
+            sdk_content: sdkContent,
+            changelog_content: { ...changelogContent, [lang]: editedChangelogContent }
+         }));
+      } else {
+        await setDoc(doc(db, 'system_content', 'home_page'), payload, { merge: true });
+      }
       setIsEditingChangelog(false);
-      setToast(t.successSaved || 'Saved successfully');
+      setToast('Saved successfully');
     } catch (e) {
       console.error(e);
       setToast('Error saving changes');

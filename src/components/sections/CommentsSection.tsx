@@ -10,6 +10,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
 import { ConfirmModal } from '../ui/ConfirmModal';
 
+import { vercelFallback } from '../../utils/vercelFallback';
+
 interface Comment {
   id: string;
   targetId: string;
@@ -87,7 +89,34 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
       handleFirestoreError(error, OperationType.GET, 'comments');
     });
 
-    return () => unsubscribe();
+    let fallbackInterval: ReturnType<typeof setInterval>;
+    const fetchFallback = async () => {
+      if (vercelFallback.isAvailable()) {
+        try {
+          const fallbackData = await vercelFallback.lrange(`comments:${targetId}`, 0, 100);
+          if (fallbackData && fallbackData.length > 0) {
+            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str).reverse() as Comment[];
+            setComments(prev => {
+              const mapped = new Map([...prev, ...parsed].map(c => [c.id, c]));
+              const sorted = Array.from(mapped.values()).sort((a, b) => {
+                  const timeA = new Date(a.createdAt).getTime();
+                  const timeB = new Date(b.createdAt).getTime();
+                  return timeB - timeA;
+              });
+              return sorted;
+            });
+          }
+        } catch (e) {}
+      }
+    };
+    
+    fetchFallback();
+    fallbackInterval = setInterval(fetchFallback, 5000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(fallbackInterval);
+    };
   }, [targetId]);
 
   const handleSubmit = async (e: React.FormEvent, parentId?: string) => {
@@ -97,7 +126,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
 
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'comments'), {
+      const payload = {
         targetId,
         parentId: parentId || null,
         authorUid: user.uid,
@@ -108,13 +137,21 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
         downvotes: [],
         isEdited: false,
         createdAt: new Date().toISOString()
-      });
+      };
 
-      // Grant XP for posting a comment
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        xp: increment(25) // 25 XP for a comment
-      });
+      if (vercelFallback.isAvailable()) {
+        const commentId = Date.now().toString() + '_' + user.uid;
+        const fullPayload = { ...payload, id: commentId };
+        await vercelFallback.lpush(`comments:${targetId}`, JSON.stringify(fullPayload));
+        setComments(prev => [fullPayload, ...prev]);
+      } else {
+        await addDoc(collection(db, 'comments'), payload);
+        // Grant XP for posting a comment
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          xp: increment(25) // 25 XP for a comment
+        });
+      }
 
       if (parentId) {
         setReplyingTo(null);

@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import './i18n';
 import { ErrorBoundary } from './components/ErrorBoundary';
+// @ts-ignore
 import { registerSW } from 'virtual:pwa-register';
 
 // Register service worker for offline support

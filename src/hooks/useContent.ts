@@ -3,6 +3,7 @@ import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestor
 import { db } from '../firebase';
 import { theoriesData as localTheories, blogPostsData as localBlogPosts, eventsData as localEvents, promoCodesData as localPromoCodes } from '../data/content';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
+import { vercelFallback } from '../utils/vercelFallback';
 
 export function useContent() {
   const [theories, setTheories] = useState<any[]>(localTheories);
@@ -91,7 +92,7 @@ export function useContent() {
         ...doc.data()
       }));
       const mappedFirestorePromoCodes = firestorePromoCodes.map((p: any) => {
-        const reward = typeof p.reward === 'string' ? { ru: p.reward, en: p.reward, by: p.reward, de: p.reward, fr: p.reward, fr: p.reward, zh: p.reward } : p.reward;
+        const reward = typeof p.reward === 'string' ? { ru: p.reward, en: p.reward, by: p.reward, de: p.reward, fr: p.reward, zh: p.reward } : p.reward;
         return {
           ...p,
           rewards: reward || { ru: '', en: '', by: '', de: '', fr: '', zh: '' }
@@ -104,11 +105,62 @@ export function useContent() {
       handleFirestoreError(error, OperationType.GET, 'promo_codes');
     });
 
+    let fallbackInterval: ReturnType<typeof setInterval>;
+    const fetchFallback = async () => {
+      if (vercelFallback.isAvailable()) {
+        try {
+          // Fetch theories
+          const fallbackData = await vercelFallback.lrange('theories', 0, 50);
+          if (fallbackData && fallbackData.length > 0) {
+            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
+            setTheories(prev => {
+              const mapped = new Map([...prev, ...parsed].map(t => [t.id, t]));
+              return Array.from(mapped.values());
+            });
+          }
+          
+          // Fetch blog posts
+          const fallbackBlogData = await vercelFallback.lrange('blogPosts', 0, 50);
+          if (fallbackBlogData && fallbackBlogData.length > 0) {
+            const parsed = fallbackBlogData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
+            setBlogPosts(prev => {
+              const mapped = new Map([...prev, ...parsed].map(t => [t.id, t]));
+              return Array.from(mapped.values());
+            });
+          }
+
+          // Fetch chronicle
+          const fallbackChronicleData = await vercelFallback.lrange('events', 0, 50);
+          if (fallbackChronicleData && fallbackChronicleData.length > 0) {
+            const parsed = fallbackChronicleData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
+            setEvents(prev => {
+              const mapped = new Map([...prev, ...parsed].map(t => [t.id, t]));
+              return Array.from(mapped.values()).sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+            });
+          }
+
+          // Fetch promos
+          const fallbackPromoData = await vercelFallback.lrange('promo_codes', 0, 50);
+          if (fallbackPromoData && fallbackPromoData.length > 0) {
+            const parsed = fallbackPromoData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
+            setPromoCodes(prev => {
+              const mapped = new Map([...prev, ...parsed].map(t => [t.id, t]));
+              return Array.from(mapped.values());
+            });
+          }
+        } catch (e) {}
+      }
+    };
+    
+    fetchFallback();
+    fallbackInterval = setInterval(fetchFallback, 10000); // 10s is fine for content feeds
+
     return () => {
       unsubscribeTheories();
       unsubscribeBlogPosts();
       unsubscribeEvents();
       unsubscribePromoCodes();
+      clearInterval(fallbackInterval);
     };
   }, []);
 

@@ -7,6 +7,7 @@ import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { Plus, Trash2, Edit2, X, Check, Gift, Calendar, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { vercelFallback } from '../../utils/vercelFallback';
 
 interface PromoCode {
   id: string;
@@ -55,7 +56,29 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
       handleFirestoreError(error, OperationType.GET, 'promo_codes');
     });
 
-    return () => unsubscribe();
+    const fetchFallback = async () => {
+      if (vercelFallback.isAvailable()) {
+        try {
+          const fallbackData = await vercelFallback.lrange('promo_codes', 0, 50);
+          if (fallbackData && fallbackData.length > 0) {
+            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
+            setPromoCodes(prev => {
+              const prevIds = new Set(prev.map(t => t.id));
+              const newItems = parsed.filter(t => !prevIds.has(t.id));
+              return newItems.length > 0 ? [...newItems, ...prev] : prev;
+            });
+          }
+        } catch (e) {}
+      }
+    };
+    
+    fetchFallback();
+    const fallbackInterval = setInterval(fetchFallback, 10000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(fallbackInterval);
+    };
   }, [isAdmin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,16 +86,27 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
     if (!isAdmin || !formData.code || !formData.reward) return;
 
     try {
-      if (editingId) {
-        await updateDoc(doc(db, 'promo_codes', editingId), formData);
-        setEditingId(null);
+      if (vercelFallback.isAvailable()) {
+         const uid = editingId || Date.now().toString();
+         const payload = {
+             ...formData,
+             id: uid,
+             createdAt: new Date().toISOString()
+         };
+         await vercelFallback.lpush('promo_codes', JSON.stringify(payload));
       } else {
-        await addDoc(collection(db, 'promo_codes'), {
-          ...formData,
-          createdAt: new Date().toISOString()
-        });
-        setIsAdding(false);
+        if (editingId) {
+          await updateDoc(doc(db, 'promo_codes', editingId), formData);
+        } else {
+          await addDoc(collection(db, 'promo_codes'), {
+            ...formData,
+            createdAt: new Date().toISOString()
+          });
+        }
       }
+      setEditingId(null);
+      setIsAdding(false);
+      
       setFormData({
         code: '',
         reward: '',

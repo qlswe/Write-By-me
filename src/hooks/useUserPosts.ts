@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
+import { vercelFallback } from '../utils/vercelFallback';
 
 export interface UserPost {
   id: string;
@@ -44,27 +45,69 @@ export function useUserPosts(userId?: string) {
         return dateB - dateA;
       });
 
-      setPosts(postsData);
+      setPosts(prev => {
+        if (!vercelFallback.isAvailable()) return postsData;
+        const mapped = new Map([...prev, ...postsData].map(p => [p.id, p]));
+        const sorted = Array.from(mapped.values()).sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
+        return sorted;
+      });
       setLoading(false);
     }, (error) => {
       console.error("Error fetching user posts:", error);
       setLoading(false);
     });
 
-    return unsubscribe;
+    const fetchFallback = async () => {
+      if (vercelFallback.isAvailable()) {
+        try {
+          const fallbackData = await vercelFallback.lrange(`user_posts:${userId}`, 0, 20);
+          if (fallbackData && fallbackData.length > 0) {
+            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
+            setPosts(prev => {
+              const mapped = new Map([...parsed, ...prev].map(p => [p.id, p]));
+              const sorted = Array.from(mapped.values()).sort((a, b) => {
+                  const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                  const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                  return dateB - dateA;
+              });
+              return sorted;
+            });
+          }
+        } catch (e) {}
+      }
+    };
+    fetchFallback();
+    const fallbackInterval = setInterval(fetchFallback, 10000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(fallbackInterval);
+    };
   }, [userId]);
 
   const createPost = async (text: string) => {
     if (!user || !text.trim()) return;
 
     try {
-      await addDoc(collection(db, 'user_posts'), {
+      const postData = {
         uid: user.uid,
         authorName: user.displayName,
         authorPhoto: user.photoURL,
         text: text.trim(),
-        createdAt: new Date().toISOString() // Using ISO string for simplicity in display, or serverTimestamp()
-      });
+        createdAt: new Date().toISOString()
+      };
+
+      if (vercelFallback.isAvailable()) {
+          const payload = { ...postData, id: Date.now().toString() + '_' + user.uid };
+          await vercelFallback.lpush(`user_posts:${user.uid}`, JSON.stringify(payload));
+          setPosts(prev => [payload as any, ...prev]);
+      } else {
+          await addDoc(collection(db, 'user_posts'), postData);
+      }
     } catch (error) {
       console.error("Error creating post:", error);
     }

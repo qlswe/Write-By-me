@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Settings, ShieldCheck, Cpu } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
+import { db } from '../../firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 interface SdkSettingsSectionProps {
   lang: Language;
@@ -28,12 +30,49 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
   const [localTime, setLocalTime] = useState(new Date().toLocaleTimeString());
   const t = translations[lang];
 
+  const [globalFallbackState, setGlobalFallbackState] = useState(false);
+
   useEffect(() => {
     const timer = setInterval(() => {
       setLocalTime(new Date().toLocaleTimeString());
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (role === 'admin' || role === 'moderator') {
+      const getSettings = async () => {
+        try {
+          const docSnap = await getDoc(doc(db, 'settings', 'general'));
+          if (docSnap.exists()) {
+            setGlobalFallbackState(docSnap.data().forceKVFallback || false);
+          }
+        } catch (e) {
+          // Setting unavailable
+        }
+      };
+      getSettings();
+    }
+  }, [role]);
+
+  const toggleGlobalFallback = async () => {
+    try {
+      const newState = !globalFallbackState;
+      setGlobalFallbackState(newState); // Optimistic update
+      await updateDoc(doc(db, 'settings', 'general'), {
+        forceKVFallback: newState
+      });
+      // Optionally reload to apply local changes immediately
+      if (newState) {
+        localStorage.setItem('aha_quota_fallback', Date.now().toString());
+      } else {
+        localStorage.removeItem('aha_quota_fallback');
+      }
+      setTimeout(() => window.location.reload(), 500);
+    } catch (e) {
+      console.error("Failed to update global routing", e);
+    }
+  };
 
   const toggleAhaSecurity = () => {
     const newValue = !ahaSecurityHidden;
@@ -146,27 +185,19 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                 Database Routing (Admin)
               </h3>
               <button 
-                onClick={() => {
-                  const isForced = localStorage.getItem('aha_quota_fallback');
-                  if (isForced) {
-                    localStorage.removeItem('aha_quota_fallback');
-                  } else {
-                    localStorage.setItem('aha_quota_fallback', Date.now().toString());
-                  }
-                  window.location.reload();
-                }}
+                onClick={toggleGlobalFallback}
                 className="w-full flex items-center justify-between p-5 bg-[#15101e] hover:bg-[#15101e]/80 rounded-2xl border border-[#3d2b4f] transition-all hover:border-indigo-500/50 text-left group"
               >
                 <div>
                   <div className="font-bold text-white text-base mb-1 group-hover:text-indigo-400 transition-colors">
-                    Force Vercel KV Fallback
+                    Global Vercel KV Fallback
                   </div>
                   <div className="text-sm text-gray-500">
-                    Bypass Firebase Firestore and route all traffic to the KV fallback database manually.
+                    Bypass Firebase Firestore globally for ALL users. Routes traffic to KV.
                   </div>
                 </div>
-                <div className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${localStorage.getItem('aha_quota_fallback') ? 'bg-indigo-500' : 'bg-[#3d2b4f]'}`}>
-                  <div className={`absolute top-[4px] left-[4px] w-6 h-6 rounded-full bg-white transition-transform ${localStorage.getItem('aha_quota_fallback') ? 'translate-x-6' : 'translate-x-0'}`} />
+                <div className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${globalFallbackState ? 'bg-indigo-500' : 'bg-[#3d2b4f]'}`}>
+                  <div className={`absolute top-[4px] left-[4px] w-6 h-6 rounded-full bg-white transition-transform ${globalFallbackState ? 'translate-x-6' : 'translate-x-0'}`} />
                 </div>
               </button>
             </div>

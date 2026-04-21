@@ -6,6 +6,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
+import { vercelFallback } from '../../utils/vercelFallback';
 
 interface EventEditorProps {
   event?: any;
@@ -69,16 +70,26 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
         }
       }
 
-      if (event?.id) {
-        await setDoc(doc(db, 'events', event.id), {
-          ...eventData,
-          createdAt: event.createdAt || new Date().toISOString()
-        });
+      if (vercelFallback.isAvailable()) {
+        const uid = event?.id || Date.now().toString() + '_' + user?.uid;
+        const payload = {
+            ...eventData,
+            id: uid,
+            createdAt: event?.createdAt || new Date().toISOString()
+        };
+        await vercelFallback.lpush('events', JSON.stringify(payload));
       } else {
-        await addDoc(collection(db, 'events'), {
-          ...eventData,
-          createdAt: new Date().toISOString()
-        });
+        if (event?.id) {
+          await setDoc(doc(db, 'events', event.id), {
+            ...eventData,
+            createdAt: event.createdAt || new Date().toISOString()
+          });
+        } else {
+          await addDoc(collection(db, 'events'), {
+            ...eventData,
+            createdAt: new Date().toISOString()
+          });
+        }
       }
       onClose();
     } catch (error) {
