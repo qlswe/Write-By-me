@@ -16,6 +16,8 @@ interface EventEditorProps {
 
 const LANGUAGES = ['ru', 'en', 'by', 'de', 'fr', 'zh'];
 
+import { CustomSelect } from '../ui/CustomSelect';
+
 export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }) => {
   const { user } = useAuth();
   const t = translations[lang];
@@ -156,28 +158,28 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.typeLabel}</label>
-              <select 
+              <CustomSelect 
                 value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all appearance-none cursor-pointer"
-              >
-                <option value="daily">{t.dailyOption}</option>
-                <option value="weekly">{t.weeklyOption}</option>
-              </select>
+                onChange={setType}
+                options={[
+                  { value: 'daily', label: t.dailyOption },
+                  { value: 'weekly', label: t.weeklyOption }
+                ]}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.iconLabel}</label>
-              <select 
+              <CustomSelect 
                 value={icon}
-                onChange={(e) => setIcon(e.target.value)}
-                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all appearance-none cursor-pointer"
-              >
-                <option value="globe">Globe</option>
-                <option value="swords">Swords</option>
-                <option value="refresh-cw">Refresh</option>
-                <option value="star">Star</option>
-                <option value="zap">Zap</option>
-              </select>
+                onChange={setIcon}
+                options={[
+                  { value: 'globe', label: 'Globe' },
+                  { value: 'swords', label: 'Swords' },
+                  { value: 'refresh-cw', label: 'Refresh' },
+                  { value: 'star', label: 'Star' },
+                  { value: 'zap', label: 'Zap' }
+                ]}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.resetTimeLabel}</label>
@@ -198,24 +200,22 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
             >
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.dayOfWeekLabel}</label>
-                <select 
-                  value={dayOfWeek}
-                  onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                  className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all appearance-none cursor-pointer"
-                >
-                  {DAYS.map(day => <option key={day.value} value={day.value}>{day.label}</option>)}
-                </select>
+                <CustomSelect 
+                  value={dayOfWeek.toString()}
+                  onChange={(val) => setDayOfWeek(Number(val))}
+                  options={DAYS.map(day => ({ value: day.value.toString(), label: day.label }))}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-2">{t.weekOffsetLabel}</label>
-                <select 
-                  value={weekOffset}
-                  onChange={(e) => setWeekOffset(Number(e.target.value))}
-                  className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-2xl px-5 py-4 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all appearance-none cursor-pointer"
-                >
-                  <option value={0}>{t.week1}</option>
-                  <option value={1}>{t.week2}</option>
-                </select>
+                <CustomSelect 
+                  value={weekOffset.toString()}
+                  onChange={(val) => setWeekOffset(Number(val))}
+                  options={[
+                    { value: '0', label: t.week1 },
+                    { value: '1', label: t.week2 }
+                  ]}
+                />
               </div>
             </motion.div>
           )}

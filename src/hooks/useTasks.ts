@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
 
@@ -78,5 +78,18 @@ export function useTasks() {
     }
   };
 
-  return { tasks, loading, addTask, updateTask, deleteTask };
+  const clearCompleted = async (completedTasks: Task[]) => {
+    if (!user || completedTasks.length === 0) return;
+    try {
+      const batch = writeBatch(db);
+      completedTasks.forEach(task => {
+        batch.delete(doc(db, 'tasks', task.id));
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error clearing completed tasks:", error);
+    }
+  };
+
+  return { tasks, loading, addTask, updateTask, deleteTask, clearCompleted };
 }

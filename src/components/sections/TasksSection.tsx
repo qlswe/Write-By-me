@@ -7,7 +7,7 @@ import { translations, Language } from '../../data/translations';
 
 export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const { user, loginWithGoogle } = useAuth();
-  const { tasks, loading, addTask, updateTask, deleteTask } = useTasks();
+  const { tasks, loading, addTask, updateTask, deleteTask, clearCompleted } = useTasks();
   const [newTaskText, setNewTaskText] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskText, setEditTaskText] = useState('');
@@ -54,6 +54,15 @@ export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
     await updateTask(task.id, { priority: nextPriority });
   };
 
+  const handleClearCompleted = async () => {
+    const completedTasks = tasks.filter(task => task.completed);
+    if (completedTasks.length > 0) {
+      if (window.confirm(t.tasksClearConfirm || "Are you sure you want to delete all completed tasks?")) {
+        await clearCompleted(completedTasks);
+      }
+    }
+  };
+
   const filteredTasks = tasks.filter(task => {
     if (filter === 'active') return !task.completed;
     if (filter === 'completed') return task.completed;
@@ -65,6 +74,10 @@ export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
     if (priority === 'medium') return 'text-yellow-500';
     return 'text-blue-500';
   };
+
+  const completedCount = tasks.filter(t => t.completed).length;
+  const totalCount = tasks.length;
+  const progressPercent = totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
 
   if (!user) {
     return (
@@ -85,34 +98,54 @@ export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-2xl sm:text-3xl font-black text-[#ff4d4d] uppercase flex items-center gap-3 tracking-widest">
-          <CheckSquare className="w-8 h-8" />
-          {t.tasksTitle || "My Tasks"}
-        </h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl sm:text-3xl font-black text-[#ff4d4d] uppercase flex items-center gap-3 tracking-widest leading-none">
+            <CheckSquare className="w-8 h-8" />
+            {t.tasksTitle || "My Tasks"}
+          </h2>
+        </div>
 
         <div className="flex bg-[#15101e] rounded-xl p-1 border border-[#3d2b4f]">
           <button
             onClick={() => setFilter('all')}
             className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${filter === 'all' ? 'bg-[#ff4d4d] text-white' : 'text-gray-400 hover:text-white'}`}
           >
-            All
+            {t.tasksFilterAll || "All"}
           </button>
           <button
             onClick={() => setFilter('active')}
             className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${filter === 'active' ? 'bg-[#ff4d4d] text-white' : 'text-gray-400 hover:text-white'}`}
           >
-            Active
+            {t.tasksFilterActive || "Active"}
           </button>
           <button
             onClick={() => setFilter('completed')}
             className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${filter === 'completed' ? 'bg-[#ff4d4d] text-white' : 'text-gray-400 hover:text-white'}`}
           >
-            Done
+            {t.tasksFilterCompleted || "Done"}
           </button>
         </div>
       </div>
 
       <div className="bg-[#251c35] rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl border border-[#3d2b4f]">
+        
+        {totalCount > 0 && (
+          <div className="mb-6">
+            <div className="flex justify-between items-center text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+              <span>{completedCount} / {totalCount} {t.tasksProgress || "completed"}</span>
+              <span>{progressPercent}%</span>
+            </div>
+            <div className="w-full h-2 bg-[#15101e] rounded-full overflow-hidden border border-[#3d2b4f]">
+              <motion.div 
+                className="h-full bg-[#ff4d4d]"
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+              />
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row gap-3 mb-8">
           <div className="flex-1 flex bg-[#15101e] border-2 border-[#3d2b4f] rounded-2xl overflow-hidden focus-within:border-[#ff4d4d] transition-colors">
             <input
@@ -128,7 +161,7 @@ export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
                 setNewTaskPriority(prev => prev === 'low' ? 'medium' : prev === 'medium' ? 'high' : 'low');
               }}
               className={`px-4 flex items-center justify-center border-l border-[#3d2b4f] hover:bg-white/5 transition-colors ${getPriorityColor(newTaskPriority)}`}
-              title="Set Priority"
+              title={t.tasksPriorityToggle || "Toggle Priority"}
             >
               <Flag size={20} className={newTaskPriority === 'high' ? 'fill-current' : ''} />
             </button>
@@ -208,21 +241,21 @@ export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
                       <button
                         onClick={() => togglePriority(task)}
                         className={`p-1.5 sm:p-2 rounded-lg transition-colors hover:bg-white/10 ${getPriorityColor(task.priority)}`}
-                        title="Toggle Priority"
+                        title={t.tasksPriorityToggle || "Toggle Priority"}
                       >
                         <Flag size={16} className={task.priority === 'high' ? 'fill-current' : ''} />
                       </button>
                       <button
                         onClick={() => startEditing(task)}
                         className="p-1.5 sm:p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                        title="Edit task"
+                        title={t.tasksEdit || "Edit task"}
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
                         onClick={() => deleteTask(task.id)}
                         className="p-1.5 sm:p-2 text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 rounded-lg transition-colors"
-                        title="Delete task"
+                        title={t.tasksDelete || "Delete task"}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -231,6 +264,22 @@ export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
                 </motion.div>
               ))}
             </AnimatePresence>
+            
+            {completedCount > 0 && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="pt-6 flex justify-center"
+              >
+                <button
+                  onClick={handleClearCompleted}
+                  className="text-sm font-bold text-gray-500 hover:text-[#ff4d4d] uppercase tracking-wider transition-colors flex items-center gap-2"
+                >
+                  <Trash2 size={14} />
+                  {t.tasksClearCompleted || "Clear completed"}
+                </button>
+              </motion.div>
+            )}
           </div>
         )}
       </div>

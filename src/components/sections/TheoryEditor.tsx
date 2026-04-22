@@ -16,6 +16,8 @@ interface TheoryEditorProps {
 
 const LANGUAGES = ['ru', 'en', 'by', 'de', 'fr', 'zh'];
 
+import { CustomSelect } from '../ui/CustomSelect';
+
 export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lang }) => {
   const { user } = useAuth();
   const t = translations[lang];
@@ -137,15 +139,15 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-4">{t.categoryLabel}</label>
-              <select 
+              <CustomSelect 
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-2xl px-6 py-4 text-white font-bold focus:outline-none focus:border-[#ff4d4d] transition-all appearance-none cursor-pointer"
-              >
-                <option value="lore">{t.filterLore}</option>
-                <option value="characters">{t.filterCharacters}</option>
-                <option value="gameplay">{t.filterGameplay}</option>
-              </select>
+                onChange={setCategory}
+                options={[
+                  { value: 'lore', label: t.filterLore },
+                  { value: 'characters', label: t.filterCharacters },
+                  { value: 'gameplay', label: t.filterGameplay }
+                ]}
+              />
             </div>
 
             <div className="space-y-2">

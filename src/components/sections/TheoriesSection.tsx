@@ -207,8 +207,9 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             <div 
               ref={contentRef}
               className="prose prose-invert prose-p:text-white/80 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none mb-8 text-base sm:text-lg leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: selectedTheory.content[lang] || selectedTheory.content['en'] }}
-            />
+            >
+              <SafeHtml html={selectedTheory.content[lang] || selectedTheory.content['en']} />
+            </div>
 
             <div className="mb-12">
 

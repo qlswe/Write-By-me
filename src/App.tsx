@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette } from 'lucide-react';
 import { collection, addDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -46,8 +46,9 @@ const ForumSection = lazy(() => import('./components/sections/ForumSection').the
 const AhiAiSection = lazy(() => import('./components/sections/AhiAiSection').then(m => ({ default: m.AhiAiSection })));
 const SdkSettingsSection = lazy(() => import('./components/sections/SdkSettingsSection').then(m => ({ default: m.SdkSettingsSection })));
 const TasksSection = lazy(() => import('./components/sections/TasksSection').then(m => ({ default: m.TasksSection })));
+const CanvasSection = lazy(() => import('./components/sections/CanvasSection').then(m => ({ default: m.CanvasSection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk' | 'tasks';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk' | 'tasks' | 'canvas';
 
 let hasPrintedStopWarning = false;
 
@@ -369,7 +370,8 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
-    { id: 'tasks' as const, label: 'Tasks', icon: ListOrdered },
+    { id: 'tasks' as const, label: t.navTasks || 'Tasks', icon: ListOrdered },
+    { id: 'canvas' as const, label: t.navCanvas || 'Canvas', icon: Palette },
     { id: 'forum' as const, label: t.navForum, icon: MessageSquare },
     { id: 'radio' as const, label: t.navRadio, icon: Radio },
     { id: 'theories', label: t.navTheories, icon: Book },
@@ -708,6 +710,10 @@ export default function App() {
 
               {section === 'tasks' && (
                 <TasksSection lang={lang as Language} />
+              )}
+
+              {section === 'canvas' && (
+                <CanvasSection lang={lang as Language} />
               )}
 
               {section === 'radio' && (

@@ -4,6 +4,7 @@ import { X, Save, Languages } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Language, translations } from '../../data/translations';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface AdminTheoryModalProps {
   isOpen: boolean;
@@ -197,18 +198,19 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#3d2b4f]">
               <div>
                 <label className="block text-sm text-white/60 mb-1">Категория</label>
-                <select 
+                <CustomSelect 
                   value={category} 
-                  onChange={e => setCategory(e.target.value)}
-                  className="w-full bg-[#1A1230] border border-[#3d2b4f] rounded-lg p-2 text-white focus:outline-none focus:border-[#ff4d4d]"
-                >
-                  <option value="lore">Lore</option>
-                  <option value="characters">Characters</option>
-                  <option value="world">World</option>
-                  <option value="mechanics">Mechanics</option>
-                  <option value="updates">Updates</option>
-                  <option value="personal">Personal</option>
-                </select>
+                  onChange={setCategory}
+                  options={[
+                    { value: 'lore', label: 'Lore' },
+                    { value: 'characters', label: 'Characters' },
+                    { value: 'world', label: 'World' },
+                    { value: 'mechanics', label: 'Mechanics' },
+                    { value: 'updates', label: 'Updates' },
+                    { value: 'personal', label: 'Personal' }
+                  ]}
+                  className="bg-[#1A1230] px-2 py-2" // override default huge padding if needed, but the current UI looks better uniform
+                />
               </div>
               
               <div>
