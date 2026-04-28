@@ -1,0 +1,40 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "canvas": {
+      ".read": true,
+      "$pixelId": {
+        ".write": "auth != null",
+        ".validate": "!newData.exists() || newData.hasChildren(['color', 'userId', 'updatedAt'])",
+        "color": {
+          ".validate": "newData.isString() && (newData.val().matches(/#[0-9a-fA-F]{6}/) || newData.val() == 'eraser')"
+        },
+        "userId": {
+          ".validate": "newData.val() == auth.uid"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    },
+    "canvas_personal": {
+      "$userId": {
+        ".read": true,
+        ".write": "auth != null && auth.uid == $userId",
+        "$pixelId": {
+          ".validate": "!newData.exists() || newData.hasChildren(['color', 'userId', 'updatedAt'])",
+          "color": {
+            ".validate": "newData.isString() && (newData.val().matches(/#[0-9a-fA-F]{6}/) || newData.val() == 'eraser')"
+          },
+          "userId": {
+            ".validate": "newData.val() == auth.uid"
+          },
+          "updatedAt": {
+            ".validate": "newData.isNumber()"
+          }
+        }
+      }
+    }
+  }
+}

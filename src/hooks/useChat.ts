@@ -49,7 +49,7 @@ export function useChat(otherUserId?: string) {
         return {
           ...data,
           id: doc.id,
-          lastMessage: data.lastMessage ? decrypt(data.lastMessage) : undefined
+          lastMessage: data.lastMessage ? decrypt(data.lastMessage, doc.id) : undefined
         } as Chat;
       });
       
@@ -87,8 +87,8 @@ export function useChat(otherUserId?: string) {
         return {
           ...data,
           id: doc.id,
-          text: decrypt(data.text),
-          images: data.images ? data.images.map((img: string) => decrypt(img)) : undefined
+          text: decrypt(data.text, chatId),
+          images: data.images ? data.images.map((img: string) => decrypt(img, chatId)) : undefined
         } as Message;
       });
       setMessages(messagesData);
@@ -104,8 +104,8 @@ export function useChat(otherUserId?: string) {
                const data = typeof str === 'string' ? JSON.parse(str) : str;
                return {
                  ...data,
-                 text: decrypt(data.text),
-                 images: data.images ? data.images.map((img: string) => decrypt(img)) : undefined
+                 text: decrypt(data.text, chatId),
+                 images: data.images ? data.images.map((img: string) => decrypt(img, chatId)) : undefined
                };
              }).reverse() as Message[];
              
@@ -141,7 +141,7 @@ export function useChat(otherUserId?: string) {
     const chatRef = doc(db, 'chats', chatId);
     const messagesRef = collection(db, 'chats', chatId, 'messages');
 
-    const encryptedText = text ? encrypt(text.trim()) : '';
+    const encryptedText = text ? encrypt(text.trim(), chatId) : '';
 
     try {
       if (vercelFallback.isAvailable()) {
@@ -153,7 +153,7 @@ export function useChat(otherUserId?: string) {
            createdAt: new Date().toISOString(),
            type,
            replyTo,
-           images: images ? images.map(img => encrypt(img)) : undefined
+           images: images ? images.map(img => encrypt(img, chatId)) : undefined
          };
          await vercelFallback.lpush(`chat:${chatId}`, JSON.stringify(messageData));
          return; // Skip firebase
@@ -176,13 +176,13 @@ export function useChat(otherUserId?: string) {
         type
       };
       if (replyTo) messageData.replyTo = replyTo;
-      if (images && images.length > 0) messageData.images = images.map(img => encrypt(img));
+      if (images && images.length > 0) messageData.images = images.map(img => encrypt(img, chatId));
 
       await addDoc(messagesRef, messageData);
 
       // Update chat metadata
       await setDoc(chatRef, {
-        lastMessage: type === 'sticker' ? encrypt('Sticker') : type === 'image' ? encrypt('Фото') : encryptedText,
+        lastMessage: type === 'sticker' ? encrypt('Sticker', chatId) : type === 'image' ? encrypt('Фото', chatId) : encryptedText,
         lastMessageAt: serverTimestamp(),
         participants: [user.uid, recipientId]
       }, { merge: true });
@@ -239,7 +239,7 @@ export function useChat(otherUserId?: string) {
     const chatId = [user.uid, recipientId].sort().join('_');
     const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
     try {
-      await setDoc(messageRef, { isDeleted: true, text: encrypt('Сообщение удалено') }, { merge: true });
+      await setDoc(messageRef, { isDeleted: true, text: encrypt('Сообщение удалено', chatId) }, { merge: true });
     } catch (error) {
       console.error('Error deleting message:', error);
     }
@@ -250,7 +250,7 @@ export function useChat(otherUserId?: string) {
     const chatId = [user.uid, recipientId].sort().join('_');
     const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
     try {
-      await setDoc(messageRef, { text: encrypt(newText.trim()), isEdited: true }, { merge: true });
+      await setDoc(messageRef, { text: encrypt(newText.trim(), chatId), isEdited: true }, { merge: true });
     } catch (error) {
       console.error('Error editing message:', error);
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette } from 'lucide-react';
-import { collection, addDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
 import { handleFirestoreError, OperationType } from './utils/errorHandlers';
@@ -229,6 +229,9 @@ export default function App() {
   // Chat notifications
   const { chats } = useChat();
   const notifiedChats = useRef<Record<string, number>>({});
+  const notifiedTyping = useRef<Record<string, boolean>>({});
+  const notifiedReads = useRef<Record<string, number>>({});
+  const profileCache = useRef<Record<string, string>>({});
   const [unreadCount, setUnreadCount] = useState(0);
 
   const [showLoadWidget, setShowLoadWidget] = useState(() => {
@@ -258,38 +261,61 @@ export default function App() {
 
     let count = 0;
     
-    chats.forEach(chat => {
+    chats.forEach(async (chat) => {
       const lastMessageAt = chat.lastMessageAt?.toMillis?.() || 0;
-      const lastReadAt = chat.lastReadAt?.[user.uid]?.toMillis?.() || 0;
+      const myReadAt = chat.lastReadAt?.[user.uid]?.toMillis?.() || 0;
+      const otherUserId = chat.participants.find(id => id !== user.uid);
+      if (!otherUserId) return;
       
-      if (lastMessageAt > lastReadAt) {
+      if (lastMessageAt > myReadAt) {
         count++;
       }
 
       const lastNotified = notifiedChats.current[chat.id] || 0;
       
-      // If there's a new message and we're not currently chatting with this user
-      if (lastMessageAt > lastNotified && lastMessageAt > lastReadAt) {
-        const otherUserId = chat.participants.find(id => id !== user.uid);
-        if (activeChat?.uid !== otherUserId) {
-          const title = t.newMessageTitle;
-          setToast(title);
-          
-          // OS Notification
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(title, {
-              body: t.newMessageBody,
-              icon: '/favicon.ico'
-            });
+      // Fetch profile quickly if needed
+      if (!profileCache.current[otherUserId]) {
+        try {
+          const snap = await getDoc(doc(db, 'public_profiles', otherUserId));
+          if (snap.exists()) {
+            profileCache.current[otherUserId] = snap.data().displayName || 'User';
           }
+        } catch(e) {}
+      }
+      const senderName = profileCache.current[otherUserId] || 'User';
+      const isNotActiveChat = activeChat?.uid !== otherUserId;
 
-          // Optional: play a sound here
-          try {
-            const audio = new Audio('/notification.mp3');
-            audio.play().catch(() => {});
-          } catch (e) {}
+      // 1. New Message
+      if (lastMessageAt > lastNotified && lastMessageAt > myReadAt) {
+        if (isNotActiveChat) {
+          const title = `${((translations as any)[lang] && (translations as any)[lang].newMessageTitle) || "New Message"}: ${senderName}`;
+          const bodyText = chat.lastMessage ? chat.lastMessage : (((translations as any)[lang] && (translations as any)[lang].newMessageBody) || "You have a new message.");
+          setToast(`${senderName}: ${bodyText}`);
+          
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, { body: bodyText, icon: '/favicon.ico' });
+          }
+          try { const audio = new Audio('/notification.mp3'); audio.play().catch(() => {}); } catch (e) {}
         }
         notifiedChats.current[chat.id] = lastMessageAt;
+      }
+
+      // 2. Typing Indicator
+      const isTyping = !!chat.typing?.[otherUserId];
+      const wasTyping = !!notifiedTyping.current[chat.id];
+      if (isTyping && !wasTyping && isNotActiveChat) {
+        setToast(`${senderName} ${((translations as any)[lang] && (translations as any)[lang].isTyping) || "is typing..."}`);
+      }
+      notifiedTyping.current[chat.id] = isTyping;
+
+      // 3. Read Receipts
+      const theirReadAt = chat.lastReadAt?.[otherUserId]?.toMillis?.() || 0;
+      const lastNotifiedRead = notifiedReads.current[chat.id] || 0;
+      if (theirReadAt > lastNotifiedRead && theirReadAt >= lastMessageAt && lastMessageAt > 0 && isNotActiveChat) {
+        setToast(`${senderName} ${((translations as any)[lang] && (translations as any)[lang].readYourMessage) || "read your message"}`);
+        notifiedReads.current[chat.id] = theirReadAt;
+      } else if (!notifiedReads.current[chat.id]) {
+        notifiedReads.current[chat.id] = theirReadAt; // initial sync
       }
     });
 

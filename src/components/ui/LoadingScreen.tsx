@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { usePerfLogger } from '../../utils/logger';
 import { Language, translations } from '../../data/translations';
 
@@ -9,31 +9,21 @@ interface LoadingScreenProps {
   lowPerfMode?: boolean;
 }
 
-const BOOT_SEQUENCE = [
-  'AHA_OS KERNEL INITIALIZED',
-  'ESTABLISHING SECURE UPLINK...',
-  'DECRYPTING ARCHIVES...',
-  'MOUNTING VIRTUAL DOM...',
-  'SYNCING LORE ENTITIES...',
-  'OVERRIDE GRANTED.'
-];
-
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, lowPerfMode }) => {
   const { trackRender } = usePerfLogger('LoadingScreen');
   trackRender();
 
-  const [lines, setLines] = useState<string[]>([]);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (!isLoading) return;
-    
-    let currentLine = 0;
+    setProgress(0);
     const interval = setInterval(() => {
-      if (currentLine < BOOT_SEQUENCE.length) {
-        setLines(prev => [...prev, BOOT_SEQUENCE[currentLine]]);
-        currentLine++;
-      }
-    }, 300);
+      setProgress(p => {
+        const next = p + (Math.random() * 15);
+        return next > 95 ? 95 : next;
+      });
+    }, 400);
 
     return () => clearInterval(interval);
   }, [isLoading]);
@@ -45,64 +35,66 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, l
           initial={{ opacity: 1 }}
           exit={{ 
             opacity: 0, 
-            scale: 1.1, 
-            filter: 'brightness(2) contrast(1.5)', 
-            transition: { duration: 0.4, ease: "easeIn" } 
+            scale: 1.05,
+            filter: 'blur(10px)',
+            transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } 
           }}
-          className="fixed inset-0 z-[99999] bg-black text-[#ff4d4d] flex flex-col justify-end p-6 sm:p-12 overflow-hidden font-mono"
+          className="fixed inset-0 z-[99999] bg-[#050505] text-white flex flex-col items-center justify-center overflow-hidden font-sans"
         >
-          {/* Scanlines Effect */}
+          {/* Beautiful Ambient Glows */}
           {!lowPerfMode && (
-            <div 
-              className="absolute inset-0 pointer-events-none opacity-20 Mix-blend-overlay"
-              style={{
-                backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, #000 2px, #000 4px)',
-                backgroundSize: '100% 4px'
-              }}
-            />
+            <>
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.1, 1],
+                  opacity: [0.3, 0.5, 0.3]
+                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40vw] h-[40vw] max-w-[600px] max-h-[600px] bg-[#ff4d4d] rounded-full mix-blend-screen blur-[120px] opacity-40 pointer-events-none" 
+              />
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  opacity: [0.2, 0.4, 0.2]
+                }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[60%] w-[35vw] h-[35vw] max-w-[500px] max-h-[500px] bg-[#6b21a8] rounded-full mix-blend-screen blur-[100px] opacity-30 pointer-events-none" 
+              />
+            </>
           )}
 
-          {/* Glitch Logo background overlay */}
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-5">
-            <h1 className="text-[20vw] font-black italic tracking-tighter mix-blend-screen scale-150 blur-sm">
-              AHA
-            </h1>
-          </div>
+          {/* Central Logo & Progress */}
+          <div className="relative z-10 flex flex-col items-center gap-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="relative"
+            >
+              <h1 className="text-5xl sm:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-white/40 drop-shadow-2xl">
+                AHA
+              </h1>
+            </motion.div>
 
-          {/* Terminal Output */}
-          <div className="relative z-10 max-w-2xl w-full mx-auto space-y-2 text-xs sm:text-base md:text-lg font-bold tracking-widest uppercase">
-            {lines.map((line, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-4"
-              >
-                <span className="text-white/30 shrink-0">[{String(idx * 0.123).padEnd(5, '0')}]</span>
-                <span className="text-[#ff4d4d]">{line}</span>
-              </motion.div>
-            ))}
-            
-            {/* Blinking Cursor */}
             <motion.div 
-              animate={{ opacity: [1, 0] }}
-              transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
-              className="inline-block w-3 sm:w-4 h-4 sm:h-5 bg-[#ff4d4d] ml-4 mt-2"
-            />
-          </div>
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              className="flex flex-col items-center gap-6"
+            >
+              <div className="w-[200px] h-[2px] bg-white/10 rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-[#ff4d4d] to-white rounded-full"
+                  initial={{ width: "0%" }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ ease: "easeOut", duration: 0.4 }}
+                />
+              </div>
 
-          {/* Status Bar */}
-          <div className="absolute top-0 left-0 w-full p-4 sm:p-6 flex justify-between items-center text-[10px] sm:text-xs text-[#ff4d4d]/50 tracking-[0.3em] uppercase">
-            <div>SYS_MEM: OK</div>
-            <div className="flex items-center gap-2">
-              <motion.div 
-                animate={lowPerfMode ? {} : { opacity: [0.2, 1, 0.2] }} 
-                transition={{ duration: 1.5, repeat: Infinity }} 
-                className="w-1.5 h-1.5 rounded-full bg-[#ff4d4d]" 
-              />
-              CONNECTION LIVE
-            </div>
-            <div>VER 4.0.1</div>
+              <div className="text-xs sm:text-sm font-medium tracking-[0.2em] text-white/40 uppercase">
+                {((translations[lang] as any)?.loading) || "Loading Experience"}
+              </div>
+            </motion.div>
           </div>
         </motion.div>
       )}

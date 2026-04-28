@@ -407,7 +407,37 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                               </div>
                             ) : (
                               <>
-                                <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed">{post.text}</p>
+                                <p className="text-sm text-white/90 whitespace-pre-wrap leading-relaxed">{post.text.replace('[CANVAS_SNAPSHOT]', '')}</p>
+                                {post.pixelsSnapshot && (
+                                  <div className="mt-3 aspect-square max-w-[200px] w-full bg-[#15101e] rounded-lg overflow-hidden border border-[#3d2b4f]/50">
+                                    <div 
+                                      className="w-full h-full grid"
+                                      style={{ 
+                                        gridTemplateColumns: `repeat(32, 1fr)`,
+                                        gridTemplateRows: `repeat(32, 1fr)`
+                                      }}
+                                    >
+                                      {(() => {
+                                        let pixelsObj = {};
+                                        try { pixelsObj = JSON.parse(post.pixelsSnapshot); } catch (e) {}
+                                        const cells = [];
+                                        for (let y = 0; y < 32; y++) {
+                                          for (let x = 0; x < 32; x++) {
+                                            const pixelId = `${x},${y}`;
+                                            const pixel = (pixelsObj as any)[pixelId];
+                                            cells.push(
+                                              <div
+                                                key={pixelId}
+                                                style={{ backgroundColor: pixel?.color || '#15101e' }}
+                                              />
+                                            );
+                                          }
+                                        }
+                                        return cells;
+                                      })()}
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="flex justify-between items-center mt-3">
                                   <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
                                     {new Date(post.createdAt).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', { hour: '2-digit', minute: '2-digit' })}

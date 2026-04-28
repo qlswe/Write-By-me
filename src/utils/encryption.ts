@@ -28,12 +28,12 @@ const generateRollingKey = (seed: string): string => {
   return CryptoJS.SHA256(BASE_SECRET + SYSTEM_SALT + seed).toString();
 };
 
-export const encrypt = (text: string): string => {
+export const encrypt = (text: string, contextId?: string): string => {
   if (!text) return "";
   
   try {
     const dailySeed = getDailyKeySeed();
-    const dynamicKey = generateRollingKey(dailySeed);
+    const dynamicKey = generateRollingKey(dailySeed + (contextId || ''));
     
     // Encrypt the text using the dynamic key derived from SHA-256
     const encryptedText = CryptoJS.AES.encrypt(text, dynamicKey).toString();
@@ -47,7 +47,7 @@ export const encrypt = (text: string): string => {
   }
 };
 
-export const decrypt = (cipherText: string): string => {
+export const decrypt = (cipherText: string, contextId?: string): string => {
   if (!cipherText) return "";
   
   // V2: Rolling Key AES Decryption
@@ -61,14 +61,14 @@ export const decrypt = (cipherText: string): string => {
         const actualCipherText = payload.substring(delimiterIndex + 1);
         
         // Reconstruct the exact rolling key used at the time of encryption
-        const historicalDynamicKey = generateRollingKey(seed);
+        const historicalDynamicKey = generateRollingKey(seed + (contextId || ''));
         
         const bytes = CryptoJS.AES.decrypt(actualCipherText, historicalDynamicKey);
         const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
         if (decryptedText) return decryptedText;
       }
     } catch (e) {
-      console.error("V2 Rolling AES Decryption error:", e);
+// Fallback gracefully instead of breaking
     }
   }
 

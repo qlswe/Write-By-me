@@ -9,13 +9,15 @@ export interface CanvasPixel {
   updatedAt: number;
 }
 
-export function useCanvas(size: number = 24) {
+export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
   const { user } = useAuth();
   const [pixels, setPixels] = useState<Record<string, CanvasPixel>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const canvasRef = ref(rtdb, 'canvas');
+    const canvasRef = ref(rtdb, canvasId);
+    setLoading(true);
+    setPixels({});
     
     // Initial fetch
     get(canvasRef).then((snapshot) => {
@@ -38,7 +40,7 @@ export function useCanvas(size: number = 24) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [canvasId]);
 
   const drawPixel = async (x: number, y: number, color: string) => {
     if (!user) return;
@@ -49,7 +51,7 @@ export function useCanvas(size: number = 24) {
 
     try {
       const pixelId = `${x},${y}`;
-      const pixelRef = ref(rtdb, `canvas/${pixelId}`);
+      const pixelRef = ref(rtdb, `${canvasId}/${pixelId}`);
       
       const newPixel: CanvasPixel = {
         color: color.substring(0, 10), // strict cap
@@ -70,7 +72,7 @@ export function useCanvas(size: number = 24) {
     if (!user) return;
     try {
       const pixelId = `${x},${y}`;
-      const pixelRef = ref(rtdb, `canvas/${pixelId}`);
+      const pixelRef = ref(rtdb, `${canvasId}/${pixelId}`);
       
       setPixels(prev => {
         const next = { ...prev };
@@ -84,5 +86,16 @@ export function useCanvas(size: number = 24) {
     }
   };
 
-  return { pixels, loading, drawPixel, erasePixel, size };
+  const clearCanvas = async () => {
+    if (!user) return;
+    try {
+      const canvasRef = ref(rtdb, canvasId);
+      await remove(canvasRef);
+      setPixels({});
+    } catch (error) {
+      console.error('Error clearing canvas:', error);
+    }
+  };
+
+  return { pixels, loading, drawPixel, erasePixel, clearCanvas, size };
 }

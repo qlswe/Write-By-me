@@ -10,6 +10,7 @@ export interface UserPost {
   authorName: string;
   authorPhoto?: string;
   text: string;
+  pixelsSnapshot?: string;
   createdAt: any;
   updatedAt?: any;
 }
@@ -89,17 +90,18 @@ export function useUserPosts(userId?: string) {
     };
   }, [userId]);
 
-  const createPost = async (text: string) => {
-    if (!user || !text.trim()) return;
+  const createPost = async (text: string, pixelsSnapshot?: string) => {
+    if (!user || (!text.trim() && !pixelsSnapshot)) return;
 
     try {
-      const postData = {
+      const postData: any = {
         uid: user.uid,
         authorName: user.displayName,
         authorPhoto: user.photoURL,
         text: text.trim(),
         createdAt: new Date().toISOString()
       };
+      if (pixelsSnapshot) postData.pixelsSnapshot = pixelsSnapshot;
 
       if (vercelFallback.isAvailable()) {
           const payload = { ...postData, id: Date.now().toString() + '_' + user.uid };

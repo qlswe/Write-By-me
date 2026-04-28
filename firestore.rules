@@ -2,42 +2,51 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Auth Helper
+    // Auth Helpers
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Role Helper
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
-    // Default deny
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidId(id) {
+      // Replaced strict regex with simple string and size checks to avoid Firebase RE2 issues.
+      return id is string && id.size() > 0 && id.size() <= 128; 
+    }
+
+    // Default Deny All
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Users and Profiles
+    // Users
     match /users/{userId} {
-      // Anyone can read (for UI presentation)
-      allow read: if true;
-      // People can only write their own user document, or admins
-      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.get('role', 'user') == 'user';
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'reputation', 'xp']) == false);
+      allow delete: if isAdmin() || isOwner(userId);
     }
 
+    // Public Profiles
     match /public_profiles/{userId} {
       allow read: if true;
-      // Users write their own profiles
-      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isOwner(userId);
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'reputation', 'xp']) == false);
+      allow delete: if isAdmin() || isOwner(userId);
     }
 
-    // Tasks 
+    // Tasks (Private to user)
     match /tasks/{taskId} {
-      allow read, write: if isSignedIn() && (
-        (resource != null && resource.data.userId == request.auth.uid) ||
-        (request.resource != null && request.resource.data.userId == request.auth.uid)
-      );
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
 
     // Chats
@@ -49,12 +58,14 @@ service cloud.firestore {
       
       match /messages/{messageId} {
         allow read: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-        allow create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants && request.resource.data.senderId == request.auth.uid;
+        allow create: if isSignedIn() && 
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants && 
+          request.resource.data.senderId == request.auth.uid;
         allow update, delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
       }
     }
 
-    // Theories (User generated content)
+    // User Generated Public Content
     match /theories/{theoryId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
@@ -65,19 +76,34 @@ service cloud.firestore {
     match /forum_threads/{threadId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
-      allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+      allow update: if isAdmin() || 
+        (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes']) == false) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes']));
+      allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
     match /forum_comments/{commentId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
-      allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+      allow update: if isAdmin() || 
+        (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes']) == false) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes']));
+      allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
     match /comments/{commentId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
-      allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+      allow update: if isAdmin() || 
+        (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes']) == false) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes']));
+      allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    match /user_posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
     // Admin controlled areas
