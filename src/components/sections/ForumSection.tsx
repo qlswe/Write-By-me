@@ -404,7 +404,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
   );
 
   if (selectedThread) {
-    const topLevelComments = comments.filter(c => !c.replyToId);
+    const topLevelComments = comments.filter(c => !c.replyToId).reverse();
     const getReplies = (parentId: string) => comments.filter(c => c.replyToId === parentId);
 
     const renderComment = (comment: ForumComment, isReply: boolean = false) => (

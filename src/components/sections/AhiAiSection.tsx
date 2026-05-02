@@ -4,6 +4,7 @@ import { Sparkles, ChevronRight, Lock, Trash2 } from 'lucide-react';
 import { sdk } from '../../sdk';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
+import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 
 export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [history, setHistory] = useState<{ type: 'cmd' | 'res' | 'info', text: string }[]>([]);
@@ -104,12 +105,7 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
             {(t as any).sdkAuthDesc || t.sdkAuthRequiredMsg}
           </p>
         </div>
-        <button
-          onClick={loginWithGoogle}
-          className="bg-white text-[#15101e] px-8 py-4 rounded-xl font-black uppercase tracking-wider hover:bg-white/90 transition-colors shadow-xl hover:shadow-white/20 active:scale-95"
-        >
-          {t.maintenanceLoginGoogle}
-        </button>
+        <GoogleLoginButton lang={lang} size="lg" />
       </motion.div>
     );
   }

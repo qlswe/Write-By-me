@@ -35,17 +35,20 @@ export const sanitizeContent = (dirty: string) => {
 
   // Count removed items (DOMPurify.removed is an array of removed elements/attributes)
   if (DOMPurify.removed && DOMPurify.removed.length > 0) {
-    globalThreatsBlocked += DOMPurify.removed.length;
-    localStorage.setItem('aha_threats_blocked', globalThreatsBlocked.toString());
-    
-    try {
-      const currentLogs = JSON.parse(localStorage.getItem('aha_security_logs') || '[]');
-      const newLog = `[${new Date().toLocaleTimeString()}] Blocked ${DOMPurify.removed.length} suspicious elements (XSS/Strict)`;
-      const newLogs = [newLog, ...currentLogs].slice(0, 20);
-      localStorage.setItem('aha_security_logs', JSON.stringify(newLogs));
-    } catch(e) {}
+    const removals = DOMPurify.removed.length;
+    setTimeout(() => {
+      globalThreatsBlocked += removals;
+      localStorage.setItem('aha_threats_blocked', globalThreatsBlocked.toString());
+      
+      try {
+        const currentLogs = JSON.parse(localStorage.getItem('aha_security_logs') || '[]');
+        const newLog = `[${new Date().toLocaleTimeString()}] Blocked ${removals} suspicious elements (XSS/Strict)`;
+        const newLogs = [newLog, ...currentLogs].slice(0, 20);
+        localStorage.setItem('aha_security_logs', JSON.stringify(newLogs));
+      } catch(e) {}
 
-    window.dispatchEvent(new CustomEvent('aha_threat_blocked'));
+      window.dispatchEvent(new CustomEvent('aha_threat_blocked'));
+    }, 0);
   }
 
   return clean;
@@ -108,7 +111,6 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
   const [threatsBlocked, setThreatsBlocked] = useState(globalThreatsBlocked);
   const [isStrict, setIsStrict] = useState(localStorage.getItem('aha_strict_mode') === 'true');
   const [isCensored, setIsCensored] = useState(localStorage.getItem('aha_censor_mode') === 'true');
-  const [isStealth, setIsStealth] = useState(localStorage.getItem('aha_stealth_mode') === 'true');
   const [activeTab, setActiveTab] = useState<'status' | 'logs' | 'tools'>('status');
   const [logs, setLogs] = useState<string[]>([]);
   const [isPanicking, setIsPanicking] = useState(false);
@@ -165,7 +167,6 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
       localStorage.removeItem('aha_threats_blocked');
       localStorage.removeItem('aha_strict_mode');
       localStorage.removeItem('aha_censor_mode');
-      localStorage.removeItem('aha_stealth_mode');
       localStorage.removeItem('aha_security_logs');
       window.location.reload();
     }
@@ -232,8 +233,8 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
                             <span className={isStrict ? 'text-green-400' : 'text-gray-500'}>Строгий</span>
                         </div>
                         <div className="bg-white/5 rounded-lg p-2 flex flex-col justify-center items-center gap-1">
-                            <Ghost className={`w-4 h-4 ${isStealth ? 'text-purple-400' : 'text-gray-500'}`} />
-                            <span className={isStealth ? 'text-purple-400' : 'text-gray-500'}>Стелс</span>
+                            <Eye className={`w-4 h-4 ${isCensored ? 'text-blue-400' : 'text-gray-500'}`} />
+                            <span className={isCensored ? 'text-blue-400' : 'text-gray-500'}>Антимат</span>
                         </div>
                     </div>
                 </div>
@@ -264,19 +265,6 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
                         </div>
                         <button className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${isCensored ? 'bg-blue-500' : 'bg-white/20'}`}>
                         <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isCensored ? 'translate-x-5' : 'translate-x-1'}`} />
-                        </button>
-                    </div>
-
-                    {/* Stealth Mode Toggle */}
-                    <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer" onClick={() => toggleToggle('aha_stealth_mode', setIsStealth, isStealth)}>
-                        <div className="flex flex-col">
-                        <span className="text-white/90 text-xs font-bold flex items-center gap-1.5">
-                            <Ghost className={`w-4 h-4 ${isStealth ? 'text-purple-500' : 'text-gray-400'}`} /> Стелс-режим (VPN)
-                        </span>
-                        <span className="text-white/50 text-[10px] mt-0.5">Маскировка IP и скрытие Origin</span>
-                        </div>
-                        <button className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${isStealth ? 'bg-purple-500' : 'bg-white/20'}`}>
-                        <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isStealth ? 'translate-x-5' : 'translate-x-1'}`} />
                         </button>
                     </div>
 

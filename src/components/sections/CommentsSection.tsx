@@ -3,6 +3,7 @@ import { collection, query, where, orderBy, onSnapshot, addDoc, deleteDoc, doc, 
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
+import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { usePerfLogger } from '../../utils/logger';
 import { Trash2, Send, Heart, Edit2, X, Check, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
@@ -500,12 +501,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
         <div className="bg-[#15101e] border border-[#3d2b4f]/20 rounded-[2.5rem] p-12 text-center mb-12">
           <MessageCircle size={48} className="mx-auto text-white/20 mb-6" />
           <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-sm">{t.loginToComment || "Войдите, чтобы оставить комментарий"}</p>
-          <button
-            onClick={loginWithGoogle}
-            className="inline-flex items-center gap-4 bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,77,77,0.3)] hover:scale-105 active:scale-95 border border-white/20"
-          >
-            {t.loginWithGoogle || "Войти через Google"}
-          </button>
+          <GoogleLoginButton lang={lang} />
         </div>
       )}
 

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Radio, Play, Square, Volume2, Loader2, Lock, SkipForward, Disc, Music } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
+import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 
 interface AhiRadioProps {
   lang: Language;
@@ -315,12 +316,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
             {(t as any).radioAuthRequired || "Access to the most unfunny jokes in the universe is only possible after logging in with Google."}
           </p>
         </div>
-        <button
-          onClick={loginWithGoogle}
-          className="bg-[#ff4d4d] text-[#15101e] px-8 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-white transition-colors shadow-[0_0_30px_rgba(255,77,77,0.3)]"
-        >
-          {t.loginWithGoogle}
-        </button>
+        <GoogleLoginButton lang={lang} size="lg" />
       </div>
     );
   }

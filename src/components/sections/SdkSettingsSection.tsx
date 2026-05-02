@@ -4,6 +4,7 @@ import { Settings, ShieldCheck, Cpu } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { db } from '../../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { sdk } from '../../sdk';
 
 interface SdkSettingsSectionProps {
   lang: Language;
@@ -98,7 +99,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
           </div>
           <div>
             <h2 className="text-3xl font-black text-white">{t.sdkSettings}</h2>
-            <p className="text-gray-400 mt-1">Configure your environment settings</p>
+            <p className="text-gray-400 mt-1">{t.sdkSettingsDesc}</p>
           </div>
         </div>
 
@@ -167,10 +168,10 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
               <div>
                 <div className="font-bold text-white text-base mb-1 flex items-center gap-2 group-hover:text-green-400 transition-colors">
                   <ShieldCheck size={20} className={!ahaSecurityHidden ? 'text-green-500' : 'text-gray-500'} />
-                  {(t as any).securityWidgetTitle || "Aha Security Widget"}
+                  {(t as any).securityWidgetTitle || t.securityWidgetTitle}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {(t as any).securityWidgetDesc || "Show actively blocked threats panel"}
+                  {(t as any).securityWidgetDesc || t.securityWidgetDesc}
                 </div>
               </div>
               <div className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${!ahaSecurityHidden ? 'bg-green-500' : 'bg-[#3d2b4f]'}`}>
@@ -182,7 +183,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
           {(role === 'admin' || role === 'moderator') && (
             <div className="space-y-4 pt-6 border-t border-[#3d2b4f]/50">
                <h3 className="text-sm font-black uppercase tracking-widest text-indigo-400">
-                Database Routing (Admin)
+                {t.sdkDatabaseRoutingAdmin}
               </h3>
               <button 
                 onClick={toggleGlobalFallback}
@@ -190,10 +191,10 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
               >
                 <div>
                   <div className="font-bold text-white text-base mb-1 group-hover:text-indigo-400 transition-colors">
-                    Global Vercel KV Fallback
+                    {t.sdkGlobalVercelFallback}
                   </div>
                   <div className="text-sm text-gray-500">
-                    Bypass Firebase Firestore globally for ALL users. Routes traffic to KV.
+                    {t.sdkGlobalVercelFallbackDesc}
                   </div>
                 </div>
                 <div className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${globalFallbackState ? 'bg-indigo-500' : 'bg-[#3d2b4f]'}`}>
@@ -210,19 +211,19 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
             
             <div className="p-6 bg-[#15101e] rounded-2xl border border-[#3d2b4f] font-mono text-sm text-gray-300 space-y-4 shadow-inner">
               <div className="flex justify-between items-center py-2 border-b border-[#3d2b4f]/50">
-                <span className="text-gray-500">SDK Version</span>
-                <span className="text-[#ff4d4d] font-bold bg-[#ff4d4d]/10 px-3 py-1 rounded-full">v2.0.0-hsr</span>
+                <span className="text-gray-500">{t.sdkVersion}</span>
+                <span className="text-[#ff4d4d] font-bold bg-[#ff4d4d]/10 px-3 py-1 rounded-full">{sdk.getVersion()}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[#3d2b4f]/50">
-                <span className="text-gray-500">Environment</span>
+                <span className="text-gray-500">{t.sdkEnvironment}</span>
                 <span className="text-green-400 font-bold bg-green-400/10 px-3 py-1 rounded-full">{process.env.NODE_ENV}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-[#3d2b4f]/50">
-                <span className="text-gray-500">AI Engine</span>
-                <span className="text-yellow-400 font-bold">Custom Neural Engine</span>
+                <span className="text-gray-500">{t.sdkAiEngine}</span>
+                <span className="text-yellow-400 font-bold">{t.sdkCustomNeuralEngine}</span>
               </div>
               <div className="flex justify-between items-center py-2">
-                <span className="text-gray-500">Local Time</span>
+                <span className="text-gray-500">{t.sdkLocalTime}</span>
                 <span className="text-blue-400 font-medium">{localTime}</span>
               </div>
             </div>

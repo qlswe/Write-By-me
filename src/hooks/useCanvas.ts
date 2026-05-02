@@ -44,7 +44,7 @@ export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
 
   const drawPixel = async (x: number, y: number, color: string) => {
     if (!user) return;
-    if (x < 0 || x >= size || y < 0 || y >= size) return;
+    if (size > 0 && (x < 0 || x >= size || y < 0 || y >= size)) return;
     
     // Security: Validate color payload format to prevent large string injection
     if (!/^#[0-9A-Fa-f]{6}$/.test(color) && color !== 'eraser') return;

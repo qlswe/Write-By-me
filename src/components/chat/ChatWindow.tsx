@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useChat, Message } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
+import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
@@ -271,12 +272,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                 {(t as any).chatAuthDesc || t.chatsLoginToView}
               </p>
             </div>
-            <button
-              onClick={loginWithGoogle}
-              className="w-full bg-white text-[#15101e] py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-white/90 transition-all active:scale-95 shadow-xl"
-            >
-              {t.maintenanceLoginGoogle}
-            </button>
+            <GoogleLoginButton lang={lang} size="lg" className="w-full" />
           </div>
         ) : (
           <>
@@ -433,7 +429,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                 )}
                               </div>
                             ) : (
-                              <p className="break-words leading-relaxed">{msg.text}</p>
+                              <div className="break-words leading-relaxed">
+                                {msg.text.match(/https?:\/\/[^\s]+?\.(?:jpg|jpeg|png|gif|webp)/i) ? (
+                                  <>
+                                    <span>{msg.text.replace(/https?:\/\/[^\s]+?\.(?:jpg|jpeg|png|gif|webp)/gi, '').trim()}</span>
+                                    <div className="mt-2 flex flex-col gap-2">
+                                      {msg.text.match(/https?:\/\/[^\s]+?\.(?:jpg|jpeg|png|gif|webp)/gi)?.map((url, i) => (
+                                        <img key={i} src={url} alt="Sent image" className="max-w-[200px] sm:max-w-[250px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFullscreenImage(url); }} />
+                                      ))}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <p>{msg.text}</p>
+                                )}
+                              </div>
                             )}
                             
                             <div className={`text-[10px] mt-1.5 font-bold opacity-70 flex items-center gap-1 ${isMe ? 'justify-end' : 'justify-start'} ${msg.type === 'sticker' && !msg.isDeleted ? 'text-gray-400' : ''}`}>

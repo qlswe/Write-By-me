@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useChat, Chat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
+import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
@@ -167,12 +168,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
         <p className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">
           {(t as any).chatLoginToView || t.chatsLoginToView}
         </p>
-        <button
-          onClick={loginWithGoogle}
-          className="inline-flex items-center gap-4 bg-[#ff4d4d] hover:bg-[#ff7a7a] text-[#15101e] px-8 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,77,77,0.3)] hover:scale-105 active:scale-95 border border-white/20"
-        >
-          {t.loginWithGoogle || "Login with Google"}
-        </button>
+        <GoogleLoginButton lang={lang} size="lg" />
       </div>
     );
   }

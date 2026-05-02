@@ -26,7 +26,7 @@ interface PromoEditorProps {
 }
 
 export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, initialPromo }) => {
-  const { user, loginWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [isAdding, setIsAdding] = useState(!!initialPromo);
   const [promoToDelete, setPromoToDelete] = useState<string | null>(null);

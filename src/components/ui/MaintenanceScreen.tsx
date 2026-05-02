@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ShieldAlert, LogIn, LogOut } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
+import { GoogleLoginButton } from './GoogleLoginButton';
 
 interface MaintenanceScreenProps {
   lang: Language;
@@ -53,20 +54,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ lang }) =>
             </button>
           </div>
         ) : (
-          <button
-            onClick={loginWithGoogle}
-            disabled={isLoggingIn}
-            className="w-full bg-white text-[#0d0b14] px-6 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-[#ff4d4d] transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
-          >
-            {isLoggingIn ? (
-              <span className="animate-pulse">...</span>
-            ) : (
-              <>
-                <LogIn size={20} />
-                {t.maintenanceLoginGoogle}
-              </>
-            )}
-          </button>
+          <GoogleLoginButton lang={lang} size="lg" className="w-full" />
         )}
       </motion.div>
     </div>

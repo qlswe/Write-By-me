@@ -4,6 +4,7 @@ import { Check, Edit2, Plus, Trash2, X, CheckSquare, LogIn, Flag } from 'lucide-
 import { useTasks, Task } from '../../hooks/useTasks';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
+import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 
 export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const { user, loginWithGoogle } = useAuth();
@@ -84,13 +85,7 @@ export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
       <div className="flex flex-col items-center justify-center h-64 bg-[#251c35] rounded-3xl p-8 border border-[#3d2b4f] shadow-2xl text-center">
         <h2 className="text-2xl font-black text-[#ff4d4d] uppercase mb-4 tracking-widest">{t.tasksTitle || "Tasks"}</h2>
         <p className="text-gray-400 mb-6">{t.tasksLoginPrompt || "Please sign in to manage your tasks."}</p>
-        <button
-          onClick={loginWithGoogle}
-          className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-3 transition-colors border border-white/10"
-        >
-          <LogIn size={20} />
-          {t.loginWithGoogle || "Login with Google"}
-        </button>
+        <GoogleLoginButton lang={lang} />
       </div>
     );
   }

@@ -610,11 +610,11 @@ export default function App() {
             
             {vercelFallback.isConfigured() ? (
                 <span className="text-indigo-400/80 font-medium">
-                  {lang === 'ru' ? 'Трафик успешно перенаправлен на Vercel KV. Чат и посты защищены от падения.' : 'Traffic successfully routed to Vercel KV bypass. Chat and posts are protected.'}
+                  {lang === 'ru' ? 'Трафик успешно перенаправлен на Firebase RTDB. Чат и посты защищены от падения.' : 'Traffic successfully routed to RTDB bypass. Chat and posts are protected.'}
                 </span>
             ) : (
                 <span className="text-red-500/70 font-medium tracking-wide">
-                  {lang === 'ru' ? 'Включен локальный режим. Настройте параметры Vercel KV в Secrets для сетевого обхода лимитов.' : 'Local fallback active. Set Vercel KV parameters in Secrets to bypass network limits.'}
+                  {lang === 'ru' ? 'Включен локальный режим. Настройте параметры RTDB в Secrets для сетевого обхода лимитов.' : 'Local fallback active. Set RTDB parameters in Secrets to bypass network limits.'}
                 </span>
             )}
             
@@ -896,7 +896,7 @@ export default function App() {
             initial={{ opacity: 0, y: 50, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
             exit={{ opacity: 0, y: 50, x: '-50%' }}
-            className="fixed bottom-8 left-1/2 z-50 bg-[#ff4d4d] text-[#15101e] px-8 py-4 rounded-2xl font-black shadow-2xl border-2 border-white/20 uppercase tracking-widest text-sm"
+            className="fixed bottom-8 left-1/2 z-[999999] bg-[#ff4d4d] text-[#15101e] px-8 py-4 rounded-2xl font-black shadow-2xl border-2 border-white/20 uppercase tracking-widest text-sm whitespace-nowrap"
           >
             {toast}
           </motion.div>
