@@ -223,7 +223,7 @@ export const TasksSection: React.FC<{ lang: Language }> = ({ lang }) => {
                       </form>
                     ) : (
                       <>
-                        <span className={`block truncate flex-1 ${task.completed ? 'line-through text-gray-500' : 'text-gray-200'}`}>
+                        <span className={`block break-words whitespace-pre-wrap flex-1 ${task.completed ? 'line-through text-gray-500' : 'text-gray-200'}`}>
                           {task.text}
                         </span>
                         

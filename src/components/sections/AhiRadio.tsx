@@ -389,10 +389,12 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
               <button
                 onClick={toggleRadio}
                 disabled={isLoading}
-                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
+                title={isPlaying ? t.radioOff : t.radioPressPlay}
+                style={{ touchAction: 'manipulation' }}
+                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all focus:outline-none ${
                   isPlaying 
                     ? 'bg-[#ff4d4d] text-[#15101e] shadow-[0_0_20px_rgba(255,77,77,0.4)] hover:scale-105' 
-                    : 'bg-[#251c35] text-white hover:bg-[#ff4d4d] hover:text-[#15101e]'
+                    : 'bg-[#ff4d4d] text-[#15101e] hover:scale-105 shadow-xl'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isLoading ? (

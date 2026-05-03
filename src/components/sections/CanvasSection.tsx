@@ -72,6 +72,8 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   const t = translations[lang] as any;
 
+  const lastTouchDistRef = useRef<number | null>(null);
+
   const handlePointerDown = (x: number, y: number) => {
     if (tool === 'move') return;
     setIsDrawing(true);
@@ -197,14 +199,18 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   const innerRef = useRef<HTMLDivElement>(null);
 
-  const handleGlobalPointer = (e: React.PointerEvent<HTMLDivElement>, action: 'down' | 'move') => {
-    if (tool === 'move' || mode === 'personal' || !innerRef.current) return;
+  const handleCanvasPointer = (e: React.PointerEvent<HTMLDivElement>, action: 'down' | 'move') => {
+    if (tool === 'move' || !innerRef.current) return;
     const rect = innerRef.current.getBoundingClientRect();
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
     
-    const x = Math.floor(rawX / (20 * scale));
-    const y = Math.floor(rawY / (20 * scale));
+    // For global canvas we use fixed 20px, for personal canvas we use the computed cell size
+    const cellWidth = isGlobal ? (20 * scale) : (rect.width / size);
+    const cellHeight = isGlobal ? (20 * scale) : (rect.height / size);
+    
+    const x = Math.floor(rawX / cellWidth);
+    const y = Math.floor(rawY / cellHeight);
     
     if (action === 'down') {
       setIsDrawing(true);
@@ -227,18 +233,8 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         cells.push(
           <div
             key={pixelId}
-            onPointerDown={(e) => {
-              if (tool === 'move') return;
-              e.preventDefault(); 
-              handlePointerDown(x, y);
-            }}
-            onPointerMove={(e) => {
-              if (tool === 'move') return;
-              e.preventDefault();
-              handlePointerMove(x, y);
-            }}
             style={{ backgroundColor: pixel?.color || '#15101e' }}
-            className="w-full h-full border-[0.5px] border-[#3d2b4f] border-opacity-30 select-none touch-none"
+            className="w-full h-full border-[0.5px] border-[#3d2b4f] border-opacity-30 select-none touch-none pointer-events-none"
           />
         );
       }
@@ -368,7 +364,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
             {/* Draggable container wrapper */}
             <div className="aspect-square bg-[#0d0b14] rounded-xl overflow-hidden border-2 border-[#3d2b4f] shadow-inner relative flex items-center justify-center p-2">
               <motion.div 
-                className={`w-full h-full relative ${tool === 'move' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
+                className={`w-full h-full relative ${tool === 'move' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'} select-none touch-none`}
                 drag={tool === 'move'}
                 dragConstraints={isGlobal ? undefined : { left: -300, right: 300, top: -300, bottom: 300 }}
                 style={{ scale }}
@@ -376,14 +372,42 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                   e.preventDefault();
                   setScale(s => Math.min(Math.max(0.5, s - e.deltaY * 0.001), 3));
                 }}
+                onTouchMove={(e) => {
+                  if (e.touches.length === 2) {
+                    e.preventDefault();
+                    // Basic pinch zoom implementation
+                    const touch1 = e.touches[0];
+                    const touch2 = e.touches[1];
+                    const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+                    
+                    if (lastTouchDistRef.current === null) {
+                      lastTouchDistRef.current = dist;
+                    } else {
+                      const delta = dist - lastTouchDistRef.current;
+                      setScale(s => Math.min(Math.max(0.5, s + delta * 0.01), 3));
+                      lastTouchDistRef.current = dist;
+                    }
+                  }
+                }}
+                onTouchEnd={() => {
+                  lastTouchDistRef.current = null;
+                }}
               >
                 {isGlobal ? (
                     <div 
                         ref={innerRef}
                         className="w-[10000px] h-[10000px] border border-[#3d2b4f]/50 bg-[#15101e] shadow-2xl relative select-none touch-none absolute top-1/2 left-1/2 -mt-[5000px] -ml-[5000px]"
-                        onPointerDown={(e) => { e.preventDefault(); handleGlobalPointer(e, 'down'); }}
-                        onPointerMove={(e) => { e.preventDefault(); handleGlobalPointer(e, 'move'); }}
-                        onPointerUp={handlePointerUp}
+                        onPointerDown={(e) => { 
+                          if (e.pointerType === 'mouse' && e.buttons !== 1) return;
+                          // If drawing, we want to capture pointer to track mouse out of bounds
+                          if (tool === 'draw') (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                          handleCanvasPointer(e, 'down'); 
+                        }}
+                        onPointerMove={(e) => { handleCanvasPointer(e, 'move'); }}
+                        onPointerUp={(e) => {
+                          if (tool === 'draw') (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+                          handlePointerUp();
+                        }}
                         onPointerLeave={handlePointerUp}
                         style={{
                             backgroundImage: `linear-gradient(to right, rgba(61,43,79,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(61,43,79,0.3) 1px, transparent 1px)`,
@@ -410,11 +434,21 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                         })}
                     </div>
                 ) : (
-                    <div className="w-full h-full border border-[#3d2b4f]/50 bg-[#15101e] shadow-2xl relative"
-                        onPointerUp={handlePointerUp}
+                    <div className="w-full h-full border border-[#3d2b4f]/50 bg-[#15101e] shadow-2xl relative select-none touch-none"
+                        ref={innerRef}
+                        onPointerDown={(e) => { 
+                          if (e.pointerType === 'mouse' && e.buttons !== 1) return;
+                          if (tool === 'draw') (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                          handleCanvasPointer(e, 'down'); 
+                        }}
+                        onPointerMove={(e) => { handleCanvasPointer(e, 'move'); }}
+                        onPointerUp={(e) => {
+                          if (tool === 'draw') (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+                          handlePointerUp();
+                        }}
                         onPointerLeave={handlePointerUp}>
                     <div 
-                        className="w-full h-full grid"
+                        className="w-full h-full grid pointer-events-none"
                         style={{ 
                         gridTemplateColumns: `repeat(${size}, 1fr)`,
                         gridTemplateRows: `repeat(${size}, 1fr)`
