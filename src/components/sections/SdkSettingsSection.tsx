@@ -32,6 +32,14 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
   const t = translations[lang];
 
   const [globalFallbackState, setGlobalFallbackState] = useState(false);
+  const [adSettings, setAdSettings] = useState<any>({
+    enabled: false,
+    provider: 'yandex',
+    blockId: '',
+    clientId: '',
+    slotId: ''
+  });
+  const [isSavingAds, setIsSavingAds] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -46,7 +54,11 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
         try {
           const docSnap = await getDoc(doc(db, 'settings', 'general'));
           if (docSnap.exists()) {
-            setGlobalFallbackState(docSnap.data().forceKVFallback || false);
+            const data = docSnap.data();
+            setGlobalFallbackState(data.forceKVFallback || false);
+            if (data.ads) {
+              setAdSettings({ ...adSettings, ...data.ads });
+            }
           }
         } catch (e) {
           // Setting unavailable
@@ -55,6 +67,20 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
       getSettings();
     }
   }, [role]);
+
+  const saveAdSettings = async () => {
+    setIsSavingAds(true);
+    try {
+      await updateDoc(doc(db, 'settings', 'general'), {
+        ads: adSettings
+      });
+      alert(lang === 'ru' ? 'Настройки рекламы сохранены' : 'Ad settings saved');
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setIsSavingAds(false);
+    }
+  };
 
   const toggleGlobalFallback = async () => {
     try {
@@ -181,13 +207,68 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
           </div>
 
           {(role === 'admin' || role === 'moderator') && (
-            <div className="space-y-4 pt-6 border-t border-[#3d2b4f]/50">
-               <h3 className="text-sm font-black uppercase tracking-widest text-indigo-400">
+            <div className="space-y-4 pt-6 mt-6 border-t border-[#3d2b4f]/50">
+               <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d]">
+                {lang === 'ru' ? 'Инструменты администратора' : 'Admin Tools'}
+              </h3>
+              
+              <div className="p-5 bg-red-500/10 border border-red-500/20 rounded-2xl mb-4">
+                <p className="text-xs text-red-400 mb-2 uppercase tracking-widest font-bold">Опасная зона / Danger Zone</p>
+                <button
+                  onClick={async () => {
+                    if (window.confirm('Вы уверены, что хотите перезагрузить страницу у всех пользователей прямо сейчас? / Are you sure you want to restart the page for all users right now?')) {
+                      try {
+                        await updateDoc(doc(db, 'settings', 'general'), {
+                          massRestartTimestamp: Date.now()
+                        });
+                        alert('Команда перезагрузки отправлена / Restart command sent');
+                      } catch (e: any) {
+                        alert('Ошибка / Error: ' + e.message);
+                      }
+                    }
+                  }}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                >
+                  Массовый перезапуск сайта (Все пользователи)
+                </button>
+              </div>
+
+              <div className="p-5 bg-purple-500/10 border border-purple-500/20 rounded-2xl mb-4 space-y-3">
+                <p className="text-xs text-purple-400 uppercase tracking-widest font-bold">Управление Premium / Premium Management</p>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    id="premium_uid_input"
+                    placeholder="UID пользователя (User UID)"
+                    className="flex-1 bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+                  />
+                  <button
+                    onClick={async () => {
+                      const input = document.getElementById('premium_uid_input') as HTMLInputElement;
+                      if (!input.value.trim()) return;
+                      try {
+                        await updateDoc(doc(db, 'users', input.value.trim()), {
+                          isPremium: true
+                        });
+                        alert('Премиум успешно выдан / Premium granted successfully');
+                        input.value = '';
+                      } catch (e: any) {
+                        alert('Ошибка / Error: ' + e.message);
+                      }
+                    }}
+                    className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-xl transition-all whitespace-nowrap text-sm shadow-[0_0_15px_rgba(147,51,234,0.3)]"
+                  >
+                    Выдать (Grant)
+                  </button>
+                </div>
+              </div>
+
+               <h3 className="text-sm font-black uppercase tracking-widest text-indigo-400 mt-6 pt-4 border-t border-[#3d2b4f]/30">
                 {t.sdkDatabaseRoutingAdmin}
               </h3>
               <button 
                 onClick={toggleGlobalFallback}
-                className="w-full flex items-center justify-between p-5 bg-[#15101e] hover:bg-[#15101e]/80 rounded-2xl border border-[#3d2b4f] transition-all hover:border-indigo-500/50 text-left group"
+                className="w-full flex items-center justify-between p-5 bg-[#15101e] hover:bg-[#15101e]/80 rounded-2xl border border-[#3d2b4f] transition-all hover:border-indigo-500/50 text-left group gap-4"
               >
                 <div>
                   <div className="font-bold text-white text-base mb-1 group-hover:text-indigo-400 transition-colors">
@@ -201,6 +282,82 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                   <div className={`absolute top-[4px] left-[4px] w-6 h-6 rounded-full bg-white transition-transform ${globalFallbackState ? 'translate-x-6' : 'translate-x-0'}`} />
                 </div>
               </button>
+
+              {/* Ad settings UI */}
+              <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d] mt-6 pt-4 border-t border-[#3d2b4f]/30">
+                Управление рекламой / Ad Settings
+              </h3>
+              <div className="p-5 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl mb-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-yellow-400">Включить рекламу</span>
+                  <button 
+                    onClick={() => setAdSettings({ ...adSettings, enabled: !adSettings.enabled })}
+                    className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${adSettings.enabled ? 'bg-yellow-500' : 'bg-[#3d2b4f]'}`}
+                  >
+                    <div className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full bg-white transition-transform ${adSettings.enabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+                
+                {adSettings.enabled && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">Провайдер / Provider</label>
+                      <select 
+                        value={adSettings.provider}
+                        onChange={e => setAdSettings({ ...adSettings, provider: e.target.value })}
+                        className="w-full bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-yellow-500"
+                      >
+                        <option value="yandex">Yandex RTB</option>
+                        <option value="adsense">Google AdSense</option>
+                      </select>
+                    </div>
+
+                    {adSettings.provider === 'yandex' ? (
+                      <div className="space-y-2">
+                        <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">R-A Block ID</label>
+                        <input 
+                          type="text" 
+                          placeholder="R-A-1234567-1"
+                          value={adSettings.blockId}
+                          onChange={e => setAdSettings({ ...adSettings, blockId: e.target.value })}
+                          className="w-full bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-yellow-500"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">Client ID (ca-pub-...)</label>
+                          <input 
+                            type="text" 
+                            placeholder="ca-pub-1234567890123456"
+                            value={adSettings.clientId}
+                            onChange={e => setAdSettings({ ...adSettings, clientId: e.target.value })}
+                            className="w-full bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-yellow-500"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">Slot ID</label>
+                          <input 
+                            type="text" 
+                            placeholder="1234567890"
+                            value={adSettings.slotId}
+                            onChange={e => setAdSettings({ ...adSettings, slotId: e.target.value })}
+                            className="w-full bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-yellow-500"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+                
+                <button
+                  onClick={saveAdSettings}
+                  disabled={isSavingAds}
+                  className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-xl transition-all disabled:opacity-50 mt-4 shadow-[0_0_15px_rgba(202,138,4,0.3)]"
+                >
+                  {isSavingAds ? '...' : (lang === 'ru' ? 'Сохранить настройки' : 'Save ad settings')}
+                </button>
+              </div>
             </div>
           )}
 

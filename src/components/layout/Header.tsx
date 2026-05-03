@@ -7,6 +7,7 @@ import { usePerfLogger } from '../../utils/logger';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { ProfileModal } from '../ui/ProfileModal';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
+import { EmailLoginModal } from '../ui/EmailLoginModal';
 
 interface HeaderProps {
   lang: Language;
@@ -42,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [profileOpen, setProfileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [emailLoginModalOpen, setEmailLoginModalOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { trackRender } = usePerfLogger('Header');
   trackRender();
@@ -348,8 +350,8 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <>
                   <button 
-                    onClick={() => { /* Open email login */ setMobileMenuOpen(false); }}
-                    className="w-full flex items-center justify-center gap-3 bg-[#15101e] border border-[#3d2b4f] text-white px-4 py-4 rounded-xl font-black transition-all active:scale-95 mb-4"
+                    onClick={() => { setEmailLoginModalOpen(true); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center justify-center gap-3 bg-[#15101e] border border-[#3d2b4f] text-white px-4 py-4 rounded-xl font-black transition-all active:scale-95 mb-4 hover:border-[#ff4d4d]"
                   >
                     <Mail size={24} className="text-[#ff4d4d]" />
                     {t.headerLoginEmail}
@@ -375,6 +377,11 @@ export const Header: React.FC<HeaderProps> = ({
         isOpen={profileModalOpen} 
         onClose={() => setProfileModalOpen(false)} 
         lang={lang} 
+      />
+      <EmailLoginModal
+        isOpen={emailLoginModalOpen}
+        onClose={() => setEmailLoginModalOpen(false)}
+        lang={lang}
       />
     </>
   );

@@ -8,6 +8,8 @@ import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, serverTime
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { TimeAgo } from '../ui/TimeAgo';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { useLimits } from '../../hooks/useLimits';
+import { AdsBlock } from '../ui/AdsBlock';
 
 import { vercelFallback } from '../../utils/vercelFallback';
 
@@ -49,6 +51,7 @@ interface ForumSectionProps {
 export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, role }) => {
   const { user } = useAuth();
   const t = translations[lang];
+  const { checkLimit, incrementUsage } = useLimits();
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [selectedThread, setSelectedThread] = useState<ForumThread | null>(null);
   const [comments, setComments] = useState<ForumComment[]>([]);
@@ -163,8 +166,13 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
   }, [selectedThread]);
 
   const handleCreateThread = async () => {
+    if (!checkLimit('threads_monthly')) {
+      alert(lang === 'ru' ? 'Вы исчерпали лимит в 20 тредов за месяц. Приобретите Aha Premium.' : 'You have reached the monthly thread limit of 20. Get Aha Premium.');
+      return;
+    }
     if (!user || !newTitle.trim() || !newContent.trim() || isSubmitting) return;
     setIsSubmitting(true);
+    incrementUsage('threads_monthly');
     try {
       const threadData = {
         title: newTitle.trim(),
@@ -231,9 +239,14 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
   };
 
   const handleCreateComment = async (replyToId?: string) => {
+    if (!checkLimit('comments_daily')) {
+      alert(lang === 'ru' ? 'Вы исчерпали лимит в 50 комментариев за день. Приобретите Aha Premium.' : 'You have reached the daily comment limit of 50. Get Aha Premium.');
+      return;
+    }
     const contentToSubmit = replyToId ? replyContent : newComment;
     if (!user || !selectedThread || !contentToSubmit.trim() || isSubmitting) return;
     setIsSubmitting(true);
+    incrementUsage('comments_daily');
     try {
       const commentData = {
         threadId: selectedThread.id,
@@ -761,6 +774,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
 
   return (
     <div className="space-y-6">
+      <AdsBlock />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
           <MessageSquare className="text-[#ff4d4d]" size={32} />

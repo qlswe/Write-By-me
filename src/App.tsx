@@ -154,6 +154,14 @@ export default function App() {
              setTimeout(() => window.location.reload(), 500);
           }
         }
+
+        if (data.massRestartTimestamp) {
+          const lastRestart = localStorage.getItem('aha_last_restart');
+          if (!lastRestart || parseInt(lastRestart, 10) < data.massRestartTimestamp) {
+            localStorage.setItem('aha_last_restart', Date.now().toString());
+            window.location.reload();
+          }
+        }
       }
     });
     return () => unsub();

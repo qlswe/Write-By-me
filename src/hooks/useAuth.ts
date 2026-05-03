@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 // --- GLOBAL SINGLETON STATE ---
@@ -8,6 +8,7 @@ let globalUser: User | null = null;
 let globalLoading = true;
 let globalIsAdmin = false;
 let globalRole: 'admin' | 'moderator' | 'user' | 'beta-tester' = 'user';
+let globalIsPremium = false;
 let authInitialized = false;
 
 const subscribers = new Set<() => void>();
@@ -35,6 +36,7 @@ const initAuth = () => {
         if (userDoc.exists()) {
           const userData = userDoc.data();
           globalRole = userData.role || 'user';
+          globalIsPremium = userData.isPremium || false;
           globalIsAdmin = globalRole === 'admin' || (user.email === 'semegladysev527@gmail.com' && user.emailVerified);
           
           await setDoc(doc(db, 'public_profiles', user.uid), {
@@ -61,19 +63,23 @@ const initAuth = () => {
             displayName: user.displayName,
             photoURL: user.photoURL,
             role: initialRole,
+            isPremium: false,
           });
           
           globalRole = initialRole;
+          globalIsPremium = false;
           globalIsAdmin = initialRole === 'admin';
         }
       } catch (e) {
         console.error("Error fetching user role:", e);
         globalIsAdmin = user.email === 'semegladysev527@gmail.com' && user.emailVerified;
         globalRole = 'user';
+        globalIsPremium = false;
       }
     } else {
       globalIsAdmin = false;
       globalRole = 'user';
+      globalIsPremium = false;
     }
     
     globalLoading = false;
@@ -135,9 +141,38 @@ export function useAuth() {
     }
   };
 
-  const loginWithEmail = async (email: string) => {
+  const loginWithEmail = async (email: string, password?: string) => {
     setError(null);
-    console.log("Email login requested for:", email);
+    if (!password) {
+      setError("Please provide a password.");
+      return;
+    }
+    setIsLoggingIn(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const registerWithEmail = async (email: string, password?: string) => {
+    setError(null);
+    if (!password) {
+      setError("Please provide a password.");
+      return;
+    }
+    setIsLoggingIn(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const logout = async () => {
@@ -154,9 +189,11 @@ export function useAuth() {
     loading: globalLoading, 
     isAdmin: globalIsAdmin, 
     role: globalRole, 
+    isPremium: globalIsPremium,
     error, 
     loginWithGoogle, 
     loginWithEmail, 
+    registerWithEmail,
     logout, 
     isLoggingIn 
   };

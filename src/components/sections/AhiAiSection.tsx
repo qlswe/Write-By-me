@@ -6,11 +6,14 @@ import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { useAiChats } from '../../hooks/useAiChats';
+import { useLimits } from '../../hooks/useLimits';
+import { AdsBlock } from '../ui/AdsBlock';
 
 export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const { user } = useAuth();
   const t = translations[lang];
   const { chats, activeChatId, setActiveChatId, activeChat, createChat, deleteChat, updateChat, addMessage } = useAiChats();
+  const { checkLimit, incrementUsage, hasUnlimitedAccess } = useLimits();
   
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -29,9 +32,12 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
   // Initial chat creation if no chats exist
   useEffect(() => {
     if (user && chats.length === 0 && !activeChatId) {
-      createChat('', lang === 'ru' ? 'Новый чат' : 'New Chat');
+      if (checkLimit('chats_daily')) {
+        createChat('', lang === 'ru' ? 'Новый чат' : 'New Chat');
+        incrementUsage('chats_daily');
+      }
     }
-  }, [user, chats.length, activeChatId, createChat, lang]);
+  }, [user, chats.length, activeChatId, createChat, lang, checkLimit, incrementUsage]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -39,11 +45,31 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
     }
   }, [activeChat?.messages.length, isProcessing]);
 
+  const handleCreateChat = () => {
+    if (!checkLimit('chats_daily')) {
+      alert(lang === 'ru' ? 'Лимит создания чатов на сегодня исчерпан. Ожидайте завтра или приобретите Aha Premium.' : 'Daily chat creation limit reached. Wait until tomorrow or get Aha Premium.');
+      return;
+    }
+    createChat('', lang === 'ru' ? 'Новый чат' : 'New Chat');
+    incrementUsage('chats_daily');
+  };
+
   const handleExecute = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isProcessing || !activeChatId) return;
 
     const cmd = input.trim();
+
+    if (!hasUnlimitedAccess && cmd.length > 250) {
+      alert(lang === 'ru' ? 'Ваше сообщение превышает лимит в 250 символов. Купите Aha Premium для снятия ограничений.' : 'Your message exceeds the 250-character limit. Get Aha Premium to remove this limit.');
+      return;
+    }
+
+    if (cmd.startsWith('/') && !checkLimit('terminal_daily')) {
+      alert(lang === 'ru' ? 'Лимит терминальных команд на сегодня исчерпан.' : 'Daily terminal commands limit reached.');
+      return;
+    }
+
     addMessage(activeChatId, { role: 'user', content: cmd });
     setInput('');
     setIsProcessing(true);
@@ -51,6 +77,7 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
     try {
       if (cmd.startsWith('/')) {
         // execute terminal command
+        incrementUsage('terminal_daily');
         const response = await sdk.terminal.execute(cmd.substring(1), lang);
         if (response === 'CLEAR_TERMINAL') {
           updateChat(activeChatId, { messages: [] });
@@ -107,16 +134,18 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-[#251c35] rounded-3xl border border-[#3d2b4f] shadow-2xl flex overflow-hidden min-h-[600px] h-[calc(100vh-12rem)] w-full relative"
-    >
+    <div className="flex flex-col gap-4">
+      <AdsBlock />
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-[#251c35] rounded-3xl border border-[#3d2b4f] shadow-2xl flex overflow-hidden min-h-[600px] h-[calc(100vh-12rem)] w-full relative"
+      >
       {/* Sidebar */}
       <div className="w-64 bg-[#15101e] border-r border-[#3d2b4f] flex flex-col hidden sm:flex shrink-0">
         <div className="p-4">
           <button
-            onClick={() => createChat('', lang === 'ru' ? 'Новый чат' : 'New Chat')}
+            onClick={handleCreateChat}
             className="w-full flex items-center gap-2 bg-[#ff4d4d] hover:bg-white text-[#15101e] transition-colors py-3 px-4 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(255,77,77,0.2)]"
           >
             <Plus size={18} />
@@ -174,7 +203,7 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
             </button>
             <button
               className="sm:hidden p-2 hover:bg-white/10 text-gray-400 rounded-lg transition-colors flex items-center justify-center"
-              onClick={() => createChat('', lang === 'ru' ? 'Новый чат' : 'New Chat')}
+              onClick={handleCreateChat}
             >
               <Plus size={18} />
             </button>
@@ -250,9 +279,14 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
               className="flex-1 min-w-0 bg-transparent border-none outline-none px-3 py-2 text-sm sm:text-base text-white placeholder-gray-500"
               disabled={!activeChat}
             />
+            {!hasUnlimitedAccess && (
+              <div className={`text-xs px-2 shrink-0 ${input.length > 250 ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
+                {input.length}/250
+              </div>
+            )}
             <button 
               type="submit"
-              disabled={!input.trim() || isProcessing || !activeChat}
+              disabled={!input.trim() || isProcessing || !activeChat || (!hasUnlimitedAccess && input.length > 250)}
               className="shrink-0 p-2.5 sm:p-3 bg-[#ff4d4d] text-[#15101e] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white transition-all hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(255,77,77,0.3)] disabled:hover:scale-100 disabled:shadow-none"
             >
               <ChevronRight size={18} className="sm:w-5 sm:h-5" />
@@ -312,6 +346,7 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
         </AnimatePresence>
       </div>
     </motion.div>
+    </div>
   );
 };
 

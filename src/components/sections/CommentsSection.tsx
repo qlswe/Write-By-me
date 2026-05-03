@@ -10,6 +10,7 @@ import { Trash2, Send, Heart, Edit2, X, Check, MessageCircle, ChevronDown, Chevr
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { useLimits } from '../../hooks/useLimits';
 
 import { vercelFallback } from '../../utils/vercelFallback';
 
@@ -51,6 +52,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   
   const { user, loginWithGoogle } = useAuth();
   const isModerator = role === 'admin' || role === 'moderator';
+  const { checkLimit, incrementUsage, hasUnlimitedAccess } = useLimits();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -122,10 +124,15 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
 
   const handleSubmit = async (e: React.FormEvent, parentId?: string) => {
     e.preventDefault();
+    if (!checkLimit('comments_daily')) {
+      alert(lang === 'ru' ? 'Вы исчерпали лимит в 50 комментариев за день. Приобретите Aha Premium.' : 'You have reached the daily comment limit of 50. Get Aha Premium.');
+      return;
+    }
     const content = parentId ? replyContent : newComment;
     if (!user || !content.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
+    incrementUsage('comments_daily');
     try {
       const payload = {
         targetId,

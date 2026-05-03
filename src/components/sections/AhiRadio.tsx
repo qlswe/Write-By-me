@@ -4,6 +4,8 @@ import { Radio, Play, Square, Volume2, Loader2, Lock, SkipForward, Disc, Music }
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
+import { useLimits } from '../../hooks/useLimits';
+import { AdsBlock } from '../ui/AdsBlock';
 
 interface AhiRadioProps {
   lang: Language;
@@ -11,6 +13,7 @@ interface AhiRadioProps {
 
 export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   const { user, loginWithGoogle } = useAuth();
+  const { checkLimit, incrementUsage, hasUnlimitedAccess } = useLimits();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [statusText, setStatusText] = useState('');
@@ -229,12 +232,19 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   const handleNextJoke = async () => {
     if (!isPlayingRef.current) return;
     
+    if (!checkLimit('radio_daily')) {
+      alert(lang === 'ru' ? 'Лимит использования Aha Radio на сегодня исчерпан. Ожидайте завтра или приобретите Aha Premium.' : 'Daily Aha Radio limit reached. Wait until tomorrow or get Aha Premium.');
+      setIsPlaying(false);
+      return;
+    }
+
     setStatusText(t.radioThinking);
     
     // Add a 2.5-second pause to simulate thinking and give a break between jokes
     setTimeout(async () => {
       if (!isPlayingRef.current) return;
       
+      incrementUsage('radio_daily');
       const nextJoke = await generateSingleJoke();
       
       if (nextJoke && isPlayingRef.current) {
@@ -249,6 +259,11 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   };
 
   const toggleRadio = async () => {
+    if (!checkLimit('radio_daily') && !isPlaying) {
+      alert(lang === 'ru' ? 'Лимит использования Aha Radio на сегодня исчерпан. Ожидайте завтра или приобретите Aha Premium.' : 'Daily Aha Radio limit reached. Wait until tomorrow or get Aha Premium.');
+      return;
+    }
+
     if (isPlaying) {
       setIsPlaying(false);
       if (utteranceRef.current) {
@@ -269,6 +284,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       setIsLoading(true);
       
       try {
+        incrementUsage('radio_daily');
         const firstJoke = await generateSingleJoke();
         
         if (firstJoke && isPlayingRef.current) {
@@ -322,7 +338,9 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-[#0d0b14] to-[#15101e] rounded-[2.5rem] border border-[#3d2b4f]/40 relative overflow-hidden shadow-2xl">
+    <div className="flex flex-col gap-4">
+      <AdsBlock />
+      <div className="flex flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-[#0d0b14] to-[#15101e] rounded-[2.5rem] border border-[#3d2b4f]/40 relative overflow-hidden shadow-2xl">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[30rem] h-[30rem] bg-[#ff4d4d]/10 rounded-full blur-[100px] transition-all duration-1000 ${isPlaying ? 'opacity-100 scale-110' : 'opacity-30 scale-90'}`} />
@@ -484,6 +502,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };

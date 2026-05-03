@@ -17,6 +17,7 @@ interface UserData {
   signature?: string;
   mainCharacter?: string;
   role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
+  isPremium?: boolean;
   reputation?: number;
   xp?: number;
   photoURL?: string;
@@ -34,6 +35,7 @@ export function useUserData(initialLang: string) {
   const [signature, setSignature] = useState<string>('');
   const [mainCharacter, setMainCharacter] = useState<string>('Stelle');
   const [role, setRole] = useState<'admin' | 'moderator' | 'user' | 'beta-tester'>('user');
+  const [isPremium, setIsPremium] = useState<boolean>(false);
   const [reputation, setReputation] = useState<number>(0);
   const [xp, setXp] = useState<number>(0);
   const [photoURL, setPhotoURL] = useState<string>('');
@@ -101,6 +103,7 @@ export function useUserData(initialLang: string) {
         if (data.signature !== undefined) setSignature(data.signature);
         if (data.mainCharacter !== undefined) setMainCharacter(data.mainCharacter);
         if (data.role !== undefined) setRole(data.role);
+        if (data.isPremium !== undefined) setIsPremium(data.isPremium);
         // Hardcoded admin check for the user's email
         if (user.email === 'semegladysev527@gmail.com') {
           setRole('admin');
@@ -120,6 +123,7 @@ export function useUserData(initialLang: string) {
           signature: signature,
           mainCharacter: mainCharacter,
           role: 'user',
+          isPremium: isPremium,
           reputation: 0,
           xp: 0,
           photoURL: user.photoURL || '',
@@ -235,5 +239,5 @@ export function useUserData(initialLang: string) {
     }
   }, [user]);
 
-  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, hsrUid, hsrServer, trailblazerLevel, signature, mainCharacter, role, reputation, xp, photoURL, updateProfile, isDataLoaded };
+  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, hsrUid, hsrServer, trailblazerLevel, signature, mainCharacter, role, isPremium, reputation, xp, photoURL, updateProfile, isDataLoaded };
 }
