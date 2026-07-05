@@ -45,11 +45,10 @@ const AhiRadio = lazy(() => import('./components/sections/AhiRadio').then(m => (
 const ForumSection = lazy(() => import('./components/sections/ForumSection').then(m => ({ default: m.ForumSection })));
 const AhiAiSection = lazy(() => import('./components/sections/AhiAiSection').then(m => ({ default: m.AhiAiSection })));
 const SdkSettingsSection = lazy(() => import('./components/sections/SdkSettingsSection').then(m => ({ default: m.SdkSettingsSection })));
-const TasksSection = lazy(() => import('./components/sections/TasksSection').then(m => ({ default: m.TasksSection })));
 const CanvasSection = lazy(() => import('./components/sections/CanvasSection').then(m => ({ default: m.CanvasSection })));
 const TelemetrySection = lazy(() => import('./components/sections/TelemetrySection').then(m => ({ default: m.TelemetrySection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk' | 'tasks' | 'canvas' | 'telemetry';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry';
 
 let hasPrintedStopWarning = false;
 
@@ -407,7 +406,6 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
-    { id: 'tasks' as const, label: t.navTasks || 'Tasks', icon: ListOrdered },
     { id: 'canvas' as const, label: t.navCanvas || 'Canvas', icon: Palette },
     { id: 'forum' as const, label: t.navForum, icon: MessageSquare },
     { id: 'radio' as const, label: t.navRadio, icon: Radio },
@@ -744,10 +742,6 @@ export default function App() {
                   onOpenChat={(uid, name) => setActiveChat({ uid, displayName: name })}
                   role={role}
                 />
-              )}
-
-              {section === 'tasks' && (
-                <TasksSection lang={lang as Language} />
               )}
 
               {section === 'canvas' && (
