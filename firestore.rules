@@ -72,6 +72,13 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
+    // Collaborative and Personal Canvases
+    match /canvases/{canvasId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && (request.resource.data.get('pixels', null) == null || request.resource.data.pixels is map);
+      allow delete: if isAdmin();
+    }
+
     // Forum
     match /forum_threads/{threadId} {
       allow read: if true;
@@ -130,6 +137,12 @@ service cloud.firestore {
     match /system_content/{docId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /telemetry/{logId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if isAdmin();
     }
   }
 }

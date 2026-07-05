@@ -49,70 +49,169 @@ export const encrypt = (text: string, contextId?: string): string => {
 
 export const decrypt = (cipherText: string, contextId?: string): string => {
   if (!cipherText) return "";
-  
-  // V2: Rolling Key AES Decryption
-  if (cipherText.startsWith(PREFIX)) {
+
+  const trimmed = cipherText.trim();
+
+  // Helper to check if decrypted string is printable/clean text
+  const isPrintable = (str: string): boolean => {
+    if (!str) return false;
+    // Check for high density of control characters which indicates decryption failure
+    const controlChars = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
+    return !controlChars.test(str);
+  };
+
+  // 1. V2: Rolling Key AES Decryption
+  if (trimmed.startsWith(PREFIX)) {
     try {
-      const payload = cipherText.substring(PREFIX.length);
+      const payload = trimmed.substring(PREFIX.length);
       const delimiterIndex = payload.indexOf('|');
       
       if (delimiterIndex !== -1) {
         const seed = payload.substring(0, delimiterIndex);
         const actualCipherText = payload.substring(delimiterIndex + 1);
-        
-        // Reconstruct the exact rolling key used at the time of encryption
         const historicalDynamicKey = generateRollingKey(seed + (contextId || ''));
-        
         const bytes = CryptoJS.AES.decrypt(actualCipherText, historicalDynamicKey);
         const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
-        if (decryptedText) return decryptedText;
+        if (decryptedText && isPrintable(decryptedText)) {
+          return decryptedText;
+        }
       }
     } catch (e) {
-// Fallback gracefully instead of breaking
+      // Fallback
     }
   }
 
-  // V1: Static AES Decryption (Fallback for older messages)
-  if (cipherText.startsWith(PREFIX_V1)) {
+  // 2. V1: Static AES Decryption (with Prefix)
+  if (trimmed.startsWith(PREFIX_V1)) {
     try {
-      const actualCipherText = cipherText.substring(PREFIX_V1.length);
+      const actualCipherText = trimmed.substring(PREFIX_V1.length);
       const bytes = CryptoJS.AES.decrypt(actualCipherText, BASE_SECRET);
       const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
-      if (decryptedText) return decryptedText;
+      if (decryptedText && isPrintable(decryptedText)) {
+        return decryptedText;
+      }
     } catch (e) {
-      console.error("V1 AES Decryption error:", e);
+      // Fallback
     }
   }
 
-  // Legacy fallback: XOR Base64
-  if (/[^\x00-\x7F]/.test(cipherText) || cipherText.includes(" ") || (!cipherText.startsWith(PREFIX) && !cipherText.startsWith(PREFIX_V1) && !cipherText.match(/^[A-Za-z0-9+/=]+$/))) {
-    return cipherText;
-  }
-
+  // 3. Raw AES Fallback with BASE_SECRET (No prefix)
   try {
-    const binary = atob(cipherText.trim());
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
+    const bytes = CryptoJS.AES.decrypt(trimmed, BASE_SECRET);
+    const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+    if (decryptedText && isPrintable(decryptedText)) {
+      return decryptedText;
     }
-    
-    const encoder = new TextEncoder();
-    const keyBytes = encoder.encode(LEGACY_KEY);
-    const decryptedBytes = new Uint8Array(bytes.length);
-    
-    for (let i = 0; i < bytes.length; i++) {
-      decryptedBytes[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
-    }
-    
-    const decoder = new TextDecoder();
-    const result = decoder.decode(decryptedBytes);
-    
-    if (/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(result)) {
-      return cipherText;
-    }
-    
-    return result;
   } catch (e) {
-    return cipherText;
+    // Fallback
   }
+
+  // 4. Raw AES Fallback with LEGACY_KEY (No prefix)
+  try {
+    const bytes = CryptoJS.AES.decrypt(trimmed, LEGACY_KEY);
+    const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+    if (decryptedText && isPrintable(decryptedText)) {
+      return decryptedText;
+    }
+  } catch (e) {
+    // Fallback
+  }
+
+  // 5. Raw AES Fallback with Daily Rolling Key (No prefix)
+  try {
+    const dailySeed = getDailyKeySeed();
+    const dynamicKey = generateRollingKey(dailySeed + (contextId || ''));
+    const bytes = CryptoJS.AES.decrypt(trimmed, dynamicKey);
+    const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+    if (decryptedText && isPrintable(decryptedText)) {
+      return decryptedText;
+    }
+  } catch (e) {
+    // Fallback
+  }
+
+  // 6. Legacy Fallback: XOR Base64 with LEGACY_KEY
+  try {
+    if (/^[A-Za-z0-9+/=]+$/.test(trimmed)) {
+      const binary = atob(trimmed);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      
+      const encoder = new TextEncoder();
+      const keyBytes = encoder.encode(LEGACY_KEY);
+      const decryptedBytes = new Uint8Array(bytes.length);
+      
+      for (let i = 0; i < bytes.length; i++) {
+        decryptedBytes[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+      }
+      
+      const decoder = new TextDecoder();
+      const result = decoder.decode(decryptedBytes);
+      if (isPrintable(result)) {
+        return result;
+      }
+    }
+  } catch (e) {
+    // Fallback
+  }
+
+  // 7. Legacy Fallback: XOR Base64 with BASE_SECRET
+  try {
+    if (/^[A-Za-z0-9+/=]+$/.test(trimmed)) {
+      const binary = atob(trimmed);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      
+      const encoder = new TextEncoder();
+      const keyBytes = encoder.encode(BASE_SECRET);
+      const decryptedBytes = new Uint8Array(bytes.length);
+      
+      for (let i = 0; i < bytes.length; i++) {
+        decryptedBytes[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+      }
+      
+      const decoder = new TextDecoder();
+      const result = decoder.decode(decryptedBytes);
+      if (isPrintable(result)) {
+        return result;
+      }
+    }
+  } catch (e) {
+    // Fallback
+  }
+
+  // 8. Plain Base64 Fallback
+  try {
+    if (/^[A-Za-z0-9+/=]+$/.test(trimmed) && trimmed.length > 4) {
+      const decoded = atob(trimmed);
+      if (isPrintable(decoded) && decoded.length > 0) {
+        return decoded;
+      }
+    }
+  } catch (e) {
+    // Fallback
+  }
+
+  // 9. Caesar ROT13 Fallback
+  try {
+    const rot13 = (str: string) => {
+      return str.replace(/[a-zA-Z]/g, (c) => {
+        const base = c <= 'Z' ? 65 : 97;
+        return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+      });
+    };
+    const decoded = rot13(trimmed);
+    if (/^[a-zA-Z\s.,!?]+$/.test(trimmed) && trimmed !== decoded) {
+      return decoded;
+    }
+  } catch (e) {
+    // Fallback
+  }
+
+  // 10. Default: Return original
+  return cipherText;
 };

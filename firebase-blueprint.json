@@ -89,6 +89,23 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "text", "createdAt"]
+    },
+    "telemetry": {
+      "title": "User Telemetry",
+      "description": "Standard permitted user browser and environment telemetry.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "displayName": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "platform": { "type": "string" },
+        "screen": { "type": "string" },
+        "language": { "type": "string" },
+        "timezone": { "type": "string" },
+        "currentSection": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
@@ -105,3 +122,12 @@
       "description": "Collection of user-created posts (Юзы)."
     },
     "/sdk_reports/{reportId}": {
+      "schema": "sdk_reports",
+      "description": "User reports and bug feedback."
+    },
+    "/telemetry/{logId}": {
+      "schema": "telemetry",
+      "description": "Permitted user browser environment telemetry."
+    }
+  }
+}

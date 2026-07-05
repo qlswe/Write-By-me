@@ -774,7 +774,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
 
   return (
     <div className="space-y-6">
-      <AdsBlock />
+      <AdsBlock lang={lang} />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
           <MessageSquare className="text-[#ff4d4d]" size={32} />

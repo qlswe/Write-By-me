@@ -21,10 +21,25 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isPlayingRef = useRef(isPlaying);
+  const ttsFailedRef = useRef(false);
+  const fallbackTimerRef = useRef<any>(null);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  useEffect(() => {
+    return () => {
+      if (utteranceRef.current) {
+        utteranceRef.current.onend = null;
+        utteranceRef.current.onerror = null;
+      }
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current);
+      }
+      window.speechSynthesis.cancel();
+    };
+  }, []);
 
   const t = translations[lang];
 
@@ -147,7 +162,26 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   };
 
-  const playJokeTTS = async (jokeText: string) => {
+  const playJokeTTS = async (jokeText: string, isRetry = false) => {
+    // Clear any previous fallback timer
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+
+    if (ttsFailedRef.current || !window.speechSynthesis) {
+      console.log('TTS: Speech synthesis is currently disabled or failed. Running simulated text-only voice mode.');
+      setStatusText(lang === 'ru' ? 'Вещание (Текстовый режим)' : 'Broadcasting (Text mode)');
+      
+      const readingDuration = Math.max(3500, jokeText.length * 75); // ~13 chars/sec, min 3.5s
+      fallbackTimerRef.current = setTimeout(() => {
+        if (isPlayingRef.current) {
+          handleNextJoke();
+        }
+      }, readingDuration);
+      return;
+    }
+
     try {
       setStatusText(t.radioVoicing);
       
@@ -188,16 +222,22 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       const targetLang = lang === 'ru' ? 'ru-RU' : 'en-US';
       utterance.lang = targetLang;
       
-      // Try to find a voice that matches the language
-      const voices = window.speechSynthesis.getVoices();
-      const targetLangPrefix = targetLang.split('-')[0];
-      
-      const availableVoices = voices.filter(v => v.lang.startsWith(targetLangPrefix));
-      
-      if (availableVoices.length > 0) {
-        // Pick a random voice from the available ones for the language
-        const randomVoice = availableVoices[Math.floor(Math.random() * availableVoices.length)];
-        utterance.voice = randomVoice;
+      if (!isRetry) {
+        // Try to find a voice that matches the language
+        const voices = window.speechSynthesis.getVoices();
+        const targetLangPrefix = targetLang.split('-')[0];
+        
+        const availableVoices = voices.filter(v => v.lang.startsWith(targetLangPrefix));
+        
+        if (availableVoices.length > 0) {
+          // Prefer offline/local voices to avoid 'synthesis-failed' from cloud/network voices
+          const localVoices = availableVoices.filter(v => v.localService);
+          const voicesToUse = localVoices.length > 0 ? localVoices : availableVoices;
+          
+          // Pick a random voice from the available ones for the language
+          const randomVoice = voicesToUse[Math.floor(Math.random() * voicesToUse.length)];
+          utterance.voice = randomVoice;
+        }
       }
 
       // Make it sound more human with wider variations
@@ -214,6 +254,26 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         console.error('TTS Error:', e.error, e);
         if (e.error === 'canceled' || e.error === 'interrupted') return;
         
+        // If it's a synthesis failure and we haven't retried yet, retry with the default voice
+        if (!isRetry && e.error === 'synthesis-failed') {
+          console.log('TTS: Custom voice synthesis failed, retrying with default voice...');
+          setTimeout(() => {
+            if (isPlayingRef.current) {
+              playJokeTTS(jokeText, true);
+            }
+          }, 100);
+          return;
+        }
+
+        // If even the default voice fails, or if it is already a retry, set the flag and switch to text mode
+        if (e.error === 'synthesis-failed') {
+          console.warn('TTS: Both voice attempts failed with synthesis-failed. Enabling text-only simulated mode for this session.');
+          ttsFailedRef.current = true;
+          // Switch to simulated visual mode immediately for the current joke
+          playJokeTTS(jokeText);
+          return;
+        }
+
         // Only proceed to next joke if we are still playing (prevents infinite error loops)
         if (isPlayingRef.current) {
            setTimeout(handleNextJoke, 1000);
@@ -223,9 +283,9 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       window.speechSynthesis.speak(utterance);
     } catch (error) {
       console.error('Error with TTS:', error);
-      if (isPlayingRef.current) {
-        setTimeout(handleNextJoke, 1000);
-      }
+      // Fallback immediately to simulated mode on any other exception
+      ttsFailedRef.current = true;
+      playJokeTTS(jokeText);
     }
   };
 
@@ -269,6 +329,10 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       if (utteranceRef.current) {
         utteranceRef.current.onend = null;
         utteranceRef.current.onerror = null;
+      }
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
       }
       window.speechSynthesis.cancel();
       setStatusText(t.radioOff);
@@ -339,7 +403,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <AdsBlock />
+      <AdsBlock lang={lang} />
       <div className="flex flex-col items-center justify-center p-6 sm:p-10 bg-gradient-to-br from-[#0d0b14] to-[#15101e] rounded-[2.5rem] border border-[#3d2b4f]/40 relative overflow-hidden shadow-2xl">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

@@ -29,12 +29,12 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
 }) => {
   const [ahaSecurityHidden, setAhaSecurityHidden] = useState(localStorage.getItem('aha_security_hidden') === 'true');
   const [localTime, setLocalTime] = useState(new Date().toLocaleTimeString());
-  const t = translations[lang];
+  const t = translations[lang] as any;
 
   const [globalFallbackState, setGlobalFallbackState] = useState(false);
   const [adSettings, setAdSettings] = useState<any>({
     enabled: false,
-    provider: 'yandex',
+    provider: 'a-ads',
     blockId: '',
     clientId: '',
     slotId: ''
@@ -74,9 +74,9 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
       await updateDoc(doc(db, 'settings', 'general'), {
         ads: adSettings
       });
-      alert(lang === 'ru' ? 'Настройки рекламы сохранены' : 'Ad settings saved');
+      alert(t.adSettingsSaved || 'Ad settings saved');
     } catch (e: any) {
-      alert('Error: ' + e.message);
+      alert((t.adminPremiumGrantError || 'Error') + ': ' + e.message);
     } finally {
       setIsSavingAds(false);
     }
@@ -209,37 +209,37 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
           {(role === 'admin' || role === 'moderator') && (
             <div className="space-y-4 pt-6 mt-6 border-t border-[#3d2b4f]/50">
                <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d]">
-                {lang === 'ru' ? 'Инструменты администратора' : 'Admin Tools'}
+                {t.adminTools || 'Admin Tools'}
               </h3>
               
               <div className="p-5 bg-red-500/10 border border-red-500/20 rounded-2xl mb-4">
-                <p className="text-xs text-red-400 mb-2 uppercase tracking-widest font-bold">Опасная зона / Danger Zone</p>
+                <p className="text-xs text-red-400 mb-2 uppercase tracking-widest font-bold">{t.adminDangerZone || "Danger Zone"}</p>
                 <button
                   onClick={async () => {
-                    if (window.confirm('Вы уверены, что хотите перезагрузить страницу у всех пользователей прямо сейчас? / Are you sure you want to restart the page for all users right now?')) {
+                    if (window.confirm(t.adminMassRestartDesc || "Are you sure you want to restart the page for all users right now?")) {
                       try {
                         await updateDoc(doc(db, 'settings', 'general'), {
                           massRestartTimestamp: Date.now()
                         });
-                        alert('Команда перезагрузки отправлена / Restart command sent');
+                        alert(t.adminMassRestartSent || 'Restart command sent');
                       } catch (e: any) {
-                        alert('Ошибка / Error: ' + e.message);
+                        alert((t.adminPremiumGrantError || 'Error') + ': ' + e.message);
                       }
                     }
                   }}
                   className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-[0_0_15px_rgba(239,68,68,0.3)]"
                 >
-                  Массовый перезапуск сайта (Все пользователи)
+                  {t.adminMassRestartBtn || "Mass website restart (All users)"}
                 </button>
               </div>
 
               <div className="p-5 bg-purple-500/10 border border-purple-500/20 rounded-2xl mb-4 space-y-3">
-                <p className="text-xs text-purple-400 uppercase tracking-widest font-bold">Управление Premium / Premium Management</p>
+                <p className="text-xs text-purple-400 uppercase tracking-widest font-bold">{t.adminPremiumTitle || "Premium Management"}</p>
                 <div className="flex gap-2">
                   <input 
                     type="text" 
                     id="premium_uid_input"
-                    placeholder="UID пользователя (User UID)"
+                    placeholder={t.adminPremiumInput || "User UID"}
                     className="flex-1 bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
                   />
                   <button
@@ -250,15 +250,15 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                         await updateDoc(doc(db, 'users', input.value.trim()), {
                           isPremium: true
                         });
-                        alert('Премиум успешно выдан / Premium granted successfully');
+                        alert(t.adminPremiumGrantSuccess || 'Premium granted successfully');
                         input.value = '';
                       } catch (e: any) {
-                        alert('Ошибка / Error: ' + e.message);
+                        alert((t.adminPremiumGrantError || 'Error') + ': ' + e.message);
                       }
                     }}
                     className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-xl transition-all whitespace-nowrap text-sm shadow-[0_0_15px_rgba(147,51,234,0.3)]"
                   >
-                    Выдать (Grant)
+                    {t.adminPremiumGrant || "Grant"}
                   </button>
                 </div>
               </div>
@@ -285,11 +285,11 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
 
               {/* Ad settings UI */}
               <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d] mt-6 pt-4 border-t border-[#3d2b4f]/30">
-                Управление рекламой / Ad Settings
+                {t.adSettings || "Ad Settings"}
               </h3>
               <div className="p-5 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl mb-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-yellow-400">Включить рекламу</span>
+                  <span className="text-sm font-bold text-yellow-400">{t.adSettingsEnable || "Enable ads"}</span>
                   <button 
                     onClick={() => setAdSettings({ ...adSettings, enabled: !adSettings.enabled })}
                     className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${adSettings.enabled ? 'bg-yellow-500' : 'bg-[#3d2b4f]'}`}
@@ -301,23 +301,34 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                 {adSettings.enabled && (
                   <>
                     <div className="space-y-2">
-                      <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">Провайдер / Provider</label>
+                      <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t.adSettingsProvider || "Provider"}</label>
                       <select 
                         value={adSettings.provider}
                         onChange={e => setAdSettings({ ...adSettings, provider: e.target.value })}
                         className="w-full bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-yellow-500"
                       >
-                        <option value="yandex">Yandex RTB</option>
+                        <option value="a-ads">A-Ads (Crypto/Global)</option>
                         <option value="adsense">Google AdSense</option>
                       </select>
+                      {adSettings.provider === 'a-ads' ? (
+                        <p className="text-xs text-gray-500">
+                          {lang === 'ru' ? 'API для мира/РФ: ' : 'API globally: '}
+                          <a href="https://a-ads.com/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">a-ads.com</a>
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-500">
+                          {lang === 'ru' ? 'API для мира: ' : 'API globally: '}
+                          <a href="https://adsense.google.com/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">adsense.google.com</a>
+                        </p>
+                      )}
                     </div>
 
-                    {adSettings.provider === 'yandex' ? (
+                    {adSettings.provider === 'a-ads' ? (
                       <div className="space-y-2">
-                        <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">R-A Block ID</label>
+                        <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t.adSettingsBlockId || "Ad Unit ID"}</label>
                         <input 
                           type="text" 
-                          placeholder="R-A-1234567-1"
+                          placeholder="2200000"
                           value={adSettings.blockId}
                           onChange={e => setAdSettings({ ...adSettings, blockId: e.target.value })}
                           className="w-full bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-yellow-500"
@@ -326,7 +337,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                     ) : (
                       <>
                         <div className="space-y-2">
-                          <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">Client ID (ca-pub-...)</label>
+                          <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t.adSettingsClient || "Client ID (ca-pub-...)"}</label>
                           <input 
                             type="text" 
                             placeholder="ca-pub-1234567890123456"
@@ -336,7 +347,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">Slot ID</label>
+                          <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t.adSettingsSlot || "Slot ID"}</label>
                           <input 
                             type="text" 
                             placeholder="1234567890"
@@ -355,7 +366,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                   disabled={isSavingAds}
                   className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded-xl transition-all disabled:opacity-50 mt-4 shadow-[0_0_15px_rgba(202,138,4,0.3)]"
                 >
-                  {isSavingAds ? '...' : (lang === 'ru' ? 'Сохранить настройки' : 'Save ad settings')}
+                  {isSavingAds ? '...' : (t.adSettingsSave || 'Save ad settings')}
                 </button>
               </div>
             </div>

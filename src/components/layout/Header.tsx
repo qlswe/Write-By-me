@@ -273,7 +273,7 @@ export const Header: React.FC<HeaderProps> = ({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="md:hidden fixed inset-0 z-40 bg-[#15101e] pt-20 px-4 flex flex-col overflow-y-auto pb-6"
+            className="lg:hidden fixed inset-0 z-40 bg-[#15101e] pt-20 px-4 flex flex-col overflow-y-auto pb-6"
           >
             <div className="flex flex-col gap-4 flex-1 shrink-0">
               {navItems.map(item => (

@@ -19,6 +19,7 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [systemPromptInput, setSystemPromptInput] = useState('');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -135,7 +136,7 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <AdsBlock />
+      <AdsBlock lang={lang} />
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -202,10 +203,14 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
               <span className="hidden sm:inline">{lang === 'ru' ? 'Промпт' : 'Prompt'}</span>
             </button>
             <button
-              className="sm:hidden p-2 hover:bg-white/10 text-gray-400 rounded-lg transition-colors flex items-center justify-center"
-              onClick={handleCreateChat}
+              className="sm:hidden p-2 hover:bg-white/10 text-gray-400 rounded-lg transition-colors flex items-center justify-center relative"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              title={lang === 'ru' ? 'Выбрать чат' : 'Select chat'}
             >
-              <Plus size={18} />
+              <MessageSquare size={18} />
+              {chats.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#ff4d4d] rounded-full animate-pulse" />
+              )}
             </button>
           </div>
         </div>
@@ -328,7 +333,7 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
                     <textarea
                       value={systemPromptInput}
                       onChange={(e) => setSystemPromptInput(e.target.value)}
-                      placeholder={lang === 'ru' ? 'Введите инструкции, как должен вести себя ИИ в этом чате...' : 'Enter instructions on how the AI should behave...'}
+                      placeholder={lang === 'ru' ? 'Введите инструкции, как должен вести себя ИИ в этом чате...' : 'Введите инструкции для ИИ...'}
                       className="w-full bg-[#15101e] border-2 border-[#3d2b4f] rounded-xl p-4 text-gray-200 placeholder-gray-600 focus:border-[#ff4d4d] outline-none min-h-[150px] resize-y"
                     />
                   </div>
@@ -339,6 +344,83 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
                   >
                     {lang === 'ru' ? 'Сохранить' : 'Save'}
                   </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Mobile Sidebar Overlay Drawer */}
+        <AnimatePresence>
+          {isMobileSidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="absolute inset-0 z-50 bg-black/75 backdrop-blur-sm sm:hidden"
+            >
+              <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-72 h-full bg-[#15101e] border-r border-[#3d2b4f] flex flex-col p-5 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    <MessageSquare className="text-[#ff4d4d]" size={18} />
+                    {lang === 'ru' ? 'Мои чаты' : 'My Chats'}
+                  </h3>
+                  <button
+                    onClick={() => setIsMobileSidebarOpen(false)}
+                    className="p-1.5 hover:bg-white/5 text-gray-400 hover:text-white rounded-lg transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    handleCreateChat();
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 bg-[#ff4d4d] hover:bg-white text-[#15101e] transition-colors py-3 px-4 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(255,77,77,0.2)]"
+                >
+                  <Plus size={18} />
+                  {lang === 'ru' ? 'Новый чат' : 'New Chat'}
+                </button>
+
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-[#3d2b4f]">
+                  {chats.map(chat => (
+                    <div 
+                      key={chat.id}
+                      onClick={() => {
+                        setActiveChatId(chat.id);
+                        setIsMobileSidebarOpen(false);
+                      }}
+                      className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
+                        activeChatId === chat.id 
+                          ? 'bg-[#3d2b4f] text-white shadow-md' 
+                          : 'text-gray-400 hover:bg-[#3d2b4f]/50 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <MessageSquare size={16} className="shrink-0" />
+                        <span className="truncate text-sm font-medium">{chat.title}</span>
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteChat(chat.id);
+                        }}
+                        className="p-1.5 rounded-md hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             </motion.div>

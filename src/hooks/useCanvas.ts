@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ref, onValue, set, get, remove } from 'firebase/database';
-import { rtdb } from '../firebase';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, deleteField } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useAuth } from './useAuth';
 
 export interface CanvasPixel {
@@ -14,33 +14,29 @@ export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
   const [pixels, setPixels] = useState<Record<string, CanvasPixel>>({});
   const [loading, setLoading] = useState(true);
 
+  const docId = canvasId.replace(/\//g, '_');
+
   useEffect(() => {
-    const canvasRef = ref(rtdb, canvasId);
+    const docRef = doc(db, 'canvases', docId);
     setLoading(true);
     setPixels({});
     
-    // Initial fetch
-    get(canvasRef).then((snapshot) => {
+    // Realtime subscription using onSnapshot
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
       if (snapshot.exists()) {
-        setPixels(snapshot.val());
+        const data = snapshot.data();
+        setPixels(data.pixels || {});
+      } else {
+        setPixels({});
       }
       setLoading(false);
-    }).catch(err => {
+    }, (err) => {
       console.error("Canvas fetch error:", err);
       setLoading(false);
     });
 
-    // Realtime subscription
-    const unsubscribe = onValue(canvasRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setPixels(snapshot.val());
-      } else {
-        setPixels({});
-      }
-    });
-
     return () => unsubscribe();
-  }, [canvasId]);
+  }, [docId]);
 
   const drawPixel = async (x: number, y: number, color: string) => {
     if (!user) return;
@@ -51,7 +47,7 @@ export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
 
     try {
       const pixelId = `${x},${y}`;
-      const pixelRef = ref(rtdb, `${canvasId}/${pixelId}`);
+      const docRef = doc(db, 'canvases', docId);
       
       const newPixel: CanvasPixel = {
         color: color.substring(0, 10), // strict cap
@@ -60,9 +56,16 @@ export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
       };
       
       // Optimistic update
-      setPixels(prev => ({ ...prev, [pixelId]: newPixel }));
+      setPixels(prev => ({ 
+        ...prev, 
+        [pixelId]: newPixel 
+      }));
       
-      await set(pixelRef, newPixel);
+      await setDoc(docRef, {
+        pixels: {
+          [pixelId]: newPixel
+        }
+      }, { merge: true });
     } catch (error) {
       console.error("Error drawing pixel:", error);
     }
@@ -72,7 +75,7 @@ export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
     if (!user) return;
     try {
       const pixelId = `${x},${y}`;
-      const pixelRef = ref(rtdb, `${canvasId}/${pixelId}`);
+      const docRef = doc(db, 'canvases', docId);
       
       setPixels(prev => {
         const next = { ...prev };
@@ -80,7 +83,9 @@ export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
         return next;
       });
       
-      await remove(pixelRef);
+      await updateDoc(docRef, {
+        [`pixels.${pixelId}`]: deleteField()
+      });
     } catch (error) {
       console.error("Error erasing pixel:", error);
     }
@@ -89,8 +94,8 @@ export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
   const clearCanvas = async () => {
     if (!user) return;
     try {
-      const canvasRef = ref(rtdb, canvasId);
-      await remove(canvasRef);
+      const docRef = doc(db, 'canvases', docId);
+      await setDoc(docRef, { pixels: {} });
       setPixels({});
     } catch (error) {
       console.error('Error clearing canvas:', error);

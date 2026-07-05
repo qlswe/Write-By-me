@@ -35,18 +35,18 @@ const initAuth = () => {
         
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          globalRole = userData.role || 'user';
+          globalRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : (userData.role || 'user');
           globalIsPremium = userData.isPremium || false;
-          globalIsAdmin = globalRole === 'admin' || (user.email === 'semegladysev527@gmail.com' && user.emailVerified);
+          globalIsAdmin = globalRole === 'admin' || user.email === 'semegladysev527@gmail.com';
           
           await setDoc(doc(db, 'public_profiles', user.uid), {
             uid: user.uid,
             displayName: user.displayName,
             photoURL: userData.photoURL || user.photoURL,
-            role: userData.role || 'user',
+            role: globalRole,
           }, { merge: true });
         } else {
-          const initialRole = (user.email === 'semegladysev527@gmail.com' && user.emailVerified) ? 'admin' : 'user';
+          const initialRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : 'user';
           const userData = {
             uid: user.uid,
             displayName: user.displayName,
@@ -72,8 +72,8 @@ const initAuth = () => {
         }
       } catch (e) {
         console.error("Error fetching user role:", e);
-        globalIsAdmin = user.email === 'semegladysev527@gmail.com' && user.emailVerified;
-        globalRole = 'user';
+        globalIsAdmin = user.email === 'semegladysev527@gmail.com';
+        globalRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : 'user';
         globalIsPremium = false;
       }
     } else {

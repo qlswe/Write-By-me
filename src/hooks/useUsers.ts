@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, setDoc, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
 
@@ -51,6 +51,9 @@ export function useUsers() {
     try {
       const userRef = doc(db, 'users', uid);
       await updateDoc(userRef, { role });
+      
+      const publicRef = doc(db, 'public_profiles', uid);
+      await setDoc(publicRef, { role }, { merge: true });
     } catch (error) {
       console.error('Error updating user role:', error);
     }

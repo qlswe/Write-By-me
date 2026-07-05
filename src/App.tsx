@@ -47,12 +47,14 @@ const AhiAiSection = lazy(() => import('./components/sections/AhiAiSection').the
 const SdkSettingsSection = lazy(() => import('./components/sections/SdkSettingsSection').then(m => ({ default: m.SdkSettingsSection })));
 const TasksSection = lazy(() => import('./components/sections/TasksSection').then(m => ({ default: m.TasksSection })));
 const CanvasSection = lazy(() => import('./components/sections/CanvasSection').then(m => ({ default: m.CanvasSection })));
+const TelemetrySection = lazy(() => import('./components/sections/TelemetrySection').then(m => ({ default: m.TelemetrySection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk' | 'tasks' | 'canvas';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk' | 'tasks' | 'canvas' | 'telemetry';
 
 let hasPrintedStopWarning = false;
 
 import { Changelog } from './components/ui/Changelog';
+import { logUserTelemetry } from './utils/telemetry';
 
 export default function App() {
   const { trackRender } = usePerfLogger('App');
@@ -71,7 +73,8 @@ export default function App() {
 
   useEffect(() => {
     sdk.logging.action('Section Change', { section });
-  }, [section]);
+    logUserTelemetry(user?.uid, user?.email, user?.displayName || 'Guest', section);
+  }, [section, user]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [modalContent, setModalContent] = useState<{id?: string, title: string, content: string} | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -414,9 +417,10 @@ export default function App() {
     { id: 'promo', label: t.navPromo, icon: Ticket },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'users' as const, label: t.navUsers, icon: User },
+    ...((role === 'admin' || role === 'moderator' || user?.email === 'semegladysev527@gmail.com') ? [{ id: 'telemetry' as const, label: 'Telemetry', icon: Settings }] : []),
     { id: 'sdk', label: 'SDK', icon: Settings },
     { id: 'ai', label: 'Aha AI', icon: Sparkles },
-  ] as const;
+  ];
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -850,6 +854,9 @@ export default function App() {
                     <ChatsList lang={lang as Language} onSelectChat={(id, name) => setActiveChat({ uid: id, displayName: name })} />
                   </div>
                 </div>
+              )}
+              {section === 'telemetry' && (role === 'admin' || role === 'moderator' || user?.email === 'semegladysev527@gmail.com') && (
+                <TelemetrySection lang={lang as Language} />
               )}
             </Suspense>
           </motion.div>
