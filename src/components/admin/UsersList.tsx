@@ -102,7 +102,8 @@ const UserListItem = React.memo(({
   setOpenDropdownId, 
   onViewProfile, 
   onOpenChat, 
-  updateUserRole 
+  updateUserRole,
+  currentUserId
 }: { 
   user: UserData, 
   isAdmin: boolean, 
@@ -112,7 +113,8 @@ const UserListItem = React.memo(({
   setOpenDropdownId: (id: string | null) => void, 
   onViewProfile?: (user: UserData) => void, 
   onOpenChat: (uid: string, name: string, photoURL?: string) => void, 
-  updateUserRole: (uid: string, role: 'admin' | 'user' | 'moderator' | 'beta-tester') => void 
+  updateUserRole: (uid: string, role: 'admin' | 'user' | 'moderator' | 'beta-tester') => void,
+  currentUserId?: string
 }) => {
   return (
     <motion.div
@@ -154,13 +156,15 @@ const UserListItem = React.memo(({
         >
           <User className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
-        <button
-          onClick={() => onOpenChat(user.uid, user.displayName, user.photoURL)}
-          className="p-2.5 sm:p-3 bg-[#3d2b4f]/30 hover:bg-[#ff4d4d] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#ff4d4d]/30 shadow-lg"
-          title={t.sendMessage}
-        >
-          <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+        {user.uid !== currentUserId && (
+          <button
+            onClick={() => onOpenChat(user.uid, user.displayName, user.photoURL)}
+            className="p-2.5 sm:p-3 bg-[#3d2b4f]/30 hover:bg-[#ff4d4d] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#ff4d4d]/30 shadow-lg"
+            title={t.sendMessage}
+          >
+            <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        )}
         
         {isAdmin && (
           <RoleSelector 
@@ -180,7 +184,7 @@ const UserListItem = React.memo(({
 
 export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewProfile }) => {
   const { users, loading, updateUserRole } = useUsers();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user: currentUser } = useAuth();
   const t = translations[lang];
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -350,6 +354,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
               onViewProfile={onViewProfile}
               onOpenChat={onOpenChat}
               updateUserRole={updateUserRole}
+              currentUserId={currentUser?.uid}
             />
           ))
         )}

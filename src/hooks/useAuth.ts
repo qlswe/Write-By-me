@@ -9,7 +9,43 @@ let globalLoading = true;
 let globalIsAdmin = false;
 let globalRole: 'admin' | 'moderator' | 'user' | 'beta-tester' = 'user';
 let globalIsPremium = false;
+let globalPhotoURL: string | null = null;
 let authInitialized = false;
+
+// Global cache to maintain stable object reference for user Proxy
+let cachedProxiedUser: User | null = null;
+let lastGlobalPhotoURL: string | null = null;
+let lastGlobalUser: User | null = null;
+
+const getProxiedUser = (): User | null => {
+  if (!globalUser) {
+    cachedProxiedUser = null;
+    lastGlobalUser = null;
+    lastGlobalPhotoURL = null;
+    return null;
+  }
+  if (cachedProxiedUser && lastGlobalUser === globalUser && lastGlobalPhotoURL === globalPhotoURL) {
+    return cachedProxiedUser;
+  }
+  
+  lastGlobalUser = globalUser;
+  lastGlobalPhotoURL = globalPhotoURL;
+  
+  cachedProxiedUser = new Proxy(globalUser, {
+    get(target, prop, receiver) {
+      if (prop === 'photoURL') {
+        return globalPhotoURL || target.photoURL;
+      }
+      const val = Reflect.get(target, prop, receiver);
+      if (typeof val === 'function') {
+        return val.bind(target);
+      }
+      return val;
+    }
+  }) as User;
+  
+  return cachedProxiedUser;
+};
 
 const subscribers = new Set<() => void>();
 
@@ -33,25 +69,43 @@ const initAuth = () => {
         const userDocRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
         
+        const fallbackName = user.displayName || user.email?.split('@')[0] || 'User';
+        const fallbackPhoto = user.photoURL || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(fallbackName)}`;
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
           globalRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : (userData.role || 'user');
           globalIsPremium = userData.isPremium || false;
           globalIsAdmin = globalRole === 'admin' || user.email === 'semegladysev527@gmail.com';
+          globalPhotoURL = userData.photoURL || fallbackPhoto;
           
-          await setDoc(doc(db, 'public_profiles', user.uid), {
-            uid: user.uid,
-            displayName: user.displayName,
-            photoURL: userData.photoURL || user.photoURL,
-            role: globalRole,
-          }, { merge: true });
+          // Create or update public profile safely without triggering "role" validation on update if unchanged
+          const publicDocRef = doc(db, 'public_profiles', user.uid);
+          const publicDoc = await getDoc(publicDocRef);
+          if (!publicDoc.exists()) {
+            await setDoc(publicDocRef, {
+              uid: user.uid,
+              displayName: fallbackName,
+              photoURL: userData.photoURL || fallbackPhoto,
+              role: 'user',
+              isPremium: globalIsPremium,
+            });
+          } else {
+            // Only update displayName or photoURL, do not include role to prevent security rules violation
+            await setDoc(publicDocRef, {
+              displayName: fallbackName,
+              photoURL: userData.photoURL || fallbackPhoto,
+            }, { merge: true });
+          }
         } else {
-          const initialRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : 'user';
+          // Rule says: allow create: if isOwner(userId) && request.resource.data.get('role', 'user') == 'user';
+          // So we must write 'role' as 'user' initially.
+          const initialRole = 'user';
           const userData = {
             uid: user.uid,
-            displayName: user.displayName,
-            email: user.email,
-            photoURL: user.photoURL,
+            displayName: fallbackName,
+            email: user.email || '',
+            photoURL: fallbackPhoto,
             role: initialRole,
             createdAt: new Date().toISOString(),
             lastLogin: new Date().toISOString()
@@ -60,26 +114,29 @@ const initAuth = () => {
           
           await setDoc(doc(db, 'public_profiles', user.uid), {
             uid: user.uid,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
+            displayName: fallbackName,
+            photoURL: fallbackPhoto,
             role: initialRole,
             isPremium: false,
           });
           
-          globalRole = initialRole;
+          globalRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : initialRole;
           globalIsPremium = false;
-          globalIsAdmin = initialRole === 'admin';
+          globalIsAdmin = globalRole === 'admin';
+          globalPhotoURL = fallbackPhoto;
         }
       } catch (e) {
         console.error("Error fetching user role:", e);
         globalIsAdmin = user.email === 'semegladysev527@gmail.com';
         globalRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : 'user';
         globalIsPremium = false;
+        globalPhotoURL = user.photoURL || null;
       }
     } else {
       globalIsAdmin = false;
       globalRole = 'user';
       globalIsPremium = false;
+      globalPhotoURL = null;
     }
     
     globalLoading = false;
@@ -184,8 +241,10 @@ export function useAuth() {
     }
   };
 
+  const proxiedUser = getProxiedUser();
+
   return { 
-    user: globalUser, 
+    user: proxiedUser, 
     loading: globalLoading, 
     isAdmin: globalIsAdmin, 
     role: globalRole, 
@@ -195,6 +254,10 @@ export function useAuth() {
     loginWithEmail, 
     registerWithEmail,
     logout, 
-    isLoggingIn 
+    isLoggingIn,
+    updateGlobalPhoto: (url: string) => {
+      globalPhotoURL = url;
+      notifySubscribers();
+    }
   };
 }

@@ -74,6 +74,16 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, [mobileMenuOpen]);
 
+  useEffect(() => {
+    const handleOpenEmailLogin = () => {
+      setEmailLoginModalOpen(true);
+    };
+    window.addEventListener('openEmailLogin', handleOpenEmailLogin);
+    return () => {
+      window.removeEventListener('openEmailLogin', handleOpenEmailLogin);
+    };
+  }, []);
+
   return (
     <>
       <header className="sticky top-0 z-50 bg-[#15101e] border-b border-[#251c35] shadow-2xl">
@@ -252,6 +262,14 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <div className="flex items-center gap-2">
                   <GoogleLoginButton lang={lang} size="sm" onClick={() => setMobileMenuOpen(false)} />
+                  <button
+                    onClick={() => setEmailLoginModalOpen(true)}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-xl font-black uppercase tracking-widest text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 cursor-pointer shadow-md h-[40px]"
+                    title={t.headerLoginEmail}
+                  >
+                    <Mail size={14} />
+                    <span className="hidden sm:inline">{lang === 'ru' ? 'Почта' : 'Email'}</span>
+                  </button>
                 </div>
               )}
             </div>

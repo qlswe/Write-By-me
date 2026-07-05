@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, useMotionValue } from 'framer-motion';
-import { Palette, LogIn, Maximize, RefreshCw, Users, Info, Eraser, Move, PenTool, Save, User as UserIcon, Undo2, Redo2 } from 'lucide-react';
+import { Palette, LogIn, Maximize, RefreshCw, Users, Info, Eraser, Move, PenTool, Save, User as UserIcon, Undo2, Redo2, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCanvas } from '../../hooks/useCanvas';
 import { translations, Language } from '../../data/translations';
@@ -189,10 +189,24 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 bg-[#251c35] rounded-3xl p-8 border border-[#3d2b4f] shadow-2xl text-center">
-        <h2 className="text-2xl font-black text-[#ff4d4d] uppercase mb-4 tracking-widest">{t.canvasTitle || "Pixel Canvas"}</h2>
-        <p className="text-gray-400 mb-6">{t.canvasLoginPrompt || "Please sign in to draw on the shared canvas."}</p>
-        <GoogleLoginButton lang={lang} />
+      <div className="bg-[#15101e]/60 border border-[#3d2b4f]/20 rounded-[2.5rem] p-8 sm:p-12 text-center max-w-2xl mx-auto my-12 backdrop-blur-md">
+        <Lock className="mx-auto text-[#ff4d4d]/60 mb-5" size={44} />
+        <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
+          {lang === 'ru' ? 'Авторизация' : 'Authorization'}
+        </h4>
+        <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-xs max-w-md mx-auto">
+          {t.canvasLoginPrompt || (lang === 'ru' ? 'Для доступа к Canvas и совместному рисованию необходимо войти в аккаунт.' : 'Log in to draw on the shared canvas.')}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+          <GoogleLoginButton lang={lang} />
+          <button
+            onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+          >
+            <Mail size={16} />
+            {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
+          </button>
+        </div>
       </div>
     );
   }

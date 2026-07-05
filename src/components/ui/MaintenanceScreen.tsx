@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ShieldAlert, LogIn, LogOut } from 'lucide-react';
+import { ShieldAlert, LogIn, LogOut, Mail } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { GoogleLoginButton } from './GoogleLoginButton';
@@ -54,7 +54,16 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ lang }) =>
             </button>
           </div>
         ) : (
-          <GoogleLoginButton lang={lang} size="lg" className="w-full" />
+          <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
+            <GoogleLoginButton lang={lang} className="w-full" />
+            <button
+              onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+            >
+              <Mail size={14} />
+              {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
+            </button>
+          </div>
         )}
       </motion.div>
     </div>

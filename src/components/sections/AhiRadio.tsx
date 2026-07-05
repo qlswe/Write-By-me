@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Radio, Play, Square, Volume2, Loader2, Lock, SkipForward, Disc, Music } from 'lucide-react';
+import { Radio, Play, Square, Volume2, Loader2, Lock, SkipForward, Disc, Music, Mail } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
@@ -384,19 +384,24 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center space-y-6 bg-[#15101e]/40 rounded-3xl border border-[#3d2b4f]/30">
-        <div className="w-20 h-20 bg-[#ff4d4d]/10 rounded-full flex items-center justify-center border border-[#ff4d4d]/20">
-          <Lock className="w-10 h-10 text-[#ff4d4d]" />
+      <div className="bg-[#15101e]/60 border border-[#3d2b4f]/20 rounded-[2.5rem] p-8 sm:p-12 text-center max-w-2xl mx-auto my-12 backdrop-blur-md">
+        <Lock className="mx-auto text-[#ff4d4d]/60 mb-5" size={44} />
+        <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
+          {lang === 'ru' ? 'Авторизация' : 'Authorization'}
+        </h4>
+        <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-xs max-w-md mx-auto">
+          {(t as any).radioAuthRequired || (lang === 'ru' ? 'Доступ к радиостанциям и эфирам возможен только после входа в аккаунт.' : 'Access to the radio stations is only possible after logging in.')}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+          <GoogleLoginButton lang={lang} />
+          <button
+            onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+          >
+            <Mail size={16} />
+            {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
+          </button>
         </div>
-        <div>
-          <h3 className="text-2xl font-bold text-white mb-2">
-            {(t as any).radioTitle || t.siteName}
-          </h3>
-          <p className="text-white/40 max-w-md mx-auto">
-            {(t as any).radioAuthRequired || "Access to the most unfunny jokes in the universe is only possible after logging in with Google."}
-          </p>
-        </div>
-        <GoogleLoginButton lang={lang} size="lg" />
       </div>
     );
   }

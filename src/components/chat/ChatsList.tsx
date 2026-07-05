@@ -3,7 +3,7 @@ import { useChat, Chat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff } from 'lucide-react';
+import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, de, fr, zhCN } from 'date-fns/locale';
@@ -163,12 +163,24 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
 
   if (!user) {
     return (
-      <div className="text-center py-16 bg-[#15101e]/20 rounded-3xl border border-[#3d2b4f]/20">
-        <User className="mx-auto mb-6 text-gray-600" size={48} />
-        <p className="text-sm font-black uppercase tracking-widest text-gray-400 mb-8">
-          {(t as any).chatLoginToView || t.chatsLoginToView}
+      <div className="bg-[#15101e]/60 border border-[#3d2b4f]/20 rounded-[2.5rem] p-8 sm:p-12 text-center max-w-2xl mx-auto my-12 backdrop-blur-md">
+        <User className="mx-auto text-[#ff4d4d]/60 mb-5" size={44} />
+        <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
+          {lang === 'ru' ? 'Авторизация' : 'Authorization'}
+        </h4>
+        <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-xs max-w-md mx-auto">
+          {(t as any).chatLoginToView || t.chatsLoginToView || (lang === 'ru' ? 'Войдите, чтобы просмотреть чаты' : 'Log in to view chats')}
         </p>
-        <GoogleLoginButton lang={lang} size="lg" />
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+          <GoogleLoginButton lang={lang} />
+          <button
+            onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+          >
+            <Mail size={16} />
+            {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
+          </button>
+        </div>
       </div>
     );
   }

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, ChevronRight, Lock, Trash2, Plus, MessageSquare, Settings, X, Bot, User } from 'lucide-react';
+import { Sparkles, ChevronRight, Lock, Trash2, Plus, MessageSquare, Settings, X, Bot, User, Mail } from 'lucide-react';
 import { sdk } from '../../sdk';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
@@ -113,24 +113,25 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   if (!user) {
     return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center p-12 text-center space-y-6 bg-[#251c35] rounded-2xl border border-[#3d2b4f] shadow-2xl min-h-[50vh]"
-      >
-        <div className="w-20 h-20 bg-[#ff4d4d]/10 rounded-full flex items-center justify-center border border-[#ff4d4d]/20">
-          <Lock className="w-10 h-10 text-[#ff4d4d]" />
+      <div className="bg-[#15101e]/60 border border-[#3d2b4f]/20 rounded-[2.5rem] p-8 sm:p-12 text-center max-w-2xl mx-auto my-12 backdrop-blur-md">
+        <Lock className="mx-auto text-[#ff4d4d]/60 mb-5" size={44} />
+        <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
+          {lang === 'ru' ? 'Авторизация' : 'Authorization'}
+        </h4>
+        <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-xs max-w-md mx-auto">
+          {t.sdkAuthRequiredMsg || (t as any).sdkAuthRequired || (lang === 'ru' ? 'Для доступа к Aha AI необходимо войти в аккаунт.' : 'Access to Aha AI requires signing in.')}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+          <GoogleLoginButton lang={lang} />
+          <button
+            onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+          >
+            <Mail size={16} />
+            {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
+          </button>
         </div>
-        <div>
-          <h3 className="text-2xl font-bold text-white mb-2">
-            {t.sdkAuthRequiredMsg || (t as any).sdkAuthRequired}
-          </h3>
-          <p className="text-gray-400">
-            {(t as any).sdkAuthDesc || t.sdkAuthRequiredMsg}
-          </p>
-        </div>
-        <GoogleLoginButton lang={lang} size="lg" />
-      </motion.div>
+      </div>
     );
   }
 

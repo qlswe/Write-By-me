@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera } from 'lucide-react';
+import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { updateProfile as updateAuthProfile } from 'firebase/auth';
@@ -20,7 +20,7 @@ interface ProfileModalProps {
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lang, viewUser }) => {
   const t = translations[lang];
-  const { user: currentUser, logout, isAdmin, role: currentUserRole } = useAuth();
+  const { user: currentUser, logout, isAdmin, role: currentUserRole, updateGlobalPhoto } = useAuth();
   const { xp: currentXp, reputation: currentRep, role: currentRole, photoURL: currentPhoto, updateProfile: updateUserData } = useUserData(lang);
   
   const isOwnProfile = !viewUser || viewUser.uid === currentUser?.uid;
@@ -40,6 +40,95 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const [showChats, setShowChats] = useState(false);
   const [showPosts, setShowPosts] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const processFile = async (file: File) => {
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert(lang === 'ru' ? 'Файл слишком большой. Максимальный размер 10MB' : 'File is too large. Max size is 10MB');
+      return;
+    }
+
+    setIsUpdating(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const img = new Image();
+      img.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const size = 256;
+        canvas.width = size;
+        canvas.height = size;
+        
+        if (ctx) {
+          const minDim = Math.min(img.width, img.height);
+          const sx = (img.width - minDim) / 2;
+          const sy = (img.height - minDim) / 2;
+          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+          
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          try {
+            if (currentUser) {
+              // Firebase Auth's photoURL has a limit of 2048 characters.
+              // To avoid "auth/invalid-profile-attribute" errors, we do NOT set base64 on it.
+              // Instead, we use the local in-memory proxy helper to reflect it instantly,
+              // and save the full resolution base64 image securely in Firestore.
+              if (updateGlobalPhoto) {
+                updateGlobalPhoto(compressedBase64);
+              }
+              await updateUserData('', '', 0, '', '', compressedBase64);
+              await setDoc(doc(db, 'public_profiles', currentUser.uid), {
+                photoURL: compressedBase64
+              }, { merge: true });
+              
+              setNewPhotoURL(compressedBase64);
+              setIsEditingPhoto(false);
+              setToast(t.profilePhotoUpdated);
+              setTimeout(() => setToast(null), 3000);
+            }
+          } catch (error) {
+            console.error('Error saving uploaded photo:', error);
+            setToast(t.profilePhotoError);
+            setTimeout(() => setToast(null), 3000);
+          } finally {
+            setIsUpdating(false);
+          }
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await processFile(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      await processFile(file);
+    } else {
+      alert(lang === 'ru' ? 'Пожалуйста, загрузите корректный файл изображения' : 'Please upload a valid image file');
+    }
+  };
 
   const { posts, createPost, updatePost, deletePost, loading: postsLoading } = useUserPosts(user?.uid);
   const [newPostText, setNewPostText] = useState('');
@@ -89,7 +178,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
     setIsUpdating(true);
     try {
       if (currentUser) {
-        await updateAuthProfile(currentUser, { photoURL: newPhotoURL.trim() });
+        // Firebase Auth's photoURL is limited to 2048 characters.
+        // If the custom URL is a standard URL (<= 2000 chars), we sync it with Auth profile too.
+        if (newPhotoURL.trim().length <= 2000) {
+          await updateAuthProfile(currentUser, { photoURL: newPhotoURL.trim() });
+        }
+        
+        if (updateGlobalPhoto) {
+          updateGlobalPhoto(newPhotoURL.trim());
+        }
+        
         // Update via useUserData hook
         await updateUserData('', '', 0, '', '', newPhotoURL.trim());
         
@@ -207,32 +305,89 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                 </div>
               </div>
               {isEditingPhoto && isOwnProfile && (
-                <div className="mb-6 p-4 bg-[#251c35]/50 rounded-2xl border border-[#ff4d4d]/30">
-                  <div className="text-[10px] font-black text-[#ff4d4d] uppercase tracking-widest mb-2">
-                    {t.profilePhotoUrl}
+                <div className="mb-6 p-6 bg-[#1a1326] rounded-[2rem] border-2 border-dashed border-[#ff4d4d]/30 hover:border-[#ff4d4d]/60 transition-colors space-y-6 relative overflow-hidden shadow-2xl">
+                  {/* Drag-and-drop zone */}
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`p-6 bg-[#15101e]/80 border border-[#3d2b4f]/40 rounded-2xl cursor-pointer flex flex-col items-center justify-center text-center transition-all ${
+                      isDragging 
+                        ? 'bg-[#ff4d4d]/10 border-[#ff4d4d] scale-[0.98]' 
+                        : 'hover:bg-[#251c35]/40 hover:border-[#ff4d4d]/40'
+                    }`}
+                  >
+                    {isUpdating ? (
+                      <div className="space-y-3">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#ff4d4d] mx-auto" />
+                        <p className="text-xs font-black uppercase tracking-widest text-white/60">
+                          {lang === 'ru' ? 'Обработка файла...' : 'Processing file...'}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 bg-[#ff4d4d]/10 rounded-full flex items-center justify-center mb-3 text-[#ff4d4d] border border-[#ff4d4d]/20">
+                          <Upload size={22} className={isDragging ? 'animate-bounce' : ''} />
+                        </div>
+                        <h5 className="text-sm font-black text-white uppercase tracking-wider mb-1">
+                          {lang === 'ru' ? 'Перетащите изображение сюда' : 'Drag & drop image here'}
+                        </h5>
+                        <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mb-3">
+                          {lang === 'ru' ? 'или нажмите, чтобы выбрать на ПК' : 'or click to browse local files'}
+                        </p>
+                        <span className="text-[9px] bg-[#3d2b4f]/40 text-white/40 border border-[#3d2b4f]/50 px-2 py-1 rounded-lg uppercase tracking-widest font-mono">
+                          JPG, PNG, WEBP (Max 10MB)
+                        </span>
+                      </>
+                    )}
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newPhotoURL}
-                      onChange={(e) => setNewPhotoURL(e.target.value)}
-                      className="flex-1 bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white outline-none focus:border-[#ff4d4d]"
-                      placeholder="https://..."
-                    />
-                    <button
-                      onClick={handleUpdatePhoto}
-                      disabled={isUpdating}
-                      className="p-2.5 bg-[#ff4d4d] text-[#15101e] rounded-xl hover:bg-[#ff7a7a] transition-colors disabled:opacity-50"
-                    >
-                      <Check size={20} />
-                    </button>
+
+                  {/* Or URL block */}
+                  <div className="relative flex py-1 items-center">
+                    <div className="flex-grow border-t border-[#3d2b4f]/30"></div>
+                    <span className="flex-shrink mx-4 text-[10px] font-black uppercase tracking-widest text-white/30">
+                      {lang === 'ru' ? 'или используйте ссылку' : 'or use web link'}
+                    </span>
+                    <div className="flex-grow border-t border-[#3d2b4f]/30"></div>
+                  </div>
+
+                  <div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newPhotoURL}
+                        onChange={(e) => setNewPhotoURL(e.target.value)}
+                        className="flex-1 bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#ff4d4d] transition-all"
+                        placeholder={lang === 'ru' ? 'Вставьте URL картинки...' : 'Paste image URL here...'}
+                      />
+                      <button
+                        onClick={handleUpdatePhoto}
+                        disabled={isUpdating || !newPhotoURL.trim()}
+                        className="px-5 bg-[#ff4d4d] text-[#15101e] font-black uppercase tracking-widest text-xs rounded-xl hover:bg-[#ff7a7a] transition-all disabled:opacity-50 active:scale-95 shadow-lg flex items-center gap-1.5 cursor-pointer h-[46px]"
+                      >
+                        <Check size={16} />
+                        {lang === 'ru' ? 'ОК' : 'OK'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
                     <button
                       onClick={() => setIsEditingPhoto(false)}
-                      className="p-2.5 bg-[#15101e] text-white/60 rounded-xl hover:text-white transition-colors"
+                      className="inline-flex items-center justify-center gap-1.5 text-xs text-white/50 hover:text-white px-4 py-2 hover:bg-white/5 rounded-xl transition-all cursor-pointer font-black uppercase tracking-widest text-[10px]"
                     >
-                      <X size={20} />
+                      <X size={14} />
+                      {t.profileCancel}
                     </button>
                   </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
                 </div>
               )}
 

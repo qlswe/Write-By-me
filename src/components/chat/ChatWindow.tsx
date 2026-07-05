@@ -4,7 +4,7 @@ import { useChat, Message } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles } from 'lucide-react';
+import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -39,6 +39,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (user && recipientId === user.uid) {
+      onClose();
+    }
+  }, [user, recipientId, onClose]);
 
   const currentChat = chats.find(c => c.participants.includes(recipientId));
   const isRecipientTyping = currentChat?.typing?.[recipientId];
@@ -261,19 +267,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
         </div>
 
         {!user ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6 bg-[#0f0a17]">
-            <div className="w-20 h-20 bg-[#ff4d4d]/10 rounded-3xl flex items-center justify-center border border-[#ff4d4d]/20 shadow-[0_0_20px_rgba(255,77,77,0.1)]">
-              <User className="w-10 h-10 text-[#ff4d4d]" />
-            </div>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#0f0a17] space-y-6">
+            <User className="mx-auto text-[#ff4d4d]/60" size={44} />
             <div className="space-y-2">
               <h3 className="text-xl font-black text-white uppercase tracking-wider">
-                {t.chatAuthRequired}
+                {lang === 'ru' ? 'Авторизация' : 'Authorization'}
               </h3>
-              <p className="text-gray-400 text-xs max-w-xs leading-relaxed">
-                {t.chatAuthDesc}
+              <p className="text-white/60 font-black uppercase tracking-widest text-[10px] max-w-xs mx-auto leading-relaxed">
+                {t.chatAuthRequired || (lang === 'ru' ? 'Войдите, чтобы общаться' : 'Sign in to chat')}
               </p>
             </div>
-            <GoogleLoginButton lang={lang} size="lg" className="w-full" />
+            <div className="flex flex-col gap-3 w-full max-w-xs">
+              <GoogleLoginButton lang={lang} className="w-full" />
+              <button
+                onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+              >
+                <Mail size={14} />
+                {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
+              </button>
+            </div>
           </div>
         ) : (
           <>
