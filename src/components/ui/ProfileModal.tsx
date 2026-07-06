@@ -20,11 +20,12 @@ interface ProfileModalProps {
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lang, viewUser }) => {
   const t = translations[lang];
-  const { user: currentUser, logout, isAdmin, role: currentUserRole, updateGlobalPhoto } = useAuth();
+  const { user: currentUser, logout, isAdmin, role: currentUserRole, updateGlobalPhoto, isVerified: isOwnVerified, sendVerificationEmail } = useAuth();
   const { xp: currentXp, reputation: currentRep, role: currentRole, photoURL: currentPhoto, updateProfile: updateUserData } = useUserData(lang);
   
   const isOwnProfile = !viewUser || viewUser.uid === currentUser?.uid;
   const user = viewUser || currentUser;
+  const isVerified = isOwnProfile ? isOwnVerified : (viewUser?.isVerified || false);
   
   // Use real data if it's the current user's profile, otherwise use viewUser data
   const xp = isOwnProfile ? currentXp : (viewUser as any)?.xp || 0;
@@ -352,34 +353,33 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                     <div className="flex-grow border-t border-[#3d2b4f]/30"></div>
                   </div>
 
-                  <div>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newPhotoURL}
-                        onChange={(e) => setNewPhotoURL(e.target.value)}
-                        className="flex-1 bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#ff4d4d] transition-all"
-                        placeholder={lang === 'ru' ? 'Вставьте URL картинки...' : 'Paste image URL here...'}
-                      />
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      value={newPhotoURL}
+                      onChange={(e) => setNewPhotoURL(e.target.value)}
+                      className="w-full bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-3.5 text-sm text-white outline-none focus:border-[#ff4d4d] transition-all"
+                      placeholder={lang === 'ru' ? 'Вставьте URL картинки...' : 'Paste image URL here...'}
+                    />
+                    
+                    <div className="flex gap-3 items-center justify-end">
+                      <button
+                        onClick={() => setIsEditingPhoto(false)}
+                        className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 text-xs text-white/50 hover:text-white px-4 py-3 hover:bg-white/5 border border-[#3d2b4f]/30 rounded-xl transition-all cursor-pointer font-black uppercase tracking-widest text-[10px] h-[46px]"
+                      >
+                        <X size={14} />
+                        {t.profileCancel}
+                      </button>
+                      
                       <button
                         onClick={handleUpdatePhoto}
                         disabled={isUpdating || !newPhotoURL.trim()}
-                        className="px-5 bg-[#ff4d4d] text-[#15101e] font-black uppercase tracking-widest text-xs rounded-xl hover:bg-[#ff7a7a] transition-all disabled:opacity-50 active:scale-95 shadow-lg flex items-center gap-1.5 cursor-pointer h-[46px]"
+                        className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-3 bg-[#ff4d4d] text-[#15101e] font-black uppercase tracking-widest text-xs rounded-xl hover:bg-[#ff7a7a] transition-all disabled:opacity-50 active:scale-95 shadow-lg cursor-pointer h-[46px]"
                       >
                         <Check size={16} />
                         {lang === 'ru' ? 'ОК' : 'OK'}
                       </button>
                     </div>
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <button
-                      onClick={() => setIsEditingPhoto(false)}
-                      className="inline-flex items-center justify-center gap-1.5 text-xs text-white/50 hover:text-white px-4 py-2 hover:bg-white/5 rounded-xl transition-all cursor-pointer font-black uppercase tracking-widest text-[10px]"
-                    >
-                      <X size={14} />
-                      {t.profileCancel}
-                    </button>
                   </div>
                   <input
                     type="file"
@@ -434,7 +434,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
 
               {/* Actions */}
               <div className="grid grid-cols-2 gap-3 mb-8">
-                {isOwnProfile ? (
+                {isOwnProfile || (user && currentUser && user.uid === currentUser.uid) ? (
                   <>
                     <button
                       onClick={() => { setShowChats(!showChats); setShowPosts(false); }}
@@ -631,6 +631,45 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
 
                     {/* Info List */}
                     <div className="space-y-3">
+                      {/* Verification status */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-[#15101e]/30 p-4 rounded-2xl border border-[#3d2b4f]/20 group hover:border-[#ff4d4d]/30 transition-colors">
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className={`p-2.5 rounded-xl shrink-0 ${isVerified ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                            {isVerified ? <Check size={20} /> : <Shield size={20} />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-0.5">
+                              {lang === 'ru' ? 'Статус верификации' : 'Verification Status'}
+                            </div>
+                            <div className={`text-sm font-black uppercase tracking-wider ${isVerified ? 'text-green-400' : 'text-red-400'}`}>
+                              {isVerified 
+                                ? (lang === 'ru' ? 'Верифицирован' : 'Verified') 
+                                : (lang === 'ru' ? 'Не верифицирован' : 'Not Verified')}
+                            </div>
+                          </div>
+                        </div>
+                        {isOwnProfile && !isVerified && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                if (sendVerificationEmail) {
+                                  await sendVerificationEmail();
+                                  setToast(lang === 'ru' ? 'Ссылка отправлена! Красивый HTML-шаблон сохранен в корне проекта!' : 'Link sent! Beautiful HTML template saved in the project root!');
+                                  setTimeout(() => setToast(null), 5000);
+                                }
+                              } catch (err: any) {
+                                console.error(err);
+                                setToast(lang === 'ru' ? 'Ошибка отправки ссылки!' : 'Error sending verification link!');
+                                setTimeout(() => setToast(null), 3000);
+                              }
+                            }}
+                            className="w-full sm:w-auto shrink-0 text-center text-[10px] font-black uppercase tracking-widest bg-[#ff4d4d] text-[#15101e] px-4 py-2.5 rounded-xl hover:bg-white hover:scale-105 transition-all"
+                          >
+                            {lang === 'ru' ? 'Подтвердить' : 'Verify'}
+                          </button>
+                        )}
+                      </div>
+
                       {canSeeEmail && (
                         <div className="flex items-center gap-4 bg-[#15101e]/30 p-4 rounded-2xl border border-[#3d2b4f]/20 group hover:border-[#ff4d4d]/30 transition-colors">
                           <div className="p-2.5 bg-[#ff4d4d]/10 rounded-xl text-[#ff4d4d]">

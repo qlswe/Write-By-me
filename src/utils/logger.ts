@@ -119,13 +119,32 @@ class Logger {
   clear() { this.logs = []; }
   
   exportLogs() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.logs, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `write_by_me_logs_${new Date().toISOString()}.json`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+    try {
+      const logsJson = JSON.stringify(this.logs, null, 2);
+      const blob = new Blob([logsJson], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", url);
+      downloadAnchorNode.setAttribute("download", `aha_secure_logs_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      URL.revokeObjectURL(url);
+      
+      window.dispatchEvent(new CustomEvent('aha_toast', { 
+        detail: "Логи успешно экспортированы!" 
+      }));
+    } catch (e) {
+      console.error("Error exporting logs, falling back to clipboard:", e);
+      try {
+        navigator.clipboard.writeText(JSON.stringify(this.logs, null, 2));
+        window.dispatchEvent(new CustomEvent('aha_toast', { 
+          detail: "Файл заблокирован браузером. Логи скопированы в буфер обмена!" 
+        }));
+      } catch (err) {
+        alert("Не удалось экспортировать логи.");
+      }
+    }
   }
 }
 

@@ -14,6 +14,7 @@ import { useContent } from './hooks/useContent';
 import { useChat, Chat } from './hooks/useChat';
 import { useTranslation } from 'react-i18next';
 import { sdk } from './sdk';
+import { decrypt } from './utils/encryption';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -295,13 +296,44 @@ export default function App() {
       const senderName = profileCache.current[otherUserId] || 'User';
       const isNotActiveChat = activeChat?.uid !== otherUserId;
 
+      const getChatNotificationText = (type: 'new_message' | 'typing' | 'read', sName: string, msgBody?: string) => {
+        if (lang === 'ru') {
+          if (type === 'new_message') return `${sName}: ${msgBody || 'У вас новое непрочитанное сообщение.'}`;
+          if (type === 'typing') return `${sName} печатает...`;
+          if (type === 'read') return `${sName} прочитал(а) ваше сообщение`;
+        } else if (lang === 'by') {
+          if (type === 'new_message') return `${sName}: ${msgBody || 'У вас новае непрачытанае паведамленне.'}`;
+          if (type === 'typing') return `${sName} друкуе...`;
+          if (type === 'read') return `${sName} прачытаў(ла) ваша паведамленне`;
+        } else if (lang === 'de') {
+          if (type === 'new_message') return `${sName}: ${msgBody || 'Neue Nachricht.'}`;
+          if (type === 'typing') return `${sName} schreibt...`;
+          if (type === 'read') return `${sName} hat Ihre Nachricht gelesen`;
+        } else if (lang === 'fr') {
+          if (type === 'new_message') return `${sName}: ${msgBody || 'Nouveau message.'}`;
+          if (type === 'typing') return `${sName} écrit...`;
+          if (type === 'read') return `${sName} a lu votre message`;
+        } else if (lang === 'zh') {
+          if (type === 'new_message') return `${sName}: ${msgBody || '您有一条新消息。'}`;
+          if (type === 'typing') return `${sName} 正在输入...`;
+          if (type === 'read') return `${sName} 已读您的消息`;
+        } else {
+          // English (default)
+          if (type === 'new_message') return `${sName}: ${msgBody || 'You have a new unread message.'}`;
+          if (type === 'typing') return `${sName} is typing...`;
+          if (type === 'read') return `${sName} read your message`;
+        }
+        return '';
+      };
+
       // 1. New Message
       if (lastMessageAt > lastNotified && lastMessageAt > myReadAt) {
         if (isNotActiveChat) {
-          const title = `${((translations as any)[lang] && (translations as any)[lang].newMessageTitle) || "New Message"}: ${senderName}`;
-          const bodyText = chat.lastMessage ? chat.lastMessage : (((translations as any)[lang] && (translations as any)[lang].newMessageBody) || "You have a new message.");
-          setToast(`${senderName}: ${bodyText}`);
+          const decryptedBody = chat.lastMessage ? decrypt(chat.lastMessage, chat.id) : '';
+          const bodyText = decryptedBody || (((translations as any)[lang] && (translations as any)[lang].newMessageBody) || (lang === 'ru' ? 'Новое сообщение' : "You have a new unread message."));
+          setToast(getChatNotificationText('new_message', senderName, bodyText));
           
+          const title = `${((translations as any)[lang] && (translations as any)[lang].newMessageTitle) || (lang === 'ru' ? 'Новое сообщение' : "New Message")}: ${senderName}`;
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(title, { body: bodyText, icon: '/favicon.ico' });
           }
@@ -314,7 +346,7 @@ export default function App() {
       const isTyping = !!chat.typing?.[otherUserId];
       const wasTyping = !!notifiedTyping.current[chat.id];
       if (isTyping && !wasTyping && isNotActiveChat) {
-        setToast(`${senderName} ${((translations as any)[lang] && (translations as any)[lang].isTyping) || "is typing..."}`);
+        setToast(getChatNotificationText('typing', senderName));
       }
       notifiedTyping.current[chat.id] = isTyping;
 
@@ -322,7 +354,7 @@ export default function App() {
       const theirReadAt = chat.lastReadAt?.[otherUserId]?.toMillis?.() || 0;
       const lastNotifiedRead = notifiedReads.current[chat.id] || 0;
       if (theirReadAt > lastNotifiedRead && theirReadAt >= lastMessageAt && lastMessageAt > 0 && isNotActiveChat) {
-        setToast(`${senderName} ${((translations as any)[lang] && (translations as any)[lang].readYourMessage) || "read your message"}`);
+        setToast(getChatNotificationText('read', senderName));
         notifiedReads.current[chat.id] = theirReadAt;
       } else if (!notifiedReads.current[chat.id]) {
         notifiedReads.current[chat.id] = theirReadAt; // initial sync
@@ -415,7 +447,7 @@ export default function App() {
     { id: 'promo', label: t.navPromo, icon: Ticket },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'users' as const, label: t.navUsers, icon: User },
-    ...((role === 'admin' || role === 'moderator' || user?.email === 'semegladysev527@gmail.com') ? [{ id: 'telemetry' as const, label: 'Telemetry', icon: Settings }] : []),
+    ...((role === 'admin' || role === 'moderator') ? [{ id: 'telemetry' as const, label: 'Telemetry', icon: Settings }] : []),
     { id: 'sdk', label: 'SDK', icon: Settings },
     { id: 'ai', label: 'Aha AI', icon: Sparkles },
   ];
@@ -449,7 +481,7 @@ export default function App() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      window.location.href = `mailto:semegladysev527@gmail.com?subject=${subject}&body=${body}`;
+      window.location.href = `mailto:support@ministry.aha?subject=${subject}&body=${body}`;
 
       setFeedbackOpen(false);
       setFeedbackText('');
@@ -849,7 +881,7 @@ export default function App() {
                   </div>
                 </div>
               )}
-              {section === 'telemetry' && (role === 'admin' || role === 'moderator' || user?.email === 'semegladysev527@gmail.com') && (
+              {section === 'telemetry' && (role === 'admin' || role === 'moderator') && (
                 <TelemetrySection lang={lang as Language} />
               )}
             </Suspense>
@@ -905,7 +937,7 @@ export default function App() {
             initial={{ opacity: 0, y: 50, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
             exit={{ opacity: 0, y: 50, x: '-50%' }}
-            className="fixed bottom-8 left-1/2 z-[999999] bg-[#ff4d4d] text-[#15101e] px-8 py-4 rounded-2xl font-black shadow-2xl border-2 border-white/20 uppercase tracking-widest text-sm whitespace-nowrap"
+            className="fixed bottom-8 left-1/2 z-[999999] bg-[#ff4d4d] text-[#15101e] px-6 py-3.5 rounded-2xl font-black shadow-2xl border-2 border-white/20 uppercase tracking-widest text-xs sm:text-sm max-w-[90vw] sm:max-w-md break-words text-center leading-normal"
           >
             {toast}
           </motion.div>
@@ -959,8 +991,6 @@ export default function App() {
           />
         )}
       </AnimatePresence>
-
-      <AhaSecurityBadge autoHide={section === 'chats' || !!activeChat} />
     </div>
   );
 }

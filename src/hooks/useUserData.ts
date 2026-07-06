@@ -104,10 +104,6 @@ export function useUserData(initialLang: string) {
         if (data.mainCharacter !== undefined) setMainCharacter(data.mainCharacter);
         if (data.role !== undefined) setRole(data.role);
         if (data.isPremium !== undefined) setIsPremium(data.isPremium);
-        // Hardcoded admin check for the user's email
-        if (user.email === 'semegladysev527@gmail.com') {
-          setRole('admin');
-        }
         if (data.reputation !== undefined) setReputation(data.reputation);
         if (data.xp !== undefined) setXp(data.xp);
         if (data.photoURL !== undefined) setPhotoURL(data.photoURL);

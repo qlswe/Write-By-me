@@ -135,7 +135,7 @@ export function useChat(otherUserId?: string) {
   }, [user, otherUserId]);
 
   const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' | 'image' = 'text', replyTo?: string, images?: string[]) => {
-    if (!user || (!text.trim() && type !== 'image' && (!images || images.length === 0))) return;
+    if (!user || user.uid === recipientId || (!text.trim() && type !== 'image' && (!images || images.length === 0))) return;
 
     const chatId = [user.uid, recipientId].sort().join('_');
     const chatRef = doc(db, 'chats', chatId);

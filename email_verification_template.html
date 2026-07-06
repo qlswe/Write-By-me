@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Верификация аккаунта — Радиостанция Ахи</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0d0b14;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #e2e8f0;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrapper {
+      width: 100%;
+      table-layout: fixed;
+      background-color: #0d0b14;
+      padding: 40px 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #15101e;
+      border: 1px solid #3d2b4f;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+    .header {
+      background: linear-gradient(135deg, #251c35 0%, #15101e 100%);
+      padding: 40px 30px;
+      text-align: center;
+      border-bottom: 1px solid #3d2b4f;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: 900;
+      color: #ff4d4d;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      margin: 0 0 10px 0;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .subtitle {
+      font-size: 11px;
+      color: #a0aec0;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin: 0;
+      font-weight: bold;
+    }
+    .content {
+      padding: 40px 30px;
+      line-height: 1.6;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    p {
+      font-size: 15px;
+      color: #cbd5e0;
+      margin-top: 0;
+      margin-bottom: 24px;
+    }
+    .btn-container {
+      text-align: center;
+      margin: 35px 0;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #ff4d4d;
+      color: #15101e !important;
+      text-decoration: none !important;
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      padding: 16px 40px;
+      border-radius: 12px;
+      transition: all 0.2s ease-in-out;
+      box-shadow: 0 0 20px rgba(255, 77, 77, 0.3);
+    }
+    .btn:hover {
+      background-color: #ffffff;
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.4);
+    }
+    .footer {
+      background-color: #0d0b14;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #251c35;
+    }
+    .footer p {
+      font-size: 12px;
+      color: #718096;
+      margin-bottom: 10px;
+    }
+    .fallback-link {
+      word-break: break-all;
+      font-size: 12px;
+      color: #ff4d4d;
+      text-decoration: none;
+    }
+    .divider {
+      height: 1px;
+      background-color: #3d2b4f;
+      margin: 30px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      
+      <!-- HEADER -->
+      <div class="header">
+        <div class="logo">Aha Radio Station</div>
+        <div class="subtitle">Official Verification System</div>
+      </div>
+      
+      <!-- CONTENT -->
+      <div class="content">
+        <!-- RU SECTION -->
+        <h1>Подтверждение почты</h1>
+        <p>Приветствуем, первопроходец! Вы получили это письмо, потому что зарегистрировали аккаунт на <strong>Радиостанции Ахи</strong>.</p>
+        <p>Для подтверждения вашей электронной почты и разблокировки всех функций (включая рисование на интерактивном холсте и общение на форуме), пожалуйста, нажмите на кнопку ниже:</p>
+        
+        <div class="btn-container">
+          <a href="%LINK%" class="btn" target="_blank">Подтвердить E-mail</a>
+        </div>
+        
+        <p>Если кнопка выше не работает, вы можете скопировать и вставить следующую ссылку в строку поиска вашего браузера:</p>
+        <p><a href="%LINK%" class="fallback-link" target="_blank">%LINK%</a></p>
+        
+        <div class="divider"></div>
+        
+        <!-- EN SECTION -->
+        <h1 style="font-size: 18px; color: #a0aec0;">Email Verification</h1>
+        <p style="font-size: 14px; color: #a0aec0;">Greetings, Trailblazer! You are receiving this email because you registered an account on the <strong>Aha Radio Station</strong> platform.</p>
+        <p style="font-size: 14px; color: #a0aec0;">To verify your email address and unlock all core features, please click the verification button above or use the fallback link.</p>
+      </div>
+      
+      <!-- FOOTER -->
+      <div class="footer">
+        <p>© 2026 Aha Radio Station. Все права защищены.</p>
+        <p style="font-size: 10px; color: #4a5568;">Если вы не регистрировались на нашем сайте, просто проигнорируйте это письмо.</p>
+      </div>
+      
+    </div>
+  </div>
+</body>
+</html>

@@ -143,7 +143,7 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
   const [now, setNow] = useState(new Date());
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const { user } = useAuth();
-  const isAdmin = role === 'admin' || user?.email === 'semegladysev527@gmail.com';
+  const isAdmin = role === 'admin';
   const isModerator = role === 'admin' || role === 'moderator' || isAdmin;
 
   useEffect(() => {

@@ -12,12 +12,13 @@ export interface UserData {
   createdAt: string;
   lastLogin: string;
   lastSeen?: string;
+  isVerified?: boolean;
 }
 
 export function useUsers() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, role: currentRole, user } = useAuth();
 
   useEffect(() => {
     if (!user) {
@@ -59,5 +60,19 @@ export function useUsers() {
     }
   };
 
-  return { users, loading, updateUserRole };
+  const updateUserVerification = async (uid: string, isVerified: boolean) => {
+    const isModeratorOrAdmin = isAdmin || currentRole === 'moderator';
+    if (!isModeratorOrAdmin) return;
+    try {
+      const userRef = doc(db, 'users', uid);
+      await setDoc(userRef, { isVerified }, { merge: true });
+      
+      const publicRef = doc(db, 'public_profiles', uid);
+      await setDoc(publicRef, { isVerified }, { merge: true });
+    } catch (error) {
+      console.error('Error updating user verification:', error);
+    }
+  };
+
+  return { users, loading, updateUserRole, updateUserVerification };
 }

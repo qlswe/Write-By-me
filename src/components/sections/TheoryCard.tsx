@@ -28,8 +28,7 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
 }) => {
   const t = translations[lang];
   const [copied, setCopied] = React.useState(false);
-  const { user } = useAuth();
-  const isAdmin = user?.email === 'semegladysev527@gmail.com';
+  const { user, isAdmin } = useAuth();
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();

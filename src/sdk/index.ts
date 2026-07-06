@@ -100,7 +100,11 @@ export class MinistrySDK {
   }
 
   public notify(title: string, body: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') {
-    this.notifications.send(title, body, type);
+    if (this.notifications && typeof this.notifications.send === 'function') {
+      this.notifications.send(title, body, type);
+    } else {
+      this.events.emit('notification', { title, body, type, id: this.utils?.generateId ? this.utils.generateId('notif') : 'notif_' + Date.now() });
+    }
     return this;
   }
 
@@ -309,14 +313,17 @@ export class MinistrySDK {
   /**
    * Notification system (logic only, UI should subscribe)
    */
-  public notifications = {
-    send: (title: string, body: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+  public notifications = (() => {
+    const emitNotification = (title: string, body: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
       this.events.emit('notification', { title, body, type, id: this.utils.generateId('notif') });
-    },
-    success: (msg: string) => this.notifications.send('Success', msg, 'success'),
-    error: (msg: string) => this.notifications.send('Error', msg, 'error'),
-    warn: (msg: string) => this.notifications.send('Warning', msg, 'warning')
-  };
+    };
+    return {
+      send: emitNotification,
+      success: (msg: string) => emitNotification('Success', msg, 'success'),
+      error: (msg: string) => emitNotification('Error', msg, 'error'),
+      warn: (msg: string) => emitNotification('Warning', msg, 'warning')
+    };
+  })();
 
   /**
    * Storage module for persistent data
@@ -555,38 +562,35 @@ export class MinistrySDK {
   /**
    * Logging module for system tracking and debugging
    */
-  public logging = {
-    info: (message: string, data?: any) => {
-      // console.log(`%c[MINISTRY_INFO] %c${message}`, 'color: #ff4d4d; font-weight: bold;', 'color: white;', data || '');
+  public logging = (() => {
+    const info = (message: string, data?: any) => {
       this.notifyLogSubscribers('info', message, data);
-    },
-    warn: (message: string, data?: any) => {
+    };
+    const warn = (message: string, data?: any) => {
       if (!this.hasWarned) {
         console.warn(`%c[MINISTRY_WARN] %c${message}`, 'color: #F27D26; font-weight: bold;', 'color: white;', data || '');
         this.hasWarned = true;
       }
       this.notifyLogSubscribers('warn', message, data);
-    },
-    error: (message: string, data?: any) => {
+    };
+    const error = (message: string, data?: any) => {
       console.error(`%c[MINISTRY_ERROR] %c${message}`, 'color: #FF4444; font-weight: bold;', 'color: white;', data || '');
       this.notifyLogSubscribers('error', message, data);
-    },
-    perf: (label: string, duration: number) => {
-      // console.log(`%c[MINISTRY_PERF] %c${label}: %c${duration.toFixed(2)}ms`, 'color: #00FF00; font-weight: bold;', 'color: white;', 'color: #00FF00;', '');
+    };
+    const perf = (label: string, duration: number) => {
       this.notifyLogSubscribers('perf', label, { duration });
-    },
-    system: (message: string, data?: any) => {
-      // console.log(`%c[MINISTRY_SYSTEM] %c${message}`, 'color: #4A90E2; font-weight: bold;', 'color: white;', data || '');
+    };
+    const system = (message: string, data?: any) => {
       this.notifyLogSubscribers('system', message, data);
-    },
-    action: (action: string, details?: any) => {
-      // console.log(`%c[MINISTRY_ACTION] %c${action}`, 'color: #F8E71C; font-weight: bold;', 'color: white;', details || '');
+    };
+    const action = (action: string, details?: any) => {
       this.notifyLogSubscribers('action', action, details);
-    },
-    trackEvent: (eventName: string, properties?: any) => {
-      this.logging.info(`Event Tracked: ${eventName}`, properties);
-    }
-  };
+    };
+    const trackEvent = (eventName: string, properties?: any) => {
+      info(`Event Tracked: ${eventName}`, properties);
+    };
+    return { info, warn, error, perf, system, action, trackEvent };
+  })();
 
   public subscribeToLogs(callback: (level: string, message: string, data?: any) => void) {
     this.logSubscribers.push(callback);

@@ -184,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => setProfileOpen(!profileOpen)}
                     className="flex items-center gap-2 bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                   >
-                    <img src={user.photoURL || ''} alt="Avatar" className="w-5 h-5 rounded-full" />
+                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-5 h-5 rounded-full" />
                     <span className="max-w-[100px] truncate">{user.displayName}</span>
                   </button>
                   
@@ -198,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({
                       >
                         <div className="p-4 border-b border-[#3d2b4f] bg-[#15101e]">
                           <div className="flex items-center gap-3 mb-2">
-                            <img src={user.photoURL || ''} alt="Avatar" className="w-10 h-10 rounded-full border border-[#3d2b4f]" />
+                            <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-10 h-10 rounded-full border border-[#3d2b4f]" />
                             <div>
                               <div className="font-bold text-white truncate">{user.displayName}</div>
                               <div className="text-xs text-gray-400 truncate">{user.email}</div>
@@ -331,7 +331,7 @@ export const Header: React.FC<HeaderProps> = ({
               {user ? (
                 <>
                   <div className="flex items-center gap-3 bg-[#251c35] p-3 rounded-xl border border-[#3d2b4f]">
-                    <img src={user.photoURL || ''} alt="Avatar" className="w-12 h-12 rounded-full border border-[#3d2b4f]" />
+                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-12 h-12 rounded-full border border-[#3d2b4f]" />
                     <div>
                       <div className="text-white font-bold">{user.displayName}</div>
                       <div className="text-xs text-gray-400">{user.email}</div>

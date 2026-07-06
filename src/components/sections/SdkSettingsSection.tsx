@@ -5,6 +5,7 @@ import { Language, translations } from '../../data/translations';
 import { db } from '../../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { sdk } from '../../sdk';
+import { AhaSecurityConsole } from '../security/AhaSecurity';
 
 interface SdkSettingsSectionProps {
   lang: Language;
@@ -373,6 +374,8 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
           )}
 
           <div className="space-y-6">
+            <AhaSecurityConsole />
+
             <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d]">
               {t.sdkSystem}
             </h3>

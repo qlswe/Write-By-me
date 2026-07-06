@@ -40,7 +40,7 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user || (role !== 'admin' && role !== 'moderator' && user.email !== 'semegladysev527@gmail.com')) {
+    if (!user || (role !== 'admin' && role !== 'moderator')) {
       setLoading(false);
       return;
     }
@@ -123,7 +123,7 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
     );
   }
 
-  if (role !== 'admin' && role !== 'moderator' && user.email !== 'semegladysev527@gmail.com') {
+  if (role !== 'admin' && role !== 'moderator') {
     return (
       <div className="flex flex-col items-center justify-center h-64 bg-[#251c35] rounded-3xl p-8 border border-[#3d2b4f] shadow-2xl text-center">
         <ShieldCheck className="w-16 h-16 text-[#ff4d4d] mb-4" />

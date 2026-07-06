@@ -28,8 +28,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
   onDelete
 }) => {
   const t = translations[lang];
-  const { user } = useAuth();
-  const isAdmin = user?.email === 'semegladysev527@gmail.com';
+  const { user, isAdmin } = useAuth();
   
   return (
     <motion.div 

@@ -9,6 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, de, fr, zhCN } from 'date-fns/locale';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { dbQueryCore } from '../../utils/dbQueryCore';
 
 interface ChatsListProps {
   lang: Language;
@@ -126,9 +127,8 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
         const recipientId = chat.participants.find(p => p !== user.uid);
         if (recipientId && !profiles[recipientId]) {
           hasNew = true;
-          const snap = await getDoc(doc(db, 'public_profiles', recipientId));
-          if (snap.exists()) {
-            const data = snap.data();
+          const data = await dbQueryCore.getProfileBatched(recipientId);
+          if (data) {
             newProfiles[recipientId] = {
               name: data.displayName || 'User',
               photo: data.photoURL,

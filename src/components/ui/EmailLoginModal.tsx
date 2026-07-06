@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
+import { getHumanFriendlyError } from '../../utils/authErrors';
 
 interface EmailLoginModalProps {
   isOpen: boolean;
@@ -40,7 +41,7 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
       setPassword('');
       setIsRegistering(false);
     } catch (err: any) {
-      setError(err.message || "An error occurred.");
+      setError(getHumanFriendlyError(err, lang));
     }
   };
 

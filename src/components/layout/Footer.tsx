@@ -52,10 +52,6 @@ export const Footer: React.FC<FooterProps> = ({ lang, setFeedbackOpen }) => {
             <button onClick={() => logger.exportLogs()} className="hover:text-[#ff4d4d] transition-colors text-xs opacity-50">
               Export Logs
             </button>
-            <button onClick={() => setFeedbackOpen(true)} className="hover:text-[#ff4d4d] transition-colors flex items-center gap-2">
-              <MessageSquare size={16} />
-              {t.feedback || "Feedback"}
-            </button>
             <a href="https://t.me/ministry_aha" target="_blank" rel="noreferrer" className="hover:text-[#ff4d4d] transition-colors">
               Telegram
             </a>

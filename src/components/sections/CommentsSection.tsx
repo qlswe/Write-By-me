@@ -10,7 +10,7 @@ import {
   Trash2, Send, Heart, Edit2, X, Check, MessageCircle, 
   ChevronDown, ChevronUp, Sparkles, Bold, Italic, Code, 
   CornerDownRight, Smile, ThumbsUp, Flame, Star, Award, 
-  MessageSquare, HelpCircle, ArrowUpDown, Clock, Mail
+  MessageSquare, HelpCircle, ArrowUpDown, Clock, Mail, ShieldAlert
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
@@ -58,7 +58,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   const { trackRender } = usePerfLogger('CommentsSection');
   trackRender();
   
-  const { user, loginWithGoogle } = useAuth();
+  const { user, loginWithGoogle, isVerified } = useAuth();
   const isModerator = role === 'admin' || role === 'moderator';
   const { checkLimit, incrementUsage } = useLimits();
   
@@ -524,7 +524,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
         </button>
 
         <div className="flex-1 min-w-0">
-          <div className="bg-[#15101e]/40 rounded-[1.5rem] rounded-tl-none p-4 sm:p-5 border border-[#3d2b4f]/25 shadow-2xl transition-all group-hover:border-[#ff4d4d]/25 group-hover:bg-[#251c35]/40 relative overflow-hidden backdrop-blur-md">
+          <div className="py-2.5 transition-all relative overflow-hidden">
             {/* Background premium aura */}
             {isPremiumUser && (
               <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-xl pointer-events-none rounded-full" />
@@ -648,34 +648,8 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
               </div>
             )}
 
-            {/* Reactions summary bar */}
-            {comment.reactions && Object.keys(comment.reactions).length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-4">
-                {Object.entries(comment.reactions).map(([emoji, uids]) => {
-                  const hasReactedToEmoji = user && uids.includes(user.uid);
-                  return (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      key={emoji}
-                      onClick={() => handleReaction(comment.id, emoji)}
-                      disabled={!user}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold border transition-all ${
-                        hasReactedToEmoji 
-                          ? 'bg-[#ff4d4d]/15 border-[#ff4d4d]/40 text-white' 
-                          : 'bg-[#0d0b14]/50 border-[#3d2b4f]/30 text-white/60 hover:border-[#ff4d4d]/30'
-                      }`}
-                    >
-                      <span>{emoji}</span>
-                      <span className="text-[10px] opacity-80">{uids.length}</span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            )}
-
             {/* Actions bottom footer */}
-            <div className="mt-4 pt-4 border-t border-[#3d2b4f]/15 flex items-center justify-between flex-wrap gap-2">
+            <div className="mt-2.5 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-xl border border-[#3d2b4f]/30">
                   <button
@@ -696,39 +670,9 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
                     <ChevronDown size={18} />
                   </button>
                 </div>
-
-                {/* Emoji reactions adder */}
-                {user && (
-                  <div className="relative">
-                    <button
-                      onClick={() => setActiveEmojiPicker(activeEmojiPicker === comment.id ? null : comment.id)}
-                      className="p-2 bg-[#0d0b14]/50 text-white/50 hover:text-[#ff4d4d] border border-[#3d2b4f]/30 hover:border-[#ff4d4d]/20 rounded-xl transition-all"
-                      title="Add Reaction"
-                    >
-                      <Smile size={14} />
-                    </button>
-
-                    {activeEmojiPicker === comment.id && (
-                      <div 
-                        ref={emojiPickerRef}
-                        className="absolute bottom-10 left-0 bg-[#15101e] border border-[#ff4d4d]/30 rounded-2xl p-2.5 flex gap-1.5 shadow-2xl z-[120] backdrop-blur-md"
-                      >
-                        {QUICK_EMOJIS.map(emoji => (
-                          <button
-                            key={emoji}
-                            onClick={() => handleReaction(comment.id, emoji)}
-                            className="hover:scale-125 active:scale-95 transition-transform text-lg"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
-              {user && (
+              {user && isVerified && (
                 <button
                   onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
                   className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-[#ff4d4d] transition-all px-3 py-2 rounded-xl hover:bg-[#ff4d4d]/10 border border-transparent hover:border-[#ff4d4d]/30"
@@ -821,18 +765,6 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
                         <Code size={13} />
                       </button>
                     </div>
-                    <div className="flex gap-1.5">
-                      {QUICK_EMOJIS.slice(0, 4).map(emoji => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => insertEmoji(emoji, true)}
-                          className="hover:scale-125 transition-transform text-sm"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 </form>
               </motion.div>
@@ -882,26 +814,41 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
       </div>
 
       {user ? (
-        <div className="mb-12 space-y-3">
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="relative group">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={hasReachedLimit ? (t.commentLimitReached || "You have reached the comment limit") : (t.writeComment || "Написать комментарий... (Enter для отправки)")}
-                className={`w-full bg-[#15101e]/30 border border-[#3d2b4f]/20 rounded-[2rem] p-5 sm:p-6 pr-16 text-white/90 focus:outline-none focus:border-[#ff4d4d]/50 focus:bg-[#15101e]/50 transition-all resize-none min-h-[140px] text-base font-medium shadow-inner ${hasReachedLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
-                maxLength={2000}
-                disabled={hasReachedLimit}
-              />
-              <button
-                type="submit"
-                disabled={!newComment.trim() || isSubmitting || hasReachedLimit}
-                className="absolute bottom-6 right-6 p-3.5 sm:p-4 bg-[#ff4d4d] text-[#15101e] rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#ff7a7a] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,77,77,0.35)] border border-white/20"
-              >
-                <Send size={18} />
-              </button>
+        <div className="mb-12 relative overflow-hidden rounded-[2rem] border border-[#3d2b4f]/20 bg-[#15101e]/15">
+          {!isVerified && (
+            <div className="absolute inset-0 bg-[#0d0b14]/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center">
+              <ShieldAlert size={36} className="text-[#ff4d4d] mb-2 animate-bounce" />
+              <h5 className="text-white font-black uppercase tracking-wider text-xs mb-1">
+                {lang === 'ru' ? 'Требуется верификация аккаунта' : 'Account Verification Required'}
+              </h5>
+              <p className="text-white/60 text-[10px] font-black uppercase tracking-widest max-w-sm mb-1 leading-relaxed">
+                {lang === 'ru' ? 'Для предотвращения спама и защиты сервиса, писать комментарии могут только подтвержденные пользователи.' : 'To prevent spam and keep the service safe, commenting is restricted to approved members.'}
+              </p>
+              <p className="text-amber-400 text-[9px] font-black uppercase tracking-widest">
+                {lang === 'ru' ? 'Обратитесь к администратору или модератору' : 'Please contact an administrator or moderator'}
+              </p>
             </div>
+          )}
+          <div className="p-5 sm:p-6 space-y-3">
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="relative group">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={hasReachedLimit ? (t.commentLimitReached || "You have reached the comment limit") : (t.writeComment || "Написать комментарий... (Enter для отправки)")}
+                  className={`w-full bg-[#15101e]/30 border border-[#3d2b4f]/20 rounded-[2rem] p-5 sm:p-6 pr-16 text-white/90 focus:outline-none focus:border-[#ff4d4d]/50 focus:bg-[#15101e]/50 transition-all resize-none min-h-[140px] text-base font-medium shadow-inner ${hasReachedLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  maxLength={2000}
+                  disabled={hasReachedLimit}
+                />
+                <button
+                  type="submit"
+                  disabled={!newComment.trim() || isSubmitting || hasReachedLimit}
+                  className="absolute bottom-6 right-6 p-3.5 sm:p-4 bg-[#ff4d4d] text-[#15101e] rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#ff7a7a] hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(255,77,77,0.35)] border border-white/20"
+                >
+                  <Send size={18} />
+                </button>
+              </div>
 
             {/* Input helpers and toolbars */}
             {!hasReachedLimit && (
@@ -940,6 +887,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
           {hasReachedLimit && (
             <p className="text-red-400 text-[10px] mt-2 font-black uppercase tracking-widest">{t.commentLimitReached || "You have reached the comment limit (max 5) for this post."}</p>
           )}
+          </div>
         </div>
       ) : (
         <div className="bg-[#15101e]/60 border border-[#3d2b4f]/20 rounded-[2.5rem] p-8 sm:p-12 text-center mb-12 backdrop-blur-md">

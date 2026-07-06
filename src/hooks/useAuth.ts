@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 // --- GLOBAL SINGLETON STATE ---
@@ -9,6 +9,7 @@ let globalLoading = true;
 let globalIsAdmin = false;
 let globalRole: 'admin' | 'moderator' | 'user' | 'beta-tester' = 'user';
 let globalIsPremium = false;
+let globalIsVerified = false;
 let globalPhotoURL: string | null = null;
 let authInitialized = false;
 
@@ -74,10 +75,21 @@ const initAuth = () => {
 
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          globalRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : (userData.role || 'user');
+          globalRole = userData.role || 'user';
           globalIsPremium = userData.isPremium || false;
-          globalIsAdmin = globalRole === 'admin' || user.email === 'semegladysev527@gmail.com';
+          globalIsAdmin = globalRole === 'admin';
+          globalIsVerified = userData.isVerified || globalRole === 'admin' || globalRole === 'moderator' || globalRole === 'beta-tester' || user.emailVerified || false;
           globalPhotoURL = userData.photoURL || fallbackPhoto;
+          
+          // Auto-verify user document if emailVerified is true but not yet stored
+          if (user.emailVerified && !userData.isVerified) {
+            try {
+              await setDoc(userDocRef, { isVerified: true }, { merge: true });
+              await setDoc(doc(db, 'public_profiles', user.uid), { isVerified: true }, { merge: true });
+            } catch (err) {
+              console.error("Error auto-verifying user in firestore:", err);
+            }
+          }
           
           // Create or update public profile safely without triggering "role" validation on update if unchanged
           const publicDocRef = doc(db, 'public_profiles', user.uid);
@@ -89,6 +101,7 @@ const initAuth = () => {
               photoURL: userData.photoURL || fallbackPhoto,
               role: 'user',
               isPremium: globalIsPremium,
+              isVerified: globalIsVerified,
             });
           } else {
             // Only update displayName or photoURL, do not include role to prevent security rules violation
@@ -101,12 +114,14 @@ const initAuth = () => {
           // Rule says: allow create: if isOwner(userId) && request.resource.data.get('role', 'user') == 'user';
           // So we must write 'role' as 'user' initially.
           const initialRole = 'user';
+          const initialVerified = user.emailVerified || false;
           const userData = {
             uid: user.uid,
             displayName: fallbackName,
             email: user.email || '',
             photoURL: fallbackPhoto,
             role: initialRole,
+            isVerified: initialVerified,
             createdAt: new Date().toISOString(),
             lastLogin: new Date().toISOString()
           };
@@ -117,19 +132,22 @@ const initAuth = () => {
             displayName: fallbackName,
             photoURL: fallbackPhoto,
             role: initialRole,
+            isVerified: initialVerified,
             isPremium: false,
           });
           
-          globalRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : initialRole;
+          globalRole = initialRole;
           globalIsPremium = false;
-          globalIsAdmin = globalRole === 'admin';
+          globalIsAdmin = false;
+          globalIsVerified = initialVerified;
           globalPhotoURL = fallbackPhoto;
         }
       } catch (e) {
         console.error("Error fetching user role:", e);
-        globalIsAdmin = user.email === 'semegladysev527@gmail.com';
-        globalRole = user.email === 'semegladysev527@gmail.com' ? 'admin' : 'user';
+        globalIsAdmin = false;
+        globalRole = 'user';
         globalIsPremium = false;
+        globalIsVerified = user.emailVerified || false;
         globalPhotoURL = user.photoURL || null;
       }
     } else {
@@ -249,12 +267,18 @@ export function useAuth() {
     isAdmin: globalIsAdmin, 
     role: globalRole, 
     isPremium: globalIsPremium,
+    isVerified: globalIsVerified,
     error, 
     loginWithGoogle, 
     loginWithEmail, 
     registerWithEmail,
     logout, 
     isLoggingIn,
+    sendVerificationEmail: async () => {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+      }
+    },
     updateGlobalPhoto: (url: string) => {
       globalPhotoURL = url;
       notifySubscribers();

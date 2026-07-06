@@ -96,6 +96,7 @@ const RoleSelector: React.FC<{
 const UserListItem = React.memo(({ 
   user, 
   isAdmin, 
+  isModeratorOrAdmin,
   t, 
   lang, 
   openDropdownId, 
@@ -103,10 +104,12 @@ const UserListItem = React.memo(({
   onViewProfile, 
   onOpenChat, 
   updateUserRole,
+  updateUserVerification,
   currentUserId
 }: { 
   user: UserData, 
   isAdmin: boolean, 
+  isModeratorOrAdmin: boolean,
   t: any, 
   lang: Language, 
   openDropdownId: string | null, 
@@ -114,6 +117,7 @@ const UserListItem = React.memo(({
   onViewProfile?: (user: UserData) => void, 
   onOpenChat: (uid: string, name: string, photoURL?: string) => void, 
   updateUserRole: (uid: string, role: 'admin' | 'user' | 'moderator' | 'beta-tester') => void,
+  updateUserVerification: (uid: string, isVerified: boolean) => void,
   currentUserId?: string
 }) => {
   return (
@@ -142,6 +146,7 @@ const UserListItem = React.memo(({
         <div className="min-w-0 flex-1">
           <h3 className="font-black text-white flex items-center gap-2 sm:gap-3 truncate uppercase tracking-tighter text-sm sm:text-base">
             <span className="truncate">{user.displayName}</span>
+            {user.isVerified && <UserCheck className="w-4.5 h-4.5 text-green-500 shrink-0" />}
             {user.role === 'admin' && <Shield className="w-4 h-4 text-red-500 shrink-0" />}
           </h3>
           {isAdmin && user.email && <p className="text-[10px] text-gray-500 truncate font-black uppercase tracking-[0.2em] mt-1">{user.email}</p>}
@@ -166,6 +171,20 @@ const UserListItem = React.memo(({
           </button>
         )}
         
+        {isModeratorOrAdmin && (
+          <button
+            onClick={() => updateUserVerification(user.uid, !user.isVerified)}
+            className={`p-2.5 sm:p-3 rounded-2xl transition-all active:scale-90 border shadow-lg ${
+              user.isVerified 
+                ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500 hover:text-white' 
+                : 'bg-[#3d2b4f]/30 hover:bg-green-500/10 text-white border-transparent hover:bg-green-500 hover:text-[#0d0b14]'
+            }`}
+            title={user.isVerified ? (lang === 'ru' ? 'Отменить верификацию' : 'Revoke verification') : (lang === 'ru' ? 'Верифицировать' : 'Verify user')}
+          >
+            <UserCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        )}
+
         {isAdmin && (
           <RoleSelector 
             user={user} 
@@ -183,8 +202,9 @@ const UserListItem = React.memo(({
 });
 
 export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewProfile }) => {
-  const { users, loading, updateUserRole } = useUsers();
-  const { isAdmin, user: currentUser } = useAuth();
+  const { users, loading, updateUserRole, updateUserVerification } = useUsers();
+  const { isAdmin, role: currentRole, user: currentUser } = useAuth();
+  const isModeratorOrAdmin = isAdmin || currentRole === 'moderator';
   const t = translations[lang];
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -347,6 +367,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
               key={user.uid}
               user={user}
               isAdmin={isAdmin}
+              isModeratorOrAdmin={isModeratorOrAdmin}
               t={t}
               lang={lang}
               openDropdownId={openDropdownId}
@@ -354,6 +375,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
               onViewProfile={onViewProfile}
               onOpenChat={onOpenChat}
               updateUserRole={updateUserRole}
+              updateUserVerification={updateUserVerification}
               currentUserId={currentUser?.uid}
             />
           ))
