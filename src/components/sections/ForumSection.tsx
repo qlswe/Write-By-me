@@ -48,6 +48,161 @@ interface ForumSectionProps {
   role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
 }
 
+const quotes: Record<string, string[]> = {
+  ru: [
+    "Ха-ха-ха! Смертный, добро пожаловать в обитель Радости! Здесь нет правил, кроме одного — будь весел! Ткни меня ещё раз!",
+    "Я подсыпал радость в твою овсянку сегодня утром! Слышишь этот смех? Это вселенная смеется над нами!",
+    "Форум? О, вы обсуждаете теории лора? А знали ли вы, что я однажды дал силу Безымянного простому червю? Это было восхитительно!",
+    "Пиши комментарии, ставь апвоуты, нарушай правила (но не слишком сильно, а то админы рассердятся)! Разве жизнь — не прекрасная шутка?",
+    "Ты кликаешь по мне... Означает ли это, что мы теперь лучшие друзья? Или я просто контролирую твой указательный палец? Ха-ха-ха!",
+    "Аха одобряет этот тред! Или не одобряет... Какая разница, если это весело?!"
+  ],
+  by: [
+    "Ха-ха-ха! Смяротны, вітаем у мясціне Радасці! Тут няма правілаў, акрамя аднаго — будзь вясёлым! Ткні мяне яшэ раз!",
+    "Я падсыпаў радасць у тваю аўсянку сёння раніцай! Чуеш гэты смех? Гэта сусвет смяецца з нас!",
+    "Форум? О, вы абмяркоўваеце тэорыі лору? А ці ведалі вы, што я аднойчы даў сілу Безыменнага звычайнаму чарвяку? Гэта было цудоўна!",
+    "Пішы каментарыі, стаў апвоўты, парушай правілы (але не занадта моцна, а то адміны раззлуюцца)! Хіба жыццё — не выдатны жарт?",
+    "Ты клікаеш па мне... Ці азначае гэта, што мы цяпер лепшыя сябры? Ці я проста кантралюю твой палец? Ха-ха-ха!"
+  ],
+  de: [
+    "Ha-ha-ha! Sterblicher, willkommen im Reich der Elation! Es gibt hier keine Regeln außer einer: Sei fröhlich! Klicke mich noch einmal!",
+    "Ich habe heute Morgen etwas Elation in deine Haferflocken gemischt! Hörst du das Lachen? Das ist das Universum, das über uns kichert!",
+    "Ein Forum? Oh, ihr diskutiert über Lore-Theorien? Wusstet ihr, dass ich einst einen einfachen Wurm zum Äonen-Emanator ernannt habe? Es war herrlich!",
+    "Schreibe Kommentare, gib Upvotes, brich die Regeln (aber nicht zu sehr, sonst weinen die Admins)! Ist das Leben nicht ein wunderbarer Witz?",
+    "Du klickst mich weiter an... Bedeutet das, dass wir jetzt beste Freunde sind? Oder kontrolliere ich deinen Zeigefinger? Ha-ha-ha!",
+    "Aha stimmt diesem Thread zu! Oder vielleicht auch nicht... Wen interessiert das schon, solange es Spaß macht?!"
+  ],
+  fr: [
+    "Ha-ha-ha ! Mortel, bienvenue dans la demeure de l'Allégresse ! Il n'y a pas de règles ici sauf une : sois joyeux ! Touche-moi encore !",
+    "J'ai glissé un peu d'Allégresse dans tes flocons d'avoine ce matin ! Tu entends ce rire ? C'est l'univers qui se moque de nous !",
+    "Un forum ? Oh, vous discutez de théories de lore ? Saviez-vous que j'ai un jour élevé un simple ver au rang d'Émanateur ? C'était glorieux !",
+    "Écris des commentaires, mets des votes positifs, enfreins les règles (mais pas trop, sinon les admins vont pleurer) ! La vie n'est-elle pas une farce magnifique ?",
+    "Tu continues de cliquer sur moi... Cela signifie-t-il que nous sommes meilleurs amis ? Ou est-ce moi qui contrôle ton index ? Ha-ha-ha !",
+    "Aha approuve ce fil ! Ou peut-être pas... Qui s'en soucie, tant que c'est amusant !?"
+  ],
+  zh: [
+    "哈-哈-哈！凡人，欢迎来到阿哈的欢愉居所！这里除了保持快乐，没有任何规则！再戳我一下！",
+    "我今天早上往你的麦片里加了点欢愉！听到笑声了吗？那是宇宙在嘲笑我们！",
+    "论坛？哦，在讨论背景设定？你知道我曾经把一个无名之辈（一条虫子）升格为令使吗？那真是太妙了！",
+    "发评论，点赞，打破规则（但别太过分，否则管理员会哭的）！生活难道不就是一个伟大的玩笑吗？",
+    "你一直在点我... 这意味着我们是最好的朋友吗？还是我在控制你的食指？哈-哈-哈！",
+    "阿哈批准了这个帖子！或者不批准... 只要有趣，谁在乎呢？！"
+  ]
+};
+
+const ForumBotComment: React.FC<{
+  comment: ForumComment;
+  lang: Language;
+  t: any;
+  isReply: boolean;
+}> = ({ comment, lang, t, isReply }) => {
+  const [pokeCount, setPokeCount] = useState(0);
+  const [isJiggling, setIsJiggling] = useState(false);
+
+  const activeQuotes = quotes[lang] || quotes['en'] || quotes['ru'];
+  const initialIndex = Math.abs(comment.threadId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % activeQuotes.length;
+  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(initialIndex);
+
+  const handlePoke = () => {
+    setPokeCount(prev => prev + 1);
+    setIsJiggling(true);
+    setTimeout(() => setIsJiggling(false), 500);
+
+    let newIndex = Math.floor(Math.random() * activeQuotes.length);
+    if (newIndex === currentQuoteIndex && activeQuotes.length > 1) {
+      newIndex = (newIndex + 1) % activeQuotes.length;
+    }
+    setCurrentQuoteIndex(newIndex);
+
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        const notes = [440, 554, 659, 880];
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+          gain.gain.setValueAtTime(0.06, ctx.currentTime + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.08 + 0.15);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + idx * 0.08);
+          osc.stop(ctx.currentTime + idx * 0.08 + 0.16);
+        });
+      }
+    } catch (err) {
+      console.warn('Audio blocked:', err);
+    }
+  };
+
+  return (
+    <motion.div 
+      key={comment.id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-[#15101e] border-2 border-[#ff4d4d]/40 rounded-2xl p-4 sm:p-5 flex gap-4 relative overflow-hidden bg-gradient-to-br from-[#ff4d4d]/5 to-transparent ${isReply ? 'ml-8 sm:ml-12 mt-2 border-l-4 border-l-[#ff4d4d]/80' : ''}`}
+    >
+      <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff4d4d]/5 rounded-full blur-2xl pointer-events-none" />
+
+      <motion.img 
+        animate={isJiggling ? { 
+          scale: [1, 1.2, 0.9, 1.1, 1],
+          rotate: [0, -10, 10, -5, 5, 0]
+        } : {}}
+        transition={{ duration: 0.5 }}
+        src="https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e"
+        alt="Aha Bot"
+        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#ff4d4d]/50 shrink-0 cursor-pointer shadow-[0_0_15px_rgba(255,77,77,0.3)] active:scale-90 transition-transform"
+        onClick={handlePoke}
+      />
+      <div className="flex-1 min-w-0 z-10">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="font-bold text-white text-sm truncate flex items-center gap-1.5">
+            <span className="text-[#ff4d4d] font-black tracking-wider uppercase">Aha Bot</span>
+            <Shield size={12} className="text-[#ff4d4d]" />
+            <span className="text-[9px] bg-[#ff4d4d]/15 border border-[#ff4d4d]/30 text-[#ff4d4d] px-1.5 py-0.5 rounded font-black uppercase tracking-widest">
+              {lang === 'ru' ? 'ЭЛАТИЯ' : 'ELATION'}
+            </span>
+          </div>
+          <div className="text-[10px] text-[#ff4d4d]/60 font-mono">
+            {lang === 'ru' ? `Ткнули: ${pokeCount}` : `Poked: ${pokeCount}`}
+          </div>
+        </div>
+
+        <div className="text-white/90 text-sm whitespace-pre-wrap break-words leading-relaxed mb-4 font-medium border-l-2 border-l-[#ff4d4d]/40 pl-3">
+          {activeQuotes[currentQuoteIndex]}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handlePoke}
+            className="px-3.5 py-1.5 bg-[#ff4d4d] hover:bg-white text-[#15101e] text-[10px] font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 shadow-[0_0_15px_rgba(255,77,77,0.2)] transition-colors"
+          >
+            <span>🎭</span>
+            {lang === 'ru' ? 'Ткнуть бота!' : 'Poke Aha Bot!'}
+          </motion.button>
+          
+          {pokeCount > 0 && (
+            <motion.span 
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-[10px] text-gray-400 italic"
+            >
+              {pokeCount >= 10 
+                ? (lang === 'ru' ? '🎉 Аха безумно хохочет!' : '🎉 Aha is laughing maniacally!')
+                : (lang === 'ru' ? '✨ Ой, щекотно!' : '✨ Oh, that tickles!')}
+            </motion.span>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, role }) => {
   const { user } = useAuth();
   const t = translations[lang];
@@ -420,81 +575,84 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
     const topLevelComments = comments.filter(c => !c.replyToId).reverse();
     const getReplies = (parentId: string) => comments.filter(c => c.replyToId === parentId);
 
-    const renderComment = (comment: ForumComment, isReply: boolean = false) => (
-      <motion.div 
-        key={comment.id}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`bg-[#15101e] border border-[#3d2b4f]/20 rounded-2xl p-4 sm:p-5 flex gap-4 group ${comment.isBot ? 'border-[#ff4d4d]/50 bg-[#ff4d4d]/5' : ''} ${isReply ? 'ml-8 sm:ml-12 mt-2 border-l-2 border-l-[#ff4d4d]/30' : ''}`}
-      >
-        <img 
-          src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=1c1528&color=fff`}
-          alt={comment.authorName}
-          className="w-10 h-10 rounded-full border border-[#3d2b4f]/50 shrink-0"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <div className="font-bold text-white text-sm truncate flex items-center gap-2">
-              {comment.authorName}
-              {comment.isBot && <Shield size={12} className="text-[#ff4d4d]" />}
-              {comment.isEdited && <span className="text-[10px] text-white/40 font-normal">({t.edited || "edited"})</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="text-[10px] text-white/40 flex items-center gap-1 shrink-0">
-                <TimeAgo date={comment.createdAt} lang={lang} />
+    const renderComment = (comment: ForumComment, isReply: boolean = false) => {
+      if (comment.isBot) {
+        return <ForumBotComment key={comment.id} comment={comment} lang={lang} t={t} isReply={isReply} />;
+      }
+
+      return (
+        <motion.div 
+          key={comment.id}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`bg-[#15101e] border border-[#3d2b4f]/20 rounded-2xl p-4 sm:p-5 flex gap-4 group ${isReply ? 'ml-8 sm:ml-12 mt-2 border-l-2 border-l-[#ff4d4d]/30' : ''}`}
+        >
+          <img 
+            src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=1c1528&color=fff`}
+            alt={comment.authorName}
+            className="w-10 h-10 rounded-full border border-[#3d2b4f]/50 shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="font-bold text-white text-sm truncate flex items-center gap-2">
+                {comment.authorName}
+                {comment.isEdited && <span className="text-[10px] text-white/40 font-normal">({t.edited || "edited"})</span>}
               </div>
-              <div className={`flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity ${comment.isBot ? 'hidden' : ''}`}>
-                {user?.uid === comment.authorId && !comment.isBot && (
-                  <button 
-                    onClick={() => {
-                      setEditingCommentId(comment.id);
-                      setEditCommentContent(comment.content);
-                    }}
-                    className="p-1.5 text-white/60 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
+              <div className="flex items-center gap-2">
+                <div className="text-[10px] text-white/40 flex items-center gap-1 shrink-0">
+                  <TimeAgo date={comment.createdAt} lang={lang} />
+                </div>
+                <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                  {user?.uid === comment.authorId && (
+                    <button 
+                      onClick={() => {
+                        setEditingCommentId(comment.id);
+                        setEditCommentContent(comment.content);
+                      }}
+                      className="p-1.5 text-white/60 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator' || role === 'beta-tester') && (
+                    <button 
+                      onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
+                      className="p-1.5 text-white/60 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {editingCommentId === comment.id ? (
+              <div className="mt-2 space-y-3">
+                <textarea
+                  value={editCommentContent}
+                  onChange={(e) => setEditCommentContent(e.target.value)}
+                  className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-y text-sm"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setEditingCommentId(null)}
+                    className="px-3 py-1.5 rounded-lg text-white/40 hover:text-white transition-colors text-xs font-bold"
                   >
-                    <Pencil size={14} />
+                    {(t as any).forumCancel || t.profileCancel}
                   </button>
-                )}
-                {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator' || role === 'beta-tester') && !comment.isBot && (
-                  <button 
-                    onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
-                    className="p-1.5 text-white/60 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
+                  <button
+                    onClick={handleUpdateComment}
+                    disabled={!editCommentContent.trim() || isSubmitting}
+                    className="bg-[#ff4d4d] text-[#15101e] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
                   >
-                    <Trash2 size={14} />
+                    {isSubmitting ? '...' : ((t as any).forumSave || t.profileSave)}
                   </button>
-                )}
+                </div>
               </div>
-            </div>
-          </div>
-          
-          {editingCommentId === comment.id ? (
-            <div className="mt-2 space-y-3">
-              <textarea
-                value={editCommentContent}
-                onChange={(e) => setEditCommentContent(e.target.value)}
-                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-y text-sm"
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setEditingCommentId(null)}
-                  className="px-3 py-1.5 rounded-lg text-white/40 hover:text-white transition-colors text-xs font-bold"
-                >
-                  {(t as any).forumCancel || t.profileCancel}
-                </button>
-                <button
-                  onClick={handleUpdateComment}
-                  disabled={!editCommentContent.trim() || isSubmitting}
-                  className="bg-[#ff4d4d] text-[#15101e] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
-                >
-                  {isSubmitting ? '...' : ((t as any).forumSave || t.profileSave)}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <p className="text-white/80 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
-              <div className="flex items-center justify-between">
-                {!comment.isBot && (
+            ) : (
+              <>
+                <p className="text-white/80 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-lg border border-[#3d2b4f]/30 w-fit">
                     <button
                       onClick={() => handleVote('comment', comment, 'up')}
@@ -514,58 +672,58 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
                       <ChevronDown size={16} />
                     </button>
                   </div>
-                )}
-                
-                <div className={`flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity ${comment.isBot ? 'ml-auto' : ''}`}>
-                  {user && !comment.isBot && !isReply && (
-                    <button 
-                      onClick={() => setReplyingToCommentId(comment.id)}
-                      className="p-1.5 text-white/40 hover:text-[#ff4d4d] transition-all rounded-md hover:bg-[#ff4d4d]/10 text-xs font-bold tracking-widest"
-                    >
-                      {(t as any).forumReply || "Reply"}
-                    </button>
-                  )}
+                  
+                  <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                    {user && !isReply && (
+                      <button 
+                        onClick={() => setReplyingToCommentId(comment.id)}
+                        className="p-1.5 text-white/40 hover:text-[#ff4d4d] transition-all rounded-md hover:bg-[#ff4d4d]/10 text-xs font-bold tracking-widest"
+                      >
+                        {(t as any).forumReply || "Reply"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {replyingToCommentId === comment.id && (
+              <div className="mt-4 bg-[#0d0b14] rounded-xl p-3 border border-[#3d2b4f]/30">
+                <textarea
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  placeholder={(t as any).forumYourReply || "Your reply..."}
+                  className="w-full bg-transparent text-white placeholder-white/40 focus:outline-none min-h-[60px] resize-y text-sm mb-2"
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setReplyingToCommentId(null);
+                      setReplyContent('');
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-white/40 hover:text-white transition-colors text-xs font-bold"
+                  >
+                    {(t as any).forumCancel || t.profileCancel}
+                  </button>
+                  <button
+                    onClick={() => handleCreateComment(comment.id)}
+                    disabled={!replyContent.trim() || isSubmitting}
+                    className="bg-[#ff4d4d] text-[#15101e] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs flex items-center gap-2"
+                  >
+                    {isSubmitting ? '...' : (
+                      <>
+                        <Send size={12} />
+                        {(t as any).forumReply || "Reply"}
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
-            </>
-          )}
-
-          {replyingToCommentId === comment.id && (
-            <div className="mt-4 bg-[#0d0b14] rounded-xl p-3 border border-[#3d2b4f]/30">
-              <textarea
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                placeholder={(t as any).forumYourReply || "Your reply..."}
-                className="w-full bg-transparent text-white placeholder-white/40 focus:outline-none min-h-[60px] resize-y text-sm mb-2"
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => {
-                    setReplyingToCommentId(null);
-                    setReplyContent('');
-                  }}
-                  className="px-3 py-1.5 rounded-lg text-white/40 hover:text-white transition-colors text-xs font-bold"
-                >
-                  {(t as any).forumCancel || t.profileCancel}
-                </button>
-                <button
-                  onClick={() => handleCreateComment(comment.id)}
-                  disabled={!replyContent.trim() || isSubmitting}
-                  className="bg-[#ff4d4d] text-[#15101e] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs flex items-center gap-2"
-                >
-                  {isSubmitting ? '...' : (
-                    <>
-                      <Send size={12} />
-                      {(t as any).forumReply || "Reply"}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    );
+            )}
+          </div>
+        </motion.div>
+      );
+    };
 
     return (
       <div className="space-y-6">

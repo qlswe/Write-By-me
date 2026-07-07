@@ -10,7 +10,7 @@ export interface Message {
   senderId: string;
   text: string;
   createdAt: any;
-  type?: 'text' | 'sticker' | 'image';
+  type?: 'text' | 'sticker' | 'image' | 'voice';
   images?: string[];
   replyTo?: string; // ID of the message being replied to
   reactions?: Record<string, string[]>; // emoji -> array of user IDs
@@ -26,6 +26,12 @@ export interface Chat {
   unreadCount?: Record<string, number>;
   typing?: Record<string, boolean>;
   lastReadAt?: Record<string, any>;
+  pinnedMessage?: {
+    id: string;
+    text: string;
+    senderId: string;
+    type?: string;
+  } | null;
 }
 
 export function useChat(otherUserId?: string) {
@@ -134,8 +140,8 @@ export function useChat(otherUserId?: string) {
     };
   }, [user, otherUserId]);
 
-  const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' | 'image' = 'text', replyTo?: string, images?: string[]) => {
-    if (!user || user.uid === recipientId || (!text.trim() && type !== 'image' && (!images || images.length === 0))) return;
+  const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' | 'image' | 'voice' = 'text', replyTo?: string, images?: string[]) => {
+    if (!user || user.uid === recipientId || (!text.trim() && type !== 'image' && type !== 'voice' && (!images || images.length === 0))) return;
 
     const chatId = [user.uid, recipientId].sort().join('_');
     const chatRef = doc(db, 'chats', chatId);
@@ -182,7 +188,7 @@ export function useChat(otherUserId?: string) {
 
       // Update chat metadata
       await setDoc(chatRef, {
-        lastMessage: type === 'sticker' ? encrypt('Sticker', chatId) : type === 'image' ? encrypt('Фото', chatId) : encryptedText,
+        lastMessage: type === 'sticker' ? encrypt('Sticker', chatId) : type === 'image' ? encrypt('Фото', chatId) : type === 'voice' ? encrypt('🎤 Голосовое сообщение', chatId) : encryptedText,
         lastMessageAt: serverTimestamp(),
         participants: [user.uid, recipientId]
       }, { merge: true });
@@ -281,5 +287,36 @@ export function useChat(otherUserId?: string) {
     }
   };
 
-  return { chats, messages, loading, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead };
+  const pinMessage = async (recipientId: string, message: Message) => {
+    if (!user) return;
+    const chatId = [user.uid, recipientId].sort().join('_');
+    const chatRef = doc(db, 'chats', chatId);
+    try {
+      await setDoc(chatRef, {
+        pinnedMessage: {
+          id: message.id,
+          text: message.text,
+          senderId: message.senderId,
+          type: message.type || 'text'
+        }
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error pinning message:', error);
+    }
+  };
+
+  const unpinMessage = async (recipientId: string) => {
+    if (!user) return;
+    const chatId = [user.uid, recipientId].sort().join('_');
+    const chatRef = doc(db, 'chats', chatId);
+    try {
+      await updateDoc(chatRef, {
+        pinnedMessage: deleteField()
+      });
+    } catch (error) {
+      console.error('Error unpinning message:', error);
+    }
+  };
+
+  return { chats, messages, loading, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead, pinMessage, unpinMessage };
 }

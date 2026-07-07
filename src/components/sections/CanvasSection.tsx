@@ -91,7 +91,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   // Use unique ID for personal canvas based on size so layouts are saved independently
   const canvasId = mode === 'global' ? 'canvas' : `canvas_personal/${user?.uid}_${personalSize}`;
   // For global we pass 0 which means infinite in our hook
-  const { pixels, loading, drawPixel, erasePixel, clearCanvas, size } = useCanvas(mode === 'global' ? 0 : personalSize, canvasId); 
+  const { pixels, loading, drawPixel, erasePixel, drawPixelsBatch, clearCanvas, size } = useCanvas(mode === 'global' ? 0 : personalSize, canvasId); 
   
   const MAX_PIXELS = 100;
   const [pixelsLeft, setPixelsLeft] = useState(() => {
@@ -206,10 +206,18 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     const realFillColor = fillHexColor === 'eraser' ? null : fillHexColor;
     if (targetColor === realFillColor) return;
     
-    const maxFlood = 1000;
+    const maxFlood = 1500; // slightly larger allowance for beautiful fillings
     const queue: [number, number][] = [[startX, startY]];
     const visited = new Set<string>();
     const strokeActions: StrokeAction[] = [];
+    const updates: Record<string, string | null> = {};
+
+    const getPixelColorLocal = (key: string): string | null => {
+      if (key in updates) {
+        return updates[key];
+      }
+      return pixels[key]?.color || null;
+    };
     
     while (queue.length > 0 && strokeActions.length < maxFlood) {
       const [cx, cy] = queue.shift()!;
@@ -217,14 +225,10 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       if (visited.has(key)) continue;
       visited.add(key);
       
-      const currColor = pixels[key]?.color || null;
+      const currColor = getPixelColorLocal(key);
       if (currColor === targetColor) {
-        strokeActions.push({ pixelId: key, oldColor: currColor, newColor: realFillColor });
-        if (fillHexColor === 'eraser') {
-          erasePixel(cx, cy);
-        } else {
-          drawPixel(cx, cy, fillHexColor);
-        }
+        strokeActions.push({ pixelId: key, oldColor: pixels[key]?.color || null, newColor: realFillColor });
+        updates[key] = realFillColor;
         
         const neighbors = [
           [cx + 1, cy],
@@ -234,13 +238,17 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         ];
         for (const [nx, ny] of neighbors) {
           if (nx >= 0 && nx < currentSize && ny >= 0 && ny < currentSize) {
-            queue.push([nx, ny]);
+            const neighborKey = `${nx},${ny}`;
+            if (!visited.has(neighborKey)) {
+              queue.push([nx, ny]);
+            }
           }
         }
       }
     }
     
     if (strokeActions.length > 0) {
+      await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
       setRedoStack([]);
     }

@@ -506,7 +506,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
         key={comment.id} 
-        className="flex gap-3 sm:gap-4 group mt-6"
+        className="flex gap-3 sm:gap-4 group mt-6 bg-[#1a1226]/40 border border-[#3d2b4f]/40 p-4 sm:p-5 rounded-3xl hover:border-[#ff4d4d]/30 hover:bg-[#1a1226]/60 transition-all shadow-md relative"
       >
         <button
           onClick={() => handleProfileClick(comment)}

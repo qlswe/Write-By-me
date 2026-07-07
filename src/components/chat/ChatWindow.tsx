@@ -4,14 +4,150 @@ import { useChat, Message } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles, Mail } from 'lucide-react';
+import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles, Mail, VolumeX, Volume2, Pin, PinOff, Mic, Play, Pause, Trash, Flame, Heart, ThumbsUp, Zap, Star, Crown, Award, Ghost, Skull, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 
 const STICKERS = ['👋', '👍', '❤️', '😂', '🔥', '🎉', '👀', '💯'];
+const EXTRA_REACTIONS = ['👑', '💩', '🤡', '💅', '🚀', '👾', '🍿', '💡', '💯', '💰', '💀', '👽', '🔥', '🎉'];
 import { CHAT_REACTIONS } from '../../constants/reactions';
+
+export const NEON_REACTION_CONFIG: Record<string, { icon: any; color: string; labelRu: string; labelEn: string }> = {
+  heart: { icon: Heart, color: 'text-rose-400 drop-shadow-[0_0_8px_#f43f5e]', labelRu: 'Любовь', labelEn: 'Love' },
+  thumbsup: { icon: ThumbsUp, color: 'text-cyan-400 drop-shadow-[0_0_8px_#22d3ee]', labelRu: 'Класс', labelEn: 'Like' },
+  flame: { icon: Flame, color: 'text-amber-400 drop-shadow-[0_0_8px_#f59e0b]', labelRu: 'Огонь', labelEn: 'Fire' },
+  zap: { icon: Zap, color: 'text-yellow-300 drop-shadow-[0_0_8px_#facc15]', labelRu: 'Молния', labelEn: 'Power' },
+  star: { icon: Star, color: 'text-purple-400 drop-shadow-[0_0_8px_#c084fc]', labelRu: 'Звезда', labelEn: 'Star' },
+  smile: { icon: Smile, color: 'text-emerald-400 drop-shadow-[0_0_8px_#34d399]', labelRu: 'Улыбка', labelEn: 'Smile' },
+  crown: { icon: Crown, color: 'text-orange-400 drop-shadow-[0_0_8px_#fb923c]', labelRu: 'Корона', labelEn: 'Crown' },
+  award: { icon: Award, color: 'text-indigo-400 drop-shadow-[0_0_8px_#818cf8]', labelRu: 'Кубок', labelEn: 'Award' },
+  ghost: { icon: Ghost, color: 'text-pink-400 drop-shadow-[0_0_8px_#f472b6]', labelRu: 'Призрак', labelEn: 'Ghost' },
+  skull: { icon: Skull, color: 'text-red-400 drop-shadow-[0_0_8px_#f87171]', labelRu: 'Череп', labelEn: 'Skull' },
+  sparkles: { icon: Sparkles, color: 'text-fuchsia-400 drop-shadow-[0_0_8px_#e08ef4]', labelRu: 'Блеск', labelEn: 'Sparkles' },
+  shield: { icon: Shield, color: 'text-blue-400 drop-shadow-[0_0_8px_#60a5fa]', labelRu: 'Щит', labelEn: 'Shield' },
+};
+
+export const mapEmojiToReactionId = (emoji: string): string => {
+  if (emoji === '👍' || emoji === 'thumbsup') return 'thumbsup';
+  if (emoji === '❤️' || emoji === 'heart') return 'heart';
+  if (emoji === '🔥' || emoji === 'flame') return 'flame';
+  if (emoji === '⚡' || emoji === 'zap') return 'zap';
+  if (emoji === '⭐' || emoji === 'star') return 'star';
+  if (emoji === '😂' || emoji === 'smile') return 'smile';
+  if (emoji === '👑' || emoji === 'crown') return 'crown';
+  if (emoji === '🏆' || emoji === 'award') return 'award';
+  if (emoji === '👻' || emoji === 'ghost') return 'ghost';
+  if (emoji === '💀' || emoji === 'skull') return 'skull';
+  if (emoji === '✨' || emoji === 'sparkles') return 'sparkles';
+  if (emoji === '🛡️' || emoji === 'shield') return 'shield';
+  return emoji;
+};
+
+export const renderNeonReactionIcon = (reactionId: string, size = 14) => {
+  const config = NEON_REACTION_CONFIG[reactionId] || NEON_REACTION_CONFIG['thumbsup'];
+  const IconComponent = config.icon;
+  return <IconComponent size={size} className={config.color} />;
+};
+
+export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language }> = ({ src, lang }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio(src);
+    audioRef.current = audio;
+
+    const handleLoadedMetadata = () => {
+      if (audio.duration && !isNaN(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+
+    // Audio elements sometimes load metadata out of order for blobs
+    const checkDurationInterval = setInterval(() => {
+      if (audio.duration && !isNaN(audio.duration) && audio.duration !== Infinity) {
+        setDuration(audio.duration);
+        clearInterval(checkDurationInterval);
+      }
+    }, 200);
+
+    return () => {
+      audio.pause();
+      clearInterval(checkDurationInterval);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [src]);
+
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(err => {
+        console.error("Audio playback failed", err);
+      });
+    }
+  };
+
+  const formatTime = (time: number) => {
+    if (isNaN(time) || time === Infinity) return '0:00';
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const progressPercent = duration && duration !== Infinity ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="flex items-center gap-3 bg-[#11071a]/90 border border-[#ff4d4d]/30 rounded-2xl p-3 shadow-[0_0_15px_rgba(255,77,77,0.15)] min-w-[220px] sm:min-w-[260px] relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="absolute top-0 left-0 w-1.5 h-full bg-[#ff4d4d] shadow-[0_0_8px_#ff4d4d]" />
+      <button
+        type="button"
+        onClick={togglePlay}
+        className="w-10 h-10 rounded-full bg-[#ff4d4d] text-[#0d0714] hover:bg-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 shrink-0 shadow-[0_0_12px_rgba(255,77,77,0.4)]"
+      >
+        {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
+      </button>
+
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
+        <div className="flex items-center gap-1.5 h-6">
+          <div className="flex-1 h-1 bg-[#28153c] rounded-full overflow-hidden relative">
+            <div 
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ff4d4d] to-pink-500 rounded-full shadow-[0_0_8px_#ff4d4d]" 
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center text-[10px] text-gray-400 font-mono">
+          <span className="text-[#ff4d4d] font-bold">{formatTime(currentTime)}</span>
+          <span>{duration && duration !== Infinity ? formatTime(duration) : '🎤 ' + (lang === 'ru' ? 'Голосовое' : 'Voice')}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface ChatWindowProps {
   recipientId: string;
@@ -23,7 +159,7 @@ interface ChatWindowProps {
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientName, recipientPhoto, lang, onClose }) => {
   const { user } = useAuth();
-  const { chats, messages, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead } = useChat(recipientId);
+  const { chats, messages, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead, pinMessage, unpinMessage } = useChat(recipientId);
   const t = translations[lang] as any;
   const [inputText, setInputText] = useState('');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -36,9 +172,235 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const [recipientProfile, setRecipientProfile] = useState<any>(null);
+  const [showMoreReactions, setShowMoreReactions] = useState<string | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+  const [showReactionCustomizer, setShowReactionCustomizer] = useState(false);
+  const [customizingSlotIndex, setCustomizingSlotIndex] = useState<number | null>(null);
+  const [manualEmoji, setManualEmoji] = useState('');
+
+  // Voice Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    };
+  }, [mediaRecorder]);
+
+  const startRecording = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      window.dispatchEvent(new CustomEvent('aha_toast', { 
+        detail: lang === 'ru' 
+          ? 'Запись голоса не поддерживается или заблокирована в iframe! Пожалуйста, откройте сайт в новой вкладке (кнопка сверху справа).' 
+          : 'Voice recording is not supported or is blocked inside iframe! Please open the app in a new tab.' 
+      }));
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      let recorder: MediaRecorder;
+      const chunks: Blob[] = [];
+
+      // Detect and use supported mime types
+      const types = ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav'];
+      let selectedType = '';
+      for (const t of types) {
+        if (typeof MediaRecorder.isTypeSupported === 'function' && MediaRecorder.isTypeSupported(t)) {
+          selectedType = t;
+          break;
+        }
+      }
+
+      try {
+        if (selectedType) {
+          recorder = new MediaRecorder(stream, { mimeType: selectedType });
+        } else {
+          recorder = new MediaRecorder(stream);
+        }
+      } catch (e) {
+        recorder = new MediaRecorder(stream);
+      }
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { type: selectedType || 'audio/webm' });
+        // stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+
+        if (chunks.length > 0) {
+          // Convert to Base64 data URL
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64Audio = reader.result as string;
+            await sendMessage(base64Audio, recipientId, 'voice');
+            playSound('send');
+          };
+        }
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setAudioChunks([]);
+      setIsRecording(true);
+      setRecordingSeconds(0);
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
+    } catch (err: any) {
+      console.error("Failed to start voice recording:", err);
+      const isPermissionDenied = err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.message?.toLowerCase().includes('permission denied');
+      if (isPermissionDenied) {
+        window.dispatchEvent(new CustomEvent('aha_toast', { 
+          detail: lang === 'ru' 
+            ? 'Доступ к микрофону отклонен! Разрешите доступ в настройках браузера и откройте приложение в новой вкладке.' 
+            : 'Microphone access denied! Grant permission in browser settings and open the app in a new tab.' 
+        }));
+      } else {
+        window.dispatchEvent(new CustomEvent('aha_toast', { 
+          detail: lang === 'ru' 
+            ? `Ошибка запуска записи: ${err.message || 'нет доступа'}` 
+            : `Failed to start recording: ${err.message || 'access denied'}` 
+        }));
+      }
+    }
+  };
+
+  const stopAndSendRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+    }
+    setIsRecording(false);
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.ondataavailable = null;
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+    }
+    setIsRecording(false);
+    setAudioChunks([]);
+    setRecordingSeconds(0);
+  };
+
+  const formatRecordingTime = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const unsub = onSnapshot(doc(db, 'public_profiles', user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        setCurrentUserProfile(docSnap.data());
+      }
+    });
+    return () => unsub();
+  }, [user?.uid]);
+
+  const customReactionsList = (currentUserProfile?.customReactions || ['thumbsup', 'heart', 'flame', 'zap', 'star', 'smile']).map(mapEmojiToReactionId);
+
+  const updateCustomReactionSlot = async (slotIndex: number, newReactionId: string) => {
+    if (!user?.uid || !newReactionId.trim()) return;
+    const cleanId = mapEmojiToReactionId(newReactionId.trim());
+    const newReactions = [...customReactionsList];
+    newReactions[slotIndex] = cleanId;
+    try {
+      await setDoc(doc(db, 'public_profiles', user.uid), {
+        customReactions: newReactions
+      }, { merge: true });
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Слот реакций обновлен!' : 'Reaction slot updated!' }));
+    } catch (e) {
+      console.error('Error saving custom reactions:', e);
+    }
+  };
+
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const playSound = (type: 'send' | 'receive' | 'react') => {
+    if (isMuted) return;
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      
+      if (type === 'send') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.14);
+      } else if (type === 'receive') {
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(800, ctx.currentTime);
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1200, ctx.currentTime);
+        
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+        
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc1.start();
+        osc2.start();
+        osc1.stop(ctx.currentTime + 0.3);
+        osc2.stop(ctx.currentTime + 0.3);
+      } else if (type === 'react') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(550, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(850, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1);
+      }
+    } catch (err) {
+      console.warn('Audio blocked:', err);
+    }
+  };
 
   useEffect(() => {
     if (user && recipientId === user.uid) {
@@ -46,7 +408,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     }
   }, [user, recipientId, onClose]);
 
-  const currentChat = chats.find(c => c.participants.includes(recipientId));
+  const activeChatId = user ? [user.uid, recipientId].sort().join('_') : '';
+  const currentChat = chats.find(c => c.id === activeChatId);
   const isRecipientTyping = currentChat?.typing?.[recipientId];
 
   const scrollToBottom = () => {
@@ -56,6 +419,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Handle playing received audio chime automatically when recipient sends a message
+  const lastMessagesLengthRef = useRef(messages.length);
+  useEffect(() => {
+    if (messages.length > lastMessagesLengthRef.current) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg && lastMsg.senderId !== user?.uid) {
+        playSound('receive');
+      }
+    }
+    lastMessagesLengthRef.current = messages.length;
+  }, [messages, user?.uid]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -161,6 +536,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
       } else {
         const type = selectedImages.length > 0 ? 'image' : 'text';
         await sendMessage(inputText, recipientId, type, replyingTo?.id, selectedImages);
+        playSound('send');
       }
       setInputText('');
       setSelectedImages([]);
@@ -196,6 +572,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     setIsSending(true);
     try {
       await sendMessage(sticker, recipientId, 'sticker', replyingTo?.id);
+      playSound('send');
       setShowStickers(false);
       setReplyingTo(null);
     } catch (error) {
@@ -212,6 +589,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     }
   };
 
+  const handleScrollToPinned = (msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('animate-pulse', 'border-[#ff4d4d]');
+      setTimeout(() => {
+        el.classList.remove('animate-pulse', 'border-[#ff4d4d]');
+      }, 1500);
+    }
+  };
+
   return (
     <>
     <AnimatePresence>
@@ -222,50 +610,92 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
         className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[420px] sm:h-[650px] bg-[#110b1a]/95 backdrop-blur-xl sm:border sm:border-[#382650]/80 sm:rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden z-50 transition-all duration-300"
       >
         {/* Header */}
-        <div className="p-4 bg-[#09050d] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20 shadow-lg relative">
+        <div className="p-3 bg-[#09050d] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20 shadow-lg relative">
           <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[#ff4d4d]/20 to-transparent" />
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <div className="relative">
               {recipientPhoto ? (
-                <img src={recipientPhoto} alt="" className="w-10 h-10 rounded-2xl object-cover border-2 border-[#ff4d4d]/30 shadow-[0_0_15px_rgba(255,77,77,0.2)]" />
+                <img src={recipientPhoto} alt="" className="w-8 h-8 rounded-full object-cover border border-[#ff4d4d]/30" />
               ) : (
-                <div className="w-10 h-10 rounded-2xl bg-[#ff4d4d]/10 flex items-center justify-center border-2 border-[#ff4d4d]/30 shadow-[0_0_15px_rgba(255,77,77,0.2)]">
-                  <User className="w-5 h-5 text-[#ff4d4d]" />
+                <div className="w-8 h-8 rounded-full bg-[#ff4d4d]/10 flex items-center justify-center border border-[#ff4d4d]/30">
+                  <User className="w-4 h-4 text-[#ff4d4d]" />
                 </div>
               )}
-              <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 border-2 border-[#09050d] rounded-full transition-colors ${
+              <div className={`absolute bottom-0 right-0 w-2 h-2 border-2 border-[#09050d] rounded-full ${
                 isUserOnline() 
-                  ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]' 
+                  ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]' 
                   : 'bg-gray-600'
               }`} />
             </div>
-            <div>
-              <span className="font-black text-white text-sm sm:text-base uppercase tracking-wider block leading-none mb-1">{recipientName}</span>
-              <div className="flex items-center gap-2">
+            <div className="min-w-0">
+              <span className="font-bold text-white text-sm sm:text-base uppercase tracking-wider block leading-none truncate max-w-[150px] sm:max-w-[200px]">{recipientName}</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
                 {isUserOnline() ? (
-                  <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span className="text-[8px] text-emerald-400 font-bold uppercase tracking-widest flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
                     {t.chatOnline}
                   </span>
                 ) : (
-                  <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#3d2b4f]"></span>
+                  <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-[#3d2b4f]"></span>
                     {t.chatOffline}
                   </span>
                 )}
-                <span className="text-[8px] text-[#ff4d4d] font-black uppercase tracking-wider border border-[#ff4d4d]/30 bg-[#ff4d4d]/5 px-2 py-0.5 rounded flex items-center gap-1">
-                  <Sparkles size={8} /> AHA SECURE E/D
-                </span>
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-[#1a0f26] border border-transparent hover:border-[#3d2b4f]/40 rounded-xl transition-all text-gray-400 hover:text-white active:scale-95"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className={`p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center ${
+                isMuted 
+                  ? 'bg-red-950/20 border-red-500/30 text-red-400 hover:bg-red-950/40 hover:border-red-500/60 shadow-[0_0_8px_rgba(239,68,68,0.2)]' 
+                  : 'bg-[#150e24] border-[#3e245a] text-gray-300 hover:border-[#ff4d4d]/50 hover:text-white'
+              }`}
+              title={isMuted ? "Unmute sounds" : "Mute sounds"}
+            >
+              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 bg-[#150e24] hover:bg-[#ff4d4d] border border-[#3e245a] hover:border-[#ff4d4d] text-gray-300 hover:text-[#0d0714] rounded-xl transition-all active:scale-95 flex items-center justify-center"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
+
+        {/* Pinned Message Bar */}
+        {currentChat?.pinnedMessage && (
+          <div className="bg-[#120a1c] border-b border-[#311c47] p-2 px-3.5 flex items-center justify-between shrink-0 z-10 relative">
+            <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[#ff4d4d]/10 to-transparent" />
+            <div 
+              onClick={() => handleScrollToPinned(currentChat.pinnedMessage!.id)}
+              className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1"
+            >
+              <Pin className="w-3.5 h-3.5 text-[#ff4d4d] shrink-0 shadow-[0_0_8px_#ff4d4d] animate-pulse" />
+              <div className="min-w-0">
+                <span className="text-[8px] font-black uppercase text-[#ff4d4d] tracking-widest block leading-none mb-1">
+                  {lang === 'ru' ? 'ЗАКРЕПЛЕННОЕ СООБЩЕНИЕ' : 'PINNED MESSAGE'}
+                </span>
+                <span className="text-xs text-gray-300 line-clamp-1 truncate max-w-[280px] sm:max-w-[340px]">
+                  {currentChat.pinnedMessage.type === 'voice' 
+                    ? '🎤 ' + (lang === 'ru' ? 'Голосовое сообщение' : 'Voice message')
+                    : currentChat.pinnedMessage.type === 'sticker' 
+                      ? 'Sticker' 
+                      : currentChat.pinnedMessage.text}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => unpinMessage(recipientId)}
+              className="p-1 hover:bg-[#ff4d4d]/10 rounded-lg text-gray-400 hover:text-[#ff4d4d] transition-colors"
+              title={lang === 'ru' ? 'Открепить' : 'Unpin'}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {!user ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#0f0a17] space-y-6">
@@ -338,61 +768,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                           </div>
                         )}
                         <motion.div
+                          id={`msg-${msg.id}`}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group ${msg.reactions && Object.keys(msg.reactions).some(k => msg.reactions![k].length > 0) ? 'mb-5' : ''}`}
+                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group ${msg.reactions && Object.keys(msg.reactions).some(k => msg.reactions![k].length > 0) ? 'mb-5.5' : ''}`}
                         >
-                          {/* Premium Action Menu */}
-                          <AnimatePresence>
-                            {activeMessageId === msg.id && !msg.isDeleted && (
-                              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md" onClick={(e) => { e.stopPropagation(); setActiveMessageId(null); }}>
-                                <motion.div 
-                                  initial={{ opacity: 0, scale: 0.95 }}
-                                  animate={{ opacity: 1, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.95 }}
-                                  className="bg-[#130b1c] border border-[#3e245a] rounded-3xl p-2 flex flex-col shadow-2xl w-full max-w-xs"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <div className="px-4 py-3 border-b border-[#3e245a]/50 mb-1">
-                                    <h4 className="text-white text-xs font-black uppercase tracking-widest text-center">Действия</h4>
-                                  </div>
-                                  <div className="flex items-center justify-between px-3 py-2 border-b border-[#3e245a]/50 bg-[#0a050f]/80 rounded-2xl mb-1">
-                                    {CHAT_REACTIONS.map(emoji => (
-                                      <button
-                                        key={emoji}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          toggleReaction(msg.id, recipientId, emoji);
-                                          setActiveMessageId(null);
-                                        }}
-                                        className={`text-2xl hover:scale-130 transition-all p-1.5 duration-200 rounded-xl ${msg.reactions?.[emoji]?.includes(user?.uid || '') ? 'bg-[#ff4d4d]/10 border border-[#ff4d4d]/30' : 'hover:bg-[#ff4d4d]/5'}`}
-                                      >
-                                        {emoji}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3 hover:bg-[#ff4d4d]/5 rounded-xl text-gray-300 hover:text-white transition-all text-sm font-semibold">
-                                    <Reply className="w-4 h-4 text-[#ff4d4d]" /> {t.chatReply || "Reply"}
-                                  </button>
-                                  {msg.type !== 'sticker' && (
-                                    <button onClick={(e) => { e.stopPropagation(); handleCopy(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3 hover:bg-[#ff4d4d]/5 rounded-xl text-gray-300 hover:text-white transition-all text-sm font-semibold">
-                                      <Copy className="w-4 h-4 text-[#ff4d4d]" /> {t.chatCopy || "Copy"}
-                                    </button>
-                                  )}
-                                  {isMe && msg.type !== 'sticker' && (
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingMessage(msg); setInputText(msg.text); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3 hover:bg-[#ff4d4d]/5 rounded-xl text-gray-300 hover:text-white transition-all text-sm font-semibold">
-                                      <Pencil className="w-4 h-4 text-[#ff4d4d]" /> {t.chatEdit || "Edit"}
-                                    </button>
-                                  )}
-                                  {isMe && (
-                                    <button onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id, recipientId); setActiveMessageId(null); }} className="flex items-center gap-3 px-4 py-3 hover:bg-red-500/10 rounded-xl text-red-400 hover:text-red-300 transition-all text-sm font-bold mt-1 border-t border-[#3e245a]/30">
-                                      <Trash2 className="w-4 h-4" /> {t.chatDelete || "Delete"}
-                                    </button>
-                                  )}
-                                </motion.div>
-                              </div>
-                            )}
-                          </AnimatePresence>
+                          {/* Global Portal-based message overlay menu renders at bottom of body instead of absolute inside list */}
 
                           <div
                             onClick={(e) => {
@@ -402,11 +783,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               }
                             }}
                             className={`max-w-[85%] p-3.5 sm:p-4 rounded-3xl text-sm sm:text-base shadow-lg relative cursor-pointer transition-all duration-200 active:scale-[0.98] ${
-                              msg.type === 'sticker' && !msg.isDeleted
+                              (msg.type === 'sticker' || msg.type === 'voice') && !msg.isDeleted
                                 ? 'bg-transparent shadow-none p-0' 
                                 : isMe
-                                  ? 'bg-gradient-to-br from-[#ff4d4d] to-[#cc2929] text-[#0d0714] rounded-tr-sm font-medium'
-                                  : 'bg-[#150e21] text-gray-100 rounded-tl-sm border border-[#2e1d44]/70 hover:border-[#ff4d4d]/30'
+                                  ? 'bg-gradient-to-br from-[#ff3d5a] to-[#cc1b36] text-white rounded-tr-sm font-medium border border-[#ff4d4d]/20'
+                                  : 'bg-[#181125]/95 text-gray-100 rounded-tl-sm border border-[#3e245a]/40 hover:border-[#ff4d4d]/30 shadow-[0_4px_20px_rgba(0,0,0,0.15)]'
                             } ${msg.isDeleted ? 'opacity-40 italic' : ''}`}
                           >
                             {repliedMsg && msg.type !== 'sticker' && !msg.isDeleted && (
@@ -415,7 +796,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                   {repliedMsg.senderId === user?.uid ? (t.chatYou || "You") : recipientName}
                                 </span>
                                 <span className="opacity-80 line-clamp-1">
-                                  {repliedMsg.isDeleted ? (t.chatMessageDeleted || "Deleted") : (repliedMsg.type === 'sticker' ? 'Sticker' : repliedMsg.text)}
+                                  {repliedMsg.isDeleted ? (t.chatMessageDeleted || "Deleted") : (repliedMsg.type === 'sticker' ? 'Sticker' : repliedMsg.type === 'voice' ? '🎤 ' + (lang === 'ru' ? 'Голосовое' : 'Voice') : repliedMsg.text)}
                                 </span>
                               </div>
                             )}
@@ -427,6 +808,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               </div>
                             ) : msg.type === 'sticker' ? (
                               <div className="text-6xl filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)] transform hover:scale-110 transition-transform">{msg.text}</div>
+                            ) : msg.type === 'voice' ? (
+                              <VoiceMessagePlayer src={msg.text} lang={lang} />
                             ) : msg.type === 'image' ? (
                               <div className="flex flex-col gap-2">
                                 {msg.images && msg.images.length > 0 ? (
@@ -463,23 +846,31 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               {msg.isEdited && !msg.isDeleted && <span>({t.edited || "edited"})</span>}
                               {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'HH:mm') : ''}
                               {isMe && !msg.isDeleted && (
-                                isRead ? <CheckCheck className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-blue-400' : 'text-[#0d0714]'}`} /> : <Check className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-gray-400' : 'opacity-60'}`} />
+                                isRead ? <CheckCheck className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-blue-400' : msg.type === 'voice' ? 'text-[#ff4d4d]' : 'text-[#0d0714]'}`} /> : <Check className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-gray-400' : 'opacity-60'}`} />
                               )}
                             </div>
 
                             {msg.reactions && Object.keys(msg.reactions).length > 0 && !msg.isDeleted && (
-                              <div className={`absolute -bottom-3 ${isMe ? 'right-2' : 'left-2'} flex items-center gap-1 bg-[#1c0f2a] border border-[#3e245a] rounded-full px-2 py-0.5 shadow-md z-10 hover:border-[#ff4d4d]/40 transition-colors`}>
-                                {Object.entries(msg.reactions).map(([emoji, users]) => users.length > 0 && (
+                              <div className={`absolute -bottom-3.5 ${isMe ? 'right-2' : 'left-2'} flex items-center gap-1.5 bg-[#09050d]/95 border border-[#3e245a] rounded-full px-2 py-0.5 shadow-[0_0_12px_rgba(0,0,0,0.6)] z-10 hover:border-[#ff4d4d]/40 transition-colors`}>
+                                {Object.entries(msg.reactions).map(([reactionId, users]) => users.length > 0 && (
                                   <button
-                                    key={emoji}
+                                    key={reactionId}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      toggleReaction(msg.id, recipientId, emoji);
+                                      toggleReaction(msg.id, recipientId, reactionId);
                                     }}
-                                    className={`flex items-center gap-1 text-[10px] ${users.includes(user?.uid || '') ? 'text-[#ff4d4d]' : 'text-gray-400'}`}
+                                    className={`flex items-center gap-1 px-1 py-0.5 rounded-full border border-transparent transition-all ${
+                                      users.includes(user?.uid || '') 
+                                        ? 'bg-[#ff4d4d]/10 border-[#ff4d4d]/30' 
+                                        : 'hover:bg-white/5'
+                                    }`}
                                   >
-                                    <span>{emoji}</span>
-                                    <span className="font-bold">{users.length}</span>
+                                    {NEON_REACTION_CONFIG[reactionId] ? (
+                                      renderNeonReactionIcon(reactionId, 11)
+                                    ) : (
+                                      <span className="text-xs">{reactionId}</span>
+                                    )}
+                                    <span className={`text-[9px] font-black font-mono leading-none ${users.includes(user?.uid || '') ? 'text-[#ff4d4d]' : 'text-gray-400'}`}>{users.length}</span>
                                   </button>
                                 ))}
                               </div>
@@ -644,37 +1035,87 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                 )}
               </AnimatePresence>
 
-              <form onSubmit={handleSend} className="p-3 bg-[#09050d] z-20">
-                <div className="flex items-center gap-1.5 bg-[#0d0714] rounded-full p-1 border border-[#311c47] focus-within:border-[#ff4d4d]/50 focus-within:shadow-[0_0_15px_rgba(255,77,77,0.05)] transition-all">
-                  <button
-                    type="button"
-                    onClick={() => setShowStickers(!showStickers)}
-                    className={`shrink-0 p-2.5 rounded-full transition-all ${showStickers ? 'bg-[#ff4d4d] text-[#0d0714] shadow-md' : 'text-gray-400 hover:text-[#ff4d4d] hover:bg-[#1a0f26]'}`}
-                  >
-                    <Sticker className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
-                  </button>
-                  <label className="shrink-0 p-2.5 rounded-full transition-all text-gray-400 hover:text-[#ff4d4d] hover:bg-[#1a0f26] cursor-pointer flex items-center justify-center">
-                    <ImageIcon className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
-                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={isSending} />
-                  </label>
-                  <input
-                    type="text"
-                    value={inputText}
-                    onChange={handleTyping}
-                    onKeyDown={handleKeyDown}
-                    disabled={isSending}
-                    placeholder={t.chatPlaceholder}
-                    className="flex-1 min-w-0 bg-transparent px-3 py-2 text-sm sm:text-base text-white outline-none disabled:opacity-50 placeholder:text-gray-600"
-                  />
-                  <button
-                    type="submit"
-                    disabled={(!inputText.trim() && selectedImages.length === 0) || isSending}
-                    className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-[#ff4d4d] hover:bg-white disabled:opacity-20 disabled:cursor-not-allowed text-[#0d0714] hover:scale-105 disabled:scale-100 rounded-full transition-all active:scale-95 shrink-0 mr-1 shadow-lg shadow-[#ff4d4d]/10"
-                  >
-                    <Send className="w-4 h-4 ml-0.5" />
-                  </button>
+              {isRecording ? (
+                <div className="p-3 bg-[#09050d] z-20">
+                  <div className="flex items-center justify-between bg-[#150a1c] rounded-full p-2 border border-[#ff4d4d]/30 shadow-[0_0_15px_rgba(255,77,77,0.1)]">
+                    <button
+                      type="button"
+                      onClick={cancelRecording}
+                      className="p-2.5 rounded-full bg-red-950/40 text-red-400 hover:bg-red-500 hover:text-[#0d0714] border border-red-500/20 transition-all active:scale-90 flex items-center justify-center animate-pulse"
+                      title={lang === 'ru' ? 'Удалить запись' : 'Cancel recording'}
+                    >
+                      <Trash size={16} />
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                      <motion.div
+                        animate={{ scale: [1, 1.25, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                        className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-[0_0_8px_#ef4444]"
+                      />
+                      <span className="text-xs font-black uppercase tracking-widest text-[#ff4d4d]">
+                        {lang === 'ru' ? 'ЗАПИСЬ' : 'RECORDING'}
+                      </span>
+                      <span className="text-sm font-mono font-bold text-white bg-[#09050d] px-2.5 py-1 rounded-lg border border-[#311c47]">
+                        {formatRecordingTime(recordingSeconds)}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={stopAndSendRecording}
+                      className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-emerald-500 hover:bg-white text-[#0d0714] rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_0_12px_rgba(16,185,129,0.4)] animate-bounce"
+                      title={lang === 'ru' ? 'Отправить' : 'Send recording'}
+                    >
+                      <Send className="w-4 h-4 ml-0.5" />
+                    </button>
+                  </div>
                 </div>
-              </form>
+              ) : (
+                <form onSubmit={handleSend} className="p-3 bg-[#09050d] z-20">
+                  <div className="flex items-center gap-1.5 bg-[#0d0714] rounded-full p-1 border border-[#311c47] focus-within:border-[#ff4d4d]/50 focus-within:shadow-[0_0_15px_rgba(255,77,77,0.05)] transition-all">
+                    <button
+                      type="button"
+                      onClick={() => setShowStickers(!showStickers)}
+                      className={`shrink-0 p-2.5 rounded-full transition-all ${showStickers ? 'bg-[#ff4d4d] text-[#0d0714] shadow-md' : 'text-gray-400 hover:text-[#ff4d4d] hover:bg-[#1a0f26]'}`}
+                    >
+                      <Sticker className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
+                    </button>
+                    <label className="shrink-0 p-2.5 rounded-full transition-all text-gray-400 hover:text-[#ff4d4d] hover:bg-[#1a0f26] cursor-pointer flex items-center justify-center">
+                      <ImageIcon className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={isSending} />
+                    </label>
+                    <input
+                      type="text"
+                      value={inputText}
+                      onChange={handleTyping}
+                      onKeyDown={handleKeyDown}
+                      disabled={isSending}
+                      placeholder={t.chatPlaceholder}
+                      className="flex-1 min-w-0 bg-transparent px-3 py-2 text-sm sm:text-base text-white outline-none disabled:opacity-50 placeholder:text-gray-600"
+                    />
+                    
+                    {inputText.trim() || selectedImages.length > 0 ? (
+                      <button
+                        type="submit"
+                        disabled={isSending}
+                        className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-[#ff4d4d] hover:bg-white text-[#0d0714] hover:scale-105 rounded-full transition-all active:scale-95 shrink-0 mr-1 shadow-lg shadow-[#ff4d4d]/10"
+                      >
+                        <Send className="w-4 h-4 ml-0.5" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={startRecording}
+                        className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-[#1b1129] hover:bg-[#ff4d4d] border border-[#3e245a] hover:border-[#ff4d4d] text-gray-400 hover:text-[#0d0714] hover:scale-105 rounded-full transition-all active:scale-95 shrink-0 mr-1 shadow-md shadow-[#ff4d4d]/5"
+                        title={lang === 'ru' ? 'Голосовое сообщение' : 'Voice Message'}
+                      >
+                        <Mic className="w-4.5 h-4.5" />
+                      </button>
+                    )}
+                  </div>
+                </form>
+              )}
             </div>
           </>
         )}
@@ -709,6 +1150,357 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
       </AnimatePresence>,
       document.body
     )}
+
+    {/* Global Premium Message Actions Overlay Portal */}
+    {(() => {
+      const activeMsg = messages.find(m => m.id === activeMessageId);
+      if (!activeMsg) return null;
+      const isMe = activeMsg.senderId === user?.uid;
+      
+      return createPortal(
+        <AnimatePresence>
+          {activeMessageId && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[99999] flex flex-col items-center justify-center p-4 bg-[#0a0510]/85 backdrop-blur-md"
+              onClick={() => {
+                setActiveMessageId(null);
+                setShowMoreReactions(null);
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                className="w-full max-w-sm bg-[#130b1c] border-2 border-[#ff4d4d]/30 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(255,77,77,0.2)] flex flex-col gap-5 text-center relative overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Neon decorative background glow */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[#ff4d4d]/10 rounded-full blur-[45px] pointer-events-none" />
+
+                {/* Header context */}
+                <div className="flex flex-col items-center gap-1.5 relative z-10">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] mb-1 px-3 py-1 bg-[#ff4d4d]/10 rounded-full">
+                    {lang === 'ru' ? 'СООБЩЕНИЕ' : 'MESSAGE INFO'}
+                  </span>
+                  
+                  {/* Selected message preview */}
+                  <div className={`w-full p-4 rounded-2xl text-sm sm:text-base text-left break-words border ${
+                    isMe 
+                      ? 'bg-gradient-to-br from-[#ff3d5a] to-[#cc1b36] border-[#ff3d5a]/20 text-white font-medium shadow-md shadow-[#ff3d5a]/10' 
+                      : 'bg-[#181125] border-[#3e245a]/50 text-gray-100 shadow-md'
+                  }`}>
+                    {activeMsg.type === 'sticker' ? (
+                      <span className="text-5xl block text-center py-2">{activeMsg.text}</span>
+                    ) : (
+                      <span className="block whitespace-pre-wrap">{activeMsg.text}</span>
+                    )}
+                    
+                    {activeMsg.images && activeMsg.images.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {activeMsg.images.map((img: string, i: number) => (
+                          <img key={i} src={img} className="max-h-24 w-full object-cover rounded-xl" alt="" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick reactions strip */}
+                <div className="flex flex-col gap-2 relative z-10">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    {lang === 'ru' ? 'Выбрать реакцию' : 'React to message'}
+                  </span>
+                  <div className="flex items-center justify-center p-2.5 bg-[#09050d] rounded-2xl border border-[#3e245a]/40 gap-1.5 overflow-x-auto">
+                    {customReactionsList.map(reactionId => {
+                      const isSelected = activeMsg.reactions?.[reactionId]?.includes(user?.uid || '');
+                      return (
+                        <button
+                          key={reactionId}
+                          onClick={() => {
+                            toggleReaction(activeMsg.id, recipientId, reactionId);
+                            playSound('react');
+                            setActiveMessageId(null);
+                          }}
+                          className={`p-2.5 hover:scale-125 transition-transform rounded-xl duration-150 shrink-0 ${
+                            isSelected 
+                              ? 'bg-[#ff4d4d]/20 border border-[#ff4d4d]/40 shadow-[0_0_8px_rgba(255,77,77,0.2)]' 
+                              : 'hover:bg-white/5 border border-transparent'
+                          }`}
+                        >
+                          {NEON_REACTION_CONFIG[reactionId] ? (
+                            renderNeonReactionIcon(reactionId, 18)
+                          ) : (
+                            <span className="text-xl leading-none">{reactionId}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMoreReactions(showMoreReactions === activeMsg.id ? null : activeMsg.id);
+                      }}
+                      className="p-2.5 hover:scale-125 transition-transform rounded-xl hover:bg-white/5 text-gray-400 hover:text-[#ff4d4d] shrink-0 border border-transparent"
+                      title="More reactions"
+                    >
+                      ➕
+                    </button>
+                  </div>
+
+                  {/* Additional reactions shelf */}
+                  <AnimatePresence>
+                    {showMoreReactions === activeMsg.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="grid grid-cols-6 gap-2 p-2.5 bg-[#06030a] border border-[#ff4d4d]/20 rounded-2xl max-h-36 overflow-y-auto mt-1"
+                      >
+                        {['thumbsup', 'heart', 'flame', 'zap', 'star', 'smile', 'crown', 'award', 'ghost', 'skull', 'sparkles', 'shield'].map(reactionId => {
+                          const isSelected = activeMsg.reactions?.[reactionId]?.includes(user?.uid || '');
+                          return (
+                            <button
+                              key={reactionId}
+                              onClick={() => {
+                                toggleReaction(activeMsg.id, recipientId, reactionId);
+                                playSound('react');
+                                setShowMoreReactions(null);
+                                setActiveMessageId(null);
+                              }}
+                              className={`p-2 hover:scale-120 transition-transform rounded-xl flex items-center justify-center ${
+                                isSelected 
+                                  ? 'bg-[#ff4d4d]/25 border border-[#ff4d4d]/40 shadow-[0_0_8px_rgba(255,77,77,0.2)]' 
+                                  : 'hover:bg-white/5 border border-transparent'
+                              }`}
+                            >
+                              {renderNeonReactionIcon(reactionId, 18)}
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Custom reaction panel configurer */}
+                  <div className="mt-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowReactionCustomizer(!showReactionCustomizer);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 bg-[#12091d] border border-[#ff4d4d]/20 hover:border-[#ff4d4d]/50 rounded-xl text-left text-xs text-gray-300 hover:text-white transition-colors"
+                    >
+                      <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px]">
+                        <span>⚙️</span>
+                        {lang === 'ru' ? 'Настроить быстрые реакции' : 'Customize Quick Reactions'}
+                      </span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showReactionCustomizer ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {showReactionCustomizer && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="mt-1.5 p-3 bg-[#0a0510] border border-[#3e245a]/50 rounded-2xl space-y-3"
+                        >
+                          <p className="text-[10px] text-gray-400 leading-normal">
+                            {lang === 'ru' 
+                              ? 'Выберите любой слот ниже, затем выберите новую неоновую реакцию для быстрой панели.' 
+                              : 'Select a slot below, then choose a new neon reaction for your quick panel.'}
+                          </p>
+
+                          {/* 6 slots */}
+                          <div className="grid grid-cols-6 gap-1.5">
+                            {customReactionsList.map((reactionId, idx) => (
+                              <button
+                                key={idx}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCustomizingSlotIndex(customizingSlotIndex === idx ? null : idx);
+                                  setManualEmoji('');
+                                }}
+                                className={`p-1.5 rounded-xl border flex flex-col items-center justify-center transition-all h-14 ${customizingSlotIndex === idx ? 'bg-[#ff4d4d]/15 border-[#ff4d4d] scale-105 shadow-[0_0_8px_rgba(255,77,77,0.2)]' : 'bg-[#150d22] border-[#3e245a] hover:border-[#ff4d4d]/40'}`}
+                              >
+                                {NEON_REACTION_CONFIG[reactionId] ? (
+                                  renderNeonReactionIcon(reactionId, 16)
+                                ) : (
+                                  <span className="text-sm leading-none">{reactionId}</span>
+                                )}
+                                <span className="text-[7px] text-[#ff4d4d]/60 font-mono mt-0.5">S{idx + 1}</span>
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Customizer drawer for selected slot */}
+                          {customizingSlotIndex !== null && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="bg-[#120a1c] p-2.5 rounded-xl border border-[#ff4d4d]/20 space-y-2.5"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-black uppercase text-[#ff4d4d] tracking-widest">
+                                  {lang === 'ru' ? `Изменение слота ${customizingSlotIndex + 1}` : `Editing Slot ${customizingSlotIndex + 1}`}
+                                </span>
+                                <button 
+                                  onClick={() => setCustomizingSlotIndex(null)}
+                                  className="text-[10px] text-gray-400 hover:text-white font-bold"
+                                >
+                                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                                </button>
+                              </div>
+
+                              {/* Grid of extra emojis to pick */}
+                              <div className="grid grid-cols-6 gap-1.5 max-h-24 overflow-y-auto p-1.5 bg-[#09050d] rounded-lg border border-[#3e245a]/30">
+                                {['thumbsup', 'heart', 'flame', 'zap', 'star', 'smile', 'crown', 'award', 'ghost', 'skull', 'sparkles', 'shield'].map(reactionId => (
+                                  <button
+                                    key={reactionId}
+                                    onClick={() => {
+                                      updateCustomReactionSlot(customizingSlotIndex, reactionId);
+                                      setCustomizingSlotIndex(null);
+                                    }}
+                                    className="p-1.5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-all active:scale-90"
+                                  >
+                                    {renderNeonReactionIcon(reactionId, 18)}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Manual text input to allow typing ANY custom emoji or letter */}
+                              <div className="flex gap-1.5 items-center">
+                                <input
+                                  type="text"
+                                  value={manualEmoji}
+                                  onChange={(e) => setManualEmoji(e.target.value)}
+                                  placeholder={lang === 'ru' ? 'Имя реакции (например, crown)...' : 'Reaction ID (e.g. crown)...'}
+                                  maxLength={15}
+                                  className="flex-1 bg-[#09050d] border border-[#3e245a]/50 focus:border-[#ff4d4d] rounded-lg px-2.5 py-1 text-xs text-white placeholder-gray-500 focus:outline-none"
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (manualEmoji.trim()) {
+                                      updateCustomReactionSlot(customizingSlotIndex, manualEmoji.trim());
+                                      setCustomizingSlotIndex(null);
+                                      setManualEmoji('');
+                                    }
+                                  }}
+                                  disabled={!manualEmoji.trim()}
+                                  className="px-3 py-1 bg-[#ff4d4d] hover:bg-white text-[#15101e] text-[10px] font-black uppercase tracking-wider rounded-lg disabled:opacity-40 transition-colors"
+                                >
+                                  {lang === 'ru' ? 'ОК' : 'OK'}
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+
+                {/* Main options list */}
+                <div className="grid grid-cols-2 gap-2 relative z-10 mt-1">
+                  <button
+                    onClick={() => {
+                      setReplyingTo(activeMsg);
+                      setActiveMessageId(null);
+                    }}
+                    className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                  >
+                    <Reply className="w-4 h-4 text-[#ff4d4d]" />
+                    {t.chatReply || "Reply"}
+                  </button>
+
+                  {currentChat?.pinnedMessage?.id === activeMsg.id ? (
+                    <button
+                      onClick={() => {
+                        unpinMessage(recipientId);
+                        setActiveMessageId(null);
+                      }}
+                      className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                    >
+                      <PinOff className="w-4 h-4 text-[#ff4d4d]" />
+                      {lang === 'ru' ? 'Открепить' : 'Unpin'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        pinMessage(recipientId, activeMsg);
+                        setActiveMessageId(null);
+                      }}
+                      className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                    >
+                      <Pin className="w-4 h-4 text-[#ff4d4d]" />
+                      {lang === 'ru' ? 'Закрепить' : 'Pin'}
+                    </button>
+                  )}
+
+                  {activeMsg.type !== 'sticker' && (
+                    <button
+                      onClick={() => {
+                        handleCopy(activeMsg.text);
+                        setActiveMessageId(null);
+                        window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Скопировано в буфер обмена!' : 'Copied to clipboard!' }));
+                      }}
+                      className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                    >
+                      <Copy className="w-4 h-4 text-[#ff4d4d]" />
+                      {t.chatCopy || "Copy"}
+                    </button>
+                  )}
+
+                  {isMe && activeMsg.type !== 'sticker' && (
+                    <button
+                      onClick={() => {
+                        setEditingMessage(activeMsg);
+                        setInputText(activeMsg.text);
+                        setActiveMessageId(null);
+                      }}
+                      className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                    >
+                      <Pencil className="w-4 h-4 text-[#ff4d4d]" />
+                      {t.chatEdit || "Edit"}
+                    </button>
+                  )}
+
+                  {isMe && (
+                    <button
+                      onClick={() => {
+                        deleteMessage(activeMsg.id, recipientId);
+                        setActiveMessageId(null);
+                      }}
+                      className={`${activeMsg.type === 'sticker' ? 'col-span-2' : ''} flex items-center justify-center gap-2 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md`}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-400" />
+                      {t.chatDelete || "Delete"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Direct Close Button */}
+                <button
+                  onClick={() => {
+                    setActiveMessageId(null);
+                    setShowMoreReactions(null);
+                  }}
+                  className="py-3 bg-[#ff4d4d] text-[#0d0714] rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:scale-[1.02] active:scale-95 transition-all shadow-md shadow-[#ff4d4d]/10 relative z-10"
+                >
+                  {lang === 'ru' ? 'Закрыть' : 'Close'}
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      );
+    })()}
     </>
   );
 };

@@ -20,12 +20,25 @@ interface ProfileModalProps {
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lang, viewUser }) => {
   const t = translations[lang];
-  const { user: currentUser, logout, isAdmin, role: currentUserRole, updateGlobalPhoto, isVerified: isOwnVerified, sendVerificationEmail } = useAuth();
+  const { user: currentUser, logout, isAdmin, role: currentUserRole, updateGlobalPhoto, isVerified: isOwnVerified, sendVerificationEmail, reloadUser } = useAuth();
   const { xp: currentXp, reputation: currentRep, role: currentRole, photoURL: currentPhoto, updateProfile: updateUserData } = useUserData(lang);
   
   const isOwnProfile = !viewUser || viewUser.uid === currentUser?.uid;
   const user = viewUser || currentUser;
   const isVerified = isOwnProfile ? isOwnVerified : (viewUser?.isVerified || false);
+
+  // Dynamic verification status background poller
+  useEffect(() => {
+    if (!isOpen || !isOwnProfile || isOwnVerified) return;
+    
+    const interval = setInterval(async () => {
+      if (reloadUser) {
+        await reloadUser();
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, isOwnProfile, isOwnVerified, reloadUser]);
   
   // Use real data if it's the current user's profile, otherwise use viewUser data
   const xp = isOwnProfile ? currentXp : (viewUser as any)?.xp || 0;

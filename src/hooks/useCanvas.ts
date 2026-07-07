@@ -91,6 +91,61 @@ export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
     }
   };
 
+  const drawPixelsBatch = async (updates: Record<string, string | null>) => {
+    if (!user) return;
+    try {
+      const docRef = doc(db, 'canvases', docId);
+      const firestorePixelsPayload: Record<string, any> = {};
+      const firestoreDeletes: Record<string, any> = {};
+      let hasDeletes = false;
+      let hasDraws = false;
+
+      Object.entries(updates).forEach(([pixelId, color]) => {
+        if (color === null || color === 'eraser') {
+          firestoreDeletes[`pixels.${pixelId}`] = deleteField();
+          hasDeletes = true;
+        } else {
+          if (!/^#[0-9A-Fa-f]{6}$/.test(color)) return;
+          const newPixel: CanvasPixel = {
+            color: color.substring(0, 10),
+            userId: user.uid,
+            updatedAt: Date.now()
+          };
+          firestorePixelsPayload[pixelId] = newPixel;
+          hasDraws = true;
+        }
+      });
+
+      // Optimistic update of state
+      setPixels(prev => {
+        const next = { ...prev };
+        Object.entries(updates).forEach(([pixelId, color]) => {
+          if (color === null || color === 'eraser') {
+            delete next[pixelId];
+          } else {
+            if (!/^#[0-9A-Fa-f]{6}$/.test(color)) return;
+            next[pixelId] = {
+              color: color.substring(0, 10),
+              userId: user.uid,
+              updatedAt: Date.now()
+            };
+          }
+        });
+        return next;
+      });
+
+      // Write to Firestore in batch
+      if (hasDraws) {
+        await setDoc(docRef, { pixels: firestorePixelsPayload }, { merge: true });
+      }
+      if (hasDeletes) {
+        await updateDoc(docRef, firestoreDeletes);
+      }
+    } catch (error) {
+      console.error("Error batch updating pixels:", error);
+    }
+  };
+
   const clearCanvas = async () => {
     if (!user) return;
     try {
@@ -102,5 +157,5 @@ export function useCanvas(size: number = 24, canvasId: string = 'canvas') {
     }
   };
 
-  return { pixels, loading, drawPixel, erasePixel, clearCanvas, size };
+  return { pixels, loading, drawPixel, erasePixel, drawPixelsBatch, clearCanvas, size };
 }

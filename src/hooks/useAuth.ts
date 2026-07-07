@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
 import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // --- GLOBAL SINGLETON STATE ---
 let globalUser: User | null = null;
@@ -12,6 +12,7 @@ let globalIsPremium = false;
 let globalIsVerified = false;
 let globalPhotoURL: string | null = null;
 let authInitialized = false;
+let userDocUnsubscribe: (() => void) | null = null;
 
 // Global cache to maintain stable object reference for user Proxy
 let cachedProxiedUser: User | null = null;
@@ -63,56 +64,24 @@ const initAuth = () => {
   });
 
   onAuthStateChanged(auth, async (user) => {
+    // Unsubscribe from previous listener to avoid leaks
+    if (userDocUnsubscribe) {
+      userDocUnsubscribe();
+      userDocUnsubscribe = null;
+    }
+
     globalUser = user;
     
     if (user) {
       try {
         const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
         
         const fallbackName = user.displayName || user.email?.split('@')[0] || 'User';
         const fallbackPhoto = user.photoURL || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(fallbackName)}`;
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          globalRole = userData.role || 'user';
-          globalIsPremium = userData.isPremium || false;
-          globalIsAdmin = globalRole === 'admin';
-          globalIsVerified = userData.isVerified || globalRole === 'admin' || globalRole === 'moderator' || globalRole === 'beta-tester' || user.emailVerified || false;
-          globalPhotoURL = userData.photoURL || fallbackPhoto;
-          
-          // Auto-verify user document if emailVerified is true but not yet stored
-          if (user.emailVerified && !userData.isVerified) {
-            try {
-              await setDoc(userDocRef, { isVerified: true }, { merge: true });
-              await setDoc(doc(db, 'public_profiles', user.uid), { isVerified: true }, { merge: true });
-            } catch (err) {
-              console.error("Error auto-verifying user in firestore:", err);
-            }
-          }
-          
-          // Create or update public profile safely without triggering "role" validation on update if unchanged
-          const publicDocRef = doc(db, 'public_profiles', user.uid);
-          const publicDoc = await getDoc(publicDocRef);
-          if (!publicDoc.exists()) {
-            await setDoc(publicDocRef, {
-              uid: user.uid,
-              displayName: fallbackName,
-              photoURL: userData.photoURL || fallbackPhoto,
-              role: 'user',
-              isPremium: globalIsPremium,
-              isVerified: globalIsVerified,
-            });
-          } else {
-            // Only update displayName or photoURL, do not include role to prevent security rules violation
-            await setDoc(publicDocRef, {
-              displayName: fallbackName,
-              photoURL: userData.photoURL || fallbackPhoto,
-            }, { merge: true });
-          }
-        } else {
-          // Rule says: allow create: if isOwner(userId) && request.resource.data.get('role', 'user') == 'user';
-          // So we must write 'role' as 'user' initially.
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
           const initialRole = 'user';
           const initialVerified = user.emailVerified || false;
           const userData = {
@@ -135,13 +104,54 @@ const initAuth = () => {
             isVerified: initialVerified,
             isPremium: false,
           });
-          
+
           globalRole = initialRole;
           globalIsPremium = false;
           globalIsAdmin = false;
           globalIsVerified = initialVerified;
           globalPhotoURL = fallbackPhoto;
+          globalLoading = false;
+          notifySubscribers();
+        } else {
+          // Warm up synchronous state immediately with the fetched doc
+          const userData = userDoc.data();
+          globalRole = userData.role || 'user';
+          globalIsPremium = userData.isPremium || false;
+          globalIsAdmin = globalRole === 'admin';
+          globalIsVerified = userData.isVerified || globalRole === 'admin' || globalRole === 'moderator' || globalRole === 'beta-tester' || user.emailVerified || false;
+          globalPhotoURL = userData.photoURL || fallbackPhoto;
+          globalLoading = false;
+          notifySubscribers();
         }
+
+        // Setup real-time listener to instantly reflect any Firestore user data changes (e.g. verification status, roles)
+        userDocUnsubscribe = onSnapshot(userDocRef, async (snapshot) => {
+          if (snapshot.exists()) {
+            const userData = snapshot.data();
+            globalRole = userData.role || 'user';
+            globalIsPremium = userData.isPremium || false;
+            globalIsAdmin = globalRole === 'admin';
+            globalIsVerified = userData.isVerified || globalRole === 'admin' || globalRole === 'moderator' || globalRole === 'beta-tester' || user.emailVerified || false;
+            globalPhotoURL = userData.photoURL || fallbackPhoto;
+
+            // Auto-verify if firebase auth says emailVerified but DB is false
+            if (user.emailVerified && !userData.isVerified) {
+              try {
+                await setDoc(userDocRef, { isVerified: true }, { merge: true });
+                await setDoc(doc(db, 'public_profiles', user.uid), { isVerified: true }, { merge: true });
+              } catch (err) {
+                console.error("Error auto-verifying user in snapshot:", err);
+              }
+            }
+          }
+          globalLoading = false;
+          notifySubscribers();
+        }, (err) => {
+          console.error("User document subscription error:", err);
+          globalLoading = false;
+          notifySubscribers();
+        });
+
       } catch (e) {
         console.error("Error fetching user role:", e);
         globalIsAdmin = false;
@@ -149,16 +159,18 @@ const initAuth = () => {
         globalIsPremium = false;
         globalIsVerified = user.emailVerified || false;
         globalPhotoURL = user.photoURL || null;
+        globalLoading = false;
+        notifySubscribers();
       }
     } else {
       globalIsAdmin = false;
       globalRole = 'user';
       globalIsPremium = false;
+      globalIsVerified = false;
       globalPhotoURL = null;
+      globalLoading = false;
+      notifySubscribers();
     }
-    
-    globalLoading = false;
-    notifySubscribers();
   });
 
   // Last seen tracker - only runs ONCE globally, every 5 minutes
@@ -277,6 +289,17 @@ export function useAuth() {
     sendVerificationEmail: async () => {
       if (auth.currentUser) {
         await sendEmailVerification(auth.currentUser);
+      }
+    },
+    reloadUser: async () => {
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+        if (auth.currentUser.emailVerified) {
+          globalIsVerified = true;
+          await setDoc(doc(db, 'users', auth.currentUser.uid), { isVerified: true }, { merge: true });
+          await setDoc(doc(db, 'public_profiles', auth.currentUser.uid), { isVerified: true }, { merge: true });
+          notifySubscribers();
+        }
       }
     },
     updateGlobalPhoto: (url: string) => {
