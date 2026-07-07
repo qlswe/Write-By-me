@@ -241,8 +241,10 @@ export default function App() {
   const { chats } = useChat();
   const notifiedChats = useRef<Record<string, number>>({});
   const notifiedTyping = useRef<Record<string, boolean>>({});
+  const notifiedTypingTime = useRef<Record<string, number>>({});
   const notifiedReads = useRef<Record<string, number>>({});
-  const profileCache = useRef<Record<string, string>>({});
+  const [profileNames, setProfileNames] = useState<Record<string, string>>({});
+  const fetchingProfiles = useRef<Record<string, boolean>>({});
   const [unreadCount, setUnreadCount] = useState(0);
 
   const [showLoadWidget, setShowLoadWidget] = useState(() => {
@@ -272,7 +274,7 @@ export default function App() {
 
     let count = 0;
     
-    chats.forEach(async (chat) => {
+    chats.forEach((chat) => {
       const lastMessageAt = chat.lastMessageAt?.toMillis?.() || 0;
       const myReadAt = chat.lastReadAt?.[user.uid]?.toMillis?.() || 0;
       const otherUserId = chat.participants.find(id => id !== user.uid);
@@ -284,44 +286,42 @@ export default function App() {
 
       const lastNotified = notifiedChats.current[chat.id] || 0;
       
-      // Fetch profile quickly if needed
-      if (!profileCache.current[otherUserId]) {
-        try {
-          const snap = await getDoc(doc(db, 'public_profiles', otherUserId));
+      // Fetch profile safely and only once
+      if (!profileNames[otherUserId] && !fetchingProfiles.current[otherUserId]) {
+        fetchingProfiles.current[otherUserId] = true;
+        getDoc(doc(db, 'public_profiles', otherUserId)).then(snap => {
           if (snap.exists()) {
-            profileCache.current[otherUserId] = snap.data().displayName || 'User';
+            const name = snap.data().displayName || 'User';
+            setProfileNames(prev => ({ ...prev, [otherUserId]: name }));
           }
-        } catch(e) {}
+        }).catch(() => {
+          fetchingProfiles.current[otherUserId] = false;
+        });
       }
-      const senderName = profileCache.current[otherUserId] || 'User';
+
+      const senderName = profileNames[otherUserId] || 'User';
       const isNotActiveChat = activeChat?.uid !== otherUserId;
 
-      const getChatNotificationText = (type: 'new_message' | 'typing' | 'read', sName: string, msgBody?: string) => {
+      const getChatNotificationText = (type: 'new_message' | 'typing', sName: string, msgBody?: string) => {
         if (lang === 'ru') {
           if (type === 'new_message') return `${sName}: ${msgBody || 'У вас новое непрочитанное сообщение.'}`;
           if (type === 'typing') return `${sName} печатает...`;
-          if (type === 'read') return `${sName} прочитал(а) ваше сообщение`;
         } else if (lang === 'by') {
           if (type === 'new_message') return `${sName}: ${msgBody || 'У вас новае непрачытанае паведамленне.'}`;
           if (type === 'typing') return `${sName} друкуе...`;
-          if (type === 'read') return `${sName} прачытаў(ла) ваша паведамленне`;
         } else if (lang === 'de') {
           if (type === 'new_message') return `${sName}: ${msgBody || 'Neue Nachricht.'}`;
           if (type === 'typing') return `${sName} schreibt...`;
-          if (type === 'read') return `${sName} hat Ihre Nachricht gelesen`;
         } else if (lang === 'fr') {
           if (type === 'new_message') return `${sName}: ${msgBody || 'Nouveau message.'}`;
           if (type === 'typing') return `${sName} écrit...`;
-          if (type === 'read') return `${sName} a lu votre message`;
         } else if (lang === 'zh') {
           if (type === 'new_message') return `${sName}: ${msgBody || '您有一条新消息。'}`;
           if (type === 'typing') return `${sName} 正在输入...`;
-          if (type === 'read') return `${sName} 已读您的消息`;
         } else {
           // English (default)
           if (type === 'new_message') return `${sName}: ${msgBody || 'You have a new unread message.'}`;
           if (type === 'typing') return `${sName} is typing...`;
-          if (type === 'read') return `${sName} read your message`;
         }
         return '';
       };
@@ -342,19 +342,24 @@ export default function App() {
         notifiedChats.current[chat.id] = lastMessageAt;
       }
 
-      // 2. Typing Indicator
+      // 2. Typing Indicator (Status notification, shown sparingly - NOT ALWAYS)
       const isTyping = !!chat.typing?.[otherUserId];
       const wasTyping = !!notifiedTyping.current[chat.id];
       if (isTyping && !wasTyping && isNotActiveChat) {
-        setToast(getChatNotificationText('typing', senderName));
+        const lastTypingToast = notifiedTypingTime.current[chat.id] || 0;
+        const now = Date.now();
+        if (now - lastTypingToast > 60000) { // Throttle status notifications to at most once per 60 seconds
+          setToast(getChatNotificationText('typing', senderName));
+          notifiedTypingTime.current[chat.id] = now;
+        }
       }
       notifiedTyping.current[chat.id] = isTyping;
 
-      // 3. Read Receipts
+      // 3. Read Receipts (Status Notification - DISABLED AS REQUESTED)
       const theirReadAt = chat.lastReadAt?.[otherUserId]?.toMillis?.() || 0;
       const lastNotifiedRead = notifiedReads.current[chat.id] || 0;
       if (theirReadAt > lastNotifiedRead && theirReadAt >= lastMessageAt && lastMessageAt > 0 && isNotActiveChat) {
-        setToast(getChatNotificationText('read', senderName));
+        // "Не уведомляй о прочитанном сообщении, бесполезно"
         notifiedReads.current[chat.id] = theirReadAt;
       } else if (!notifiedReads.current[chat.id]) {
         notifiedReads.current[chat.id] = theirReadAt; // initial sync
@@ -362,7 +367,7 @@ export default function App() {
     });
 
     setUnreadCount(count);
-  }, [chats, user, activeChat, lang]);
+  }, [chats, user, activeChat, lang, profileNames]);
 
   const t = translations[lang as Language];
 

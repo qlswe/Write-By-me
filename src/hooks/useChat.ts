@@ -16,6 +16,7 @@ export interface Message {
   reactions?: Record<string, string[]>; // emoji -> array of user IDs
   isEdited?: boolean;
   isDeleted?: boolean;
+  voiceDuration?: number;
 }
 
 export interface Chat {
@@ -140,7 +141,7 @@ export function useChat(otherUserId?: string) {
     };
   }, [user, otherUserId]);
 
-  const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' | 'image' | 'voice' = 'text', replyTo?: string, images?: string[]) => {
+  const sendMessage = async (text: string, recipientId: string, type: 'text' | 'sticker' | 'image' | 'voice' = 'text', replyTo?: string, images?: string[], voiceDuration?: number) => {
     if (!user || user.uid === recipientId || (!text.trim() && type !== 'image' && type !== 'voice' && (!images || images.length === 0))) return;
 
     const chatId = [user.uid, recipientId].sort().join('_');
@@ -159,7 +160,8 @@ export function useChat(otherUserId?: string) {
            createdAt: new Date().toISOString(),
            type,
            replyTo,
-           images: images ? images.map(img => encrypt(img, chatId)) : undefined
+           images: images ? images.map(img => encrypt(img, chatId)) : undefined,
+           voiceDuration
          };
          await vercelFallback.lpush(`chat:${chatId}`, JSON.stringify(messageData));
          return; // Skip firebase
@@ -183,6 +185,7 @@ export function useChat(otherUserId?: string) {
       };
       if (replyTo) messageData.replyTo = replyTo;
       if (images && images.length > 0) messageData.images = images.map(img => encrypt(img, chatId));
+      if (voiceDuration !== undefined) messageData.voiceDuration = voiceDuration;
 
       await addDoc(messagesRef, messageData);
 

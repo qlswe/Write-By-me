@@ -51,9 +51,9 @@ export const renderNeonReactionIcon = (reactionId: string, size = 14) => {
   return <IconComponent size={size} className={config.color} />;
 };
 
-export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language }> = ({ src, lang }) => {
+export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language; initialDuration?: number }> = ({ src, lang, initialDuration }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState<number | null>(null);
+  const [duration, setDuration] = useState<number | null>(initialDuration || null);
   const [currentTime, setCurrentTime] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -62,7 +62,7 @@ export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language }> = ({ 
     audioRef.current = audio;
 
     const handleLoadedMetadata = () => {
-      if (audio.duration && !isNaN(audio.duration)) {
+      if (audio.duration && !isNaN(audio.duration) && audio.duration !== Infinity) {
         setDuration(audio.duration);
       }
     };
@@ -72,28 +72,32 @@ export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language }> = ({ 
     const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
+      audio.currentTime = 0;
     };
 
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
 
-    // Audio elements sometimes load metadata out of order for blobs
-    const checkDurationInterval = setInterval(() => {
-      if (audio.duration && !isNaN(audio.duration) && audio.duration !== Infinity) {
-        setDuration(audio.duration);
-        clearInterval(checkDurationInterval);
-      }
-    }, 200);
+    // Only search for duration if initialDuration is not supplied
+    let checkDurationInterval: NodeJS.Timeout | null = null;
+    if (!initialDuration) {
+      checkDurationInterval = setInterval(() => {
+        if (audio.duration && !isNaN(audio.duration) && audio.duration !== Infinity) {
+          setDuration(audio.duration);
+          if (checkDurationInterval) clearInterval(checkDurationInterval);
+        }
+      }, 500);
+    }
 
     return () => {
       audio.pause();
-      clearInterval(checkDurationInterval);
+      if (checkDurationInterval) clearInterval(checkDurationInterval);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [src]);
+  }, [src, initialDuration]);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -186,15 +190,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingSecondsRef = useRef<number>(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   useEffect(() => {
     return () => {
       if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
       }
     };
-  }, [mediaRecorder]);
+  }, []);
 
   const startRecording = async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -249,20 +255,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
           reader.readAsDataURL(audioBlob);
           reader.onloadend = async () => {
             const base64Audio = reader.result as string;
-            await sendMessage(base64Audio, recipientId, 'voice');
+            await sendMessage(base64Audio, recipientId, 'voice', undefined, undefined, recordingSecondsRef.current);
             playSound('send');
           };
         }
       };
 
       recorder.start();
+      mediaRecorderRef.current = recorder;
       setMediaRecorder(recorder);
       setAudioChunks([]);
       setIsRecording(true);
       setRecordingSeconds(0);
+      recordingSecondsRef.current = 0;
 
       recordingIntervalRef.current = setInterval(() => {
-        setRecordingSeconds(prev => prev + 1);
+        setRecordingSeconds(prev => {
+          const next = prev + 1;
+          recordingSecondsRef.current = next;
+          return next;
+        });
       }, 1000);
     } catch (err: any) {
       console.error("Failed to start voice recording:", err);
@@ -673,7 +685,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
               onClick={() => handleScrollToPinned(currentChat.pinnedMessage!.id)}
               className="flex items-center gap-2.5 min-w-0 cursor-pointer flex-1"
             >
-              <Pin className="w-3.5 h-3.5 text-[#ff4d4d] shrink-0 shadow-[0_0_8px_#ff4d4d] animate-pulse" />
+              <Pin className="w-4 h-4 text-[#ff4d4d] shrink-0" />
               <div className="min-w-0">
                 <span className="text-[8px] font-black uppercase text-[#ff4d4d] tracking-widest block leading-none mb-1">
                   {lang === 'ru' ? 'ЗАКРЕПЛЕННОЕ СООБЩЕНИЕ' : 'PINNED MESSAGE'}
@@ -809,7 +821,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             ) : msg.type === 'sticker' ? (
                               <div className="text-6xl filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)] transform hover:scale-110 transition-transform">{msg.text}</div>
                             ) : msg.type === 'voice' ? (
-                              <VoiceMessagePlayer src={msg.text} lang={lang} />
+                              <VoiceMessagePlayer src={msg.text} lang={lang} initialDuration={msg.voiceDuration} />
                             ) : msg.type === 'image' ? (
                               <div className="flex flex-col gap-2">
                                 {msg.images && msg.images.length > 0 ? (
@@ -851,7 +863,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             </div>
 
                             {msg.reactions && Object.keys(msg.reactions).length > 0 && !msg.isDeleted && (
-                              <div className={`absolute -bottom-3.5 ${isMe ? 'right-2' : 'left-2'} flex items-center gap-1.5 bg-[#09050d]/95 border border-[#3e245a] rounded-full px-2 py-0.5 shadow-[0_0_12px_rgba(0,0,0,0.6)] z-10 hover:border-[#ff4d4d]/40 transition-colors`}>
+                              <div className={`absolute -bottom-3.5 ${isMe ? 'right-2' : 'left-2'} flex items-center gap-1 z-10 flex-wrap max-w-full`}>
                                 {Object.entries(msg.reactions).map(([reactionId, users]) => users.length > 0 && (
                                   <button
                                     key={reactionId}
@@ -859,16 +871,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                       e.stopPropagation();
                                       toggleReaction(msg.id, recipientId, reactionId);
                                     }}
-                                    className={`flex items-center gap-1 px-1 py-0.5 rounded-full border border-transparent transition-all ${
+                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full border transition-all shadow-[0_2px_8px_rgba(0,0,0,0.4)] ${
                                       users.includes(user?.uid || '') 
-                                        ? 'bg-[#ff4d4d]/10 border-[#ff4d4d]/30' 
-                                        : 'hover:bg-white/5'
+                                        ? 'bg-[#ff4d4d]/15 border-[#ff4d4d]/40 text-[#ff4d4d]' 
+                                        : 'bg-[#0f0a18]/95 border-[#2e1d44] text-gray-300 hover:border-[#ff4d4d]/30 hover:bg-[#1b112c]'
                                     }`}
                                   >
                                     {NEON_REACTION_CONFIG[reactionId] ? (
                                       renderNeonReactionIcon(reactionId, 11)
                                     ) : (
-                                      <span className="text-xs">{reactionId}</span>
+                                      <span className="text-xs leading-none">{reactionId}</span>
                                     )}
                                     <span className={`text-[9px] font-black font-mono leading-none ${users.includes(user?.uid || '') ? 'text-[#ff4d4d]' : 'text-gray-400'}`}>{users.length}</span>
                                   </button>
