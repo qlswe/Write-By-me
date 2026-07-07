@@ -64,6 +64,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   }, [messages.length, recipientId]);
 
   useEffect(() => {
+    if (!recipientId || typeof recipientId !== 'string' || recipientId.trim() === '') return;
     const unsub = onSnapshot(doc(db, 'public_profiles', recipientId), (doc) => {
       if (doc.exists()) {
         setRecipientProfile(doc.data());

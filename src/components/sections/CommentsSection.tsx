@@ -152,7 +152,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   // Dynamic profiles fetching
   useEffect(() => {
     if (comments.length === 0) return;
-    const uidsToFetch = Array.from(new Set(comments.map(c => c.authorUid))).filter(uid => !authorProfiles[uid]);
+    const uidsToFetch = Array.from(new Set(comments.map(c => c.authorUid))).filter(uid => uid && typeof uid === 'string' && uid.trim() !== '' && !authorProfiles[uid]);
     if (uidsToFetch.length === 0) return;
 
     const fetchProfiles = async () => {

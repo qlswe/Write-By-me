@@ -654,8 +654,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                               try {
                                 if (sendVerificationEmail) {
                                   await sendVerificationEmail();
-                                  setToast(lang === 'ru' ? 'Ссылка отправлена! Красивый HTML-шаблон сохранен в корне проекта!' : 'Link sent! Beautiful HTML template saved in the project root!');
-                                  setTimeout(() => setToast(null), 5000);
+                                  setToast(lang === 'ru' ? 'Ссылка для подтверждения отправлена на вашу почту!' : 'Verification link has been sent to your email!');
+                                  setTimeout(() => setToast(null), 4000);
                                 }
                               } catch (err: any) {
                                 console.error(err);
