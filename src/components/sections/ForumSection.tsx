@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Plus, Search, User as UserIcon, Shield, Clock, ArrowLeft, Send, Trash2, ChevronUp, ChevronDown, Pencil, X, Check } from 'lucide-react';
+import { MessageSquare, Plus, Search, User as UserIcon, Shield, Clock, ArrowLeft, Send, Trash2, ChevronUp, ChevronDown, Pencil, X, Check, Camera, Palette as PaletteIcon, Activity, Key, ShieldAlert, ShieldCheck, Cpu, RefreshCw, Ticket, Info, Sparkles } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { db } from '../../firebase';
@@ -12,6 +12,11 @@ import { useLimits } from '../../hooks/useLimits';
 import { AdsBlock } from '../ui/AdsBlock';
 
 import { vercelFallback } from '../../utils/vercelFallback';
+import { CanvasSection } from './CanvasSection';
+import { PromoSection } from './PromoSection';
+import { ChronicleSection } from './ChronicleSection';
+import { decryptImage, encryptImage } from '../../utils/encryption';
+
 
 interface ForumThread {
   id: string;
@@ -25,6 +30,7 @@ interface ForumThread {
   upvotes?: string[];
   downvotes?: string[];
   isEdited?: boolean;
+  imageUrl?: string;
 }
 
 interface ForumComment {
@@ -46,6 +52,12 @@ interface ForumSectionProps {
   lang: Language;
   onOpenChat: (uid: string, name: string, photoURL?: string) => void;
   role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
+  lowPerfMode?: boolean;
+  events?: any[];
+  promoCodes?: any[];
+  handleCopy?: (text: string) => void;
+  onEditEvent?: any;
+  onCreateEvent?: any;
 }
 
 const quotes: Record<string, string[]> = {
@@ -203,7 +215,59 @@ const ForumBotComment: React.FC<{
   );
 };
 
-export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, role }) => {
+const compressAndGetBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 600;
+        const MAX_HEIGHT = 600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        } else {
+          resolve(e.target?.result as string);
+        }
+      };
+      img.onerror = () => reject(new Error('Image load failed'));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('File read failed'));
+    reader.readAsDataURL(file);
+  });
+};
+
+export const ForumSection: React.FC<ForumSectionProps> = ({ 
+  lang, 
+  onOpenChat, 
+  role,
+  lowPerfMode = false,
+  events = [],
+  promoCodes = [],
+  handleCopy = () => {},
+  onEditEvent = () => {},
+  onCreateEvent = () => {}
+}) => {
   const { user } = useAuth();
   const t = translations[lang];
   const { checkLimit, incrementUsage } = useLimits();
@@ -216,6 +280,134 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
   const [newComment, setNewComment] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Custom states for Consolidated Activities & Posts section
+  const [activeTab, setActiveTab] = useState<'posts' | 'canvas' | 'activities' | 'security'>('posts');
+  const [subActivityTab, setSubActivityTab] = useState<'events' | 'promos'>('events');
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Doodling states
+  const [isDoodling, setIsDoodling] = useState(false);
+  const [doodleColor, setDoodleColor] = useState('#ff4d4d');
+  const [doodleBrushSize, setDoodleBrushSize] = useState(4);
+  const doodleCanvasRef = useRef<HTMLCanvasElement>(null);
+  const doodleDrawingRef = useRef(false);
+
+  // Security concept states
+  const [secureViewFeatureEnabled, setSecureViewFeatureEnabled] = useState(true);
+  const [isSecureViewOption, setIsSecureViewOption] = useState(true);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setSecureViewFeatureEnabled(data.secureViewEnabled !== false);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const [isE2EEEnabled, setIsE2EEEnabled] = useState(() => {
+    return localStorage.getItem('aha_security_e2ee') !== 'false';
+  });
+  const [isAntiIPCCensorEnabled, setIsAntiIPCCensorEnabled] = useState(() => {
+    return localStorage.getItem('aha_security_censor') !== 'false';
+  });
+  const [securityLogs, setSecurityLogs] = useState<Array<{ id: string; time: string; type: string; msg: string }>>([
+    { id: '1', time: new Date().toLocaleTimeString(), type: 'INFO', msg: 'Fools-Guard Firewall Core online.' },
+    { id: '2', time: new Date().toLocaleTimeString(), type: 'SUCCESS', msg: 'Anti-KMM Encryption Protocol loaded successfully.' }
+  ]);
+
+  const addSecurityLog = (type: 'INFO' | 'WARNING' | 'SUCCESS' | 'ALERT', msg: string) => {
+    setSecurityLogs(prev => [
+      { id: Date.now().toString(), time: new Date().toLocaleTimeString(), type, msg },
+      ...prev.slice(0, 49)
+    ]);
+  };
+
+  useEffect(() => {
+    localStorage.setItem('aha_security_e2ee', String(isE2EEEnabled));
+  }, [isE2EEEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('aha_security_censor', String(isAntiIPCCensorEnabled));
+  }, [isAntiIPCCensorEnabled]);
+
+  // Handle active drawing on canvas
+  const startDoodling = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const canvas = doodleCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    doodleDrawingRef.current = true;
+    ctx.beginPath();
+    
+    const rect = canvas.getBoundingClientRect();
+    let clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    let clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    ctx.moveTo(clientX - rect.left, clientY - rect.top);
+    ctx.strokeStyle = doodleColor;
+    ctx.lineWidth = doodleBrushSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  };
+
+  const drawDoodle = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!doodleDrawingRef.current) return;
+    e.preventDefault();
+    const canvas = doodleCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    let clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    let clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    ctx.lineTo(clientX - rect.left, clientY - rect.top);
+    ctx.stroke();
+  };
+
+  const stopDoodling = () => {
+    doodleDrawingRef.current = false;
+  };
+
+  const clearDoodle = () => {
+    const canvas = doodleCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const saveDoodleAttachment = () => {
+    const canvas = doodleCanvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    setAttachedImage(dataUrl);
+    setIsDoodling(false);
+    addSecurityLog('SUCCESS', 'Doodle attached to post draft.');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const base64 = await compressAndGetBase64(file);
+      setAttachedImage(base64);
+      addSecurityLog('SUCCESS', `Image loaded successfully: ${file.name} compressed.`);
+    } catch (err) {
+      console.error(err);
+      addSecurityLog('ALERT', 'Failed to compress or upload image.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
   
   const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
   const [commentToDelete, setCommentToDelete] = useState<{id: string, threadId: string} | null>(null);
@@ -338,7 +530,8 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
         createdAt: new Date().toISOString(), // Fallback ready format
         commentCount: 1,
         upvotes: [],
-        downvotes: []
+        downvotes: [],
+        imageUrl: attachedImage ? ((isSecureViewOption && secureViewFeatureEnabled) ? encryptImage(attachedImage) : attachedImage) : ''
       };
 
       let threadId = Date.now().toString() + '_' + user.uid;
@@ -386,6 +579,8 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
       setIsCreating(false);
       setNewTitle('');
       setNewContent('');
+      setAttachedImage(null);
+      addSecurityLog('SUCCESS', `New post "${threadData.title}" created successfully${attachedImage ? ' with attached image' : ''}.`);
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'forum_threads');
     } finally {
@@ -809,8 +1004,44 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
             </div>
           ) : (
             <>
-              <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">{selectedThread.title}</h2>
-              <p className="text-white/80 whitespace-pre-wrap leading-relaxed mb-6">{selectedThread.content}</p>
+              <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">
+                {isAntiIPCCensorEnabled ? (
+                  selectedThread.title.replace(/кмм/gi, '🤡 Корпорация Смешных Людей (КММ)').replace(/ipc/gi, '🤡 Interastral Clown Corporation (IPC)').replace(/стелларон/gi, '🔮 Искрящаяся Грань').replace(/stellaron/gi, '🔮 Sparkling Toy')
+                ) : selectedThread.title}
+              </h2>
+              <p className="text-white/80 whitespace-pre-wrap leading-relaxed mb-6">
+                {isAntiIPCCensorEnabled ? (
+                  selectedThread.content.replace(/кмм/gi, '🤡 Корпорация Смешных Людей (КММ)').replace(/ipc/gi, '🤡 Interastral Clown Corporation (IPC)').replace(/стелларон/gi, '🔮 Искрящаяся Грань').replace(/stellaron/gi, '🔮 Sparkling Toy')
+                ) : selectedThread.content}
+              </p>
+              
+              {selectedThread.imageUrl && (() => {
+                const isEncrypted = selectedThread.imageUrl.startsWith("IMG_AES:");
+                const isSecure = secureViewFeatureEnabled && isEncrypted;
+                return (
+                  <div className="mb-6 rounded-3xl overflow-hidden border border-[#3d2b4f]/40 max-h-[450px] min-h-[250px] w-full flex items-center justify-center bg-black/40 relative">
+                    <img 
+                      src={decryptImage(selectedThread.imageUrl)} 
+                      alt="Attached visual" 
+                      className={`w-full h-full object-cover ${isSecure ? 'select-none pointer-events-none' : 'cursor-zoom-in hover:scale-[1.01] transition-transform duration-300'}`}
+                      onContextMenu={isSecure ? (e) => e.preventDefault() : undefined}
+                      onDragStart={isSecure ? (e) => e.preventDefault() : undefined}
+                      onClick={!isSecure ? () => {
+                        const w = window.open();
+                        if (w) {
+                          w.document.write(`<img src="${decryptImage(selectedThread?.imageUrl || '')}" style="max-width:100%; max-height:100vh; display:block; margin:auto; background:#15101e;"/>`);
+                          w.document.body.style.background = '#15101e';
+                        }
+                      } : undefined}
+                    />
+                    {isSecure && (
+                      <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-[#3d2b4f]/30 text-[10px] font-black uppercase tracking-widest text-white/50 select-none pointer-events-none">
+                        🔒 {lang === 'ru' ? 'Защищенный просмотр' : 'Secure View'}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               
               <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-xl border border-[#3d2b4f]/30 w-fit">
                 <button
@@ -908,8 +1139,165 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
             placeholder={t.forumMessageContent}
-            className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[200px] resize-y"
+            className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[160px] resize-y"
           />
+
+          {/* Visual Attachments Block */}
+          <div className="bg-[#0d0b14]/40 border border-[#3d2b4f]/20 rounded-2xl p-4 space-y-4">
+            <div className="flex flex-wrap gap-4 items-center justify-between">
+              <span className="text-sm text-white/60 font-bold uppercase tracking-wider flex items-center gap-2">
+                <Camera size={16} className="text-[#ff4d4d]" />
+                {lang === 'ru' ? 'Прикрепить контент' : 'Attach Visual Content'}
+              </span>
+              <div className="flex gap-2">
+                {/* File Upload Button */}
+                <input
+                  type="file"
+                  id="forum-photo-upload"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                />
+                <label
+                  htmlFor="forum-photo-upload"
+                  className={`bg-[#15101e] border border-[#3d2b4f]/50 text-white hover:text-[#ff4d4d] hover:border-[#ff4d4d]/50 px-4 py-2 rounded-xl text-xs font-black cursor-pointer flex items-center gap-2 transition-all ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  <Camera size={14} />
+                  {lang === 'ru' ? 'Загрузить фото' : 'Upload Photo'}
+                </label>
+
+                {/* Draw Doodle Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setIsDoodling(!isDoodling)}
+                  className="bg-[#15101e] border border-[#3d2b4f]/50 text-white hover:text-[#ff4d4d] hover:border-[#ff4d4d]/50 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all"
+                >
+                  <PaletteIcon size={14} />
+                  {lang === 'ru' ? 'Нарисовать' : 'Draw Doodle'}
+                </button>
+              </div>
+            </div>
+
+            {/* Doodle Canvas Interactive Drawer */}
+            {isDoodling && (
+              <div className="bg-[#15101e] border border-[#ff4d4d]/30 rounded-2xl p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <PaletteIcon size={16} className="text-[#ff4d4d]" />
+                    {lang === 'ru' ? 'Интерактивная рисовашка Ахи' : 'Aha Doodle Pad'}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setIsDoodling(false)}
+                    className="text-white/40 hover:text-white"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 items-center">
+                  <canvas
+                    ref={doodleCanvasRef}
+                    width={400}
+                    height={260}
+                    onMouseDown={startDoodling}
+                    onMouseMove={drawDoodle}
+                    onMouseUp={stopDoodling}
+                    onMouseLeave={stopDoodling}
+                    onTouchStart={startDoodling}
+                    onTouchMove={drawDoodle}
+                    onTouchEnd={stopDoodling}
+                    className="bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-xl cursor-crosshair touch-none w-full max-w-[400px] h-[260px] shadow-inner"
+                  />
+                  <div className="space-y-4 w-full md:w-auto">
+                    {/* Brush Colors */}
+                    <div>
+                      <span className="text-xs text-white/40 block mb-2 font-bold uppercase">{lang === 'ru' ? 'Цвет кисти' : 'Brush Color'}</span>
+                      <div className="flex flex-wrap gap-2">
+                        {['#ff4d4d', '#4da6ff', '#4dff88', '#ffff4d', '#ff4dff', '#ffffff', '#0d0b14'].map(color => (
+                          <button
+                            key={color}
+                            type="button"
+                            onClick={() => setDoodleColor(color)}
+                            className={`w-7 h-7 rounded-full border transition-all ${doodleColor === color ? 'scale-110 border-white ring-2 ring-[#ff4d4d]/40' : 'border-[#3d2b4f]/50'}`}
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Brush Size */}
+                    <div>
+                      <span className="text-xs text-white/40 block mb-1 font-bold uppercase">{lang === 'ru' ? 'Толщина' : 'Brush Size'} ({doodleBrushSize}px)</span>
+                      <input
+                        type="range"
+                        min="2"
+                        max="20"
+                        value={doodleBrushSize}
+                        onChange={(e) => setDoodleBrushSize(Number(e.target.value))}
+                        className="w-full accent-[#ff4d4d] bg-[#0d0b14] h-1.5 rounded-lg appearance-none cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={clearDoodle}
+                        className="bg-black/40 border border-[#3d2b4f]/40 hover:bg-[#ff4d4d]/10 hover:border-[#ff4d4d]/30 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors w-full"
+                      >
+                        {lang === 'ru' ? 'Очистить' : 'Clear'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveDoodleAttachment}
+                        className="bg-[#ff4d4d] text-[#15101e] hover:bg-white text-xs font-black px-4 py-2 rounded-xl transition-all shadow-[0_0_15px_rgba(255,77,77,0.3)] w-full"
+                      >
+                        {lang === 'ru' ? 'Прикрепить' : 'Attach'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Attached Image Preview */}
+            {attachedImage && (
+              <div className="space-y-3">
+                <div className="relative w-fit bg-[#15101e] border border-[#3d2b4f]/60 rounded-2xl p-2 group">
+                  <img
+                    src={attachedImage}
+                    alt="Attachment preview"
+                    className="max-h-[120px] rounded-xl object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAttachedImage(null)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                
+                {secureViewFeatureEnabled && (
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={isSecureViewOption}
+                        onChange={(e) => setIsSecureViewOption(e.target.checked)}
+                        className="w-4 h-4 rounded border-[#3d2b4f] text-[#ff4d4d] focus:ring-[#ff4d4d] bg-[#1e172a]"
+                      />
+                      <span className="text-xs font-black uppercase tracking-widest text-white/70">
+                        🔒 {lang === 'ru' ? 'Защищённый просмотр (шифрование изображения)' : 'Secure View (Image Encryption)'}
+                      </span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-4 pt-4">
             <button
               onClick={() => setIsCreating(false)}
@@ -919,7 +1307,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
             </button>
             <button
               onClick={handleCreateThread}
-              disabled={!newTitle.trim() || !newContent.trim() || isSubmitting}
+              disabled={!newTitle.trim() || !newContent.trim() || isSubmitting || isUploading}
               className="bg-[#ff4d4d] text-[#15101e] px-8 py-3 rounded-xl font-black tracking-widest hover:bg-white transition-colors disabled:opacity-50 shadow-[0_0_20px_rgba(255,77,77,0.3)]"
             >
               {isSubmitting ? '...' : ((t as any).forumCreate || t.profileSave)}
@@ -933,14 +1321,19 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
   return (
     <div className="space-y-6">
       <AdsBlock lang={lang} />
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      
+      {/* Consolidated Page Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
-          <MessageSquare className="text-[#ff4d4d]" size={32} />
-          {(t as any).forumTitle || "Forum"}
+          <Activity className="text-[#ff4d4d] animate-pulse" size={36} />
+          {lang === 'ru' ? 'Активности и Посты' : 'Activities & Posts'}
         </h2>
-        {user && (
+        {activeTab === 'posts' && user && !selectedThread && (
           <button
-            onClick={() => setIsCreating(true)}
+            onClick={() => {
+              setIsCreating(true);
+              addSecurityLog('INFO', 'User opened post creation box.');
+            }}
             className="bg-[#ff4d4d] text-[#15101e] px-6 py-3 rounded-xl font-black tracking-widest hover:bg-white transition-all active:scale-95 shadow-[0_0_20px_rgba(255,77,77,0.3)] flex items-center gap-2 justify-center"
           >
             <Plus size={20} />
@@ -949,74 +1342,329 @@ export const ForumSection: React.FC<ForumSectionProps> = ({ lang, onOpenChat, ro
         )}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={(t as any).forumSearch || "Search threads..."}
-          className="w-full bg-[#15101e] border border-[#3d2b4f]/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] transition-colors"
-        />
-      </div>
+      {/* Sub-Tabs Selector */}
+      {!selectedThread && (
+        <div className="flex border-b border-[#3d2b4f]/30 gap-2 overflow-x-auto pb-px mb-6 scrollbar-none">
+          <button
+            onClick={() => setActiveTab('posts')}
+            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-black uppercase text-xs tracking-wider transition-all whitespace-nowrap ${activeTab === 'posts' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white'}`}
+          >
+            <MessageSquare size={14} />
+            {lang === 'ru' ? 'Лента Постов' : 'Posts Feed'}
+          </button>
+          <button
+            onClick={() => setActiveTab('canvas')}
+            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-black uppercase text-xs tracking-wider transition-all whitespace-nowrap ${activeTab === 'canvas' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white'}`}
+          >
+            <PaletteIcon size={14} />
+            {lang === 'ru' ? 'Рисовашка' : 'Drawing Board'}
+          </button>
+          <button
+            onClick={() => setActiveTab('activities')}
+            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-black uppercase text-xs tracking-wider transition-all whitespace-nowrap ${activeTab === 'activities' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white'}`}
+          >
+            <Ticket size={14} />
+            {lang === 'ru' ? 'Челленджи и Промо' : 'Activities & Promos'}
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-black uppercase text-xs tracking-wider transition-all whitespace-nowrap ${activeTab === 'security' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white'}`}
+          >
+            <Shield size={14} />
+            {lang === 'ru' ? 'Центр Безопасности' : 'Security Center'}
+          </button>
+        </div>
+      )}
 
-      <div className="space-y-4">
-        {filteredThreads.length === 0 ? (
-          <div className="text-center py-12 text-white/40 bg-[#15101e]/30 rounded-3xl border border-[#3d2b4f]/20">
-            {(t as any).forumNoThreads || "No threads found."}
+      {/* Tab Contents */}
+      {activeTab === 'posts' && (
+        <>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={(t as any).forumSearch || "Search threads..."}
+              className="w-full bg-[#15101e] border border-[#3d2b4f]/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] transition-colors"
+            />
           </div>
-        ) : (
-          filteredThreads.map(thread => (
-            <motion.div
-              key={thread.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={() => {
-                setSelectedThread(thread);
-              }}
-              className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 sm:p-6 hover:border-[#ff4d4d]/50 hover:bg-[#251c35] transition-all cursor-pointer group"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
-                <h3 className="text-xl font-black text-white group-hover:text-[#ff4d4d] transition-colors line-clamp-2">
-                  {thread.title}
-                </h3>
-                <div className="flex items-center gap-4 shrink-0">
-                  <div className="flex items-center gap-1.5 text-white/40 text-sm bg-[#0d0b14] px-3 py-1.5 rounded-lg">
-                    <MessageSquare size={14} />
-                    <span className="font-bold">{thread.commentCount || 0}</span>
+
+          <div className="space-y-4">
+            {filteredThreads.length === 0 ? (
+              <div className="text-center py-12 text-white/40 bg-[#15101e]/30 rounded-3xl border border-[#3d2b4f]/20">
+                {(t as any).forumNoThreads || "No threads found."}
+              </div>
+            ) : (
+              filteredThreads.map(thread => (
+                <motion.div
+                  key={thread.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  onClick={() => {
+                    setSelectedThread(thread);
+                    addSecurityLog('INFO', `Viewed thread: ${thread.title}`);
+                  }}
+                  className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 sm:p-6 hover:border-[#ff4d4d]/50 hover:bg-[#251c35] transition-all cursor-pointer group"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+                    <h3 className="text-xl font-black text-white group-hover:text-[#ff4d4d] transition-colors line-clamp-2">
+                      {isAntiIPCCensorEnabled ? (
+                        thread.title.replace(/кмм/gi, '🤡 КММ').replace(/ipc/gi, '🤡 IPC').replace(/стелларон/gi, '🔮 Стелларон').replace(/stellaron/gi, '🔮 Stellaron')
+                      ) : thread.title}
+                    </h3>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="flex items-center gap-1.5 text-white/40 text-sm bg-[#0d0b14] px-3 py-1.5 rounded-lg">
+                        <MessageSquare size={14} />
+                        <span className="font-bold">{thread.commentCount || 0}</span>
+                      </div>
+                      {(user?.uid === thread.authorId || role === 'admin' || role === 'moderator') && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setThreadToDelete(thread.id);
+                          }}
+                          className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  {(user?.uid === thread.authorId || role === 'admin' || role === 'moderator') && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setThreadToDelete(thread.id);
-                      }}
-                      className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                  
+                  <p className="text-white/40 text-sm line-clamp-2 mb-4">
+                    {isAntiIPCCensorEnabled ? (
+                      thread.content.replace(/кмм/gi, '🤡 КММ').replace(/ipc/gi, '🤡 IPC').replace(/стелларон/gi, '🔮 Стелларон').replace(/stellaron/gi, '🔮 Stellaron')
+                    ) : thread.content}
+                  </p>
+
+                  {thread.imageUrl && (() => {
+                    const isEncrypted = thread.imageUrl.startsWith("IMG_AES:");
+                    const isSecure = secureViewFeatureEnabled && isEncrypted;
+                    return (
+                      <div className="mb-4 rounded-xl overflow-hidden border border-[#3d2b4f]/20 h-[140px] w-[240px] max-w-full flex items-center bg-black/40 relative">
+                        <img 
+                          src={decryptImage(thread.imageUrl)} 
+                          alt="Post attachment" 
+                          className={`w-full h-full object-cover ${isSecure ? 'select-none pointer-events-none' : ''}`} 
+                          onContextMenu={isSecure ? (e) => e.preventDefault() : undefined}
+                          onDragStart={isSecure ? (e) => e.preventDefault() : undefined}
+                        />
+                      </div>
+                    );
+                  })()}
+
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={thread.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(thread.authorName)}&background=1c1528&color=fff`}
+                      alt={thread.authorName}
+                      className="w-6 h-6 rounded-full"
+                    />
+                    <span className="text-xs font-bold text-white/80">{thread.authorName}</span>
+                    <span className="text-xs text-white/40 flex items-center gap-1">
+                      <Clock size={10} />
+                      <TimeAgo date={thread.createdAt} lang={lang} />
+                    </span>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'canvas' && (
+        <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-4 sm:p-6 shadow-xl">
+          <CanvasSection lang={lang} />
+        </div>
+      )}
+
+      {activeTab === 'activities' && (
+        <div className="space-y-6">
+          {/* Mini navigation for Activities */}
+          <div className="flex gap-2 bg-[#15101e] border border-[#3d2b4f]/30 rounded-2xl p-1.5 w-fit">
+            <button
+              onClick={() => setSubActivityTab('events')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-xs transition-all ${subActivityTab === 'events' ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-white/50 hover:text-white'}`}
+            >
+              <RefreshCw size={12} className={subActivityTab === 'events' ? 'animate-spin' : ''} />
+              {lang === 'ru' ? 'Хроника событий' : 'Event Chronicle'}
+            </button>
+            <button
+              onClick={() => setSubActivityTab('promos')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-xs transition-all ${subActivityTab === 'promos' ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-white/50 hover:text-white'}`}
+            >
+              <Ticket size={12} />
+              {lang === 'ru' ? 'Промокоды' : 'Promo Codes'}
+            </button>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {subActivityTab === 'events' ? (
+              <motion.div
+                key="events-tab"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 shadow-xl"
+              >
+                <ChronicleSection 
+                  lang={lang} 
+                  lowPerfMode={lowPerfMode} 
+                  events={events} 
+                  onEdit={onEditEvent} 
+                  onCreate={onCreateEvent} 
+                  role={role} 
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="promos-tab"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 shadow-xl"
+              >
+                <PromoSection 
+                  lang={lang} 
+                  handleCopy={handleCopy} 
+                  promoCodes={promoCodes} 
+                  role={role} 
+                  onOpenEditor={() => {}} 
+                  onEdit={() => {}} 
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {activeTab === 'security' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left side: status and settings */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Security Status Card */}
+              <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-6 opacity-10 text-[#ff4d4d] group-hover:scale-110 transition-transform duration-300">
+                  <Shield size={120} />
+                </div>
+                <h3 className="text-xl font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <ShieldCheck className="text-green-400" size={20} />
+                  {lang === 'ru' ? 'Допуск Безопасности' : 'Security Clearance'}
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/60 text-sm">{lang === 'ru' ? 'Уровень Допуска:' : 'Clearance Level:'}</span>
+                    <span className="bg-[#ff4d4d]/10 text-[#ff4d4d] border border-[#ff4d4d]/30 px-3 py-1 rounded-lg text-xs font-black uppercase">
+                      {role === 'admin' ? 'LEVEL 5 (ADMIN)' : role === 'moderator' ? 'LEVEL 4 (MOD)' : 'LEVEL 2 (FOOL)'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/60 text-sm">{lang === 'ru' ? 'Верификация аккаунта:' : 'Account Verification:'}</span>
+                    <span className="text-green-400 text-xs font-bold flex items-center gap-1">
+                      <Check size={14} /> {lang === 'ru' ? 'Активна' : 'Verified'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/60 text-sm">{lang === 'ru' ? 'Протокол защиты:' : 'Defense Protocol:'}</span>
+                    <span className="text-white/80 font-black text-xs">Fools-Guard v4.1.2</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Security Controls */}
+              <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 space-y-4">
+                <h3 className="text-md font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <Cpu size={18} className="text-[#ff4d4d]" />
+                  {lang === 'ru' ? 'Управление Протоколами' : 'Protocol Controls'}
+                </h3>
+
+                {/* E2EE Chat Switch */}
+                <div className="p-4 bg-[#0d0b14]/50 rounded-2xl border border-[#3d2b4f]/20 flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <Key size={14} className="text-[#ff4d4d]" />
+                      {lang === 'ru' ? 'Сквозное Шифрование' : 'E2EE Encryption'}
+                    </div>
+                    <p className="text-xs text-white/40 leading-relaxed">
+                      {lang === 'ru' 
+                        ? 'Шифрует сообщения в чатах на стороне клиента перед отправкой в сеть.' 
+                        : 'Encrypts private chat messages client-side before sending to server.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsE2EEEnabled(!isE2EEEnabled);
+                      addSecurityLog(!isE2EEEnabled ? 'SUCCESS' : 'WARNING', !isE2EEEnabled ? 'E2EE Encryption Protocol armed.' : 'E2EE Encryption disarmed.');
+                    }}
+                    className={`w-12 h-6 rounded-full p-1 transition-colors shrink-0 ${isE2EEEnabled ? 'bg-green-500' : 'bg-[#0d0b14] border border-[#3d2b4f]/50'}`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isE2EEEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                {/* Anti-IPC Censor Switch */}
+                <div className="p-4 bg-[#0d0b14]/50 rounded-2xl border border-[#3d2b4f]/20 flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                      <ShieldAlert size={14} className="text-[#ff4d4d]" />
+                      {lang === 'ru' ? 'Цензура КММ / IPC' : 'Anti-IPC Fools-Guard'}
+                    </div>
+                    <p className="text-xs text-white/40 leading-relaxed">
+                      {lang === 'ru' 
+                        ? 'Автоматически заменяет упоминания КММ на смешные смайлики.' 
+                        : 'Filters out Interastral Peace Corporation references with clown emojis.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsAntiIPCCensorEnabled(!isAntiIPCCensorEnabled);
+                      addSecurityLog(!isAntiIPCCensorEnabled ? 'SUCCESS' : 'WARNING', !isAntiIPCCensorEnabled ? 'Anti-IPC firewall filter activated.' : 'Anti-IPC firewall filter deactivated.');
+                    }}
+                    className={`w-12 h-6 rounded-full p-1 transition-colors shrink-0 ${isAntiIPCCensorEnabled ? 'bg-green-500' : 'bg-[#0d0b14] border border-[#3d2b4f]/50'}`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isAntiIPCCensorEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right side: Console Logs */}
+            <div className="lg:col-span-7">
+              <div className="bg-[#0d0b14] border border-[#3d2b4f]/40 rounded-3xl p-5 font-mono h-[420px] flex flex-col shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[#3d2b4f]/40 pb-3 mb-3 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-xs text-white/60 font-black tracking-widest uppercase">{lang === 'ru' ? 'КОНСОЛЬ БЕЗОПАСНОСТИ' : 'SECURITY CORE LOGS'}</span>
+                  </div>
+                  <button
+                    onClick={() => setSecurityLogs([])}
+                    className="text-[10px] text-white/40 hover:text-white uppercase font-black"
+                  >
+                    [Clear Logs]
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-2 text-xs pr-2 scrollbar-thin scrollbar-thumb-[#3d2b4f]">
+                  {securityLogs.length === 0 ? (
+                    <div className="text-white/20 text-center py-12 italic">{lang === 'ru' ? '[Лонг пуст... Все спокойно]' : '[Console empty]'}</div>
+                  ) : (
+                    securityLogs.map(log => (
+                      <div key={log.id} className="leading-relaxed break-all">
+                        <span className="text-white/30 mr-2">[{log.time}]</span>
+                        <span className={`font-black mr-2 ${log.type === 'ALERT' ? 'text-red-500' : log.type === 'WARNING' ? 'text-yellow-500' : log.type === 'SUCCESS' ? 'text-green-500' : 'text-blue-400'}`}>
+                          {log.type}
+                        </span>
+                        <span className="text-white/80">{log.msg}</span>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
-              <p className="text-white/40 text-sm line-clamp-2 mb-4">
-                {thread.content}
-              </p>
-              <div className="flex items-center gap-3">
-                <img 
-                  src={thread.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(thread.authorName)}&background=1c1528&color=fff`}
-                  alt={thread.authorName}
-                  className="w-6 h-6 rounded-full"
-                />
-                <span className="text-xs font-bold text-white/80">{thread.authorName}</span>
-                <span className="text-xs text-white/40 flex items-center gap-1">
-                  <Clock size={10} />
-                  <TimeAgo date={thread.createdAt} lang={lang} />
-                </span>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={!!threadToDelete}

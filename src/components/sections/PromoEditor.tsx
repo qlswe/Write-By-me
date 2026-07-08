@@ -231,7 +231,7 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                     value={formData.description}
                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                     className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-4 text-white font-medium focus:outline-none focus:border-[#ff4d4d] transition-all resize-none h-24 placeholder:text-gray-700"
-                    placeholder="Special reward for Ministry members..."
+                    placeholder="Special reward for Aha members..."
                   />
                 </div>
 

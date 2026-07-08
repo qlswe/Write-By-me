@@ -103,9 +103,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [profiles, setProfiles] = useState<Record<string, { name: string, photo?: string, lastSeen?: string }>>({});
-  const [showNotifPrompt, setShowNotifPrompt] = useState(
-    typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default'
-  );
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
 
   const requestNotifications = async () => {
     if ('Notification' in window) {

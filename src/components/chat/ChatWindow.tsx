@@ -863,7 +863,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             </div>
 
                             {msg.reactions && Object.keys(msg.reactions).length > 0 && !msg.isDeleted && (
-                              <div className={`absolute -bottom-3.5 ${isMe ? 'right-2' : 'left-2'} flex items-center gap-1 z-10 flex-wrap max-w-full`}>
+                              <div className={`absolute -bottom-3.5 ${isMe ? 'right-2' : 'left-2'} flex items-center gap-1 bg-[#09050d] border border-[#2e1d44] rounded-full px-1.5 py-0.5 shadow-[0_2px_8px_rgba(0,0,0,0.5)] z-10 flex-wrap max-w-full`}>
                                 {Object.entries(msg.reactions).map(([reactionId, users]) => users.length > 0 && (
                                   <button
                                     key={reactionId}
@@ -871,10 +871,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                                       e.stopPropagation();
                                       toggleReaction(msg.id, recipientId, reactionId);
                                     }}
-                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full border transition-all shadow-[0_2px_8px_rgba(0,0,0,0.4)] ${
+                                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full transition-all ${
                                       users.includes(user?.uid || '') 
-                                        ? 'bg-[#ff4d4d]/15 border-[#ff4d4d]/40 text-[#ff4d4d]' 
-                                        : 'bg-[#0f0a18]/95 border-[#2e1d44] text-gray-300 hover:border-[#ff4d4d]/30 hover:bg-[#1b112c]'
+                                        ? 'bg-[#ff4d4d]/15 text-[#ff4d4d]' 
+                                        : 'text-gray-300 hover:text-white'
                                     }`}
                                   >
                                     {NEON_REACTION_CONFIG[reactionId] ? (

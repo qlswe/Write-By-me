@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 // --- GLOBAL SINGLETON STATE ---
@@ -73,6 +73,28 @@ const initAuth = () => {
     globalUser = user;
     
     if (user) {
+      // Check 30 days session limit
+      const sessionStart = localStorage.getItem('auth_session_start_time');
+      const now = Date.now();
+      if (sessionStart) {
+        const elapsed = now - parseInt(sessionStart, 10);
+        if (elapsed > 30 * 24 * 60 * 60 * 1000) { // 30 days
+          localStorage.removeItem('auth_session_start_time');
+          await signOut(auth);
+          globalUser = null;
+          globalIsAdmin = false;
+          globalRole = 'user';
+          globalIsPremium = false;
+          globalIsVerified = false;
+          globalPhotoURL = null;
+          globalLoading = false;
+          notifySubscribers();
+          return;
+        }
+      } else {
+        localStorage.setItem('auth_session_start_time', now.toString());
+      }
+
       try {
         const userDocRef = doc(db, 'users', user.uid);
         
@@ -211,6 +233,7 @@ export function useAuth() {
     
     try {
       await signInWithPopup(auth, provider);
+      localStorage.setItem('auth_session_start_time', Date.now().toString());
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
         return;
@@ -237,6 +260,7 @@ export function useAuth() {
     setIsLoggingIn(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      localStorage.setItem('auth_session_start_time', Date.now().toString());
     } catch (error: any) {
       setError(error.message);
       throw error;
@@ -254,6 +278,7 @@ export function useAuth() {
     setIsLoggingIn(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
+      localStorage.setItem('auth_session_start_time', Date.now().toString());
     } catch (error: any) {
       setError(error.message);
       throw error;
@@ -265,6 +290,7 @@ export function useAuth() {
   const logout = async () => {
     setError(null);
     try {
+      localStorage.removeItem('auth_session_start_time');
       await signOut(auth);
     } catch (error: any) {
       setError(error.message);
@@ -286,6 +312,15 @@ export function useAuth() {
     registerWithEmail,
     logout, 
     isLoggingIn,
+    sendPasswordReset: async (email: string) => {
+      setError(null);
+      try {
+        await sendPasswordResetEmail(auth, email);
+      } catch (error: any) {
+        setError(error.message);
+        throw error;
+      }
+    },
     sendVerificationEmail: async () => {
       if (auth.currentUser) {
         await sendEmailVerification(auth.currentUser);

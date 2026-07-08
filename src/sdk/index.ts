@@ -8,8 +8,8 @@ import { GoogleGenAI } from "@google/genai";
  * Aha Radio Station SDK
  * Centralized logic for game data, calculations, and security.
  */
-export class MinistrySDK {
-  private static instance: MinistrySDK;
+export class AhaSDK {
+  private static instance: AhaSDK;
   private version: string = '2.0.0-hsr';
   private logSubscribers: ((level: string, message: string, data?: any) => void)[] = [];
   private ready: boolean = false;
@@ -46,11 +46,11 @@ export class MinistrySDK {
     this.events.emit('ready');
   }
 
-  public static getInstance(): MinistrySDK {
-    if (!MinistrySDK.instance) {
-      MinistrySDK.instance = new MinistrySDK();
+  public static getInstance(): AhaSDK {
+    if (!AhaSDK.instance) {
+      AhaSDK.instance = new AhaSDK();
     }
-    return MinistrySDK.instance;
+    return AhaSDK.instance;
   }
 
   public isReady(): boolean {
@@ -100,10 +100,11 @@ export class MinistrySDK {
   }
 
   public notify(title: string, body: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') {
-    if (this.notifications && typeof this.notifications.send === 'function') {
+    if (this && this.notifications && typeof this.notifications.send === 'function') {
       this.notifications.send(title, body, type);
-    } else {
-      this.events.emit('notification', { title, body, type, id: this.utils?.generateId ? this.utils.generateId('notif') : 'notif_' + Date.now() });
+    } else if (this && this.events && typeof this.events.emit === 'function') {
+      const generatedId = this.utils?.generateId ? this.utils.generateId('notif') : 'notif_' + Date.now();
+      this.events.emit('notification', { title, body, type, id: generatedId });
     }
     return this;
   }
@@ -300,7 +301,7 @@ export class MinistrySDK {
       return Math.max(0, score);
     },
     isLowEndDevice: () => {
-      const score = MinistrySDK.getInstance().hardware.getDevicePerformanceScore();
+      const score = AhaSDK.getInstance().hardware.getDevicePerformanceScore();
       let isMobile = false;
       if (typeof navigator !== 'undefined') {
         isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -315,7 +316,10 @@ export class MinistrySDK {
    */
   public notifications = (() => {
     const emitNotification = (title: string, body: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
-      this.events.emit('notification', { title, body, type, id: this.utils.generateId('notif') });
+      const generatedId = this.utils?.generateId ? this.utils.generateId('notif') : 'notif_' + Date.now();
+      if (this.events && typeof this.events.emit === 'function') {
+        this.events.emit('notification', { title, body, type, id: generatedId });
+      }
     };
     return {
       send: emitNotification,
@@ -755,7 +759,7 @@ export class MinistrySDK {
       const start = performance.now();
       const result = await fn();
       const end = performance.now();
-      MinistrySDK.getInstance().logging.perf(label, end - start);
+      AhaSDK.getInstance().logging.perf(label, end - start);
       return result;
     },
     preloadImage: (url: string): Promise<void> => {
@@ -961,7 +965,7 @@ export class MinistrySDK {
             ? 'Доступные команды: help, version, status, echo [текст], gen [запрос], exit, clear, ping, date, time, calc [выражение], userinfo'
             : 'Available commands: help, version, status, echo [text], gen [prompt], exit, clear, ping, date, time, calc [expression], userinfo';
         case 'version':
-          return `Ministry SDK v${this.version}`;
+          return `AhaSDK v${this.version}`;
         case 'status':
           const statusRes = `SDK Status: ${this.ready ? 'READY' : 'INITIALIZING'}\nEnvironment: ${process.env.NODE_ENV}\nMode: ${this.terminalMode.toUpperCase()}`;
           return statusRes;
@@ -1042,4 +1046,4 @@ export class MinistrySDK {
   };
 }
 
-export const sdk = MinistrySDK.getInstance();
+export const sdk = AhaSDK.getInstance();

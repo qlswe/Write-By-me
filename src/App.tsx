@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity } from 'lucide-react';
 import { collection, addDoc, doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -15,6 +15,7 @@ import { useChat, Chat } from './hooks/useChat';
 import { useTranslation } from 'react-i18next';
 import { sdk } from './sdk';
 import { decrypt } from './utils/encryption';
+import { dbQueryCore } from './utils/dbQueryCore';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -286,13 +287,16 @@ export default function App() {
 
       const lastNotified = notifiedChats.current[chat.id] || 0;
       
-      // Fetch profile safely and only once
+      // Fetch profile safely and only once using batched query core
       if (!profileNames[otherUserId] && !fetchingProfiles.current[otherUserId]) {
         fetchingProfiles.current[otherUserId] = true;
-        getDoc(doc(db, 'public_profiles', otherUserId)).then(snap => {
-          if (snap.exists()) {
-            const name = snap.data().displayName || 'User';
-            setProfileNames(prev => ({ ...prev, [otherUserId]: name }));
+        dbQueryCore.getProfileBatched(otherUserId).then(data => {
+          if (data) {
+            const name = data.displayName || 'User';
+            setProfileNames(prev => {
+              if (prev[otherUserId] === name) return prev;
+              return { ...prev, [otherUserId]: name };
+            });
           }
         }).catch(() => {
           fetchingProfiles.current[otherUserId] = false;
@@ -326,17 +330,13 @@ export default function App() {
         return '';
       };
 
-      // 1. New Message
+      // 1. New Message (In-app only, no system/push notifications or permission prompts)
       if (lastMessageAt > lastNotified && lastMessageAt > myReadAt) {
         if (isNotActiveChat) {
           const decryptedBody = chat.lastMessage ? decrypt(chat.lastMessage, chat.id) : '';
           const bodyText = decryptedBody || (((translations as any)[lang] && (translations as any)[lang].newMessageBody) || (lang === 'ru' ? 'Новое сообщение' : "You have a new unread message."));
           setToast(getChatNotificationText('new_message', senderName, bodyText));
           
-          const title = `${((translations as any)[lang] && (translations as any)[lang].newMessageTitle) || (lang === 'ru' ? 'Новое сообщение' : "New Message")}: ${senderName}`;
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(title, { body: bodyText, icon: '/favicon.ico' });
-          }
           try { const audio = new Audio('/notification.mp3'); audio.play().catch(() => {}); } catch (e) {}
         }
         notifiedChats.current[chat.id] = lastMessageAt;
@@ -367,7 +367,7 @@ export default function App() {
     });
 
     setUnreadCount(count);
-  }, [chats, user, activeChat, lang, profileNames]);
+  }, [chats, user, activeChat, lang]);
 
   const t = translations[lang as Language];
 
@@ -443,13 +443,10 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
-    { id: 'canvas' as const, label: t.navCanvas || 'Canvas', icon: Palette },
-    { id: 'forum' as const, label: t.navForum, icon: MessageSquare },
+    { id: 'forum' as const, label: t.navForum, icon: Activity },
     { id: 'radio' as const, label: t.navRadio, icon: Radio },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
-    { id: 'chronicle', label: t.navChronicle, icon: RefreshCw },
-    { id: 'promo', label: t.navPromo, icon: Ticket },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'users' as const, label: t.navUsers, icon: User },
     ...((role === 'admin' || role === 'moderator') ? [{ id: 'telemetry' as const, label: 'Telemetry', icon: Settings }] : []),
@@ -624,6 +621,7 @@ export default function App() {
         lowPerfMode={lowPerfMode}
         toggleLowPerfMode={toggleLowPerfMode}
         role={role}
+        unreadCount={unreadCount}
       />
 
       {/* Offline Banner */}
@@ -778,6 +776,12 @@ export default function App() {
                   lang={lang as Language}
                   onOpenChat={(uid, name) => setActiveChat({ uid, displayName: name })}
                   role={role}
+                  lowPerfMode={lowPerfMode}
+                  events={events}
+                  promoCodes={promoCodes}
+                  handleCopy={handleCopy}
+                  onEditEvent={setEditingEvent}
+                  onCreateEvent={() => setIsCreatingEvent(true)}
                 />
               )}
 

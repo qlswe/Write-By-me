@@ -13,17 +13,38 @@ interface EmailLoginModalProps {
 
 export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClose, lang }) => {
   const t = translations[lang] as any;
-  const { loginWithEmail, registerWithEmail, isLoggingIn } = useAuth();
+  const { loginWithEmail, registerWithEmail, isLoggingIn, sendPasswordReset } = useAuth();
   
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     
+    if (isResetting) {
+      if (!email) {
+        setError(lang === 'ru' ? 'Пожалуйста, введите ваш email.' : "Please enter your email.");
+        return;
+      }
+      try {
+        await sendPasswordReset(email);
+        setSuccessMessage(lang === 'ru' ? 'Инструкции по восстановлению отправлены на вашу почту!' : "Reset instructions sent to your email!");
+        setTimeout(() => {
+          setIsResetting(false);
+          setSuccessMessage(null);
+        }, 5000);
+      } catch (err: any) {
+        setError(getHumanFriendlyError(err, lang));
+      }
+      return;
+    }
+
     if (!email || !password) {
       setError(t.errorMissingFields || "Please fill in all fields.");
       return;
@@ -40,6 +61,7 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
       setEmail('');
       setPassword('');
       setIsRegistering(false);
+      setIsResetting(false);
     } catch (err: any) {
       setError(getHumanFriendlyError(err, lang));
     }
@@ -47,7 +69,9 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
 
   const toggleMode = () => {
     setIsRegistering(!isRegistering);
+    setIsResetting(false);
     setError(null);
+    setSuccessMessage(null);
   };
 
   if (!isOpen) return null;
@@ -72,7 +96,12 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
           <div className="p-6 border-b border-[#3d2b4f] flex justify-between items-center bg-[#251c35]">
             <h2 className="text-xl font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-2">
               <Mail size={24} />
-              {isRegistering ? (t.registerTitle || "Sign Up") : (t.headerLoginEmail || "Login with Email")}
+              {isResetting 
+                ? (lang === 'ru' ? 'Сброс пароля' : "Reset Password") 
+                : isRegistering 
+                  ? (t.registerTitle || "Sign Up") 
+                  : (t.headerLoginEmail || "Login with Email")
+              }
             </h2>
             <button
               onClick={onClose}
@@ -85,8 +114,14 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
           {/* Body */}
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-xl text-sm">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-xl text-sm font-semibold">
                 {error}
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="bg-green-500/10 border border-green-500/50 text-green-400 p-3 rounded-xl text-sm font-semibold">
+                {successMessage}
               </div>
             )}
             
@@ -110,40 +145,59 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                {t.password || "Password"}
-              </label>
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                  <Lock size={18} />
+            {!isResetting && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    {t.password || "Password"}
+                  </label>
+                  {!isRegistering && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsResetting(true);
+                        setError(null);
+                        setSuccessMessage(null);
+                      }}
+                      className="text-xs font-bold text-[#ff4d4d] hover:text-white transition-colors uppercase tracking-widest"
+                    >
+                      {lang === 'ru' ? 'Забыли?' : 'Forgot?'}
+                    </button>
+                  )}
                 </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoggingIn}
-                  className="w-full bg-[#0d0b14] border border-[#3d2b4f] rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-[#ff4d4d] transition-colors"
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                />
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    <Lock size={18} />
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoggingIn}
+                    className="w-full bg-[#0d0b14] border border-[#3d2b4f] rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-[#ff4d4d] transition-colors"
+                    placeholder="••••••••"
+                    required={!isResetting}
+                    minLength={6}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
               disabled={isLoggingIn}
               className="w-full bg-[#ff4d4d] text-[#15101e] font-black tracking-widest uppercase py-3 rounded-xl hover:bg-white hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:pointer-events-none"
             >
-              {isLoggingIn ? "..." : isRegistering ? (
+              {isLoggingIn ? "..." : isResetting ? (
+                lang === 'ru' ? 'Сбросить пароль' : 'Send Reset Link'
+              ) : isRegistering ? (
                 <><UserPlus size={18} /> {t.registerAction || "Create Account"}</>
               ) : (
                 <><LogIn size={18} /> {t.loginAction || "Sign In"}</>
               )}
             </button>
             
-            <div className="pt-4 text-center">
+            <div className="pt-4 text-center flex flex-col gap-2">
               <button
                 type="button"
                 onClick={toggleMode}
@@ -153,6 +207,20 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
                   ? (t.alreadyHaveAccount || "Already have an account? Sign in") 
                   : (t.needAccount || "Don't have an account? Sign up")}
               </button>
+
+              {isResetting && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsResetting(false);
+                    setError(null);
+                    setSuccessMessage(null);
+                  }}
+                  className="text-sm text-[#ff4d4d] hover:text-white transition-colors font-semibold"
+                >
+                  {lang === 'ru' ? 'Назад к входу' : 'Back to login'}
+                </button>
+              )}
             </div>
           </form>
         </motion.div>

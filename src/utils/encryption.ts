@@ -1,7 +1,7 @@
 import CryptoJS from 'crypto-js';
 
 /**
- * Ministry E/D (Encoding/Decoding)
+ * Aha E/D (Encoding/Decoding)
  * Ultra-secure rolling Key AES-256 encryption for messages
  */
 
@@ -215,3 +215,35 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
   // 10. Default: Return original
   return cipherText;
 };
+
+/**
+ * Image data URL AES encryption for safeguarding user-uploaded and drawn photos.
+ */
+export const encryptImage = (dataUrl: string): string => {
+  if (!dataUrl) return "";
+  if (dataUrl.startsWith("IMG_AES:")) return dataUrl; // Already encrypted
+  try {
+    const encrypted = CryptoJS.AES.encrypt(dataUrl, BASE_SECRET).toString();
+    return `IMG_AES:${encrypted}`;
+  } catch (e) {
+    console.error("Image encryption error:", e);
+    return dataUrl;
+  }
+};
+
+/**
+ * Decrypt AES-encrypted image data URL. Supporting legacy unencrypted images.
+ */
+export const decryptImage = (cipherText: string): string => {
+  if (!cipherText) return "";
+  if (!cipherText.startsWith("IMG_AES:")) return cipherText; // Not encrypted
+  try {
+    const cipher = cipherText.substring("IMG_AES:".length);
+    const bytes = CryptoJS.AES.decrypt(cipher, BASE_SECRET);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  } catch (e) {
+    console.error("Image decryption error:", e);
+    return "";
+  }
+};
+

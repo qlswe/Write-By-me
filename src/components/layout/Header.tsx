@@ -22,6 +22,7 @@ interface HeaderProps {
   lowPerfMode?: boolean;
   toggleLowPerfMode?: () => void;
   role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
+  unreadCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,7 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
   clearFavorites,
   lowPerfMode,
   toggleLowPerfMode,
-  role
+  role,
+  unreadCount = 0
 }) => {
   const t = translations[lang];
   const { user, loginWithGoogle, logout } = useAuth();
@@ -111,8 +113,19 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'text-gray-400 hover:text-gray-200 hover:bg-[#251c35]/50'
                 }`}
               >
-                <item.icon size={16} className="shrink-0" />
-                <span className="hidden xl:inline">{item.label}</span>
+                <div className="flex items-center gap-2">
+                  <item.icon size={16} className="shrink-0" />
+                  <span className="hidden xl:inline">{item.label}</span>
+                  {item.id === 'chats' && unreadCount > 0 && (
+                    <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none transition-colors ${
+                      section === item.id 
+                        ? 'bg-[#15101e] text-[#ff4d4d]' 
+                        : 'bg-[#ff4d4d] text-white shadow-[0_0_8px_rgba(255,77,77,0.4)]'
+                    }`}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
               </button>
             ))}
           </nav>
@@ -301,14 +314,21 @@ export const Header: React.FC<HeaderProps> = ({
                     setSection(item.id);
                     setMobileMenuOpen(false);
                   }}
-                  className={`flex items-center gap-4 p-4 rounded-xl text-xl font-semibold ${
+                  className={`flex items-center justify-between p-4 rounded-xl text-xl font-semibold w-full ${
                     section === item.id 
                       ? 'bg-[#3d2b4f] text-[#ff4d4d]' 
                       : 'text-gray-300'
                   }`}
                 >
-                  <item.icon size={24} />
-                  {item.label}
+                  <div className="flex items-center gap-4">
+                    <item.icon size={24} />
+                    {item.label}
+                  </div>
+                  {item.id === 'chats' && unreadCount > 0 && (
+                    <span className="bg-[#ff4d4d] text-[#15101e] font-black text-xs px-2.5 py-1 rounded-full shadow-[0_0_10px_rgba(255,77,77,0.4)]">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

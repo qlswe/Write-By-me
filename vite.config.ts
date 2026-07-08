@@ -8,6 +8,21 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
     plugins: [
+      {
+        name: 'mock-ws-for-tailwindcss',
+        configureServer(server) {
+          if (!server.ws) {
+            server.ws = {
+              send() {},
+              close() {},
+              on() {},
+              off() {},
+              listeners: [],
+              clients: new Set(),
+            } as any;
+          }
+        },
+      },
       react(), 
       tailwindcss(),
       VitePWA({
