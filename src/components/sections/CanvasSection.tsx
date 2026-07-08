@@ -5,7 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useCanvas } from '../../hooks/useCanvas';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { encryptImage } from '../../utils/encryption';
 
@@ -141,19 +141,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [publishTitle, setPublishTitle] = useState('');
   const [publishCaption, setPublishCaption] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
-
-  const [secureViewFeatureEnabled, setSecureViewFeatureEnabled] = useState(true);
-  const [isSecureViewOption, setIsSecureViewOption] = useState(true);
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setSecureViewFeatureEnabled(data.secureViewEnabled !== false);
-      }
-    });
-    return () => unsub();
-  }, []);
 
 
   const lastTouchDistRef = useRef<number | null>(null);
@@ -519,8 +506,8 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         throw new Error("Could not compile canvas pixels to image");
       }
 
-      // 2. Encrypt the compiled image string for ultra-safe database storage if selected & allowed
-      const encryptedImage = (isSecureViewOption && secureViewFeatureEnabled) ? encryptImage(canvasBase64) : canvasBase64;
+      // 2. Encrypt the compiled image string for ultra-safe database storage
+      const encryptedImage = encryptImage(canvasBase64);
 
       // 3. Prepare thread data targeting forum_threads (Activities feed!)
       const threadData = {
@@ -852,116 +839,329 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
                {/* Dynamic sub-tool row for personal settings */}
                {mode === 'personal' && (
-                  <div className="pt-4 border-t border-[#3d2b4f]/30 flex flex-col gap-2">
-                    <button
-                      onClick={handlePublish}
-                      className="w-full flex items-center justify-center h-10 gap-2 bg-[#ff4d4d] text-[#15101e] rounded-xl text-xs font-black uppercase tracking-wider hover:bg-[#ff7a7a] transition-all active:scale-95 shadow-[0_0_15px_rgba(255,77,77,0.3)]"
-                    >
-                      <Save size={14} className="shrink-0" />
-                      {t.canvasPublish || "ОПУБЛИКОВАТЬ"}
-                    </button>
+                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[#3d2b4f]/30">
+                   <div className="flex items-center gap-2">
+                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                       {lang === 'ru' ? 'РАЗМЕР:' : 'SIZE:'}
+                     </span>
+                     <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
+                       {[16, 32, 64].map(sz => (
+                         <button
+                           key={sz}
+                           onClick={() => setPersonalSize(sz)}
+                           className={`px-2 py-1 rounded text-[10px] font-black transition-all ${personalSize === sz ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
+                         >
+                           {sz}x{sz}
+                         </button>
+                       ))}
+                     </div>
+                   </div>
 
-                    <button
-                      onClick={() => {
-                        if (window.confirm(t.canvasClearConfirm || "Are you sure you want to clear your personal canvas?")) {
-                          clearCanvas();
-                        }
-                      }}
-                      className="w-full flex items-center justify-center h-10 gap-2 bg-red-600/10 text-red-500 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-red-600 transition-all active:scale-95 border border-red-500/20"
-                      title={t.canvasClear || "Clear Canvas"}
-                    >
-                      <Eraser size={14} className="shrink-0" />
-                      {t.canvasClear || "ОЧИСТИТЬ"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+                   <div className="flex items-center gap-2">
+                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                       {lang === 'ru' ? 'ШАБЛОНЫ:' : 'TEMPLATES:'}
+                     </span>
+                     <div className="flex flex-wrap gap-1 bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
+                       {Object.entries(TEMPLATES).map(([key, val]) => (
+                         <button
+                           key={key}
+                           onClick={() => loadTemplate(key)}
+                           className="px-2 py-0.5 rounded text-[10px] font-bold text-gray-300 hover:text-white hover:bg-[#3d2b4f]/50 flex items-center gap-1 uppercase tracking-tight"
+                         >
+                           <LayoutGrid size={10} className="text-[#ff4d4d]" />
+                           {lang === 'ru' ? val.nameRu : val.name}
+                         </button>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
+               )}
+             </div>
 
-         </div>
-       </div>
+             {/* Draggable container wrapper */}
+             <div className="aspect-square bg-[#0d0b14] rounded-xl overflow-hidden border-2 border-[#3d2b4f] shadow-inner relative flex items-center justify-center p-2">
+               <motion.div 
+                 className={`w-full h-full relative ${tool === 'move' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'} select-none touch-none`}
+                 drag={tool === 'move'}
+                 dragConstraints={isGlobal ? undefined : { left: -300, right: 300, top: -300, bottom: 300 }}
+                 style={{ scale }}
+                 onWheel={(e) => {
+                   e.preventDefault();
+                   setScale(s => Math.min(Math.max(0.5, s - e.deltaY * 0.001), 3));
+                 }}
+                 onTouchMove={(e) => {
+                   if (e.touches.length === 2) {
+                     e.preventDefault();
+                     // Basic pinch zoom implementation
+                     const touch1 = e.touches[0];
+                     const touch2 = e.touches[1];
+                     const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+                     
+                     if (lastTouchDistRef.current === null) {
+                       lastTouchDistRef.current = dist;
+                     } else {
+                       const delta = dist - lastTouchDistRef.current;
+                       setScale(s => Math.min(Math.max(0.5, s + delta * 0.01), 3));
+                       lastTouchDistRef.current = dist;
+                     }
+                   }
+                 }}
+                 onTouchEnd={() => {
+                   lastTouchDistRef.current = null;
+                 }}
+               >
+                 {isGlobal ? (
+                     <div 
+                         ref={innerRef}
+                         className="w-[10000px] h-[10000px] border border-[#3d2b4f]/50 bg-[#15101e] shadow-2xl relative select-none touch-none absolute top-1/2 left-1/2 -mt-[5000px] -ml-[5000px]"
+                         onPointerDown={(e) => { 
+                           if (e.pointerType === 'mouse' && e.buttons !== 1) return;
+                           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                           handlePointerDown(e.clientX, e.clientY); 
+                         }}
+                         onPointerMove={(e) => { 
+                           handlePointerMove(e.clientX, e.clientY); 
+                         }}
+                         onPointerUp={(e) => {
+                           (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+                           handlePointerUp(e.clientX, e.clientY);
+                         }}
+                         onPointerLeave={() => handlePointerUp()}
+                         style={{
+                             backgroundImage: showGrid ? `linear-gradient(to right, rgba(61,43,79,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(61,43,79,0.3) 1px, transparent 1px)` : 'none',
+                             backgroundSize: `${PIXEL_CSS_SIZE}px ${PIXEL_CSS_SIZE}px`
+                         }}
+                     >
+                         {Object.keys(pixels).map(key => {
+                             const p = pixels[key];
+                             if (!p) return null;
+                             const [xx, yy] = key.split(',').map(Number);
+                             const previewColor = previewPixels[key];
+                             return (
+                                 <div 
+                                     key={key}
+                                     style={{
+                                         position: 'absolute',
+                                         left: xx * PIXEL_CSS_SIZE,
+                                         top: yy * PIXEL_CSS_SIZE,
+                                         width: PIXEL_CSS_SIZE,
+                                         height: PIXEL_CSS_SIZE,
+                                         backgroundColor: previewColor || p.color
+                                     }}
+                                 />
+                             );
+                         })}
+                     </div>
+                 ) : (
+                     <div className="w-full h-full border border-[#3d2b4f]/50 bg-[#15101e] shadow-2xl relative select-none touch-none"
+                         ref={innerRef}
+                         onPointerDown={(e) => { 
+                           if (e.pointerType === 'mouse' && e.buttons !== 1) return;
+                           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                           handlePointerDown(e.clientX, e.clientY); 
+                         }}
+                         onPointerMove={(e) => { 
+                           handlePointerMove(e.clientX, e.clientY); 
+                         }}
+                         onPointerUp={(e) => {
+                           (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+                           handlePointerUp(e.clientX, e.clientY);
+                         }}
+                         onPointerLeave={() => handlePointerUp()}>
+                     <div 
+                         className="w-full h-full grid pointer-events-none"
+                         style={{ 
+                         gridTemplateColumns: `repeat(${size}, 1fr)`,
+                         gridTemplateRows: `repeat(${size}, 1fr)`
+                         }}
+                     >
+                         {cells}
+                     </div>
+                     </div>
+                 )}
+               </motion.div>
+             </div>
+             
+             <div className="mt-4 flex items-start gap-3 bg-[#251c35] p-3 rounded-xl border border-[#3d2b4f]">
+               <Info size={20} className="text-[#ff4d4d] shrink-0 mt-0.5" />
+               <p className="text-xs text-gray-400">
+                 {mode === 'global' 
+                   ? t.canvasDesc || "This is a real-time collaborative canvas. Any changes you make are instantly visible to everyone globally!"
+                   : t.canvasPersonalDesc || "This is your personal canvas. You can draw here and publish a snapshot to your profile."}
+                 {t.canvasMoveToolText || " Use the Move tool (or mouse wheel) to zoom and pan."}
+               </p>
+             </div>
+           </div>
 
-       {isPublishModalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm">
-            <div className="bg-[#15101e] border border-[#3d2b4f] rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-lg overflow-hidden relative flex flex-col p-8 text-white text-left font-sans">
-              <h3 className="text-2xl font-black text-[#ff4d4d] uppercase tracking-wider mb-2">
-                {lang === 'ru' ? 'Опубликовать в Активность' : 'Publish to Activity'}
-              </h3>
-              <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-6 leading-relaxed">
-                {lang === 'ru' ? 'Ваш рисунок появится в ленте активностей и постов!' : 'Your drawing will appear in the main activity and posts feed!'}
-              </p>
-              <div className="space-y-4 mb-8">
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
-                    {lang === 'ru' ? 'Название рисунка / поста' : 'Drawing Title / Post Subject'}
-                  </label>
-                  <input
-                    type="text"
-                    value={publishTitle}
-                    onChange={(e) => setPublishTitle(e.target.value)}
-                    placeholder={lang === 'ru' ? 'Например: Моё пиксель-арт сердечко...' : 'e.g., My Pixel Art Heart...'}
-                    className="w-full bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all font-sans text-white"
-                    maxLength={100}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
-                    {lang === 'ru' ? 'Подпись / Описание' : 'Caption / Description'}
-                  </label>
-                  <textarea
-                    value={publishCaption}
-                    onChange={(e) => setPublishCaption(e.target.value)}
-                    placeholder={lang === 'ru' ? 'Опишите ваш рисунок или оставьте комментарий...' : 'Write something about your drawing...'}
-                    className="w-full h-28 bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all resize-none font-sans text-white"
-                    maxLength={500}
-                  />
-                </div>
+           <div className="w-full md:w-64 shrink-0 flex flex-col gap-6">
+             <div className="bg-[#251c35] rounded-2xl p-4 sm:p-6 border border-[#3d2b4f]">
+               <h3 className="text-sm font-black text-gray-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                 <Palette size={16} />
+                 {t.canvasColors || "Colors"}
+               </h3>
+               <div className="flex flex-wrap gap-3">
+                 {COLORS.map(color => (
+                   <button
+                     key={color}
+                     onClick={() => { setSelectedColor(color); if (tool === 'move' || tool === 'eraser') setTool('draw'); }}
+                     className={`shrink-0 w-10 h-10 rounded-xl transition-all border-2 ${
+                       selectedColor === color && tool !== 'move' && tool !== 'eraser'
+                         ? 'scale-110 border-white shadow-lg shadow-white/20' 
+                         : 'border-transparent hover:scale-105'
+                     }`}
+                     style={{ backgroundColor: color }}
+                     aria-label={`Select color ${color}`}
+                   />
+                 ))}
+                 
+                 <label
+                   className={`shrink-0 w-10 h-10 rounded-xl transition-all border-2 flex items-center justify-center cursor-pointer relative overflow-hidden ${
+                     selectedColor !== 'eraser' && !COLORS.includes(selectedColor) && tool !== 'move'
+                       ? 'scale-110 border-white shadow-lg shadow-white/20' 
+                       : 'border-transparent hover:scale-105'
+                   }`}
+                   style={{
+                     background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)'
+                   }}
+                   title={t.canvasCustomColor || "Custom Color"}
+                 >
+                   <input
+                     type="color"
+                     value={selectedColor !== 'eraser' && !COLORS.includes(selectedColor) ? selectedColor : '#ff0000'}
+                     onChange={(e) => { setSelectedColor(e.target.value); if (tool === 'move' || tool === 'eraser') setTool('draw'); }}
+                     className="absolute opacity-0 w-20 h-20 cursor-pointer"
+                   />
+                 </label>
+                 
+                 <button
+                   onClick={() => { setSelectedColor('eraser'); setTool('eraser'); }}
+                   className={`shrink-0 w-10 h-10 rounded-xl transition-all border-2 flex items-center justify-center bg-[#15101e] ${
+                     tool === 'eraser'
+                       ? 'scale-110 border-white shadow-lg shadow-white/20' 
+                       : 'border-[#3d2b4f] hover:scale-105 hover:border-[#ff4d4d]'
+                   }`}
+                   title={t.canvasEraser || "Eraser"}
+                   aria-label="Eraser"
+                 >
+                   <Eraser size={20} className={tool === 'eraser' ? 'text-white' : 'text-gray-400'} />
+                 </button>
+               </div>
+             </div>
 
-                {secureViewFeatureEnabled && (
-                  <div className="pt-2">
-                    <label className="flex items-center gap-3 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={isSecureViewOption}
-                        onChange={(e) => setIsSecureViewOption(e.target.checked)}
-                        className="w-4 h-4 rounded border-[#3d2b4f] text-[#ff4d4d] focus:ring-[#ff4d4d] bg-[#1e172a]"
-                      />
-                      <span className="text-xs font-black uppercase tracking-widest text-white/70">
-                        🔒 {lang === 'ru' ? 'Защищённый просмотр (шифрование рисунка)' : 'Secure View (Encrypt Drawing)'}
-                      </span>
-                    </label>
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-4 items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => setIsPublishModalOpen(false)}
-                  disabled={isPublishing}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-white/50 hover:text-white px-5 py-3.5 hover:bg-white/5 border border-[#3d2b4f]/30 rounded-2xl transition-all cursor-pointer font-black uppercase tracking-widest text-[10px]"
-                >
-                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmPublish}
-                  disabled={isPublishing || !publishTitle.trim()}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-6 py-3.5 bg-[#ff4d4d] text-[#15101e] font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-[#ff7a7a] transition-all disabled:opacity-50 active:scale-95 shadow-lg cursor-pointer"
-                >
-                  {isPublishing ? (
-                    <div className="w-4 h-4 border-2 border-[#15101e] border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Save size={16} />
-                      {lang === 'ru' ? 'Опубликовать' : 'Publish'}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-     </div>
-   );
- };
+             <div className="bg-[#251c35] rounded-2xl p-4 sm:p-6 border border-[#3d2b4f] space-y-4">
+               <div>
+                 <h3 className="text-sm font-black text-gray-300 uppercase tracking-widest mb-3">
+                   {t.canvasYourColor || "Selected"}
+                 </h3>
+                 <div className="flex items-center gap-3">
+                   <div 
+                     className="w-12 h-12 shrink-0 rounded-xl shadow-inner border border-white/20 flex flex-col items-center justify-center animate-pulse"
+                     style={{ backgroundColor: tool === 'eraser' ? '#15101e' : selectedColor }}
+                   >
+                     {tool === 'eraser' && <Eraser size={24} className="text-gray-400" />}
+                   </div>
+                   <div className="flex-1 min-w-0 bg-[#15101e] px-3 py-2.5 rounded-lg border border-[#3d2b4f] flex items-center">
+                     <span className="text-xs font-mono text-gray-400 truncate">
+                       {tool === 'eraser' ? t.canvasEraser || "ERASER" : selectedColor.toUpperCase()}
+                     </span>
+                   </div>
+                 </div>
+               </div>
+
+               {mode === 'personal' && (
+                 <div className="pt-4 border-t border-[#3d2b4f]/30 flex flex-col gap-2">
+                   <button
+                     onClick={handlePublish}
+                     className="w-full flex items-center justify-center h-10 gap-2 bg-[#ff4d4d] text-[#15101e] rounded-xl text-xs font-black uppercase tracking-wider hover:bg-[#ff7a7a] transition-all active:scale-95 shadow-[0_0_15px_rgba(255,77,77,0.3)]"
+                   >
+                     <Save size={14} className="shrink-0" />
+                     {t.canvasPublish || "ОПУБЛИКОВАТЬ"}
+                   </button>
+
+                   {isPublishModalOpen && (
+                      <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm">
+                        <div className="bg-[#15101e] border border-[#3d2b4f] rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-lg overflow-hidden relative flex flex-col p-8 text-white text-left font-sans">
+                          <h3 className="text-2xl font-black text-[#ff4d4d] uppercase tracking-wider mb-2">
+                            {lang === 'ru' ? 'Опубликовать в Активность' : 'Publish to Activity'}
+                          </h3>
+                          <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-6 leading-relaxed">
+                            {lang === 'ru' ? 'Ваш рисунок появится в ленте активностей и постов!' : 'Your drawing will appear in the main activity and posts feed!'}
+                          </p>
+                          <div className="space-y-4 mb-8">
+                            <div>
+                              <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                                {lang === 'ru' ? 'Название рисунка / поста' : 'Drawing Title / Post Subject'}
+                              </label>
+                              <input
+                                type="text"
+                                value={publishTitle}
+                                onChange={(e) => setPublishTitle(e.target.value)}
+                                placeholder={lang === 'ru' ? 'Например: Моё пиксель-арт сердечко...' : 'e.g., My Pixel Art Heart...'}
+                                className="w-full bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all font-sans text-white"
+                                maxLength={100}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                                {lang === 'ru' ? 'Подпись / Описание' : 'Caption / Description'}
+                              </label>
+                              <textarea
+                                value={publishCaption}
+                                onChange={(e) => setPublishCaption(e.target.value)}
+                                placeholder={lang === 'ru' ? 'Опишите ваш рисунок или оставьте комментарий...' : 'Write something about your drawing...'}
+                                className="w-full h-28 bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all resize-none font-sans text-white"
+                                maxLength={500}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-4 items-center justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setIsPublishModalOpen(false)}
+                              disabled={isPublishing}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-white/50 hover:text-white px-5 py-3.5 hover:bg-white/5 border border-[#3d2b4f]/30 rounded-2xl transition-all cursor-pointer font-black uppercase tracking-widest text-[10px]"
+                            >
+                              {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleConfirmPublish}
+                              disabled={isPublishing || !publishTitle.trim()}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-6 py-3.5 bg-[#ff4d4d] text-[#15101e] font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-[#ff7a7a] transition-all disabled:opacity-50 active:scale-95 shadow-lg cursor-pointer"
+                            >
+                              {isPublishing ? (
+                                <div className="w-4 h-4 border-2 border-[#15101e] border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <>
+                                  <Save size={16} />
+                                  {lang === 'ru' ? 'Опубликовать' : 'Publish'}
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                   <button
+                     onClick={() => {
+                       if (window.confirm(t.canvasClearConfirm || "Are you sure you want to clear your personal canvas?")) {
+                         clearCanvas();
+                       }
+                     }}
+                     className="w-full flex items-center justify-center h-10 gap-2 bg-red-600/10 text-red-500 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-red-600 transition-all active:scale-95 border border-red-500/20"
+                     title={t.canvasClear || "Clear Canvas"}
+                   >
+                     <Eraser size={14} className="shrink-0" />
+                     {t.canvasClear || "ОЧИСТИТЬ"}
+                   </button>
+                 </div>
+               )}
+             </div>
+           </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};

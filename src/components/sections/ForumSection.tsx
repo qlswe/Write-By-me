@@ -295,19 +295,6 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
   const doodleDrawingRef = useRef(false);
 
   // Security concept states
-  const [secureViewFeatureEnabled, setSecureViewFeatureEnabled] = useState(true);
-  const [isSecureViewOption, setIsSecureViewOption] = useState(true);
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setSecureViewFeatureEnabled(data.secureViewEnabled !== false);
-      }
-    });
-    return () => unsub();
-  }, []);
-
   const [isE2EEEnabled, setIsE2EEEnabled] = useState(() => {
     return localStorage.getItem('aha_security_e2ee') !== 'false';
   });
@@ -531,7 +518,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
         commentCount: 1,
         upvotes: [],
         downvotes: [],
-        imageUrl: attachedImage ? ((isSecureViewOption && secureViewFeatureEnabled) ? encryptImage(attachedImage) : attachedImage) : ''
+        imageUrl: attachedImage ? encryptImage(attachedImage) : ''
       };
 
       let threadId = Date.now().toString() + '_' + user.uid;
@@ -1015,33 +1002,20 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                 ) : selectedThread.content}
               </p>
               
-              {selectedThread.imageUrl && (() => {
-                const isEncrypted = selectedThread.imageUrl.startsWith("IMG_AES:");
-                const isSecure = secureViewFeatureEnabled && isEncrypted;
-                return (
-                  <div className="mb-6 rounded-3xl overflow-hidden border border-[#3d2b4f]/40 max-h-[450px] min-h-[250px] w-full flex items-center justify-center bg-black/40 relative">
-                    <img 
-                      src={decryptImage(selectedThread.imageUrl)} 
-                      alt="Attached visual" 
-                      className={`w-full h-full object-cover ${isSecure ? 'select-none pointer-events-none' : 'cursor-zoom-in hover:scale-[1.01] transition-transform duration-300'}`}
-                      onContextMenu={isSecure ? (e) => e.preventDefault() : undefined}
-                      onDragStart={isSecure ? (e) => e.preventDefault() : undefined}
-                      onClick={!isSecure ? () => {
-                        const w = window.open();
-                        if (w) {
-                          w.document.write(`<img src="${decryptImage(selectedThread?.imageUrl || '')}" style="max-width:100%; max-height:100vh; display:block; margin:auto; background:#15101e;"/>`);
-                          w.document.body.style.background = '#15101e';
-                        }
-                      } : undefined}
-                    />
-                    {isSecure && (
-                      <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-[#3d2b4f]/30 text-[10px] font-black uppercase tracking-widest text-white/50 select-none pointer-events-none">
-                        🔒 {lang === 'ru' ? 'Защищенный просмотр' : 'Secure View'}
-                      </div>
-                    )}
+              {selectedThread.imageUrl && (
+                <div className="mb-6 rounded-3xl overflow-hidden border border-[#3d2b4f]/40 h-[320px] sm:h-[400px] w-full flex items-center justify-center bg-black/40 relative">
+                  <img 
+                    src={decryptImage(selectedThread.imageUrl)} 
+                    alt="Attached visual" 
+                    className="w-full h-full object-cover select-none pointer-events-none" 
+                    onContextMenu={(e) => e.preventDefault()}
+                    onDragStart={(e) => e.preventDefault()}
+                  />
+                  <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-[#3d2b4f]/30 text-[10px] font-black uppercase tracking-widest text-white/50 select-none pointer-events-none">
+                    🔒 {lang === 'ru' ? 'Защищенный просмотр' : 'Secure View'}
                   </div>
-                );
-              })()}
+                </div>
+              )}
               
               <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-xl border border-[#3d2b4f]/30 w-fit">
                 <button
@@ -1263,37 +1237,19 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
 
             {/* Attached Image Preview */}
             {attachedImage && (
-              <div className="space-y-3">
-                <div className="relative w-fit bg-[#15101e] border border-[#3d2b4f]/60 rounded-2xl p-2 group">
-                  <img
-                    src={attachedImage}
-                    alt="Attachment preview"
-                    className="max-h-[120px] rounded-xl object-contain"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setAttachedImage(null)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-                
-                {secureViewFeatureEnabled && (
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-3 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={isSecureViewOption}
-                        onChange={(e) => setIsSecureViewOption(e.target.checked)}
-                        className="w-4 h-4 rounded border-[#3d2b4f] text-[#ff4d4d] focus:ring-[#ff4d4d] bg-[#1e172a]"
-                      />
-                      <span className="text-xs font-black uppercase tracking-widest text-white/70">
-                        🔒 {lang === 'ru' ? 'Защищённый просмотр (шифрование изображения)' : 'Secure View (Image Encryption)'}
-                      </span>
-                    </label>
-                  </div>
-                )}
+              <div className="relative w-fit bg-[#15101e] border border-[#3d2b4f]/60 rounded-2xl p-2 group">
+                <img
+                  src={attachedImage}
+                  alt="Attachment preview"
+                  className="max-h-[120px] rounded-xl object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={() => setAttachedImage(null)}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
+                >
+                  <X size={14} />
+                </button>
               </div>
             )}
           </div>
@@ -1438,21 +1394,17 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                     ) : thread.content}
                   </p>
 
-                  {thread.imageUrl && (() => {
-                    const isEncrypted = thread.imageUrl.startsWith("IMG_AES:");
-                    const isSecure = secureViewFeatureEnabled && isEncrypted;
-                    return (
-                      <div className="mb-4 rounded-xl overflow-hidden border border-[#3d2b4f]/20 h-[140px] w-[240px] max-w-full flex items-center bg-black/40 relative">
-                        <img 
-                          src={decryptImage(thread.imageUrl)} 
-                          alt="Post attachment" 
-                          className={`w-full h-full object-cover ${isSecure ? 'select-none pointer-events-none' : ''}`} 
-                          onContextMenu={isSecure ? (e) => e.preventDefault() : undefined}
-                          onDragStart={isSecure ? (e) => e.preventDefault() : undefined}
-                        />
-                      </div>
-                    );
-                  })()}
+                  {thread.imageUrl && (
+                    <div className="mb-4 rounded-xl overflow-hidden border border-[#3d2b4f]/20 h-[140px] w-[240px] max-w-full flex items-center bg-black/40 relative">
+                      <img 
+                        src={decryptImage(thread.imageUrl)} 
+                        alt="Post attachment" 
+                        className="w-full h-full object-cover select-none pointer-events-none" 
+                        onContextMenu={(e) => e.preventDefault()}
+                        onDragStart={(e) => e.preventDefault()}
+                      />
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-3">
                     <img 
