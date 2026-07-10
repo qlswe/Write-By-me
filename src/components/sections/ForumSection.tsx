@@ -31,6 +31,7 @@ interface ForumThread {
   downvotes?: string[];
   isEdited?: boolean;
   imageUrl?: string;
+  isProtected?: boolean;
 }
 
 interface ForumComment {
@@ -271,6 +272,17 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
   const { user } = useAuth();
   const t = translations[lang];
   const { checkLimit, incrementUsage } = useLimits();
+  const [protectedViewFeatureEnabled, setProtectedViewFeatureEnabled] = useState<boolean>(true);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+      if (docSnap.exists()) {
+        setProtectedViewFeatureEnabled(docSnap.data().protectedViewFeatureEnabled !== false);
+      }
+    });
+    return () => unsub();
+  }, []);
+
   const [threads, setThreads] = useState<ForumThread[]>([]);
   const [selectedThread, setSelectedThread] = useState<ForumThread | null>(null);
   const [comments, setComments] = useState<ForumComment[]>([]);
@@ -282,7 +294,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Custom states for Consolidated Activities & Posts section
-  const [activeTab, setActiveTab] = useState<'posts' | 'canvas' | 'activities' | 'security'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'activities' | 'security'>('posts');
   const [subActivityTab, setSubActivityTab] = useState<'events' | 'promos'>('events');
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -1002,20 +1014,43 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                 ) : selectedThread.content}
               </p>
               
-              {selectedThread.imageUrl && (
-                <div className="mb-6 rounded-3xl overflow-hidden border border-[#3d2b4f]/40 h-[320px] sm:h-[400px] w-full flex items-center justify-center bg-black/40 relative">
-                  <img 
-                    src={decryptImage(selectedThread.imageUrl)} 
-                    alt="Attached visual" 
-                    className="w-full h-full object-cover select-none pointer-events-none" 
-                    onContextMenu={(e) => e.preventDefault()}
-                    onDragStart={(e) => e.preventDefault()}
-                  />
-                  <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-[#3d2b4f]/30 text-[10px] font-black uppercase tracking-widest text-white/50 select-none pointer-events-none">
-                    🔒 {lang === 'ru' ? 'Защищенный просмотр' : 'Secure View'}
+              {selectedThread.imageUrl && (() => {
+                const isThreadProtected = protectedViewFeatureEnabled && (selectedThread.isProtected !== false);
+                return (
+                  <div className="mb-6 rounded-3xl overflow-hidden border border-[#3d2b4f]/40 h-[320px] sm:h-[400px] w-full flex items-center justify-center bg-black/40 relative">
+                    <img 
+                      src={decryptImage(selectedThread.imageUrl)} 
+                      alt="Attached visual" 
+                      className={`w-full h-full object-cover ${isThreadProtected ? 'select-none pointer-events-none' : ''}`} 
+                      onContextMenu={isThreadProtected ? (e) => e.preventDefault() : undefined}
+                      onDragStart={isThreadProtected ? (e) => e.preventDefault() : undefined}
+                    />
+                    {isThreadProtected ? (
+                      <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-[#3d2b4f]/30 text-[10px] font-black uppercase tracking-widest text-white/50 select-none pointer-events-none">
+                        🔒 {lang === 'ru' ? 'Защищенный просмотр' : 'Secure View'}
+                      </div>
+                    ) : (
+                      <div className="absolute bottom-4 right-4 flex gap-2">
+                        <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-[#3d2b4f]/30 text-[10px] font-black uppercase tracking-widest text-white/50 select-none pointer-events-none">
+                          🔓 {lang === 'ru' ? 'Открытый просмотр' : 'Public View'}
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (!selectedThread.imageUrl) return;
+                            const link = document.createElement('a');
+                            link.href = decryptImage(selectedThread.imageUrl);
+                            link.download = `${selectedThread.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'drawing'}.png`;
+                            link.click();
+                          }}
+                          className="bg-[#ff4d4d] hover:bg-white text-[#15101e] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(255,77,77,0.3)] flex items-center gap-1 cursor-pointer"
+                        >
+                          📥 {lang === 'ru' ? 'Скачать' : 'Download'}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
               
               <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-xl border border-[#3d2b4f]/30 w-fit">
                 <button
@@ -1309,20 +1344,6 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
             {lang === 'ru' ? 'Лента Постов' : 'Posts Feed'}
           </button>
           <button
-            onClick={() => setActiveTab('canvas')}
-            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-black uppercase text-xs tracking-wider transition-all whitespace-nowrap ${activeTab === 'canvas' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white'}`}
-          >
-            <PaletteIcon size={14} />
-            {lang === 'ru' ? 'Рисовашка' : 'Drawing Board'}
-          </button>
-          <button
-            onClick={() => setActiveTab('activities')}
-            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-black uppercase text-xs tracking-wider transition-all whitespace-nowrap ${activeTab === 'activities' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white'}`}
-          >
-            <Ticket size={14} />
-            {lang === 'ru' ? 'Челленджи и Промо' : 'Activities & Promos'}
-          </button>
-          <button
             onClick={() => setActiveTab('security')}
             className={`flex items-center gap-2 px-6 py-3 border-b-2 font-black uppercase text-xs tracking-wider transition-all whitespace-nowrap ${activeTab === 'security' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white'}`}
           >
@@ -1394,17 +1415,20 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                     ) : thread.content}
                   </p>
 
-                  {thread.imageUrl && (
-                    <div className="mb-4 rounded-xl overflow-hidden border border-[#3d2b4f]/20 h-[140px] w-[240px] max-w-full flex items-center bg-black/40 relative">
-                      <img 
-                        src={decryptImage(thread.imageUrl)} 
-                        alt="Post attachment" 
-                        className="w-full h-full object-cover select-none pointer-events-none" 
-                        onContextMenu={(e) => e.preventDefault()}
-                        onDragStart={(e) => e.preventDefault()}
-                      />
-                    </div>
-                  )}
+                  {thread.imageUrl && (() => {
+                    const isThreadProtected = protectedViewFeatureEnabled && (thread.isProtected !== false);
+                    return (
+                      <div className="mb-4 rounded-xl overflow-hidden border border-[#3d2b4f]/20 h-[140px] w-[240px] max-w-full flex items-center bg-black/40 relative">
+                        <img 
+                          src={decryptImage(thread.imageUrl)} 
+                          alt="Post attachment" 
+                          className={`w-full h-full object-cover ${isThreadProtected ? 'select-none pointer-events-none' : ''}`} 
+                          onContextMenu={isThreadProtected ? (e) => e.preventDefault() : undefined}
+                          onDragStart={isThreadProtected ? (e) => e.preventDefault() : undefined}
+                        />
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex items-center gap-3">
                     <img 
@@ -1423,72 +1447,6 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
             )}
           </div>
         </>
-      )}
-
-      {activeTab === 'canvas' && (
-        <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-4 sm:p-6 shadow-xl">
-          <CanvasSection lang={lang} />
-        </div>
-      )}
-
-      {activeTab === 'activities' && (
-        <div className="space-y-6">
-          {/* Mini navigation for Activities */}
-          <div className="flex gap-2 bg-[#15101e] border border-[#3d2b4f]/30 rounded-2xl p-1.5 w-fit">
-            <button
-              onClick={() => setSubActivityTab('events')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-xs transition-all ${subActivityTab === 'events' ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-white/50 hover:text-white'}`}
-            >
-              <RefreshCw size={12} className={subActivityTab === 'events' ? 'animate-spin' : ''} />
-              {lang === 'ru' ? 'Хроника событий' : 'Event Chronicle'}
-            </button>
-            <button
-              onClick={() => setSubActivityTab('promos')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-xs transition-all ${subActivityTab === 'promos' ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-white/50 hover:text-white'}`}
-            >
-              <Ticket size={12} />
-              {lang === 'ru' ? 'Промокоды' : 'Promo Codes'}
-            </button>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {subActivityTab === 'events' ? (
-              <motion.div
-                key="events-tab"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 shadow-xl"
-              >
-                <ChronicleSection 
-                  lang={lang} 
-                  lowPerfMode={lowPerfMode} 
-                  events={events} 
-                  onEdit={onEditEvent} 
-                  onCreate={onCreateEvent} 
-                  role={role} 
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="promos-tab"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 shadow-xl"
-              >
-                <PromoSection 
-                  lang={lang} 
-                  handleCopy={handleCopy} 
-                  promoCodes={promoCodes} 
-                  role={role} 
-                  onOpenEditor={() => {}} 
-                  onEdit={() => {}} 
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
       )}
 
       {activeTab === 'security' && (

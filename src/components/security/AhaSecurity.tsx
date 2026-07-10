@@ -173,12 +173,10 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
   };
 
   const handlePanic = async () => {
-    if (window.confirm("АКТИВИРОВАТЬ ПРОТОКОЛ ПАНИКИ? Это приведет к немедленному выходу из системы и очистке данных сессии.")) {
+    if (window.confirm("АКТИВИРОВАТЬ ПРОТОКОЛ ПАНИКИ? Это включит режим экстренной маскировки.")) {
         setIsPanicking(true);
-        localStorage.clear();
-        sessionStorage.clear();
-        await logout();
-        window.location.href = 'https://google.com';
+        localStorage.setItem('aha_panic_mode', 'true');
+        window.location.href = window.location.origin;
     }
   };
 
@@ -380,12 +378,10 @@ export const AhaSecurityConsole: React.FC = () => {
   };
 
   const handlePanic = async () => {
-    if (window.confirm("АКТИВИРОВАТЬ ПРОТОКОЛ ПАНИКИ? Это приведет к немедленному выходу из системы и очистке данных сессии.")) {
+    if (window.confirm("АКТИВИРОВАТЬ ПРОТОКОЛ ПАНИКИ? Это включит режим экстренной маскировки.")) {
       setIsPanicking(true);
-      localStorage.clear();
-      sessionStorage.clear();
-      await logout();
-      window.location.href = 'https://google.com';
+      localStorage.setItem('aha_panic_mode', 'true');
+      window.location.href = window.location.origin;
     }
   };
 

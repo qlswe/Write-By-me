@@ -35,6 +35,7 @@ import { UserData } from './hooks/useUsers';
 
 import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
 import { AhaSecurityBadge, SafeHtml } from './components/security/AhaSecurity';
+import { DisguisePage } from './components/security/DisguisePage';
 
 // Lazy load sections for better performance
 const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
@@ -109,6 +110,21 @@ export default function App() {
   
   // Offline state
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  // Panic / Camouflage Mode
+  const [isPanicked, setIsPanicked] = useState(() => localStorage.getItem('aha_panic_mode') === 'true');
+
+  useEffect(() => {
+    const checkPanic = () => {
+      setIsPanicked(localStorage.getItem('aha_panic_mode') === 'true');
+    };
+    window.addEventListener('storage', checkPanic);
+    window.addEventListener('aha_panic_triggered', checkPanic);
+    return () => {
+      window.removeEventListener('storage', checkPanic);
+      window.removeEventListener('aha_panic_triggered', checkPanic);
+    };
+  }, []);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -444,6 +460,7 @@ export default function App() {
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
     { id: 'forum' as const, label: t.navForum, icon: Activity },
+    { id: 'canvas' as const, label: t.navCanvas || 'Aha Canvas', icon: Palette },
     { id: 'radio' as const, label: t.navRadio, icon: Radio },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
@@ -600,6 +617,18 @@ export default function App() {
 
   if (!isLoading && maintenanceMode && !isAuthorizedForMaintenance) {
     return <MaintenanceScreen lang={lang as Language} />;
+  }
+
+  if (isPanicked) {
+    return (
+      <DisguisePage 
+        onDeactivate={() => {
+          localStorage.removeItem('aha_panic_mode');
+          setIsPanicked(false);
+          window.dispatchEvent(new CustomEvent('aha_panic_triggered'));
+        }} 
+      />
+    );
   }
 
   return (

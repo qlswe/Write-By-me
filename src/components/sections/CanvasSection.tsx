@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, useMotionValue, AnimatePresence } from 'framer-motion';
-import { Palette, LogIn, Maximize, RefreshCw, Users, Info, Eraser, Move, PenTool, Save, User as UserIcon, Undo2, Redo2, Mail, Lock, ShieldAlert, PaintBucket, Slash, Square, Grid, Download, LayoutGrid } from 'lucide-react';
+import { Palette, LogIn, Maximize, RefreshCw, Users, Info, Eraser, Move, PenTool, Save, User as UserIcon, Undo2, Redo2, Mail, Lock, ShieldAlert, PaintBucket, Slash, Square, Grid, Download, LayoutGrid, FolderOpen, Trash2, Plus, Bookmark, X } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCanvas } from '../../hooks/useCanvas';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp, onSnapshot, query, where, deleteDoc, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { encryptImage } from '../../utils/encryption';
 
@@ -84,7 +84,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const { user, loginWithGoogle, isVerified } = useAuth();
   const innerRef = useRef<HTMLDivElement>(null);
   
-  const [mode, setMode] = useState<CanvasMode>('global');
+  const [mode, setMode] = useState<CanvasMode>('personal');
   const [personalSize, setPersonalSize] = useState<number>(32);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [previewPixels, setPreviewPixels] = useState<Record<string, string>>({});
@@ -141,6 +141,142 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [publishTitle, setPublishTitle] = useState('');
   const [publishCaption, setPublishCaption] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
+  const [publishIsProtected, setPublishIsProtected] = useState<boolean>(true);
+  const [protectedViewFeatureEnabled, setProtectedViewFeatureEnabled] = useState<boolean>(true);
+
+  // States for canvas drafts (sketches/черновики)
+  const [drafts, setDrafts] = useState<any[]>([]);
+  const [draftName, setDraftName] = useState('');
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [loadingDrafts, setLoadingDrafts] = useState(true);
+  const [selectedDraftForSaves, setSelectedDraftForSaves] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (isPublishModalOpen || selectedDraftForSaves !== null) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isPublishModalOpen, selectedDraftForSaves]);
+
+  // Subscribe to user drafts in real-time
+  useEffect(() => {
+    if (!user) {
+      setDrafts([]);
+      setLoadingDrafts(false);
+      return;
+    }
+    setLoadingDrafts(true);
+    const q = query(
+      collection(db, 'canvas_drafts'),
+      where('userId', '==', user.uid)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      list.sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      setDrafts(list);
+      setLoadingDrafts(false);
+    }, (err) => {
+      console.error("Drafts subscribe error:", err);
+      setLoadingDrafts(false);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  const handleSaveDraft = async () => {
+    if (!user) return;
+    if (Object.keys(pixels).length === 0) {
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Нельзя сохранить пустой холст!" : "Cannot save empty canvas!" }));
+      return;
+    }
+    
+    setIsSavingDraft(true);
+    const nameToUse = draftName.trim() || `${lang === 'ru' ? 'Черновик' : 'Draft'} #${drafts.length + 1}`;
+    
+    const initialSave = {
+      id: 'save_' + Date.now(),
+      pixels: pixels,
+      size: personalSize,
+      createdAt: new Date().toISOString()
+    };
+    
+    try {
+      await addDoc(collection(db, 'canvas_drafts'), {
+        userId: user.uid,
+        name: nameToUse,
+        pixels: pixels,
+        size: personalSize,
+        createdAt: new Date().toISOString(),
+        saves: [initialSave]
+      });
+      setDraftName('');
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Эскиз успешно сохранен в черновики!' : 'Sketch successfully saved to drafts!' }));
+    } catch (e) {
+      console.error("Error saving draft:", e);
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Ошибка сохранения черновика' : 'Error saving draft' }));
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const handleLoadDraft = async (draft: any) => {
+    if (!user) return;
+    if (!window.confirm(lang === 'ru' ? `Загрузить черновик "${draft.name}"? Текущий холст будет перезаписан.` : `Load draft "${draft.name}"? Current canvas will be overwritten.`)) {
+      return;
+    }
+
+    try {
+      // First update personal size so canvasId matches
+      if (draft.size && draft.size !== personalSize) {
+        setPersonalSize(draft.size);
+      }
+      
+      const targetCanvasId = `canvas_personal/${user.uid}_${draft.size || personalSize}`;
+      const targetDocId = targetCanvasId.replace(/\//g, '_');
+      const docRef = doc(db, 'canvases', targetDocId);
+      
+      await setDoc(docRef, {
+        pixels: draft.pixels || {}
+      });
+      
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Черновик успешно загружен!' : 'Draft loaded successfully!' }));
+    } catch (e) {
+      console.error("Error loading draft:", e);
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Ошибка загрузки черновика' : 'Error loading draft' }));
+    }
+  };
+
+  const handleDeleteDraft = async (draftId: string, name: string) => {
+    if (!window.confirm(lang === 'ru' ? `Удалить черновик "${name}"?` : `Delete draft "${name}"?`)) {
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, 'canvas_drafts', draftId));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Черновик удален' : 'Draft deleted' }));
+    } catch (e) {
+      console.error("Error deleting draft:", e);
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Ошибка удаления' : 'Error deleting draft' }));
+    }
+  };
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+      if (docSnap.exists()) {
+        setProtectedViewFeatureEnabled(docSnap.data().protectedViewFeatureEnabled !== false);
+      }
+    });
+    return () => unsub();
+  }, []);
 
 
   const lastTouchDistRef = useRef<number | null>(null);
@@ -350,7 +486,8 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       }
     } else {
       if (currentStrokeRef.current.length > 0) {
-        setUndoStack(prev => [...prev, currentStrokeRef.current]);
+        const strokeCopy = [...currentStrokeRef.current];
+        setUndoStack(prev => [...prev, strokeCopy]);
         setRedoStack([]);
       }
     }
@@ -398,15 +535,11 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     setUndoStack(prev => prev.slice(0, -1));
     setRedoStack(prev => [...prev, lastAction]);
     
+    const updates: Record<string, string | null> = {};
     lastAction.forEach(action => {
-      const { pixelId, oldColor } = action;
-      const [px, py] = pixelId.split(',').map(Number);
-      if (oldColor) {
-        drawPixel(px, py, oldColor);
-      } else {
-        erasePixel(px, py);
-      }
+      updates[action.pixelId] = action.oldColor;
     });
+    drawPixelsBatch(updates);
   };
 
   const redo = () => {
@@ -415,15 +548,11 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     setRedoStack(prev => prev.slice(0, -1));
     setUndoStack(prev => [...prev, nextAction]);
     
+    const updates: Record<string, string | null> = {};
     nextAction.forEach(action => {
-      const { pixelId, newColor } = action;
-      const [px, py] = pixelId.split(',').map(Number);
-      if (newColor) {
-        drawPixel(px, py, newColor);
-      } else {
-        erasePixel(px, py);
-      }
+      updates[action.pixelId] = action.newColor;
     });
+    drawPixelsBatch(updates);
   };
 
   const generateCanvasBase64 = (): string | null => {
@@ -493,6 +622,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     // Open the publish modal to let user edit title and caption
     setPublishTitle('');
     setPublishCaption('');
+    setPublishIsProtected(true);
     setIsPublishModalOpen(true);
   };
 
@@ -520,7 +650,8 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         commentCount: 1,
         upvotes: [],
         downvotes: [],
-        imageUrl: encryptedImage
+        imageUrl: encryptedImage,
+        isProtected: protectedViewFeatureEnabled ? publishIsProtected : false
       };
 
       // 4. Save thread to Firestore (using vercelFallback bypass if active)
@@ -715,22 +846,8 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         <div className="flex items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-black text-[#ff4d4d] uppercase flex items-center gap-3 tracking-widest leading-none">
             <Palette className="w-8 h-8" />
-            {t.canvasTitle || "Aha Canvas"}
+            {lang === 'ru' ? 'Асабісты Холст' : (t.canvasTitle || "Aha Canvas")}
           </h2>
-        </div>
-        <div className="flex items-center gap-2 bg-[#251c35] px-2 py-1.5 rounded-xl border border-[#3d2b4f]">
-           <button
-             onClick={() => setMode('global')}
-             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${mode === 'global' ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
-           >
-             <Users size={14} /> {t.canvasGlobal || "Global"}
-           </button>
-           <button
-             onClick={() => setMode('personal')}
-             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors ${mode === 'personal' ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
-           >
-             <UserIcon size={14} /> {t.canvasPersonal || "Personal"}
-           </button>
         </div>
       </div>
 
@@ -1078,71 +1195,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                      {t.canvasPublish || "ОПУБЛИКОВАТЬ"}
                    </button>
 
-                   {isPublishModalOpen && (
-                      <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm">
-                        <div className="bg-[#15101e] border border-[#3d2b4f] rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-lg overflow-hidden relative flex flex-col p-8 text-white text-left font-sans">
-                          <h3 className="text-2xl font-black text-[#ff4d4d] uppercase tracking-wider mb-2">
-                            {lang === 'ru' ? 'Опубликовать в Активность' : 'Publish to Activity'}
-                          </h3>
-                          <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-6 leading-relaxed">
-                            {lang === 'ru' ? 'Ваш рисунок появится в ленте активностей и постов!' : 'Your drawing will appear in the main activity and posts feed!'}
-                          </p>
-                          <div className="space-y-4 mb-8">
-                            <div>
-                              <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
-                                {lang === 'ru' ? 'Название рисунка / поста' : 'Drawing Title / Post Subject'}
-                              </label>
-                              <input
-                                type="text"
-                                value={publishTitle}
-                                onChange={(e) => setPublishTitle(e.target.value)}
-                                placeholder={lang === 'ru' ? 'Например: Моё пиксель-арт сердечко...' : 'e.g., My Pixel Art Heart...'}
-                                className="w-full bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all font-sans text-white"
-                                maxLength={100}
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
-                                {lang === 'ru' ? 'Подпись / Описание' : 'Caption / Description'}
-                              </label>
-                              <textarea
-                                value={publishCaption}
-                                onChange={(e) => setPublishCaption(e.target.value)}
-                                placeholder={lang === 'ru' ? 'Опишите ваш рисунок или оставьте комментарий...' : 'Write something about your drawing...'}
-                                className="w-full h-28 bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all resize-none font-sans text-white"
-                                maxLength={500}
-                              />
-                            </div>
-                          </div>
-                          <div className="flex gap-4 items-center justify-end">
-                            <button
-                              type="button"
-                              onClick={() => setIsPublishModalOpen(false)}
-                              disabled={isPublishing}
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-white/50 hover:text-white px-5 py-3.5 hover:bg-white/5 border border-[#3d2b4f]/30 rounded-2xl transition-all cursor-pointer font-black uppercase tracking-widest text-[10px]"
-                            >
-                              {lang === 'ru' ? 'Отмена' : 'Cancel'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleConfirmPublish}
-                              disabled={isPublishing || !publishTitle.trim()}
-                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-6 py-3.5 bg-[#ff4d4d] text-[#15101e] font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-[#ff7a7a] transition-all disabled:opacity-50 active:scale-95 shadow-lg cursor-pointer"
-                            >
-                              {isPublishing ? (
-                                <div className="w-4 h-4 border-2 border-[#15101e] border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <>
-                                  <Save size={16} />
-                                  {lang === 'ru' ? 'Опубликовать' : 'Publish'}
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+
                    <button
                      onClick={() => {
                        if (window.confirm(t.canvasClearConfirm || "Are you sure you want to clear your personal canvas?")) {
@@ -1158,10 +1211,398 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                  </div>
                )}
              </div>
+
+             {/* Drafts Section */}
+             {mode === 'personal' && (
+               <div className="bg-[#251c35] rounded-2xl p-4 sm:p-6 border border-[#3d2b4f] space-y-4 animate-fadeIn">
+                 <h3 className="text-sm font-black text-gray-300 uppercase tracking-widest flex items-center gap-2">
+                   <Bookmark size={16} className="text-[#ff4d4d]" />
+                   {lang === 'ru' ? 'Черновики' : 'Drafts & Sketches'}
+                 </h3>
+                 
+                 {/* Create Draft Form */}
+                 <div className="space-y-2">
+                   <input
+                     type="text"
+                     value={draftName}
+                     onChange={(e) => setDraftName(e.target.value)}
+                     placeholder={lang === 'ru' ? 'Имя черновика...' : 'Draft name...'}
+                     className="w-full bg-[#15101e] border border-[#3d2b4f]/60 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all font-sans"
+                     maxLength={40}
+                   />
+                   <button
+                     onClick={handleSaveDraft}
+                     disabled={isSavingDraft}
+                     className="w-full flex items-center justify-center h-9 gap-1.5 bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                   >
+                     {isSavingDraft ? (
+                       <div className="w-4 h-4 border-2 border-purple-300 border-t-transparent rounded-full animate-spin" />
+                     ) : (
+                       <>
+                         <Plus size={14} />
+                         {lang === 'ru' ? 'СОХРАНИТЬ ЭСКИЗ' : 'SAVE SKETCH'}
+                       </>
+                     )}
+                   </button>
+                 </div>
+
+                 {/* List of drafts */}
+                 <div className="pt-2 border-t border-[#3d2b4f]/30 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
+                   {loadingDrafts ? (
+                     <div className="text-center py-4 text-white/40 text-xs">
+                       <div className="w-4 h-4 border-2 border-[#ff4d4d] border-t-transparent rounded-full animate-spin mx-auto mb-1" />
+                       {lang === 'ru' ? 'Загрузка...' : 'Loading...'}
+                     </div>
+                   ) : drafts.length === 0 ? (
+                     <div className="text-center py-4 text-white/30 text-xs italic leading-tight">
+                       {lang === 'ru' 
+                         ? 'Нет сохраненных эскизов. Нарисуйте что-то и сохраните!' 
+                         : 'No saved drafts yet. Draw something and save!'}
+                     </div>
+                   ) : (
+                     drafts.map((d) => (
+                       <div 
+                         key={d.id} 
+                         className="bg-[#15101e] border border-[#3d2b4f]/40 hover:border-[#ff4d4d]/40 transition-all p-2 rounded-xl flex items-center justify-between gap-2"
+                       >
+                         <div className="min-w-0 flex-1">
+                           <p className="text-xs font-bold text-gray-200 truncate" title={d.name}>
+                             {d.name}
+                           </p>
+                           <p className="text-[9px] text-gray-500 font-mono">
+                             {d.size ? `${d.size}x${d.size}` : '32x32'} • {new Date(d.createdAt).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}
+                           </p>
+                         </div>
+                         <div className="flex items-center gap-1 shrink-0">
+                           <button
+                             onClick={() => handleLoadDraft(d)}
+                             className="p-1.5 bg-[#ff4d4d]/10 hover:bg-[#ff4d4d]/20 text-[#ff4d4d] rounded-lg transition-all"
+                             title={lang === 'ru' ? 'Загрузить на холст' : 'Load onto canvas'}
+                           >
+                             <FolderOpen size={12} />
+                           </button>
+                           <button
+                             onClick={() => setSelectedDraftForSaves(d)}
+                             className="p-1.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 rounded-lg transition-all"
+                             title={lang === 'ru' ? 'История сохранений (раз в 72ч)' : 'Save history (every 72h)'}
+                           >
+                             <Bookmark size={12} />
+                           </button>
+                           <button
+                             onClick={() => handleDeleteDraft(d.id, d.name)}
+                             className="p-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg transition-all"
+                             title={lang === 'ru' ? 'Удалить' : 'Delete'}
+                           >
+                             <Trash2 size={12} />
+                           </button>
+                         </div>
+                       </div>
+                     ))
+                   )}
+                 </div>
+               </div>
+             )}
            </div>
 
         </div>
       </div>
+
+      {/* Center-fixed Publish Post to Activity Modal */}
+      <AnimatePresence>
+        {isPublishModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-[#15101e] border border-[#3d2b4f] rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-lg overflow-hidden relative flex flex-col p-8 text-white text-left font-sans"
+            >
+              <button
+                onClick={() => setIsPublishModalOpen(false)}
+                className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <h3 className="text-2xl font-black text-[#ff4d4d] uppercase tracking-wider mb-2">
+                {lang === 'ru' ? 'Опубликовать в Активность' : 'Publish to Activity'}
+              </h3>
+              <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-6 leading-relaxed">
+                {lang === 'ru' ? 'Ваш рисунок появится в ленте активностей и постов!' : 'Your drawing will appear in the main activity and posts feed!'}
+              </p>
+              <div className="space-y-4 mb-8">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                    {lang === 'ru' ? 'Название рисунка / поста' : 'Drawing Title / Post Subject'}
+                  </label>
+                  <input
+                    type="text"
+                    value={publishTitle}
+                    onChange={(e) => setPublishTitle(e.target.value)}
+                    placeholder={lang === 'ru' ? 'Например: Моё пиксель-арт сердечко...' : 'e.g., My Pixel Art Heart...'}
+                    className="w-full bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all font-sans text-white"
+                    maxLength={100}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
+                    {lang === 'ru' ? 'Подпись / Описание' : 'Caption / Description'}
+                  </label>
+                  <textarea
+                    value={publishCaption}
+                    onChange={(e) => setPublishCaption(e.target.value)}
+                    placeholder={lang === 'ru' ? 'Опишите ваш рисунок или оставьте комментарий...' : 'Write something about your drawing...'}
+                    className="w-full h-28 bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all resize-none font-sans text-white"
+                    maxLength={500}
+                  />
+                </div>
+                
+                {protectedViewFeatureEnabled && (
+                  <div className="bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 flex items-center justify-between">
+                    <div className="flex-1 pr-4">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] mb-1">
+                        {lang === 'ru' ? 'Защищенный просмотр' : 'Protected View'}
+                      </label>
+                      <p className="text-white/50 text-[10px] leading-tight">
+                        {lang === 'ru' 
+                          ? 'Запретить скачивание, правый клик и сохранение вашего рисунка другими пользователями.' 
+                          : 'Prevent downloading, right-click, and saving of your drawing by other users.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPublishIsProtected(!publishIsProtected)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none shrink-0 ${
+                        publishIsProtected ? 'bg-[#ff4d4d]' : 'bg-[#0d0b14]'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          publishIsProtected ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-4 items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsPublishModalOpen(false)}
+                  disabled={isPublishing}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-white/50 hover:text-white px-5 py-3.5 hover:bg-white/5 border border-[#3d2b4f]/30 rounded-2xl transition-all cursor-pointer font-black uppercase tracking-widest text-[10px]"
+                >
+                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPublish}
+                  disabled={isPublishing || !publishTitle.trim()}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-6 py-3.5 bg-[#ff4d4d] text-[#15101e] font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-[#ff7a7a] transition-all disabled:opacity-50 active:scale-95 shadow-lg cursor-pointer"
+                >
+                  {isPublishing ? (
+                    <div className="w-4 h-4 border-2 border-[#15101e] border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      {lang === 'ru' ? 'Опубликовать' : 'Publish'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Saves/Backups Modal */}
+      <AnimatePresence>
+        {selectedDraftForSaves && (() => {
+          const currentDraft = drafts.find(d => d.id === selectedDraftForSaves.id) || selectedDraftForSaves;
+          const savesList = currentDraft?.saves || [];
+          const now = Date.now();
+          const hasRecentSave = savesList.some((s: any) => {
+            const saveTime = new Date(s.createdAt).getTime();
+            return (now - saveTime) < (72 * 60 * 60 * 1000); // 72 hours
+          });
+
+          const handleCreateCopy = async () => {
+            if (Object.keys(pixels).length === 0) {
+              window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Нельзя сохранить пустой холст!" : "Cannot save empty canvas!" }));
+              return;
+            }
+            if (hasRecentSave) {
+              window.dispatchEvent(new CustomEvent('aha_toast', { 
+                detail: lang === 'ru' 
+                  ? 'Копия делается только раз в 72 часа!' 
+                  : 'A copy can only be made once every 72 hours!' 
+              }));
+              return;
+            }
+
+            try {
+              const newSave = {
+                id: 'save_' + Date.now(),
+                pixels: pixels,
+                size: personalSize,
+                createdAt: new Date().toISOString()
+              };
+              const updatedSaves = [...savesList, newSave];
+              await setDoc(doc(db, 'canvas_drafts', currentDraft.id), {
+                saves: updatedSaves
+              }, { merge: true });
+
+              window.dispatchEvent(new CustomEvent('aha_toast', { 
+                detail: lang === 'ru' ? 'Новое сохранение эскиза создано!' : 'New sketch save created!' 
+              }));
+            } catch (e) {
+              console.error(e);
+              window.dispatchEvent(new CustomEvent('aha_toast', { 
+                detail: lang === 'ru' ? 'Ошибка при создании копии' : 'Error creating copy' 
+              }));
+            }
+          };
+
+          const handleLoadSave = async (save: any) => {
+            if (!window.confirm(lang === 'ru' ? `Загрузить эту версию? Текущий холст будет перезаписан.` : `Load this version? Current canvas will be overwritten.`)) {
+              return;
+            }
+
+            try {
+              if (save.size && save.size !== personalSize) {
+                setPersonalSize(save.size);
+              }
+              const targetCanvasId = `canvas_personal/${user?.uid}_${save.size || personalSize}`;
+              const targetDocId = targetCanvasId.replace(/\//g, '_');
+              await setDoc(doc(db, 'canvases', targetDocId), {
+                pixels: save.pixels || {}
+              });
+              setSelectedDraftForSaves(null);
+              window.dispatchEvent(new CustomEvent('aha_toast', { 
+                detail: lang === 'ru' ? 'Версия успешно загружена!' : 'Version successfully loaded!' 
+              }));
+            } catch (e) {
+              console.error(e);
+              window.dispatchEvent(new CustomEvent('aha_toast', { 
+                detail: lang === 'ru' ? 'Ошибка загрузки версии' : 'Error loading version' 
+              }));
+            }
+          };
+
+          const handleDeleteSave = async (saveId: string) => {
+            if (!window.confirm(lang === 'ru' ? 'Удалить это сохранение?' : 'Delete this save?')) {
+              return;
+            }
+
+            try {
+              const updatedSaves = savesList.filter((s: any) => s.id !== saveId);
+              await setDoc(doc(db, 'canvas_drafts', currentDraft.id), {
+                saves: updatedSaves
+              }, { merge: true });
+              window.dispatchEvent(new CustomEvent('aha_toast', { 
+                detail: lang === 'ru' ? 'Сохранение удалено!' : 'Save deleted!' 
+              }));
+            } catch (e) {
+              console.error(e);
+              window.dispatchEvent(new CustomEvent('aha_toast', { 
+                detail: lang === 'ru' ? 'Ошибка удаления сохранения' : 'Error deleting save' 
+              }));
+            }
+          };
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 20 }}
+                className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 max-w-md w-full shadow-2xl relative"
+              >
+                <button
+                  onClick={() => setSelectedDraftForSaves(null)}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                >
+                  <X size={20} />
+                </button>
+
+                <h3 className="text-xl font-black text-[#ff4d4d] uppercase mb-1 flex items-center gap-2">
+                  <Bookmark className="w-5 h-5" />
+                  {lang === 'ru' ? 'Сохранения эскиза' : 'Sketch Saves'}
+                </h3>
+                <p className="text-xs text-gray-400 mb-4 font-semibold truncate">
+                  {currentDraft.name}
+                </p>
+
+                <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1 mb-6">
+                  {savesList.length === 0 ? (
+                    <p className="text-center py-6 text-xs text-gray-500 italic">
+                      {lang === 'ru' ? 'Нет сохраненных копий.' : 'No saved copies yet.'}
+                    </p>
+                  ) : (
+                    savesList.map((s: any, idx: number) => {
+                      return (
+                        <div key={s.id || idx} className="bg-[#15101e] border border-[#3d2b4f]/60 p-3 rounded-xl flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-bold text-gray-200">
+                              {lang === 'ru' ? `Копия #${idx + 1}` : `Copy #${idx + 1}`}
+                            </p>
+                            <p className="text-[10px] text-gray-500 font-mono">
+                              {s.size ? `${s.size}x${s.size}` : '32x32'} • {new Date(s.createdAt).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US')}
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleLoadSave(s)}
+                              className="px-2.5 py-1.5 bg-[#ff4d4d]/10 hover:bg-[#ff4d4d]/20 text-[#ff4d4d] rounded-lg text-[10px] font-bold uppercase transition-all"
+                            >
+                              {lang === 'ru' ? 'Загрузить' : 'Load'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSave(s.id)}
+                              className="p-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg transition-all"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-[#3d2b4f]/30">
+                  <button
+                    onClick={handleCreateCopy}
+                    disabled={hasRecentSave}
+                    className="w-full flex items-center justify-center py-2.5 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-950/40 disabled:text-gray-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:cursor-not-allowed"
+                  >
+                    <Plus size={14} className="mr-1.5" />
+                    {lang === 'ru' ? 'Сделать копию (1 раз в 72ч)' : 'Make Copy (1 per 72h)'}
+                  </button>
+                  {hasRecentSave && (
+                    <p className="text-[10px] text-[#ff4d4d] text-center mt-2 font-medium">
+                      {lang === 'ru' 
+                        ? 'Копию можно делать только раз в 72 часа' 
+                        : 'You can only make a copy once every 72 hours'}
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 };

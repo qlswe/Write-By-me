@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUsers, UserData } from '../../hooks/useUsers';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
-import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Settings } from 'lucide-react';
+import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Settings, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -210,6 +210,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
   const [searchQuery, setSearchQuery] = useState('');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [securityHidden, setSecurityHidden] = useState(false);
+  const [protectedViewFeatureEnabled, setProtectedViewFeatureEnabled] = useState(true);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
@@ -217,6 +218,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
         const data = docSnap.data();
         setMaintenanceMode(data.maintenanceMode || false);
         setSecurityHidden(data.securityHidden || false);
+        setProtectedViewFeatureEnabled(data.protectedViewFeatureEnabled !== false);
       }
     });
     return () => unsub();
@@ -239,6 +241,16 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
       await setDoc(docRef, { securityHidden: !securityHidden }, { merge: true });
     } catch (error) {
       console.error("Error toggling security hidden:", error);
+    }
+  };
+
+  const toggleProtectedViewFeature = async () => {
+    if (!isAdmin) return;
+    try {
+      const docRef = doc(db, 'settings', 'general');
+      await setDoc(docRef, { protectedViewFeatureEnabled: !protectedViewFeatureEnabled }, { merge: true });
+    } catch (error) {
+      console.error("Error toggling protected view feature:", error);
     }
   };
 
@@ -314,6 +326,36 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                   securityHidden ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${protectedViewFeatureEnabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                <Lock size={20} />
+              </div>
+              <div>
+                <h3 className="font-black text-white uppercase tracking-widest text-sm">
+                  {lang === 'ru' ? 'Функция защищенного просмотра' : 'Protected View Feature'}
+                </h3>
+                <p className="text-xs text-gray-400">
+                  {lang === 'ru' 
+                    ? 'Включить/выключить функцию защищенного просмотра для холста' 
+                    : 'Enable/disable protected viewing controls for canvas drawings'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleProtectedViewFeature}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                protectedViewFeatureEnabled ? 'bg-green-500' : 'bg-[#0d0b14]'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  protectedViewFeatureEnabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload } from 'lucide-react';
+import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload, Download } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { updateProfile as updateAuthProfile } from 'firebase/auth';
@@ -8,8 +8,10 @@ import { ChatsList } from '../chat/ChatsList';
 import { UserData } from '../../hooks/useUsers';
 import { useUserPosts } from '../../hooks/useUserPosts';
 import { useUserData } from '../../hooks/useUserData';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { decrypt } from '../../utils/encryption';
+import { vercelFallback } from '../../utils/vercelFallback';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -147,6 +149,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const { posts, createPost, updatePost, deletePost, loading: postsLoading } = useUserPosts(user?.uid);
   const [newPostText, setNewPostText] = useState('');
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [isDownloadingData, setIsDownloadingData] = useState(false);
 
   // Level calculation: 1000 XP per level
   const level = Math.floor(xp / 1000) + 1;
@@ -269,6 +272,181 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   };
 
   const canSeeEmail = isOwnProfile || isAdmin;
+
+  const handleDownloadData = async () => {
+    if (!user) return;
+    setIsDownloadingData(true);
+    try {
+      const dataArchive: Record<string, any> = {
+        exportedAt: new Date().toISOString(),
+        profile: {
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: photoURL || user.photoURL || '',
+          xp: xp,
+          reputation: reputation,
+          role: userRole,
+          createdAt: creationDate
+        },
+        theories: [],
+        userPosts: [],
+        forumThreads: [],
+        forumComments: [],
+        comments: [],
+        chats: []
+      };
+
+      // 1. Fetch user profile posts
+      try {
+        if (vercelFallback.isAvailable()) {
+          const fallbackData = await vercelFallback.lrange(`user_posts:${user.uid}`, 0, 100);
+          if (fallbackData && fallbackData.length > 0) {
+            dataArchive.userPosts = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
+          }
+        } else {
+          const postsQuery = query(collection(db, 'user_posts'), where('uid', '==', user.uid));
+          const postsSnap = await getDocs(postsQuery);
+          dataArchive.userPosts = postsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+      } catch (err) {
+        console.error("Error exporting user posts:", err);
+      }
+
+      // 2. Fetch theories
+      try {
+        if (vercelFallback.isAvailable()) {
+          const fallbackData = await vercelFallback.lrange('theories', 0, 200);
+          if (fallbackData && fallbackData.length > 0) {
+            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
+            dataArchive.theories = parsed.filter((t: any) => t.authorUid === user.uid);
+          }
+        } else {
+          const theoriesQuery = query(collection(db, 'theories'), where('authorUid', '==', user.uid));
+          const theoriesSnap = await getDocs(theoriesQuery);
+          dataArchive.theories = theoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+      } catch (err) {
+        console.error("Error exporting theories:", err);
+      }
+
+      // 3. Fetch forum threads
+      try {
+        if (vercelFallback.isAvailable()) {
+          const fallbackData = await vercelFallback.lrange('forum_threads', 0, 200);
+          if (fallbackData && fallbackData.length > 0) {
+            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
+            dataArchive.forumThreads = parsed.filter((t: any) => t.authorId === user.uid);
+          }
+        } else {
+          const forumThreadsQuery = query(collection(db, 'forum_threads'), where('authorId', '==', user.uid));
+          const forumThreadsSnap = await getDocs(forumThreadsQuery);
+          dataArchive.forumThreads = forumThreadsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+      } catch (err) {
+        console.error("Error exporting forum threads:", err);
+      }
+
+      // 4. Fetch forum comments
+      try {
+        const forumCommentsQuery = query(collection(db, 'forum_comments'), where('authorId', '==', user.uid));
+        const forumCommentsSnap = await getDocs(forumCommentsQuery);
+        dataArchive.forumComments = forumCommentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (err) {
+        console.error("Error exporting forum comments:", err);
+      }
+
+      // 5. Fetch blog comments
+      try {
+        const commentsQuery = query(collection(db, 'comments'), where('authorUid', '==', user.uid));
+        const commentsSnap = await getDocs(commentsQuery);
+        dataArchive.comments = commentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      } catch (err) {
+        console.error("Error exporting blog comments:", err);
+      }
+
+      // 6. Fetch chats and decrypt messages
+      try {
+        const chatsQuery = query(collection(db, 'chats'), where('participants', 'array-contains', user.uid));
+        const chatsSnap = await getDocs(chatsQuery);
+        
+        const chatsList = [];
+        for (const chatDoc of chatsSnap.docs) {
+          const chatData = chatDoc.data();
+          const chatId = chatDoc.id;
+          
+          // Fetch messages for this chat
+          const messagesQuery = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
+          const messagesSnap = await getDocs(messagesQuery);
+          
+          const decryptedMessages = messagesSnap.docs.map(msgDoc => {
+            const msgData = msgDoc.data();
+            let decryptedText = '';
+            try {
+              decryptedText = decrypt(msgData.text || '', chatId);
+            } catch (e) {
+              decryptedText = msgData.text || '';
+            }
+
+            let decryptedImages = undefined;
+            if (msgData.images) {
+              try {
+                decryptedImages = msgData.images.map((img: string) => decrypt(img, chatId));
+              } catch (e) {
+                decryptedImages = msgData.images;
+              }
+            }
+
+            return {
+              id: msgDoc.id,
+              senderId: msgData.senderId,
+              text: decryptedText,
+              type: msgData.type || 'text',
+              images: decryptedImages,
+              createdAt: msgData.createdAt?.toDate ? msgData.createdAt.toDate().toISOString() : msgData.createdAt,
+              isEdited: msgData.isEdited || false,
+              isDeleted: msgData.isDeleted || false,
+              reactions: msgData.reactions || {}
+            };
+          });
+
+          chatsList.push({
+            chatId: chatId,
+            participants: chatData.participants,
+            messages: decryptedMessages,
+            lastMessage: chatData.lastMessage ? decrypt(chatData.lastMessage, chatId) : '',
+            lastMessageAt: chatData.lastMessageAt?.toDate ? chatData.lastMessageAt.toDate().toISOString() : chatData.lastMessageAt
+          });
+        }
+        dataArchive.chats = chatsList;
+      } catch (err) {
+        console.error("Error exporting chats:", err);
+      }
+
+      // Trigger the JSON file download
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(dataArchive, null, 2)
+      )}`;
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', jsonString);
+      downloadAnchor.setAttribute(
+        'download',
+        `aha_user_data_${user.uid}_${new Date().toISOString().split('T')[0]}.json`
+      );
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      setToast(lang === 'ru' ? 'Архив успешно скачан!' : 'Archive downloaded successfully!');
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      console.error("Error gathering user data:", error);
+      setToast(lang === 'ru' ? 'Ошибка сбора данных!' : 'Error downloading data!');
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setIsDownloadingData(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -720,6 +898,38 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                           <Copy size={16} />
                         </button>
                       </div>
+
+                      {isOwnProfile && (
+                        <div className="mt-6 bg-[#251c35]/40 border border-[#3d2b4f]/40 p-5 rounded-2xl flex flex-col gap-3">
+                          <div>
+                            <h4 className="text-xs font-black text-[#ff4d4d] uppercase tracking-wider mb-1">
+                              {lang === 'ru' ? 'Управление вашими данными' : 'Manage Your Data'}
+                            </h4>
+                            <p className="text-[10px] text-white/50 leading-relaxed">
+                              {lang === 'ru'
+                                ? 'Вы можете скачать архив со всей вашей активностью на платформе (посты, теории, комментарии и история чатов).'
+                                : 'You can export a JSON archive containing all your active contributions, including theories, posts, comments, and chat transcripts.'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={handleDownloadData}
+                            disabled={isDownloadingData}
+                            className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-[#ff4d4d] text-[#15101e] hover:bg-white hover:scale-[1.02] transition-all rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
+                          >
+                            {isDownloadingData ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-[#15101e] border-t-transparent rounded-full animate-spin shrink-0" />
+                                {lang === 'ru' ? 'Сбор данных...' : 'Collecting Data...'}
+                              </>
+                            ) : (
+                              <>
+                                <Download size={14} className="shrink-0" />
+                                {lang === 'ru' ? 'Скачать мои данные (JSON)' : 'Download My Data (JSON)'}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}
