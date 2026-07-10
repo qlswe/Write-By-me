@@ -428,7 +428,20 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
         id: doc.id,
         ...doc.data()
       })) as ForumThread[];
-      setThreads(threadsData);
+      
+      // Explicitly sort on the client-side so that any post with a pending/null createdAt (i.e. just created) is put on top!
+      const sortedThreads = [...threadsData].sort((a, b) => {
+        const getTime = (t: ForumThread) => {
+          if (!t.createdAt) return Date.now(); // Newly created thread with pending serverTimestamp
+          if (typeof t.createdAt === 'string') return new Date(t.createdAt).getTime();
+          if (typeof (t.createdAt as any).toMillis === 'function') return (t.createdAt as any).toMillis();
+          if ((t.createdAt as any).seconds) return (t.createdAt as any).seconds * 1000;
+          return Date.now();
+        };
+        return getTime(b) - getTime(a);
+      });
+      
+      setThreads(sortedThreads);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'forum_threads');
     });

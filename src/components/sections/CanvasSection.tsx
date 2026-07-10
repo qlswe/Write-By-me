@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useCanvas } from '../../hooks/useCanvas';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
+import { ConfirmModal } from '../ui/ConfirmModal';
 import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp, onSnapshot, query, where, deleteDoc, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { encryptImage } from '../../utils/encryption';
@@ -83,6 +84,7 @@ const TEMPLATES: Record<string, { name: string; nameRu: string; pixels: Record<s
 export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const { user, loginWithGoogle, isVerified } = useAuth();
   const innerRef = useRef<HTMLDivElement>(null);
+  const zoomContainerRef = useRef<HTMLDivElement>(null);
   
   const [mode, setMode] = useState<CanvasMode>('personal');
   const [personalSize, setPersonalSize] = useState<number>(32);
@@ -134,6 +136,22 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     setPreviewPixels({});
   }, [canvasId]);
 
+  useEffect(() => {
+    const container = zoomContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Prevent default browser scrolling
+      e.preventDefault();
+      setScale(s => Math.min(Math.max(0.5, s - e.deltaY * 0.001), 3));
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [mode, loading]);
+
   const t = translations[lang] as any;
 
   // States for publishing canvas to forum threads with custom caption
@@ -150,6 +168,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [loadingDrafts, setLoadingDrafts] = useState(true);
   const [selectedDraftForSaves, setSelectedDraftForSaves] = useState<any | null>(null);
+  const [draftToLoad, setDraftToLoad] = useState<any | null>(null);
+  const [draftToDelete, setDraftToDelete] = useState<any | null>(null);
+  const [saveToLoad, setSaveToLoad] = useState<any | null>(null);
+  const [saveToDelete, setSaveToDelete] = useState<{ saveId: string; draftId: string; savesList: any[] } | null>(null);
+
+  const [templateToLoad, setTemplateToLoad] = useState<string | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false);
+  const [showPublishClearConfirm, setShowPublishClearConfirm] = useState<boolean>(false);
 
   useEffect(() => {
     if (isPublishModalOpen || selectedDraftForSaves !== null) {
@@ -229,12 +255,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     }
   };
 
-  const handleLoadDraft = async (draft: any) => {
-    if (!user) return;
-    if (!window.confirm(lang === 'ru' ? `Загрузить черновик "${draft.name}"? Текущий холст будет перезаписан.` : `Load draft "${draft.name}"? Current canvas will be overwritten.`)) {
-      return;
-    }
+  const handleLoadDraft = (draft: any) => {
+    setDraftToLoad(draft);
+  };
 
+  const executeLoadDraft = async () => {
+    if (!user || !draftToLoad) return;
+    const draft = draftToLoad;
+    setDraftToLoad(null);
     try {
       // First update personal size so canvasId matches
       if (draft.size && draft.size !== personalSize) {
@@ -256,16 +284,65 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     }
   };
 
-  const handleDeleteDraft = async (draftId: string, name: string) => {
-    if (!window.confirm(lang === 'ru' ? `Удалить черновик "${name}"?` : `Delete draft "${name}"?`)) {
-      return;
-    }
+  const handleDeleteDraft = (draft: any) => {
+    setDraftToDelete(draft);
+  };
+
+  const executeDeleteDraft = async () => {
+    if (!draftToDelete) return;
+    const draftId = draftToDelete.id;
+    setDraftToDelete(null);
     try {
       await deleteDoc(doc(db, 'canvas_drafts', draftId));
       window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Черновик удален' : 'Draft deleted' }));
     } catch (e) {
       console.error("Error deleting draft:", e);
       window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Ошибка удаления' : 'Error deleting draft' }));
+    }
+  };
+
+  const executeLoadSave = async () => {
+    if (!user || !saveToLoad) return;
+    const save = saveToLoad;
+    setSaveToLoad(null);
+    setSelectedDraftForSaves(null);
+    try {
+      if (save.size && save.size !== personalSize) {
+        setPersonalSize(save.size);
+      }
+      const targetCanvasId = `canvas_personal/${user.uid}_${save.size || personalSize}`;
+      const targetDocId = targetCanvasId.replace(/\//g, '_');
+      await setDoc(doc(db, 'canvases', targetDocId), {
+        pixels: save.pixels || {}
+      });
+      window.dispatchEvent(new CustomEvent('aha_toast', { 
+        detail: lang === 'ru' ? 'Версия успешно загружена!' : 'Version successfully loaded!' 
+      }));
+    } catch (e) {
+      console.error(e);
+      window.dispatchEvent(new CustomEvent('aha_toast', { 
+        detail: lang === 'ru' ? 'Ошибка загрузки версии' : 'Error loading version' 
+      }));
+    }
+  };
+
+  const executeDeleteSave = async () => {
+    if (!saveToDelete) return;
+    const { saveId, draftId, savesList } = saveToDelete;
+    setSaveToDelete(null);
+    try {
+      const updatedSaves = savesList.filter((s: any) => s.id !== saveId);
+      await setDoc(doc(db, 'canvas_drafts', draftId), {
+        saves: updatedSaves
+      }, { merge: true });
+      window.dispatchEvent(new CustomEvent('aha_toast', { 
+        detail: lang === 'ru' ? 'Сохранение удалено!' : 'Save deleted!' 
+      }));
+    } catch (e) {
+      console.error(e);
+      window.dispatchEvent(new CustomEvent('aha_toast', { 
+        detail: lang === 'ru' ? 'Ошибка удаления сохранения' : 'Error deleting save' 
+      }));
     }
   };
 
@@ -694,9 +771,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       setIsPublishModalOpen(false);
       
       // Auto-prompt to clear canvas
-      if (window.confirm(lang === 'ru' ? 'Хотите очистить холст после публикации?' : 'Would you like to clear your canvas now that it is published?')) {
-        clearCanvas();
-      }
+      setShowPublishClearConfirm(true);
     } catch (e) {
       console.error(e);
       window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Ошибка публикации' : 'Error publishing artwork' }));
@@ -732,8 +807,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const isGlobal = mode === 'global';
   const PIXEL_CSS_SIZE = 20;
 
-  const loadTemplate = async (templateKey: string) => {
-    if (!window.confirm(lang === 'ru' ? 'Загрузка шаблона очистит текущий холст. Продолжить?' : 'Loading a template will clear your current canvas. Continue?')) return;
+  const loadTemplate = (templateKey: string) => {
+    setTemplateToLoad(templateKey);
+  };
+
+  const executeLoadTemplate = async () => {
+    if (!user || !templateToLoad) return;
+    const templateKey = templateToLoad;
+    setTemplateToLoad(null);
     const template = TEMPLATES[templateKey];
     if (!template) return;
     
@@ -743,14 +824,15 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       Object.entries(template.pixels).forEach(([key, color]) => {
         templatePixels[key] = {
           color,
-          userId: user?.uid || '',
+          userId: user.uid,
           updatedAt: Date.now()
         };
       });
       await setDoc(docRef, { pixels: templatePixels });
       window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Шаблон успешно загружен!" : "Template successfully loaded!" }));
     } catch (e) {
-      console.error(e);
+      console.error("Error loading template:", e);
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Ошибка загрузки шаблона" : "Error loading template" }));
     }
   };
 
@@ -846,7 +928,19 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         <div className="flex items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-black text-[#ff4d4d] uppercase flex items-center gap-3 tracking-widest leading-none">
             <Palette className="w-8 h-8" />
-            {lang === 'ru' ? 'Асабісты Холст' : (t.canvasTitle || "Aha Canvas")}
+            {(() => {
+              if (mode === 'global') {
+                return t.canvasTitle || "Global Canvas";
+              }
+              switch (lang) {
+                case 'ru': return 'Личный Холст';
+                case 'by': return 'Асабісты Холст';
+                case 'de': return 'Persönliche Leinwand';
+                case 'fr': return 'Toile Personnelle';
+                case 'zh': return '个人画板';
+                default: return 'Personal Canvas';
+              }
+            })()}
           </h2>
         </div>
       </div>
@@ -996,16 +1090,12 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
              </div>
 
              {/* Draggable container wrapper */}
-             <div className="aspect-square bg-[#0d0b14] rounded-xl overflow-hidden border-2 border-[#3d2b4f] shadow-inner relative flex items-center justify-center p-2">
+             <div ref={zoomContainerRef} className="aspect-square bg-[#0d0b14] rounded-xl overflow-hidden border-2 border-[#3d2b4f] shadow-inner relative flex items-center justify-center p-2">
                <motion.div 
                  className={`w-full h-full relative ${tool === 'move' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'} select-none touch-none`}
                  drag={tool === 'move'}
                  dragConstraints={isGlobal ? undefined : { left: -300, right: 300, top: -300, bottom: 300 }}
                  style={{ scale }}
-                 onWheel={(e) => {
-                   e.preventDefault();
-                   setScale(s => Math.min(Math.max(0.5, s - e.deltaY * 0.001), 3));
-                 }}
                  onTouchMove={(e) => {
                    if (e.touches.length === 2) {
                      e.preventDefault();
@@ -1198,7 +1288,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
                    <button
                      onClick={() => {
-                       if (window.confirm(t.canvasClearConfirm || "Are you sure you want to clear your personal canvas?")) {
+                       if (true) { setShowClearConfirm(true); } else {
                          clearCanvas();
                        }
                      }}
@@ -1289,7 +1379,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                              <Bookmark size={12} />
                            </button>
                            <button
-                             onClick={() => handleDeleteDraft(d.id, d.name)}
+                             onClick={() => handleDeleteDraft(d)}
                              className="p-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg transition-all"
                              title={lang === 'ru' ? 'Удалить' : 'Delete'}
                            >
@@ -1469,51 +1559,12 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
             }
           };
 
-          const handleLoadSave = async (save: any) => {
-            if (!window.confirm(lang === 'ru' ? `Загрузить эту версию? Текущий холст будет перезаписан.` : `Load this version? Current canvas will be overwritten.`)) {
-              return;
-            }
-
-            try {
-              if (save.size && save.size !== personalSize) {
-                setPersonalSize(save.size);
-              }
-              const targetCanvasId = `canvas_personal/${user?.uid}_${save.size || personalSize}`;
-              const targetDocId = targetCanvasId.replace(/\//g, '_');
-              await setDoc(doc(db, 'canvases', targetDocId), {
-                pixels: save.pixels || {}
-              });
-              setSelectedDraftForSaves(null);
-              window.dispatchEvent(new CustomEvent('aha_toast', { 
-                detail: lang === 'ru' ? 'Версия успешно загружена!' : 'Version successfully loaded!' 
-              }));
-            } catch (e) {
-              console.error(e);
-              window.dispatchEvent(new CustomEvent('aha_toast', { 
-                detail: lang === 'ru' ? 'Ошибка загрузки версии' : 'Error loading version' 
-              }));
-            }
+          const handleLoadSave = (save: any) => {
+            setSaveToLoad(save);
           };
 
-          const handleDeleteSave = async (saveId: string) => {
-            if (!window.confirm(lang === 'ru' ? 'Удалить это сохранение?' : 'Delete this save?')) {
-              return;
-            }
-
-            try {
-              const updatedSaves = savesList.filter((s: any) => s.id !== saveId);
-              await setDoc(doc(db, 'canvas_drafts', currentDraft.id), {
-                saves: updatedSaves
-              }, { merge: true });
-              window.dispatchEvent(new CustomEvent('aha_toast', { 
-                detail: lang === 'ru' ? 'Сохранение удалено!' : 'Save deleted!' 
-              }));
-            } catch (e) {
-              console.error(e);
-              window.dispatchEvent(new CustomEvent('aha_toast', { 
-                detail: lang === 'ru' ? 'Ошибка удаления сохранения' : 'Error deleting save' 
-              }));
-            }
+          const handleDeleteSave = (saveId: string) => {
+            setSaveToDelete({ saveId, draftId: currentDraft.id, savesList });
           };
 
           return (
@@ -1603,6 +1654,85 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
           );
         })()}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={draftToLoad !== null}
+        onClose={() => setDraftToLoad(null)}
+        onConfirm={executeLoadDraft}
+        title={lang === 'ru' ? 'Загрузить черновик?' : 'Load draft?'}
+        message={draftToLoad ? (lang === 'ru' ? `Вы действительно хотите загрузить черновик "${draftToLoad.name}"? Текущий холст будет перезаписан.` : `Are you sure you want to load draft "${draftToLoad.name}"? This will overwrite your current canvas.`) : ''}
+        confirmText={lang === 'ru' ? 'Загрузить' : 'Load'}
+        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+      />
+
+      <ConfirmModal
+        isOpen={draftToDelete !== null}
+        onClose={() => setDraftToDelete(null)}
+        onConfirm={executeDeleteDraft}
+        title={lang === 'ru' ? 'Удалить черновик?' : 'Delete draft?'}
+        message={draftToDelete ? (lang === 'ru' ? `Вы действительно хотите безвозвратно удалить черновик "${draftToDelete.name}"?` : `Are you sure you want to permanently delete draft "${draftToDelete.name}"?`) : ''}
+        confirmText={lang === 'ru' ? 'Удалить' : 'Delete'}
+        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        isDestructive={true}
+      />
+
+      <ConfirmModal
+        isOpen={saveToLoad !== null}
+        onClose={() => setSaveToLoad(null)}
+        onConfirm={executeLoadSave}
+        title={lang === 'ru' ? 'Загрузить версию?' : 'Load version?'}
+        message={lang === 'ru' ? 'Загрузить эту версию? Текущий холст будет перезаписан.' : 'Load this version? Current canvas will be overwritten.'}
+        confirmText={lang === 'ru' ? 'Загрузить' : 'Load'}
+        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+      />
+
+      <ConfirmModal
+        isOpen={saveToDelete !== null}
+        onClose={() => setSaveToDelete(null)}
+        onConfirm={executeDeleteSave}
+        title={lang === 'ru' ? 'Удалить это сохранение?' : 'Delete this save?'}
+        message={lang === 'ru' ? 'Вы действительно хотите безвозвратно удалить эту копию сохранения?' : 'Are you sure you want to permanently delete this saved copy?'}
+        confirmText={lang === 'ru' ? 'Удалить' : 'Delete'}
+        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        isDestructive={true}
+      />
+
+      <ConfirmModal
+        isOpen={templateToLoad !== null}
+        onClose={() => setTemplateToLoad(null)}
+        onConfirm={executeLoadTemplate}
+        title={lang === 'ru' ? 'Загрузить шаблон?' : 'Load template?'}
+        message={templateToLoad ? (lang === 'ru' ? `Загрузка шаблона "${TEMPLATES[templateToLoad]?.nameRu || templateToLoad}" очистит ваш текущий холст. Продолжить?` : `Loading the template "${TEMPLATES[templateToLoad]?.name || templateToLoad}" will clear your current canvas. Continue?`) : ''}
+        confirmText={lang === 'ru' ? 'Загрузить' : 'Load'}
+        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+      />
+
+      <ConfirmModal
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={async () => {
+          setShowClearConfirm(false);
+          await clearCanvas();
+        }}
+        title={lang === 'ru' ? 'Очистить холст?' : 'Clear canvas?'}
+        message={t.canvasClearConfirm || (lang === 'ru' ? 'Вы действительно хотите очистить персональный холст?' : 'Are you sure you want to clear your personal canvas?')}
+        confirmText={lang === 'ru' ? 'Очистить' : 'Clear'}
+        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        isDestructive={true}
+      />
+
+      <ConfirmModal
+        isOpen={showPublishClearConfirm}
+        onClose={() => setShowPublishClearConfirm(false)}
+        onConfirm={async () => {
+          setShowPublishClearConfirm(false);
+          await clearCanvas();
+        }}
+        title={lang === 'ru' ? 'Очистить холст после публикации?' : 'Clear canvas after publishing?'}
+        message={lang === 'ru' ? 'Хотите ли вы очистить свой холст теперь, когда рисунок опубликован?' : 'Would you like to clear your canvas now that your drawing is published?'}
+        confirmText={lang === 'ru' ? 'Очистить' : 'Clear'}
+        cancelText={lang === 'ru' ? 'Оставить' : 'Keep'}
+      />
     </div>
   );
 };

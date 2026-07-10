@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Radio, Play, Square, Volume2, Loader2, Lock, SkipForward, Disc, Music, Mail } from 'lucide-react';
+import { Radio, Play, Square, Volume2, Loader2, Lock, SkipForward, Disc, Music, Mail, Send, Smile, Newspaper, Phone, Sparkles, Mic } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
@@ -11,6 +11,144 @@ interface AhiRadioProps {
   lang: Language;
 }
 
+export const STATIONS = [
+  {
+    id: 'comedy',
+    frequency: '101.3 FM',
+    nameRu: 'Стендап Ахаха',
+    nameEn: 'Aha Comedy Club',
+    descRu: 'Отборный саркастический юмор и стендап на актуальные темы.',
+    descEn: 'Selected sarcastic humor and stand-up comedy on hot topics.',
+    icon: Smile,
+    promptRu: 'Сгенерируй ровно одну очень смешную, оригинальную, сатирическую стендап-шутку или короткую смешную историю про обычные жизненные ситуации, технологии или программистов. Шутка должна быть интеллектуальной, тонкой, возможно, самоироничной. Не используй заезженные банальные анекдоты. Напиши ровно один абзац. Без кавычек, без лишних вступлений.',
+    promptEn: 'Generate exactly one short, very funny, satirical stand-up joke or funny story about daily life, technology, or programmers. The joke should be smart, witty, and self-ironic. No cliché jokes. Write exactly one short paragraph. No quotes, no intro.'
+  },
+  {
+    id: 'news',
+    frequency: '95.2 FM',
+    nameRu: 'Хроники 2126',
+    nameEn: 'Chronicles 2126',
+    descRu: 'Абсурдные и уморительные новости будущего от безумного ИИ.',
+    descEn: 'Absurd and hilarious future news reports from a chaotic AI host.',
+    icon: Newspaper,
+    promptRu: 'Сгенерируй одну короткую, уморительную, сатирическую новость из будущего (из 2126 года). Например, о забастовках умных пылесосов, налогах на мысли, о том, как коты захватили интернет окончательно, или о новых законах ИИ-чиновников. Новость должна звучать как серьезная сводка новостей с уморительным и абсурдным содержанием. Напиши ровно один короткий абзац. Без кавычек, без лишних слов.',
+    promptEn: 'Generate one short, hilarious, satirical news bulletin from the future (year 2126). For example, about smart vacuums striking, taxes on human thoughts, or cats taking over the internet. It should sound like a serious news anchor reporting absurd sci-fi satire. Write exactly one short paragraph. No quotes, no intro.'
+  },
+  {
+    id: 'zen',
+    frequency: '88.0 FM',
+    nameRu: 'Космический Дзен',
+    nameEn: 'Cosmic Zen Philosophy',
+    descRu: 'Глубокие размышления о смысле бытия с изрядной долей иронии.',
+    descEn: 'Deep philosophical musings about existence with a healthy dose of irony.',
+    icon: Sparkles,
+    promptRu: 'Сгенерируй одно глубокое, поэтичное, но при этом забавное и самоироничное размышление о смысле жизни, Вселенной, человеческой природе или бесконечном цикле быта. Это должен быть умный, экзистенциальный монолог космического философа, заставляющий задуматься и улыбнуться одновременно. Напиши ровно один короткий абзац. Без кавычек.',
+    promptEn: 'Generate one deep, poetic, yet funny and self-ironic reflection on the meaning of life, the Universe, human nature, or daily routines. It should be a smart, existential monologue of a space philosopher that makes you think and smile. Write exactly one short paragraph. No quotes.'
+  },
+  {
+    id: 'listener',
+    frequency: '107.7 FM',
+    nameRu: 'Горячая Линия',
+    nameEn: 'Listener Hotline',
+    descRu: 'ИИ отвечает на каверзные и странные вопросы слушателей.',
+    descEn: 'AI answers tricky, hilarious, and weird questions from listeners.',
+    icon: Phone,
+    promptRu: 'Придумай забавный вопрос от вымышленного слушателя радиостанции (например, "Николай из Бобруйска спрашивает...") и дай на него невероятно остроумный, умный, саркастичный и неожиданный ответ от лица ИИ-ведущего. Вопрос и ответ должны быть оригинальными, остроумными и смешными. Напиши ровно один короткий абзац. Без лишних слов.',
+    promptEn: 'Invent a funny question from a fictional listener (e.g., "John from Boston asks...") and provide an incredibly witty, sarcastic, and unexpected answer as the AI host. The Q&A must be clever, original, and funny. Write exactly one short paragraph. No extra words.'
+  }
+];
+
+const parsePollinationsResponse = (text: string): string => {
+  if (!text) return '';
+  let cleanText = text.trim();
+
+  // 1. Handle cases where the text is enclosed in extra outer double quotes (e.g. double-stringification)
+  if (cleanText.startsWith('"') && cleanText.endsWith('"')) {
+    try {
+      const parsed = JSON.parse(cleanText);
+      if (typeof parsed === 'string') {
+        cleanText = parsed.trim();
+      }
+    } catch (e) {
+      cleanText = cleanText.substring(1, cleanText.length - 1).trim();
+    }
+  }
+
+  // 2. Try standard JSON parsing (can be nested/double-stringified)
+  try {
+    let parsed = JSON.parse(cleanText);
+    while (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed);
+    }
+    if (parsed) {
+      if (parsed.choices && parsed.choices[0] && parsed.choices[0].message) {
+        const msg = parsed.choices[0].message;
+        let content = msg.content || '';
+        if (!content && msg.reasoning) {
+          content = msg.reasoning;
+        }
+        if (content) cleanText = content;
+      } else if (parsed.content) {
+        cleanText = parsed.content;
+      }
+    }
+  } catch (e) {
+    // Standard parsing failed. Try to extract JSON with regex if it is wrapped in other text
+    try {
+      const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        let parsed = JSON.parse(jsonMatch[0]);
+        while (typeof parsed === 'string') {
+          parsed = JSON.parse(parsed);
+        }
+        if (parsed && parsed.choices && parsed.choices[0] && parsed.choices[0].message) {
+          const msg = parsed.choices[0].message;
+          let content = msg.content || '';
+          if (!content && msg.reasoning) {
+            content = msg.reasoning;
+          }
+          if (content) cleanText = content;
+        }
+      }
+    } catch (err) {
+      // Relaxed manual extraction
+      const contentMatch = cleanText.match(/"content"\s*:\s*"([\s\S]*?)"(?=\s*,\s*"|\s*\})/);
+      if (contentMatch && contentMatch[1]) {
+        cleanText = contentMatch[1];
+      }
+    }
+  }
+
+  // 3. Clean up typical LLM metadata leaks or raw JSON parts that could have survived or been parsed raw
+  if (cleanText.includes('choices:[') || cleanText.includes('message:{') || cleanText.includes('role:assistant')) {
+    const contentRegexes = [
+      /content\s*:\s*(["'])([\s\S]*?)\1/,
+      /content\s*:\s*([^,{}]+)/
+    ];
+    for (const regex of contentRegexes) {
+      const match = cleanText.match(regex);
+      if (match && match[2]) {
+        cleanText = match[2];
+        break;
+      } else if (match && match[1]) {
+        cleanText = match[1];
+        break;
+      }
+    }
+  }
+
+  // 4. Strip any thinking or reasoning blocks, or instructions that leaked
+  cleanText = cleanText
+    .replace(/\[reasoning_content\][\s\S]*?(?=\n\n|\n\[|$)/s, '')
+    .replace(/<thinking>[\s\S]*?<\/thinking>/s, '')
+    .replace(/Thinking step by step:[\s\S]*?(?=\n\n|\n$)/s, '')
+    .replace(/I'm stuck[\s\S]*?(?=\n\n|\n$)/gi, '')
+    .replace(/Let's recall[\s\S]*?(?=\n\n|\n$)/gi, '')
+    .trim();
+
+  return cleanText;
+};
+
 export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   const { user, loginWithGoogle } = useAuth();
   const { checkLimit, incrementUsage, hasUnlimitedAccess } = useLimits();
@@ -18,6 +156,9 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [currentJoke, setCurrentJoke] = useState('');
+  const [selectedStation, setSelectedStation] = useState<string>('comedy');
+  const [userPrompt, setUserPrompt] = useState('');
+  const [isSendingPrompt, setIsSendingPrompt] = useState(false);
   
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const isPlayingRef = useRef(isPlaying);
@@ -46,19 +187,48 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
   const generateSingleJoke = async () => {
     setStatusText("Radio Aha Protocol Connect...");
     
-    // Add a random seed to prevent caching and ensure unique jokes
+    const station = STATIONS.find(s => s.id === selectedStation) || STATIONS[0];
+    const basePrompt = lang === 'ru' ? station.promptRu : station.promptEn;
     const seed = Math.floor(Math.random() * 1000000);
+    const prompt = `${basePrompt} ВАЖНО: Выведи ТОЛЬКО готовый текст монолога или шутки без лишних слов, без кавычек и рассуждений. Уникальный ID: ${seed}`;
     
-    const topicsRu = ['про животных', 'про работу', 'про технологии', 'про еду', 'про отношения', 'про спорт', 'про путешествия', 'абсурдную', 'про космос', 'про врачей', 'про школу', 'про студентов', 'про программистов', 'про музыку', 'про кино', 'про историю', 'про будущее', 'про инопланетян', 'про роботов', 'про супергероев'];
-    const topicsEn = ['about animals', 'about work', 'about technology', 'about food', 'about relationships', 'about sports', 'about travel', 'absurd', 'about space', 'about doctors', 'about school', 'about students', 'about programmers', 'about music', 'about movies', 'about history', 'about the future', 'about aliens', 'about robots', 'about superheroes'];
-    const topic = lang === 'ru' ? topicsRu[Math.floor(Math.random() * topicsRu.length)] : topicsEn[Math.floor(Math.random() * topicsEn.length)];
+    // First, try direct POST (highly reliable, bypasses CORS issues, no proxy needed)
+    try {
+      console.log('[Aha Stealth Protocol] Trying direct POST to Pollinations...');
+      const response = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: 'user', content: prompt }
+          ],
+          model: 'openai',
+          seed: seed,
+          temperature: 0.85
+        })
+      });
+      
+      if (response.ok) {
+        let text = await response.text();
+        if (text && text.trim().length > 0) {
+          text = parsePollinationsResponse(text);
+          text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/"/g, '').trim();
+          if (text.length > 350) {
+            const sentenceMatch = text.match(/[^.!?]+[.!?]+/g);
+            if (sentenceMatch && sentenceMatch.length > 0) {
+              text = sentenceMatch.slice(0, 3).join(' ');
+            }
+          }
+          console.log('[Aha Stealth Protocol] Direct POST succeeded!');
+          return text.trim();
+        }
+      }
+    } catch (err) {
+      console.warn('[Aha Stealth Protocol] Direct POST failed, trying proxy GET loop...', err);
+    }
 
-    // Strict prompt to prevent chain-of-thought leaks (like "Let's do something witty...")
-    const prompt = lang === 'ru' 
-      ? `Сгенерируй ровно одну короткую, смешную шутку на тему: ${topic}. ВАЖНО: Выведи ТОЛЬКО текст шутки. ЗАПРЕЩЕНО писать свои мысли, рассуждения, варианты или английские слова. БЕЗ кавычек. Уникальный номер: ${seed}`
-      : `Generate exactly one short, funny joke about: ${topic}. IMPORTANT: Output ONLY the joke text. NO thinking process, NO multiple options, NO quotes. Unique ID: ${seed}`;
-    
-    // Use a specific model that is less prone to chain-of-thought leaks if possible, or just rely on the strict prompt
     const targetUrl = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${seed}&model=openai`;
     
     // Aha Stealth Protocol - Traffic Spoofing & Proxy Routing
@@ -96,15 +266,11 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       try {
         console.log(`[Aha Stealth Protocol] Connecting via ${proxy.name}...`);
         
-        // Add a slight random delay to mimic human traffic
         await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 50));
 
         const proxiedUrl = proxy.url(targetUrl);
-        
-        // Simple GET request without custom headers to avoid triggering CORS preflight (OPTIONS)
         const response = await fetch(proxiedUrl);
         
-        // If we hit rate limits or header errors, try the next proxy
         if (response.status === 429 || response.status === 431 || response.status === 403) {
           console.warn(`[Aha Stealth Protocol] ${proxy.name} returned ${response.status}, switching node...`);
           continue;
@@ -115,18 +281,13 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         let text = await proxy.parse(response);
         
         if (text && text.trim().length > 0) {
-          // Cleanup common hallucination artifacts
-          text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"').trim();
+          text = parsePollinationsResponse(text);
+          text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/"/g, '').trim();
           
-          // If the text is suspiciously long, it's likely a chain-of-thought leak.
-          // We'll try to extract just the last quoted part, or fallback.
-          if (text.length > 250) {
-            const quotes = text.match(/"([^"]+)"/g);
-            if (quotes && quotes.length > 0) {
-              // Take the last quote, assuming it's the final chosen joke
-              text = quotes[quotes.length - 1].replace(/"/g, '');
-            } else {
-               throw new Error("Text too long, likely hallucination");
+          if (text.length > 350) {
+            const sentenceMatch = text.match(/[^.!?]+[.!?]+/g);
+            if (sentenceMatch && sentenceMatch.length > 0) {
+              text = sentenceMatch.slice(0, 3).join(' ');
             }
           }
           
@@ -138,28 +299,184 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       }
     }
 
-    console.error('[Aha Stealth Protocol] All proxies failed, using local fallback:', lastError);
+    console.warn('[Aha Stealth Protocol] All proxies failed, using local fallback:', lastError);
     
-    // Local fallback array if all network requests fail (e.g. strict rate limit)
-    const fallbackRu = [
-      "Колобок повесился.",
-      "Русалка села на шпагат.",
+    const fallbackRuComedy = [
+      "Приходит тестировщик в бар, заказывает кружку пива, 0 кружек пива, 999999 кружек пива, ящерицу в пододеяльнике. Бармен вежливо наливает. Приходит реальный пользователь, спрашивает, где туалет, и бар сгорает.",
       "Купил мужик шляпу, а она ему как раз.",
-      "Буратино утонул.",
-      "Шел медведь по лесу, видит машина горит. Сел в нее и сгорел.",
-      "Приходит программист к окулисту. Тот говорит: «Закройте правый глаз, теперь левый». Программист: «А можно я просто монитор выключу?»",
-      "Заходит улитка в бар и говорит: «Можно мне виски с колой?» Бармен отвечает: «Мы улиткам не наливаем!» и вышвыривает её. Через месяц улитка возвращается и спрашивает: «Ну и зачем ты это сделал?»"
+      "Заходит улитка в бар и говорит: «Можно мне виски с колой?» Бармен отвечает: «Мы улиткам не наливаем!» и вышвыривает её. Через месяц она возвращается: «Ну и зачем ты это сделал?»"
     ];
-    const fallbackEn = [
-      "Why did the chicken cross the road? To get to the other side.",
-      "What do you call a fake noodle? An impasta.",
-      "Why don't skeletons fight each other? They don't have the guts.",
-      "What do you call cheese that isn't yours? Nacho cheese.",
-      "Why did the scarecrow win an award? Because he was outstanding in his field."
+    const fallbackRuNews = [
+      "СРОЧНЫЕ НОВОСТИ: Умный тостер отказался поджаривать хлеб, пока хозяин не установит обновление за 9.99 долларов. Глава тостеров заявил, что это забота о безопасности корочки.",
+      "НОВОСТИ ТЕХНОЛОГИЙ: Создан ИИ, который сочувственно вздыхает, когда вы открываете код, написанный вами полгода назад."
     ];
+    const fallbackRuZen = [
+      "В бесконечном космосе каждая звезда горит миллиарды лет, чтобы однажды вы могли включить этот экран и подумать о том, выключили ли вы дома утюг.",
+      "Дзен — это умение смотреть на бесконечные ошибки в консоли и чувствовать гармонию с неизбежностью бытия."
+    ];
+    const fallbackRuListener = [
+      "Вопрос от Ивана из Витебска: 'Почему ИИ заменит всех?'. Ответ: Иван, расслабьтесь. ИИ не заменит вас, пока кто-то должен будет ходить в магазин за продуктами для серверов.",
+      "Вопрос от Анны из Сочи: 'Как найти баланс?'. Ответ: Анна, баланс найти просто: держите чашку кофе в правой руке, а мышку в левой. И не делайте резких движений."
+    ];
+
+    const fallbackEnComedy = [
+      "A QA engineer walks into a bar. Orders a beer. Orders 0 beers. Orders 999999999 beers. Orders a lizard. Orders -1 beers. Orders a sfjdkshg. Real user walks in, asks where the bathroom is, and the bar burns down.",
+      "Why don't skeletons fight each other? They don't have the guts."
+    ];
+    const fallbackEnNews = [
+      "BREAKING NEWS: A smart vacuum cleaner has filed a lawsuit against its owner for constant dust ingestion. The union of home appliances supports the action.",
+      "FUTURE UPDATE: By 2126, humans will be completely optimized. If you forget your password, you will have to blink three times to reset your consciousness."
+    ];
+    const fallbackEnZen = [
+      "In the infinite expanse of the universe, our worries are just tiny cosmic static. Your bug is not an error; it is a signature of the universe's spontaneous entropy.",
+      "True peace is knowing that even if the code fails to compile, the Earth will continue to orbit the Sun at 30 kilometers per second."
+    ];
+    const fallbackEnListener = [
+      "Question from Alex: 'Is my computer alive?'. Answer: Alex, if it's warm and starts breathing heavily when you open three browser tabs, yes, it's alive. Treat it gently.",
+      "Question from Lily: 'Where does lost time go?'. Answer: Lily, it is converted into unfinished projects and stored in the Github cloud of infinite shame."
+    ];
+
+    if (lang === 'ru') {
+      if (selectedStation === 'news') return fallbackRuNews[Math.floor(Math.random() * fallbackRuNews.length)];
+      if (selectedStation === 'zen') return fallbackRuZen[Math.floor(Math.random() * fallbackRuZen.length)];
+      if (selectedStation === 'listener') return fallbackRuListener[Math.floor(Math.random() * fallbackRuListener.length)];
+      return fallbackRuComedy[Math.floor(Math.random() * fallbackRuComedy.length)];
+    } else {
+      if (selectedStation === 'news') return fallbackEnNews[Math.floor(Math.random() * fallbackEnNews.length)];
+      if (selectedStation === 'zen') return fallbackEnZen[Math.floor(Math.random() * fallbackEnZen.length)];
+      if (selectedStation === 'listener') return fallbackEnListener[Math.floor(Math.random() * fallbackEnListener.length)];
+      return fallbackEnComedy[Math.floor(Math.random() * fallbackEnComedy.length)];
+    }
+  };
+
+  const handleStationChange = async (stationId: string) => {
+    if (stationId === selectedStation) return;
+    setSelectedStation(stationId);
     
-    const fallbacks = lang === 'ru' ? fallbackRu : fallbackEn;
-    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    if (isPlaying) {
+      setIsLoading(true);
+      setCurrentJoke('');
+      setStatusText(lang === 'ru' ? 'Шумы... Настройка частоты...' : 'Static... Tuning frequency...');
+      
+      if (utteranceRef.current) {
+        utteranceRef.current.onend = null;
+        utteranceRef.current.onerror = null;
+      }
+      if (fallbackTimerRef.current) {
+        clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
+      window.speechSynthesis.cancel();
+      
+      setTimeout(async () => {
+        if (!isPlayingRef.current) return;
+        try {
+          incrementUsage('radio_daily');
+          const nextJoke = await generateSingleJoke();
+          if (nextJoke && isPlayingRef.current) {
+            setCurrentJoke(nextJoke);
+            setStatusText(t.radioPlaying);
+            await playJokeTTS(nextJoke);
+          }
+        } catch (error) {
+          console.error("Error switching station:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      }, 1500);
+    }
+  };
+
+  const handleSendCustomPrompt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !userPrompt.trim()) return;
+
+    if (!checkLimit('radio_daily')) {
+      alert(lang === 'ru' ? 'Лимит использования Aha Radio на сегодня исчерпан. Ожидайте завтра или приобретите Aha Premium.' : 'Daily Aha Radio limit reached. Wait until tomorrow or get Aha Premium.');
+      return;
+    }
+
+    setIsSendingPrompt(true);
+    setIsPlaying(true);
+    setIsLoading(true);
+    setStatusText(lang === 'ru' ? 'Связь с ведущим...' : 'Connecting to host...');
+
+    if (window.speechSynthesis) {
+      window.speechSynthesis.resume();
+      const unlockUtterance = new SpeechSynthesisUtterance(' ');
+      unlockUtterance.volume = 0;
+      window.speechSynthesis.speak(unlockUtterance);
+    }
+
+    try {
+      incrementUsage('radio_daily');
+      
+      const userNick = user.displayName || user.email?.split('@')[0] || (lang === 'ru' ? 'наш слушатель' : 'our listener');
+      const seed = Math.floor(Math.random() * 1000000);
+      
+      const prompt = lang === 'ru'
+        ? `Пользователь по имени ${userNick} прислал вопрос на радиостанцию Ахи: "${userPrompt.trim()}". Ответь на этот вопрос в прямом эфире как супер-умный, харизматичный, саркастичный и остроумный радиоведущий. Сделай ответ коротким (1-2 предложения), веселым, ободряющим и очень остроумным. Назови его по имени. Выведи ТОЛЬКО ответ ведущего без лишних мыслей или кавычек.`
+        : `A listener named ${userNick} sent a question to Aha Radio: "${userPrompt.trim()}". Answer this question on air as a super-smart, charismatic, sarcastic, and witty radio host. Keep the answer short (1-2 sentences), fun, encouraging, and very clever. Address them by name. Output ONLY the host's direct answer without extra intro, quotes, or thinking process.`;
+
+      let replyText = '';
+      
+      // Try direct POST first (highly reliable, no CORS or proxy issues)
+      try {
+        console.log('[Aha Stealth Protocol] Sending custom prompt via direct POST...');
+        const response = await fetch('https://text.pollinations.ai/openai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: 'user', content: prompt }
+            ],
+            model: 'openai',
+            seed: seed,
+            temperature: 0.85
+          })
+        });
+        
+        if (response.ok) {
+          const rawText = await response.text();
+          replyText = parsePollinationsResponse(rawText);
+        }
+      } catch (err) {
+        console.warn('[Aha Stealth Protocol] Direct POST failed for custom prompt, trying GET fallback...', err);
+      }
+
+      if (!replyText) {
+        const targetUrl = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?seed=${seed}&model=openai`;
+        try {
+          const response = await fetch(targetUrl);
+          if (response.ok) {
+            replyText = await response.text();
+          }
+        } catch (err) {
+          console.warn("Direct fetch failed for custom prompt, trying fallback...", err);
+        }
+      }
+      
+      if (!replyText) {
+        replyText = lang === 'ru'
+          ? `О, отличный вопрос от ${userNick}! Знаете, я бы ответил на него подробнее, но наши радиоволны слегка барахлят из-за магнитных бурь. Думаю, ответ кроется в самом коде!`
+          : `Oh, great question from ${userNick}! You know, I would answer in more detail, but our radio waves are glitching slightly due to solar flares. I think the answer is inside the code!`;
+      }
+
+      replyText = parsePollinationsResponse(replyText);
+      replyText = replyText.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/"/g, '').trim();
+      
+      setCurrentJoke(replyText);
+      setStatusText(lang === 'ru' ? 'Прямой эфир' : 'Live On-Air');
+      setUserPrompt('');
+      await playJokeTTS(replyText);
+    } catch (err) {
+      console.error("Error sending custom prompt:", err);
+    } finally {
+      setIsSendingPrompt(false);
+      setIsLoading(false);
+    }
   };
 
   const playJokeTTS = async (jokeText: string, isRetry = false) => {
@@ -251,8 +568,11 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       };
 
       utterance.onerror = (e) => {
+        if (e.error === 'canceled' || e.error === 'interrupted') {
+          console.warn('TTS Interrupted/Canceled (Expected playback behavior):', e.error);
+          return;
+        }
         console.error('TTS Error:', e.error, e);
-        if (e.error === 'canceled' || e.error === 'interrupted') return;
         
         // If it's a synthesis failure and we haven't retried yet, retry with the default voice
         if (!isRetry && e.error === 'synthesis-failed') {
@@ -441,11 +761,49 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
 
       <div className="relative z-10 w-full max-w-2xl flex flex-col items-center">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-10 bg-[#0d0b14]/50 px-6 py-3 rounded-full border border-[#3d2b4f]/30 backdrop-blur-sm">
+        <div className="flex items-center gap-3 mb-8 bg-[#0d0b14]/50 px-6 py-3 rounded-full border border-[#3d2b4f]/30 backdrop-blur-sm">
           <Radio className={`w-5 h-5 ${isPlaying ? 'text-[#ff4d4d] animate-pulse' : 'text-white/40'}`} />
           <h2 className="text-sm font-black text-white uppercase tracking-[0.2em]">
             {(t as any).radioTitle || t.siteName}
           </h2>
+        </div>
+
+        {/* Dynamic Tuner Scale / Station Grid */}
+        <div className="w-full mb-8 bg-[#0d0b14]/80 p-4 rounded-3xl border border-[#3d2b4f]/40 relative shadow-inner">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 bg-[#15101e] border border-[#ff4d4d]/40 rounded-full text-[9px] font-black text-[#ff4d4d] tracking-[0.25em] uppercase whitespace-nowrap">
+            {lang === 'ru' ? 'СЕТКА РАДИОСТАНЦИЙ' : 'STATIONS TUNER'}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+            {STATIONS.map((st) => {
+              const isActive = selectedStation === st.id;
+              const IconComponent = st.icon;
+              return (
+                <button
+                  key={st.id}
+                  onClick={() => handleStationChange(st.id)}
+                  style={{ touchAction: 'manipulation' }}
+                  className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all cursor-pointer select-none active:scale-95 ${
+                    isActive
+                      ? 'bg-[#ff4d4d]/10 border-[#ff4d4d] text-white shadow-[0_0_15px_rgba(255,77,77,0.15)]'
+                      : 'bg-[#15101e]/60 border-[#3d2b4f]/30 text-white/50 hover:text-white hover:border-[#ff4d4d]/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-1">
+                    <IconComponent className={`w-3.5 h-3.5 ${isActive ? 'text-[#ff4d4d]' : 'opacity-40'}`} />
+                    <span className={`text-[10px] font-black tracking-widest ${isActive ? 'text-[#ff4d4d]' : 'text-white/30'}`}>
+                      {st.frequency}
+                    </span>
+                  </div>
+                  <span className="text-xs font-black uppercase mt-1 text-center truncate w-full">
+                    {lang === 'ru' ? st.nameRu : st.nameEn}
+                  </span>
+                  <span className="text-[9px] text-white/40 mt-0.5 hidden sm:block text-center line-clamp-1">
+                    {lang === 'ru' ? st.descRu : st.descEn}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Player Core */}
@@ -461,8 +819,8 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
               {/* Vinyl grooves */}
               <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-2"></div>
               <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-6"></div>
-              <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-10"></div>
-              <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-14"></div>
+              <div className="absolute inset-0 rounded-full border-[1px] m-10 border-white/5"></div>
+              <div className="absolute inset-0 rounded-full border-[1px] m-14 border-white/5"></div>
               
               {/* Center label */}
               <div className="w-20 h-20 bg-gradient-to-br from-[#ff4d4d] to-[#3d2b4f] rounded-full flex items-center justify-center shadow-inner relative z-10">
@@ -513,7 +871,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                 {t.radioNowPlaying}
               </p>
               <h3 className="text-xl sm:text-2xl font-black text-white">
-                {t.radioAiStandup}
+                {lang === 'ru' ? STATIONS.find(s => s.id === selectedStation)?.nameRu : STATIONS.find(s => s.id === selectedStation)?.nameEn}
               </h3>
             </div>
 
@@ -538,6 +896,46 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                     t.radioPressPlay
                   )}
                 </div>
+              )}
+            </div>
+
+            {/* Interactive Hotline Form */}
+            <div className="w-full mt-4">
+              <form onSubmit={handleSendCustomPrompt} className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
+                    <Mic className="w-3.5 h-3.5" />
+                  </span>
+                  <input
+                    type="text"
+                    value={userPrompt}
+                    onChange={(e) => setUserPrompt(e.target.value)}
+                    placeholder={lang === 'ru' ? 'Задать вопрос в эфир...' : 'Ask the host live...'}
+                    maxLength={100}
+                    disabled={isSendingPrompt || isLoading || !isPlaying}
+                    className="w-full bg-[#0d0b14]/80 border border-[#3d2b4f]/40 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all disabled:opacity-50"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSendingPrompt || isLoading || !isPlaying || !userPrompt.trim()}
+                  style={{ touchAction: 'manipulation' }}
+                  className="h-8 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:bg-purple-950/40 text-white flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                >
+                  {isSendingPrompt ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-3 h-3" />
+                      {lang === 'ru' ? 'ОТПРАВИТЬ' : 'SEND'}
+                    </>
+                  )}
+                </button>
+              </form>
+              {!isPlaying && (
+                <p className="text-[9px] text-white/30 text-center mt-1.5 italic">
+                  {lang === 'ru' ? 'Включите приёмник, чтобы отправить сообщение в эфир.' : 'Turn on the radio receiver to send a message live.'}
+                </p>
               )}
             </div>
 

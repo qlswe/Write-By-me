@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar } from 'lucide-react';
 import { collection, addDoc, doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -464,6 +464,8 @@ export default function App() {
     { id: 'radio' as const, label: t.navRadio, icon: Radio },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
+    { id: 'chronicle' as const, label: t.navChronicle || 'Хроника событий', icon: Calendar },
+    { id: 'promo' as const, label: t.navPromo || 'Промокоды', icon: Ticket },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'users' as const, label: t.navUsers, icon: User },
     ...((role === 'admin' || role === 'moderator') ? [{ id: 'telemetry' as const, label: 'Telemetry', icon: Settings }] : []),
