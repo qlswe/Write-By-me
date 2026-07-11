@@ -125,6 +125,7 @@ const initAuth = () => {
             role: initialRole,
             isVerified: initialVerified,
             isPremium: false,
+            createdAt: new Date().toISOString(),
           });
 
           globalRole = initialRole;

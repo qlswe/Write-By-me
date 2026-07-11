@@ -1039,13 +1039,15 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                       onDragStart={isThreadProtected ? (e) => e.preventDefault() : undefined}
                     />
                     {isThreadProtected ? (
-                      <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-[#3d2b4f]/30 text-[10px] font-black uppercase tracking-widest text-white/50 select-none pointer-events-none">
-                        🔒 {lang === 'ru' ? 'Защищенный просмотр' : 'Secure View'}
+                      <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-[#ff4d4d]/30 text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-1.5 select-none pointer-events-none">
+                        <ShieldAlert size={12} className="text-[#ff4d4d]" />
+                        {lang === 'ru' ? 'Защищенный просмотр' : 'Secure View'}
                       </div>
                     ) : (
                       <div className="absolute bottom-4 right-4 flex gap-2">
-                        <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-[#3d2b4f]/30 text-[10px] font-black uppercase tracking-widest text-white/50 select-none pointer-events-none">
-                          🔓 {lang === 'ru' ? 'Открытый просмотр' : 'Public View'}
+                        <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-green-500/30 text-[10px] font-black uppercase tracking-widest text-green-400 flex items-center gap-1.5 select-none pointer-events-none">
+                          <ShieldCheck size={12} className="text-green-400" />
+                          {lang === 'ru' ? 'Открытый просмотр' : 'Public View'}
                         </div>
                         <button
                           onClick={() => {

@@ -545,16 +545,15 @@ export const eventsData: GameEvent[] = [
       zh: "货币战争"
     },
     description: {
-      ru: "Валютные войны обновляются раз в две недели в 06:00 по МСК, чередуясь с Виртуальной вселенной.",
-      en: "Currency wars update every two weeks at 03:00 UTC, alternating with the Simulated Universe.",
-      by: "Валютныя вайны абнаўляюцца раз на два тыдні ў 06:00 па МСК, чаргуючыся з Віртуальным сусветам.",
-      de: "Währungskriege werden alle zwei Wochen um 03:00 UTC aktualisiert und wechseln sich mit dem Simulierten Universum ab.",
-      fr: "Les guerres de devises sont mises à jour toutes les deux semaines à 03:00 UTC, en alternance avec l'Univers Simulé.",
-      zh: "货币战争每两周在 03:00 UTC 更新一次，与模拟宇宙交替进行。"
+      ru: "Валютные войны обновляются каждую неделю по понедельникам в 06:00 по МСК.",
+      en: "Currency wars update every week on Mondays at 03:00 UTC.",
+      by: "Валютныя вайны абнаўляюцца кожны тыдзень па панядзелках у 06:00 па МСК.",
+      de: "Währungskriege werden jede Woche montags um 03:00 UTC aktualisiert.",
+      fr: "Les guerres de devises sont mises à jour chaque semaine le lundi à 03:00 UTC.",
+      zh: "货币战争每周一在 03:00 UTC 更新一次。"
     },
     type: 'weekly',
     dayOfWeek: 1,
-    weekOffset: 0,
     resetTime: '03:00'
   },
   {
@@ -569,16 +568,15 @@ export const eventsData: GameEvent[] = [
       zh: "模拟宇宙"
     },
     description: {
-      ru: "Виртуальная вселенная обновляется раз в две недели в 06:00 по МСК, чередуясь с Валютными войнами.",
-      en: "The Simulated Universe updates every two weeks at 03:00 UTC, alternating with Currency Wars.",
-      by: "Віртуальны сусвет абнаўляецца раз на два тыдні ў 06:00 па МСК, чаргуючыся з Валютнымі войнамі.",
-      de: "Das Simulierte Universum wird alle zwei Wochen um 03:00 UTC aktualisiert und wechselt sich mit den Währungskriegen ab.",
-      fr: "L'Univers Simulé est mis à jour toutes les deux semaines à 03:00 UTC, en alternance avec les Guerres Monétaires.",
-      zh: "模拟宇宙每两周在 03:00 UTC 更新一次，与货币战争交替进行。"
+      ru: "Виртуальная вселенная обновляется каждую неделю по понедельникам в 06:00 по МСК.",
+      en: "The Simulated Universe updates every week on Mondays at 03:00 UTC.",
+      by: "Віртуальны сусвет абнаўляецца кожны тыдзень па панядзелках у 06:00 па МСК.",
+      de: "Das Simulierte Universum wird jede Woche montags um 03:00 UTC aktualisiert.",
+      fr: "L'Univers Simulé est mis à jour chaque semaine le lundi à 03:00 UTC.",
+      zh: "模拟宇宙每周一在 03:00 UTC 更新一次."
     },
     type: 'weekly',
     dayOfWeek: 1,
-    weekOffset: 1,
     resetTime: '03:00'
   }
 ];

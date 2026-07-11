@@ -178,14 +178,14 @@ export function DisguisePage({ onDeactivate }: DisguisePageProps) {
               </div>
 
               <div className="bg-gray-50 border-l-4 border-blue-500 p-4 font-sans text-xs text-gray-600 rounded-r-md">
-                <p className="font-bold text-gray-800 mb-1">ОБРАТИТЕ ВНИМАНИЕ:</p>
+                <p className="font-bold text-gray-800 mb-1">РЕЖИМ МАСКИРОВКИ:</p>
                 <p>
-                  Данный интерфейс активирован в рамках встроенного протокола конспирации (маскировки) Министерства Ахахи. Чтобы полностью разблокировать систему и вернуться на главный секретный портал Министерства, совершите одно из следующих действий:
+                  Этот режим включен для скрытия содержимого страницы. Чтобы вернуться к стандартному интерфейсу сайта, выполните одно из следующих действий:
                 </p>
                 <ul className="list-disc pl-5 mt-2 space-y-1 font-semibold text-blue-700">
-                  <li>Наберите на клавиатуре секретное слово: <span className="font-mono bg-blue-100 px-1 py-0.5 rounded text-xs select-all">aha</span></li>
-                  <li>Или трижды кликните по заголовку сайта <strong className="cursor-pointer underline" onClick={handleTitleClick}>"РосСтандартДок"</strong> в шапке страницы.</li>
-                  <li>Или нажмите на скрытую кнопку разблокировки в самом низу страницы.</li>
+                  <li>Наберите на клавиатуре слово: <span className="font-mono bg-blue-100 px-1 py-0.5 rounded text-xs select-all">aha</span></li>
+                  <li>Или нажмите 3 раза на заголовок <strong className="cursor-pointer underline" onClick={handleTitleClick}>"РосСтандартДок"</strong> в самом верху страницы.</li>
+                  <li>Или нажмите на незаметную кнопку деактивации маскировки в самом низу страницы.</li>
                 </ul>
               </div>
 

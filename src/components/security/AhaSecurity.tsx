@@ -173,7 +173,7 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
   };
 
   const handlePanic = async () => {
-    if (window.confirm("АКТИВИРОВАТЬ ПРОТОКОЛ ПАНИКИ? Это включит режим экстренной маскировки.")) {
+    if (window.confirm("Включить режим маскировки? Это скроет текущий интерфейс сайта.")) {
         setIsPanicking(true);
         localStorage.setItem('aha_panic_mode', 'true');
         window.location.href = window.location.origin;
@@ -275,7 +275,7 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
                         className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all border border-red-500/30 hover:border-transparent group"
                     >
                         <Siren className={`w-4 h-4 ${isPanicking ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
-                        {isPanicking ? 'Уничтожение...' : 'Протокол Паники'}
+                        {isPanicking ? 'Маскировка...' : 'Режим маскировки'}
                     </button>
                 </div>
               )}
@@ -378,7 +378,7 @@ export const AhaSecurityConsole: React.FC = () => {
   };
 
   const handlePanic = async () => {
-    if (window.confirm("АКТИВИРОВАТЬ ПРОТОКОЛ ПАНИКИ? Это включит режим экстренной маскировки.")) {
+    if (window.confirm("Включить режим маскировки? Это скроет текущий интерфейс сайта.")) {
       setIsPanicking(true);
       localStorage.setItem('aha_panic_mode', 'true');
       window.location.href = window.location.origin;
@@ -471,7 +471,7 @@ export const AhaSecurityConsole: React.FC = () => {
                   className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all border border-red-500/30 hover:border-transparent group"
               >
                   <Siren className={`w-4 h-4 ${isPanicking ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
-                  {isPanicking ? 'Уничтожение...' : 'Протокол Паники'}
+                  {isPanicking ? 'Маскировка...' : 'Режим маскировки'}
               </button>
           </div>
         )}
