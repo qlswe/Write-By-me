@@ -4,7 +4,7 @@ import { useChat, Message } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles, Mail, VolumeX, Volume2, Pin, PinOff, Mic, Play, Pause, Trash, Flame, Heart, ThumbsUp, Zap, Star, Crown, Award, Ghost, Skull, Shield } from 'lucide-react';
+import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles, Mail, VolumeX, Volume2, Pin, PinOff, Mic, Play, Pause, Trash, Flame, Heart, ThumbsUp, Zap, Star, Crown, Award, Ghost, Skull, Shield, Plus, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -193,6 +193,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [showStickers, setShowStickers] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -812,7 +813,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!msg.isDeleted) {
-                                setActiveMessageId(activeMessageId === msg.id ? null : msg.id);
+                                if (activeMessageId === msg.id) {
+                                  setActiveMessageId(null);
+                                  setMenuPosition(null);
+                                } else {
+                                  setActiveMessageId(msg.id);
+                                  setMenuPosition({ x: e.clientX, y: e.clientY });
+                                }
+                              }
+                            }}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (!msg.isDeleted) {
+                                setActiveMessageId(msg.id);
+                                setMenuPosition({ x: e.clientX, y: e.clientY });
                               }
                             }}
                             className={`max-w-[85%] p-3.5 sm:p-4 rounded-3xl text-sm sm:text-base shadow-lg relative cursor-pointer transition-all duration-200 active:scale-[0.98] ${
@@ -1190,265 +1205,164 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
       if (!activeMsg) return null;
       const isMe = activeMsg.senderId === user?.uid;
       
+      // Calculate dynamic positioning with safety boundary checks
+      let x = menuPosition?.x ?? (typeof window !== 'undefined' ? window.innerWidth / 2 : 200);
+      let y = menuPosition?.y ?? (typeof window !== 'undefined' ? window.innerHeight / 2 : 200);
+      
+      const menuWidth = 230;
+      const menuHeight = showMoreReactions === activeMsg.id ? 285 : 240;
+      
+      const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1000;
+      const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+      
+      // Offset slightly from pointer for better focus and finger/cursor clearance
+      x = x + 10;
+      y = y - 10;
+
+      // Auto-reposition relative to viewport to prevent clipping
+      if (x + menuWidth > screenWidth) {
+        x = screenWidth - menuWidth - 16;
+      }
+      if (x < 16) {
+        x = 16;
+      }
+      if (y + menuHeight > screenHeight) {
+        y = screenHeight - menuHeight - 16;
+      }
+      if (y < 16) {
+        y = 16;
+      }
+
       return createPortal(
         <AnimatePresence>
           {activeMessageId && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[99999] flex flex-col items-center justify-center p-4 bg-[#0a0510]/85 backdrop-blur-md"
-              onClick={() => {
-                setActiveMessageId(null);
-                setShowMoreReactions(null);
-              }}
-            >
+            <div className="fixed inset-0 z-[99999] pointer-events-none">
+              {/* Premium dark backdrop that dims the workspace elegantly */}
+              <div 
+                className="fixed inset-0 bg-[#0a0512]/60 backdrop-blur-[2px] pointer-events-auto transition-opacity"
+                onClick={() => {
+                  setActiveMessageId(null);
+                  setMenuPosition(null);
+                  setShowMoreReactions(null);
+                }}
+              />
+              
               <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                initial={{ opacity: 0, scale: 0.96, y: 4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 15 }}
-                transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                className="w-full max-w-sm bg-[#130b1c] border-2 border-[#ff4d4d]/30 rounded-[32px] p-6 shadow-[0_20px_50px_rgba(255,77,77,0.2)] flex flex-col gap-5 text-center relative overflow-hidden"
+                exit={{ opacity: 0, scale: 0.96, y: 4 }}
+                transition={{ duration: 0.1, ease: "easeOut" }}
+                style={{ 
+                  position: 'fixed',
+                  left: `${x}px`,
+                  top: `${y}px`,
+                  width: `${menuWidth}px`
+                }}
+                className="bg-[#0e071c]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.7)] text-left overflow-hidden pointer-events-auto z-10 flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Neon decorative background glow */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[#ff4d4d]/10 rounded-full blur-[45px] pointer-events-none" />
-
-                {/* Header context */}
-                <div className="flex flex-col items-center gap-1.5 relative z-10">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] mb-1 px-3 py-1 bg-[#ff4d4d]/10 rounded-full">
-                    {lang === 'ru' ? 'СООБЩЕНИЕ' : 'MESSAGE INFO'}
-                  </span>
-                  
-                  {/* Selected message preview */}
-                  <div className={`w-full p-4 rounded-2xl text-sm sm:text-base text-left break-words border ${
-                    isMe 
-                      ? 'bg-gradient-to-br from-[#ff3d5a] to-[#cc1b36] border-[#ff3d5a]/20 text-white font-medium shadow-md shadow-[#ff3d5a]/10' 
-                      : 'bg-[#181125] border-[#3e245a]/50 text-gray-100 shadow-md'
-                  }`}>
-                    {activeMsg.type === 'sticker' ? (
-                      <span className="text-5xl block text-center py-2">{activeMsg.text}</span>
-                    ) : (
-                      <span className="block whitespace-pre-wrap">{activeMsg.text}</span>
-                    )}
-                    
-                    {activeMsg.images && activeMsg.images.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2 mt-2">
-                        {activeMsg.images.map((img: string, i: number) => (
-                          <img key={i} src={img} className="max-h-24 w-full object-cover rounded-xl" alt="" />
-                        ))}
-                      </div>
-                    )}
+                {/* Selected Message Tiny Header */}
+                <div className="px-3.5 py-2 border-b border-white/5 bg-black/10 flex flex-col gap-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] uppercase tracking-wider font-semibold text-gray-400">
+                      {isMe ? (lang === 'ru' ? 'Ваше сообщение' : 'Your Message') : (lang === 'ru' ? 'Сообщение' : 'Message')}
+                    </span>
+                    <span className="text-[8px] text-gray-500 font-mono">
+                      {activeMsg.createdAt ? format(new Date(getMillis(activeMsg.createdAt)), 'HH:mm') : ''}
+                    </span>
                   </div>
+                  <p className="text-[11px] text-gray-300 line-clamp-1 italic truncate">
+                    {activeMsg.type === 'sticker' ? `Sticker: ${activeMsg.text}` : activeMsg.text}
+                  </p>
                 </div>
 
-                {/* Quick reactions strip */}
-                <div className="flex flex-col gap-2 relative z-10">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                    {lang === 'ru' ? 'Выбрать реакцию' : 'React to message'}
-                  </span>
-                  <div className="flex items-center justify-center p-2.5 bg-[#09050d] rounded-2xl border border-[#3e245a]/40 gap-1.5 overflow-x-auto">
-                    {customReactionsList.map(reactionId => {
-                      const isSelected = activeMsg.reactions?.[reactionId]?.includes(user?.uid || '');
-                      return (
-                        <button
-                          key={reactionId}
-                          onClick={() => {
-                            toggleReaction(activeMsg.id, recipientId, reactionId);
-                            playSound('react');
-                            setActiveMessageId(null);
-                          }}
-                          className={`p-2.5 hover:scale-125 transition-transform rounded-xl duration-150 shrink-0 ${
-                            isSelected 
-                              ? 'bg-[#ff4d4d]/20 border border-[#ff4d4d]/40 shadow-[0_0_8px_rgba(255,77,77,0.2)]' 
-                              : 'hover:bg-white/5 border border-transparent'
-                          }`}
-                        >
-                          {NEON_REACTION_CONFIG[reactionId] ? (
-                            renderNeonReactionIcon(reactionId, 18)
-                          ) : (
-                            <span className="text-xl leading-none">{reactionId}</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowMoreReactions(showMoreReactions === activeMsg.id ? null : activeMsg.id);
-                      }}
-                      className="p-2.5 hover:scale-125 transition-transform rounded-xl hover:bg-white/5 text-gray-400 hover:text-[#ff4d4d] shrink-0 border border-transparent"
-                      title="More reactions"
-                    >
-                      ➕
-                    </button>
-                  </div>
-
-                  {/* Additional reactions shelf */}
-                  <AnimatePresence>
-                    {showMoreReactions === activeMsg.id && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="grid grid-cols-6 gap-2 p-2.5 bg-[#06030a] border border-[#ff4d4d]/20 rounded-2xl max-h-36 overflow-y-auto mt-1"
+                {/* Quick reactions row */}
+                <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between gap-1">
+                  {['thumbsup', 'heart', 'flame', 'zap', 'star', 'smile'].map(reactionId => {
+                    const isSelected = activeMsg.reactions?.[reactionId]?.includes(user?.uid || '');
+                    return (
+                      <button
+                        key={reactionId}
+                        onClick={() => {
+                          toggleReaction(activeMsg.id, recipientId, reactionId);
+                          playSound('react');
+                          setActiveMessageId(null);
+                          setMenuPosition(null);
+                        }}
+                        className={`w-7 h-7 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 hover:bg-white/5 ${
+                          isSelected 
+                            ? 'bg-[#ff4d4d]/15 border border-[#ff4d4d]/30 shadow-[0_0_8px_rgba(255,77,77,0.2)]' 
+                            : 'border border-transparent text-gray-400 hover:text-white'
+                        }`}
+                        title={reactionId}
                       >
-                        {['thumbsup', 'heart', 'flame', 'zap', 'star', 'smile', 'crown', 'award', 'ghost', 'skull', 'sparkles', 'shield'].map(reactionId => {
-                          const isSelected = activeMsg.reactions?.[reactionId]?.includes(user?.uid || '');
-                          return (
-                            <button
-                              key={reactionId}
-                              onClick={() => {
-                                toggleReaction(activeMsg.id, recipientId, reactionId);
-                                playSound('react');
-                                setShowMoreReactions(null);
-                                setActiveMessageId(null);
-                              }}
-                              className={`p-2 hover:scale-120 transition-transform rounded-xl flex items-center justify-center ${
-                                isSelected 
-                                  ? 'bg-[#ff4d4d]/25 border border-[#ff4d4d]/40 shadow-[0_0_8px_rgba(255,77,77,0.2)]' 
-                                  : 'hover:bg-white/5 border border-transparent'
-                              }`}
-                            >
-                              {renderNeonReactionIcon(reactionId, 18)}
-                            </button>
-                          );
-                        })}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Custom reaction panel configurer */}
-                  <div className="mt-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowReactionCustomizer(!showReactionCustomizer);
-                      }}
-                      className="w-full flex items-center justify-between px-3 py-2 bg-[#12091d] border border-[#ff4d4d]/20 hover:border-[#ff4d4d]/50 rounded-xl text-left text-xs text-gray-300 hover:text-white transition-colors"
-                    >
-                      <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px]">
-                        <span>⚙️</span>
-                        {lang === 'ru' ? 'Настроить быстрые реакции' : 'Customize Quick Reactions'}
-                      </span>
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showReactionCustomizer ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    <AnimatePresence>
-                      {showReactionCustomizer && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="mt-1.5 p-3 bg-[#0a0510] border border-[#3e245a]/50 rounded-2xl space-y-3"
-                        >
-                          <p className="text-[10px] text-gray-400 leading-normal">
-                            {lang === 'ru' 
-                              ? 'Выберите любой слот ниже, затем выберите новую неоновую реакцию для быстрой панели.' 
-                              : 'Select a slot below, then choose a new neon reaction for your quick panel.'}
-                          </p>
-
-                          {/* 6 slots */}
-                          <div className="grid grid-cols-6 gap-1.5">
-                            {customReactionsList.map((reactionId, idx) => (
-                              <button
-                                key={idx}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCustomizingSlotIndex(customizingSlotIndex === idx ? null : idx);
-                                  setManualEmoji('');
-                                }}
-                                className={`p-1.5 rounded-xl border flex flex-col items-center justify-center transition-all h-14 ${customizingSlotIndex === idx ? 'bg-[#ff4d4d]/15 border-[#ff4d4d] scale-105 shadow-[0_0_8px_rgba(255,77,77,0.2)]' : 'bg-[#150d22] border-[#3e245a] hover:border-[#ff4d4d]/40'}`}
-                              >
-                                {NEON_REACTION_CONFIG[reactionId] ? (
-                                  renderNeonReactionIcon(reactionId, 16)
-                                ) : (
-                                  <span className="text-sm leading-none">{reactionId}</span>
-                                )}
-                                <span className="text-[7px] text-[#ff4d4d]/60 font-mono mt-0.5">S{idx + 1}</span>
-                              </button>
-                            ))}
-                          </div>
-
-                          {/* Customizer drawer for selected slot */}
-                          {customizingSlotIndex !== null && (
-                            <motion.div 
-                              initial={{ opacity: 0, y: -5 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="bg-[#120a1c] p-2.5 rounded-xl border border-[#ff4d4d]/20 space-y-2.5"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-black uppercase text-[#ff4d4d] tracking-widest">
-                                  {lang === 'ru' ? `Изменение слота ${customizingSlotIndex + 1}` : `Editing Slot ${customizingSlotIndex + 1}`}
-                                </span>
-                                <button 
-                                  onClick={() => setCustomizingSlotIndex(null)}
-                                  className="text-[10px] text-gray-400 hover:text-white font-bold"
-                                >
-                                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
-                                </button>
-                              </div>
-
-                              {/* Grid of extra emojis to pick */}
-                              <div className="grid grid-cols-6 gap-1.5 max-h-24 overflow-y-auto p-1.5 bg-[#09050d] rounded-lg border border-[#3e245a]/30">
-                                {['thumbsup', 'heart', 'flame', 'zap', 'star', 'smile', 'crown', 'award', 'ghost', 'skull', 'sparkles', 'shield'].map(reactionId => (
-                                  <button
-                                    key={reactionId}
-                                    onClick={() => {
-                                      updateCustomReactionSlot(customizingSlotIndex, reactionId);
-                                      setCustomizingSlotIndex(null);
-                                    }}
-                                    className="p-1.5 hover:bg-white/10 rounded-lg flex items-center justify-center transition-all active:scale-90"
-                                  >
-                                    {renderNeonReactionIcon(reactionId, 18)}
-                                  </button>
-                                ))}
-                              </div>
-
-                              {/* Manual text input to allow typing ANY custom emoji or letter */}
-                              <div className="flex gap-1.5 items-center">
-                                <input
-                                  type="text"
-                                  value={manualEmoji}
-                                  onChange={(e) => setManualEmoji(e.target.value)}
-                                  placeholder={lang === 'ru' ? 'Имя реакции (например, crown)...' : 'Reaction ID (e.g. crown)...'}
-                                  maxLength={15}
-                                  className="flex-1 bg-[#09050d] border border-[#3e245a]/50 focus:border-[#ff4d4d] rounded-lg px-2.5 py-1 text-xs text-white placeholder-gray-500 focus:outline-none"
-                                />
-                                <button
-                                  onClick={() => {
-                                    if (manualEmoji.trim()) {
-                                      updateCustomReactionSlot(customizingSlotIndex, manualEmoji.trim());
-                                      setCustomizingSlotIndex(null);
-                                      setManualEmoji('');
-                                    }
-                                  }}
-                                  disabled={!manualEmoji.trim()}
-                                  className="px-3 py-1 bg-[#ff4d4d] hover:bg-white text-[#15101e] text-[10px] font-black uppercase tracking-wider rounded-lg disabled:opacity-40 transition-colors"
-                                >
-                                  {lang === 'ru' ? 'ОК' : 'OK'}
-                                </button>
-                              </div>
-                            </motion.div>
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                        {renderNeonReactionIcon(reactionId, 14)}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMoreReactions(showMoreReactions === activeMsg.id ? null : activeMsg.id);
+                    }}
+                    className={`w-7 h-7 flex items-center justify-center rounded-full transition-all duration-150 hover:scale-125 ${
+                      showMoreReactions === activeMsg.id 
+                        ? 'text-[#ff4d4d] bg-[#ff4d4d]/10' 
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                    title="More reactions"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
-                {/* Main options list */}
-                <div className="grid grid-cols-2 gap-2 relative z-10 mt-1">
+                {/* Expanded Reactions Grid */}
+                <AnimatePresence>
+                  {showMoreReactions === activeMsg.id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="grid grid-cols-6 gap-1 p-2 bg-[#080410]/95 border-b border-white/5"
+                    >
+                      {['crown', 'award', 'ghost', 'skull', 'sparkles', 'shield'].map(reactionId => {
+                        const isSelected = activeMsg.reactions?.[reactionId]?.includes(user?.uid || '');
+                        return (
+                          <button
+                            key={reactionId}
+                            onClick={() => {
+                              toggleReaction(activeMsg.id, recipientId, reactionId);
+                              playSound('react');
+                              setShowMoreReactions(null);
+                              setActiveMessageId(null);
+                              setMenuPosition(null);
+                            }}
+                            className={`w-7 h-7 flex items-center justify-center mx-auto rounded-full transition-all duration-150 hover:scale-125 ${
+                              isSelected 
+                                ? 'bg-[#ff4d4d]/25 border border-[#ff4d4d]/40 shadow-[0_0_8px_rgba(255,77,77,0.2)]' 
+                                : 'hover:bg-white/5 border border-transparent'
+                            }`}
+                          >
+                            {renderNeonReactionIcon(reactionId, 14)}
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Action Items List */}
+                <div className="p-1 flex flex-col gap-0.5">
                   <button
                     onClick={() => {
                       setReplyingTo(activeMsg);
                       setActiveMessageId(null);
+                      setMenuPosition(null);
                     }}
-                    className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                    className="w-full flex items-center justify-between px-3 py-2 text-[11px] text-gray-300 hover:bg-white/5 hover:text-white rounded-lg transition-all text-left"
                   >
-                    <Reply className="w-4 h-4 text-[#ff4d4d]" />
-                    {t.chatReply || "Reply"}
+                    <span className="font-medium">{t.chatReply || "Reply"}</span>
+                    <Reply className="w-3.5 h-3.5 text-gray-400" />
                   </button>
 
                   {currentChat?.pinnedMessage?.id === activeMsg.id ? (
@@ -1456,22 +1370,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                       onClick={() => {
                         unpinMessage(recipientId);
                         setActiveMessageId(null);
+                        setMenuPosition(null);
                       }}
-                      className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                      className="w-full flex items-center justify-between px-3 py-2 text-[11px] text-gray-300 hover:bg-white/5 hover:text-white rounded-lg transition-all text-left"
                     >
-                      <PinOff className="w-4 h-4 text-[#ff4d4d]" />
-                      {lang === 'ru' ? 'Открепить' : 'Unpin'}
+                      <span className="font-medium">{lang === 'ru' ? 'Открепить сообщение' : 'Unpin Message'}</span>
+                      <PinOff className="w-3.5 h-3.5 text-gray-400" />
                     </button>
                   ) : (
                     <button
                       onClick={() => {
                         pinMessage(recipientId, activeMsg);
                         setActiveMessageId(null);
+                        setMenuPosition(null);
                       }}
-                      className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                      className="w-full flex items-center justify-between px-3 py-2 text-[11px] text-gray-300 hover:bg-white/5 hover:text-white rounded-lg transition-all text-left"
                     >
-                      <Pin className="w-4 h-4 text-[#ff4d4d]" />
-                      {lang === 'ru' ? 'Закрепить' : 'Pin'}
+                      <span className="font-medium">{lang === 'ru' ? 'Закрепить сообщение' : 'Pin Message'}</span>
+                      <Pin className="w-3.5 h-3.5 text-gray-400" />
                     </button>
                   )}
 
@@ -1480,12 +1396,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                       onClick={() => {
                         handleCopy(activeMsg.text);
                         setActiveMessageId(null);
+                        setMenuPosition(null);
                         window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Скопировано в буфер обмена!' : 'Copied to clipboard!' }));
                       }}
-                      className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                      className="w-full flex items-center justify-between px-3 py-2 text-[11px] text-gray-300 hover:bg-white/5 hover:text-white rounded-lg transition-all text-left"
                     >
-                      <Copy className="w-4 h-4 text-[#ff4d4d]" />
-                      {t.chatCopy || "Copy"}
+                      <span className="font-medium">{t.chatCopy || "Copy"}</span>
+                      <Copy className="w-3.5 h-3.5 text-gray-400" />
                     </button>
                   )}
 
@@ -1495,11 +1412,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                         setEditingMessage(activeMsg);
                         setInputText(activeMsg.text);
                         setActiveMessageId(null);
+                        setMenuPosition(null);
                       }}
-                      className="flex items-center justify-center gap-2 py-3 bg-[#181125] hover:bg-[#ff4d4d]/10 hover:text-[#ff4d4d] text-gray-300 border border-[#3e245a]/50 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md"
+                      className="w-full flex items-center justify-between px-3 py-2 text-[11px] text-gray-300 hover:bg-white/5 hover:text-white rounded-lg transition-all text-left"
                     >
-                      <Pencil className="w-4 h-4 text-[#ff4d4d]" />
-                      {t.chatEdit || "Edit"}
+                      <span className="font-medium">{t.chatEdit || "Edit"}</span>
+                      <Pencil className="w-3.5 h-3.5 text-gray-400" />
                     </button>
                   )}
 
@@ -1508,27 +1426,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                       onClick={() => {
                         deleteMessage(activeMsg.id, recipientId);
                         setActiveMessageId(null);
+                        setMenuPosition(null);
                       }}
-                      className={`${activeMsg.type === 'sticker' ? 'col-span-2' : ''} flex items-center justify-center gap-2 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-2xl transition-all font-black uppercase tracking-wider text-[11px] active:scale-95 shadow-md`}
+                      className="w-full flex items-center justify-between px-3 py-2 text-[11px] text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-all text-left"
                     >
-                      <Trash2 className="w-4 h-4 text-red-400" />
-                      {t.chatDelete || "Delete"}
+                      <span className="font-medium">{t.chatDelete || "Delete"}</span>
+                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
                     </button>
                   )}
                 </div>
-
-                {/* Direct Close Button */}
-                <button
-                  onClick={() => {
-                    setActiveMessageId(null);
-                    setShowMoreReactions(null);
-                  }}
-                  className="py-3 bg-[#ff4d4d] text-[#0d0714] rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white hover:scale-[1.02] active:scale-95 transition-all shadow-md shadow-[#ff4d4d]/10 relative z-10"
-                >
-                  {lang === 'ru' ? 'Закрыть' : 'Close'}
-                </button>
               </motion.div>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>,
         document.body
