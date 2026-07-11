@@ -18,6 +18,27 @@ interface ChatsListProps {
 
 const locales = { ru, en: enUS, by: be, de, fr, zh: zhCN };
 
+const getSafeDate = (val: any): Date => {
+  if (!val) return new Date();
+  if (typeof val.toDate === 'function') return val.toDate();
+  if (val instanceof Date) return val;
+  if (typeof val === 'number') return new Date(val);
+  if (typeof val === 'string') return new Date(val);
+  if (typeof val.seconds === 'number') return new Date(val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000));
+  return new Date();
+};
+
+const getMillis = (val: any): number => {
+  if (!val) return 0;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (val instanceof Date) return val.getTime();
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') return new Date(val).getTime();
+  if (typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000);
+  return 0;
+};
+
 const ChatItem = React.memo(({ 
   chat, 
   currentUserId, 
@@ -34,8 +55,8 @@ const ChatItem = React.memo(({
   const recipientId = chat.participants.find(p => p !== currentUserId);
   const isTyping = chat.typing?.[recipientId || ''];
   
-  const lastRead = chat.lastReadAt?.[currentUserId]?.toMillis() || 0;
-  const lastMsg = chat.lastMessageAt?.toMillis() || 0;
+  const lastRead = getMillis(chat.lastReadAt?.[currentUserId]);
+  const lastMsg = getMillis(chat.lastMessageAt);
   const isUnread = lastMsg > lastRead && chat.lastMessage;
 
   const t = translations[lang];
@@ -70,7 +91,7 @@ const ChatItem = React.memo(({
           </span>
           {chat.lastMessageAt && (
             <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnread ? 'text-[#ff4d4d]' : 'text-gray-500'}`}>
-              {formatDistanceToNow(chat.lastMessageAt.toDate(), {
+              {formatDistanceToNow(getSafeDate(chat.lastMessageAt), {
                 addSuffix: true,
                 locale: locales[lang] || locales.en
               })}

@@ -35,6 +35,17 @@ export interface Chat {
   } | null;
 }
 
+const getMillis = (val: any): number => {
+  if (!val) return 0;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (val instanceof Date) return val.getTime();
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') return new Date(val).getTime();
+  if (typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000);
+  return 0;
+};
+
 export function useChat(otherUserId?: string) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -62,8 +73,8 @@ export function useChat(otherUserId?: string) {
       
       // Sort client-side to avoid composite index requirement
       chatsData.sort((a, b) => {
-        const timeA = a.lastMessageAt?.toMillis?.() || (a.lastMessageAt instanceof Date ? a.lastMessageAt.getTime() : 0);
-        const timeB = b.lastMessageAt?.toMillis?.() || (b.lastMessageAt instanceof Date ? b.lastMessageAt.getTime() : 0);
+        const timeA = getMillis(a.lastMessageAt);
+        const timeB = getMillis(b.lastMessageAt);
         return timeB - timeA;
       });
       
@@ -119,8 +130,8 @@ export function useChat(otherUserId?: string) {
              setMessages(prev => {
                const mapped = new Map([...prev, ...parsed].map(m => [m.id, m]));
                const sorted = Array.from(mapped.values()).sort((a, b) => {
-                   const timeA = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : ((a.createdAt as any)?.toMillis?.() || 0);
-                   const timeB = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : ((b.createdAt as any)?.toMillis?.() || 0);
+                   const timeA = getMillis(a.createdAt);
+                   const timeB = getMillis(b.createdAt);
                    return timeA - timeB;
                });
                return sorted;

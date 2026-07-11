@@ -37,6 +37,17 @@ import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
 import { AhaSecurityBadge, SafeHtml } from './components/security/AhaSecurity';
 import { DisguisePage } from './components/security/DisguisePage';
 
+const getMillis = (val: any): number => {
+  if (!val) return 0;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (val instanceof Date) return val.getTime();
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') return new Date(val).getTime();
+  if (typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000);
+  return 0;
+};
+
 // Lazy load sections for better performance
 const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
 const BlogSection = lazy(() => import('./components/sections/BlogSection').then(m => ({ default: m.BlogSection })));
@@ -292,8 +303,8 @@ export default function App() {
     let count = 0;
     
     chats.forEach((chat) => {
-      const lastMessageAt = chat.lastMessageAt?.toMillis?.() || 0;
-      const myReadAt = chat.lastReadAt?.[user.uid]?.toMillis?.() || 0;
+      const lastMessageAt = getMillis(chat.lastMessageAt);
+      const myReadAt = getMillis(chat.lastReadAt?.[user.uid]);
       const otherUserId = chat.participants.find(id => id !== user.uid);
       if (!otherUserId) return;
       
@@ -372,7 +383,7 @@ export default function App() {
       notifiedTyping.current[chat.id] = isTyping;
 
       // 3. Read Receipts (Status Notification - DISABLED AS REQUESTED)
-      const theirReadAt = chat.lastReadAt?.[otherUserId]?.toMillis?.() || 0;
+      const theirReadAt = getMillis(chat.lastReadAt?.[otherUserId]);
       const lastNotifiedRead = notifiedReads.current[chat.id] || 0;
       if (theirReadAt > lastNotifiedRead && theirReadAt >= lastMessageAt && lastMessageAt > 0 && isNotActiveChat) {
         // "Не уведомляй о прочитанном сообщении, бесполезно"

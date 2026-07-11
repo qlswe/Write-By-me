@@ -51,6 +51,27 @@ export const renderNeonReactionIcon = (reactionId: string, size = 14) => {
   return <IconComponent size={size} className={config.color} />;
 };
 
+const getSafeDate = (val: any): Date => {
+  if (!val) return new Date();
+  if (typeof val.toDate === 'function') return val.toDate();
+  if (val instanceof Date) return val;
+  if (typeof val === 'number') return new Date(val);
+  if (typeof val === 'string') return new Date(val);
+  if (typeof val.seconds === 'number') return new Date(val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000));
+  return new Date();
+};
+
+const getMillis = (val: any): number => {
+  if (!val) return 0;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (val instanceof Date) return val.getTime();
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') return new Date(val).getTime();
+  if (typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000);
+  return 0;
+};
+
 export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language; initialDuration?: number }> = ({ src, lang, initialDuration }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState<number | null>(initialDuration || null);
@@ -757,14 +778,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   return messages.map((msg, idx) => {
                     const isMe = msg.senderId === user?.uid;
                     const repliedMsg = msg.replyTo ? messages.find(m => m.id === msg.replyTo) : null;
-                    const msgDate = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date();
+                    const msgDate = getSafeDate(msg.createdAt);
                     const showDateSeparator = !lastDate || !isSameDay(lastDate, msgDate);
                     lastDate = msgDate;
                     
                     let isRead = false;
                     if (currentChat?.lastReadAt?.[recipientId] && msg.createdAt) {
-                      const readAt = currentChat.lastReadAt[recipientId]?.toMillis?.() || currentChat.lastReadAt[recipientId];
-                      const msgAt = msg.createdAt?.toMillis?.() || msg.createdAt;
+                      const readAt = getMillis(currentChat.lastReadAt[recipientId]);
+                      const msgAt = getMillis(msg.createdAt);
                       if (readAt && msgAt) {
                         isRead = msgAt <= readAt;
                       }
