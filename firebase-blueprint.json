@@ -106,6 +106,30 @@
         "currentSection": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" }
       }
+    },
+    "ai_chats": {
+      "title": "Aha AI Chat",
+      "description": "User's Aha AI conversation history.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "systemPrompt": { "type": "string" },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string", "enum": ["user", "assistant", "system", "info"] },
+              "content": { "type": "string" },
+              "createdAt": { "type": "number" }
+            }
+          }
+        },
+        "updatedAt": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "title"]
     }
   },
   "firestore": {
@@ -128,6 +152,10 @@
     "/telemetry/{logId}": {
       "schema": "telemetry",
       "description": "Permitted user browser environment telemetry."
+    },
+    "/ai_chats/{chatId}": {
+      "schema": "ai_chats",
+      "description": "Aha AI Chat records."
     }
   }
 }

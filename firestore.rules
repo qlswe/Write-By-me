@@ -93,8 +93,9 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
       allow update: if isAdmin() || 
-        (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes']) == false) ||
-        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes']));
+        (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes', 'pokeCount']) == false) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes'])) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pokeCount']));
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
@@ -105,6 +106,12 @@ service cloud.firestore {
         (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes']) == false) ||
         (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes']));
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    // Aha AI Chats (Private to user)
+    match /ai_chats/{chatId} {
+      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
 
     match /user_posts/{postId} {

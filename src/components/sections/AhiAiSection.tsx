@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, ChevronRight, Lock, Trash2, Plus, MessageSquare, Settings, X, Bot, User, Mail } from 'lucide-react';
+import { Sparkles, ChevronRight, Lock, Trash2, Plus, MessageSquare, Settings, X, Bot, User, Mail, Pencil, Copy, RotateCcw } from 'lucide-react';
 import { sdk } from '../../sdk';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,6 +8,21 @@ import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { useAiChats } from '../../hooks/useAiChats';
 import { useLimits } from '../../hooks/useLimits';
 import { AdsBlock } from '../ui/AdsBlock';
+
+const quickSuggestions = {
+  ru: [
+    { label: 'Космический анекдот 🌌', prompt: 'Расскажи безумный и веселый космический анекдот!' },
+    { label: 'Теория заговора HSR 🔮', prompt: 'Придумай самую абсурдную и угарную фанатскую теорию заговора по игре Honkai: Star Rail!' },
+    { label: 'Билд на персонажа HSR 🎮', prompt: 'Помоги составить крутой, безумный или эффективный билд для любого персонажа на твой выбор!' },
+    { label: 'Ода богу Радости Ахе 🎉', prompt: 'Напиши вдохновляющую, веселую и хаотичную оду или стих Эону Радости Ахе!' }
+  ],
+  en: [
+    { label: 'Cosmic Joke 🌌', prompt: 'Tell me a wild and funny cosmic joke!' },
+    { label: 'HSR Conspiracy Theory 🔮', prompt: 'Invent the most absurd and hilarious fan conspiracy theory about Honkai: Star Rail!' },
+    { label: 'Character Build HSR 🎮', prompt: 'Help me design a fun, crazy, or high-performance build for any character of your choice!' },
+    { label: 'Ode to Aha the Elation 🎉', prompt: 'Write an inspiring, funny, and chaotic poem or ode to Aha, the Aeon of Elation!' }
+  ]
+};
 
 export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const { user } = useAuth();
@@ -104,6 +119,56 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
     }
   };
 
+  const handleSuggestionClick = (promptText: string) => {
+    setInput(promptText);
+    setTimeout(() => {
+      if (inputRef.current) inputRef.current.focus();
+    }, 50);
+  };
+
+  const handleRenameChat = (id: string, currentTitle: string) => {
+    const newTitle = prompt(
+      lang === 'ru' ? 'Введите новое название чата (макс. 24 символа):' : 'Enter new chat title (max 24 characters):',
+      currentTitle
+    );
+    if (!newTitle) return;
+    const trimmedTitle = newTitle.trim();
+    if (!trimmedTitle) return;
+
+    if (trimmedTitle.length > 24) {
+      alert(
+        lang === 'ru' 
+          ? 'Название слишком длинное! Пожалуйста, укажите название не более 24 символов.' 
+          : 'Title is too long! Please specify a title with at most 24 characters.'
+      );
+      return;
+    }
+
+    updateChat(id, { title: trimmedTitle });
+  };
+
+  const handleClearHistory = () => {
+    if (!activeChatId) return;
+    if (window.confirm(lang === 'ru' ? 'Вы уверены, что хотите очистить всю историю сообщений в этом чате?' : 'Are you sure you want to clear all message history in this chat?')) {
+      updateChat(activeChatId, { messages: [] });
+    }
+  };
+
+  const handleExportChat = () => {
+    if (!activeChat) return;
+    const chatText = activeChat.messages
+      .map(m => {
+        const roleLabel = m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Aha AI' : 'Info';
+        return `[${roleLabel}] ${m.content}`;
+      })
+      .join('\n\n');
+    navigator.clipboard.writeText(chatText).then(() => {
+      alert(lang === 'ru' ? 'История чата скопирована в буфер обмена! 🚀' : 'Chat history copied to clipboard! 🚀');
+    }).catch(err => {
+      console.error('Failed to copy chat:', err);
+    });
+  };
+
   const handleSaveSettings = () => {
     if (activeChatId) {
       updateChat(activeChatId, { systemPrompt: systemPromptInput });
@@ -134,6 +199,8 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
       </div>
     );
   }
+
+  const currentSuggestions = quickSuggestions[lang] || quickSuggestions['ru'];
 
   return (
     <div className="flex flex-col gap-4">
@@ -166,19 +233,32 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
                   : 'text-gray-400 hover:bg-[#3d2b4f]/50 hover:text-white'
               }`}
             >
-              <div className="flex items-center gap-3 overflow-hidden">
-                <MessageSquare size={16} className="shrink-0" />
+              <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
+                <MessageSquare size={16} className="shrink-0 text-[#ff4d4d]" />
                 <span className="truncate text-sm font-medium">{chat.title}</span>
               </div>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteChat(chat.id);
-                }}
-                className={`p-1.5 rounded-md hover:bg-red-500/20 hover:text-red-400 transition-colors ${activeChatId === chat.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-              >
-                <Trash2 size={14} />
-              </button>
+              <div className="flex items-center gap-1 shrink-0 ml-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRenameChat(chat.id, chat.title);
+                  }}
+                  title={lang === 'ru' ? 'Переименовать' : 'Rename'}
+                  className={`p-1 rounded hover:bg-gray-500/20 hover:text-white transition-colors ${activeChatId === chat.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                >
+                  <Pencil size={12} />
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteChat(chat.id);
+                  }}
+                  title={lang === 'ru' ? 'Удалить' : 'Delete'}
+                  className={`p-1 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors ${activeChatId === chat.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -187,14 +267,34 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col relative min-w-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#3d2b4f]/50 bg-[#15101e]/50 shrink-0">
-          <div className="flex items-center gap-3">
-            <Sparkles className="text-[#ff4d4d]" />
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#3d2b4f]/50 bg-[#15101e]/50 shrink-0 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 mr-4">
+            <Sparkles className="text-[#ff4d4d] shrink-0" />
             <h2 className="text-lg sm:text-xl font-bold text-white truncate">
               {activeChat ? activeChat.title : ((t as any).sdkAhaRadio || t.siteName) + ' AI'}
             </h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            {activeChat && activeChat.messages.length > 0 && (
+              <>
+                <button
+                  onClick={handleExportChat}
+                  title={lang === 'ru' ? 'Скопировать чат' : 'Copy chat log'}
+                  className="p-2 hover:bg-[#ff4d4d]/20 hover:text-[#ff4d4d] text-gray-400 rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium"
+                >
+                  <Copy size={16} />
+                  <span className="hidden md:inline">{lang === 'ru' ? 'Копировать' : 'Copy'}</span>
+                </button>
+                <button
+                  onClick={handleClearHistory}
+                  title={lang === 'ru' ? 'Очистить историю' : 'Clear history'}
+                  className="p-2 hover:bg-red-500/20 hover:text-red-400 text-gray-400 rounded-lg transition-colors flex items-center gap-1.5 text-sm font-medium"
+                >
+                  <RotateCcw size={16} />
+                  <span className="hidden md:inline">{lang === 'ru' ? 'Очистить' : 'Clear'}</span>
+                </button>
+              </>
+            )}
             <button
               onClick={() => setIsSettingsOpen(true)}
               disabled={!activeChat}
@@ -222,12 +322,30 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
           className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scrollbar-thin scrollbar-thumb-[#3d2b4f] scrollbar-track-transparent bg-[#15101e]/30"
         >
           {activeChat?.messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-4 text-gray-500">
-              <Bot size={48} className="text-[#3d2b4f]" />
-              <p className="font-medium">
-                {(t as any).sdkAhaRadioAI || t.sdkTitle}<br />
-                <span className="text-sm font-normal">{(t as any).sdkAskMe || t.sdkDesc}</span>
-              </p>
+            <div className="h-full flex flex-col items-center justify-center text-center space-y-6 p-4 max-w-xl mx-auto">
+              <Bot size={56} className="text-[#ff4d4d] animate-bounce" />
+              <div>
+                <p className="font-black text-white text-lg mb-1 uppercase tracking-wider">
+                  {lang === 'ru' ? 'Безумный ИИ Ахи к твоим услугам! 🎉' : "Aha's Chaotic AI at your service! 🎉"}
+                </p>
+                <p className="text-gray-400 text-sm font-medium">
+                  {lang === 'ru' ? 'Твои чаты автоматически сохраняются в облаке твоего аккаунта.' : 'Your chat sessions are fully stored in your cloud account.'}
+                </p>
+              </div>
+
+              {/* Suggestions Grid */}
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                {currentSuggestions.map((item, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSuggestionClick(item.prompt)}
+                    className="p-4 bg-[#15101e]/80 border border-[#3d2b4f] hover:border-[#ff4d4d] rounded-2xl text-left text-xs sm:text-sm text-gray-300 hover:text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-[0_0_15px_rgba(255,77,77,0.1)]"
+                  >
+                    <p className="font-bold mb-1 text-[#ff4d4d]">{item.label}</p>
+                    <p className="text-gray-500 font-medium truncate">{item.prompt}</p>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
             activeChat?.messages.map((item, i) => (
@@ -407,19 +525,32 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
                           : 'text-gray-400 hover:bg-[#3d2b4f]/50 hover:text-white'
                       }`}
                     >
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <MessageSquare size={16} className="shrink-0" />
+                      <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
+                        <MessageSquare size={16} className="shrink-0 text-[#ff4d4d]" />
                         <span className="truncate text-sm font-medium">{chat.title}</span>
                       </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteChat(chat.id);
-                        }}
-                        className="p-1.5 rounded-md hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0 ml-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRenameChat(chat.id, chat.title);
+                          }}
+                          title={lang === 'ru' ? 'Переименовать' : 'Rename'}
+                          className="p-1 rounded hover:bg-gray-500/20 hover:text-white transition-colors"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteChat(chat.id);
+                          }}
+                          title={lang === 'ru' ? 'Удалить' : 'Delete'}
+                          className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -432,4 +563,3 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
     </div>
   );
 };
-

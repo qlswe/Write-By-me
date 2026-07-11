@@ -16,6 +16,7 @@ import { CanvasSection } from './CanvasSection';
 import { PromoSection } from './PromoSection';
 import { ChronicleSection } from './ChronicleSection';
 import { decryptImage, encryptImage } from '../../utils/encryption';
+import { sdk } from '../../sdk';
 
 
 interface ForumThread {
@@ -47,7 +48,35 @@ interface ForumComment {
   isEdited?: boolean;
   isBot?: boolean;
   replyToId?: string;
+  pokeCount?: number;
 }
+
+export const checkContentModeration = (text: string, lang: Language): { isSafe: boolean; message: string } => {
+  const t = text.toLowerCase();
+  
+  // List of forbidden 18+ topics (sexually explicit, pornography, NSFW links)
+  // Ensure we do NOT block general swearing (хуй, пизда, ебать, блять) because "маты разрешены"
+  const forbiddenKeywords = [
+    'порно', 'porno', 'porn', 'hentai', 'хентай', 'онлифанс', 'onlyfans', 'порнуха', 
+    'порнография', 'pornography', 'эротика', 'erotica', 'эротическ', 'обнаженка', 'нюдсы', 
+    'нюдс', 'nudes', 'nude', 'adult video', 'секс видео', 'sex video', 'секс-видео',
+    'onlyfans', 'порнофильм', 'redtube', 'pornhub', 'xnxx', 'xvideos', 'milf', 'милф',
+    'zoophilia', 'зоофилия', 'педофилия', 'pedophilia', 'incest', 'инцест'
+  ];
+
+  const hasForbidden = forbiddenKeywords.some(keyword => t.includes(keyword));
+
+  if (hasForbidden) {
+    return {
+      isSafe: false,
+      message: lang === 'ru' 
+        ? 'Опачки! На нашей радиостанции запрещён 18+ контент (порнография, эротика и т.д.). Маты использовать можно, а вот порнуху сюда тащить не надо! 🎭'
+        : 'Whoops! 18+ content (pornography, erotica, etc.) is strictly forbidden on our radio station. Swearing is allowed, but keep it SFW! 🎭'
+    };
+  }
+
+  return { isSafe: true, message: '' };
+};
 
 interface ForumSectionProps {
   lang: Language;
@@ -103,34 +132,37 @@ const quotes: Record<string, string[]> = {
   ]
 };
 
+let sharedAhaAudioCtx: AudioContext | null = null;
+
 const ForumBotComment: React.FC<{
   comment: ForumComment;
   lang: Language;
   t: any;
   isReply: boolean;
 }> = ({ comment, lang, t, isReply }) => {
-  const [pokeCount, setPokeCount] = useState(0);
+  const [localPokeCount, setLocalPokeCount] = useState(comment.pokeCount || 0);
   const [isJiggling, setIsJiggling] = useState(false);
 
   const activeQuotes = quotes[lang] || quotes['en'] || quotes['ru'];
   const initialIndex = Math.abs(comment.threadId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % activeQuotes.length;
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState(initialIndex);
 
-  const handlePoke = () => {
-    setPokeCount(prev => prev + 1);
-    setIsJiggling(true);
-    setTimeout(() => setIsJiggling(false), 500);
+  useEffect(() => {
+    setLocalPokeCount(comment.pokeCount || 0);
+  }, [comment.pokeCount]);
 
-    let newIndex = Math.floor(Math.random() * activeQuotes.length);
-    if (newIndex === currentQuoteIndex && activeQuotes.length > 1) {
-      newIndex = (newIndex + 1) % activeQuotes.length;
-    }
-    setCurrentQuoteIndex(newIndex);
-
+  const handlePoke = async () => {
+    // 1. Play sound IMMEDIATELY
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContext) {
-        const ctx = new AudioContext();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        if (!sharedAhaAudioCtx) {
+          sharedAhaAudioCtx = new AudioContextClass();
+        }
+        const ctx = sharedAhaAudioCtx;
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
         const notes = [440, 554, 659, 880];
         notes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
@@ -147,6 +179,34 @@ const ForumBotComment: React.FC<{
       }
     } catch (err) {
       console.warn('Audio blocked:', err);
+    }
+
+    // 2. Visual jiggle
+    setIsJiggling(true);
+    setTimeout(() => setIsJiggling(false), 500);
+
+    // 3. Increment local state instantly for lightning fast feedback
+    setLocalPokeCount(prev => prev + 1);
+
+    // 4. Cycle quote
+    let newIndex = Math.floor(Math.random() * activeQuotes.length);
+    if (newIndex === currentQuoteIndex && activeQuotes.length > 1) {
+      newIndex = (newIndex + 1) % activeQuotes.length;
+    }
+    setCurrentQuoteIndex(newIndex);
+
+    // 5. Update count in Firestore or fallback DB
+    try {
+      if (vercelFallback.isAvailable()) {
+        await vercelFallback.lpush(`poke_fallback:${comment.id}`, String((comment.pokeCount || 0) + 1));
+      } else {
+        const commentRef = doc(db, 'forum_comments', comment.id);
+        await updateDoc(commentRef, {
+          pokeCount: increment(1)
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save poke count:', e);
     }
   };
 
@@ -180,7 +240,7 @@ const ForumBotComment: React.FC<{
             </span>
           </div>
           <div className="text-[10px] text-[#ff4d4d]/60 font-mono">
-            {lang === 'ru' ? `Ткнули: ${pokeCount}` : `Poked: ${pokeCount}`}
+            {lang === 'ru' ? `Ткнули: ${localPokeCount}` : `Poked: ${localPokeCount}`}
           </div>
         </div>
 
@@ -199,13 +259,13 @@ const ForumBotComment: React.FC<{
             {lang === 'ru' ? 'Ткнуть бота!' : 'Poke Aha Bot!'}
           </motion.button>
           
-          {pokeCount > 0 && (
+          {localPokeCount > 0 && (
             <motion.span 
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="text-[10px] text-gray-400 italic"
             >
-              {pokeCount >= 10 
+              {localPokeCount >= 10 
                 ? (lang === 'ru' ? '🎉 Аха безумно хохочет!' : '🎉 Aha is laughing maniacally!')
                 : (lang === 'ru' ? '✨ Ой, щекотно!' : '✨ Oh, that tickles!')}
             </motion.span>
@@ -530,6 +590,20 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
       return;
     }
     if (!user || !newTitle.trim() || !newContent.trim() || isSubmitting) return;
+
+    // --- MODERATION SYSTEM (18+ content forbidden, swearing allowed) ---
+    const modTitle = checkContentModeration(newTitle, lang);
+    if (!modTitle.isSafe) {
+      alert(modTitle.message);
+      return;
+    }
+    const modContent = checkContentModeration(newContent, lang);
+    if (!modContent.isSafe) {
+      alert(modContent.message);
+      return;
+    }
+    // --------------------------------------------------------------------
+
     setIsSubmitting(true);
     incrementUsage('threads_monthly');
     try {
@@ -607,6 +681,15 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
     }
     const contentToSubmit = replyToId ? replyContent : newComment;
     if (!user || !selectedThread || !contentToSubmit.trim() || isSubmitting) return;
+
+    // --- MODERATION SYSTEM (18+ content forbidden, swearing allowed) ---
+    const modComment = checkContentModeration(contentToSubmit, lang);
+    if (!modComment.isSafe) {
+      alert(modComment.message);
+      return;
+    }
+    // --------------------------------------------------------------------
+
     setIsSubmitting(true);
     incrementUsage('comments_daily');
     try {
@@ -647,6 +730,61 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
       } else {
         setNewComment('');
       }
+
+      // --- AHA BOT FULL AUTONOMOUS REPLY ENGINE ---
+      const isBotMentioned = 
+        contentToSubmit.toLowerCase().includes('bot') || 
+        contentToSubmit.toLowerCase().includes('бот') || 
+        contentToSubmit.toLowerCase().includes('aha') || 
+        contentToSubmit.toLowerCase().includes('аха') ||
+        (replyToId && comments.find(c => c.id === replyToId)?.isBot);
+
+      if (isBotMentioned) {
+        setTimeout(async () => {
+          try {
+            const botReplyText = await sdk.genai.generate(
+              contentToSubmit.trim(), 
+              lang,
+              `Ты - ИИ Радиостанции Ахи (Aha Bot), отвечаешь в комментариях на форуме. Твой тон: саркастичный, безумный, веселый, издевательский, хаотичный эон Радости. Отвечай кратко (1-3 предложения), подкалывай автора комментария, используй маты (маты разрешены, матерные слова делают тебя смешнее).`
+            );
+
+            const botCommentData = {
+              threadId: selectedThread.id,
+              content: botReplyText,
+              authorId: 'system-bot',
+              authorName: 'Aha Bot',
+              authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
+              createdAt: new Date().toISOString(),
+              upvotes: [],
+              downvotes: [],
+              isBot: true,
+              replyToId: replyToId || null,
+              pokeCount: 0
+            };
+
+            if (vercelFallback.isAvailable()) {
+              const botCommentId = 'comment_bot_' + Date.now();
+              const payload = { ...botCommentData, id: botCommentId, createdAt: new Date().toISOString() };
+              await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
+              setComments(prev => [...prev, payload]);
+            } else {
+              await addDoc(collection(db, 'forum_comments'), {
+                ...botCommentData,
+                createdAt: serverTimestamp()
+              });
+              
+              const threadRef = doc(db, 'forum_threads', selectedThread.id);
+              await updateDoc(threadRef, {
+                commentCount: increment(1)
+              });
+            }
+          } catch (e) {
+            console.error('Aha Bot failed to reply:', e);
+          }
+        }, 1500);
+      }
+      // ---------------------------------------------
+
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'forum_comments');
     } finally {
