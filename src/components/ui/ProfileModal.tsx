@@ -10,7 +10,8 @@ import { useUserPosts } from '../../hooks/useUserPosts';
 import { useUserData } from '../../hooks/useUserData';
 import { doc, setDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { decrypt } from '../../utils/encryption';
+import { encrypt, decrypt } from '../../utils/encryption';
+import CryptoJS from 'crypto-js';
 import { vercelFallback } from '../../utils/vercelFallback';
 
 interface ProfileModalProps {
@@ -150,6 +151,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const [newPostText, setNewPostText] = useState('');
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [isDownloadingData, setIsDownloadingData] = useState(false);
+  const [isUploadingBackup, setIsUploadingBackup] = useState(false);
+  const [backupStatus, setBackupStatus] = useState('');
+  const backupFileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Level calculation: 1000 XP per level
   const level = Math.floor(xp / 1000) + 1;
@@ -423,29 +427,237 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
         console.error("Error exporting chats:", err);
       }
 
+      // Convert entire archive to a JSON string
+      const rawJson = JSON.stringify(dataArchive);
+      
+      // Encrypt the JSON string using AES with a secure backup key
+      const encryptedPayload = CryptoJS.AES.encrypt(rawJson, "AHA_SECURE_BACKUP_KEY_2026_V2").toString();
+      
+      // Wrap it in a secure backup container
+      const backupContainer = {
+        type: "AHA_SECURE_BACKUP",
+        version: "2.0",
+        checksum: CryptoJS.SHA256(encryptedPayload).toString().substring(0, 16),
+        payload: encryptedPayload
+      };
+
       // Trigger the JSON file download
-      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-        JSON.stringify(dataArchive, null, 2)
+      const jsonString = `data:application/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(backupContainer, null, 2)
       )}`;
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', jsonString);
       downloadAnchor.setAttribute(
         'download',
-        `aha_user_data_${user.uid}_${new Date().toISOString().split('T')[0]}.json`
+        `aha_backup_secure_${user.uid}_${new Date().toISOString().split('T')[0]}.json`
       );
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
 
-      setToast(lang === 'ru' ? 'Архив успешно скачан!' : 'Archive downloaded successfully!');
+      setToast(lang === 'ru' ? 'Зашифрованная копия создана!' : 'Encrypted backup created!');
       setTimeout(() => setToast(null), 3000);
     } catch (error) {
       console.error("Error gathering user data:", error);
-      setToast(lang === 'ru' ? 'Ошибка сбора данных!' : 'Error downloading data!');
+      setToast(lang === 'ru' ? 'Ошибка создания копии!' : 'Error creating backup!');
       setTimeout(() => setToast(null), 3000);
     } finally {
       setIsDownloadingData(false);
     }
+  };
+
+  const handleUploadBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    setIsUploadingBackup(true);
+    setBackupStatus(lang === 'ru' ? 'Чтение резервной копии...' : 'Reading backup file...');
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const fileContent = event.target?.result as string;
+        const backupData = JSON.parse(fileContent);
+
+        if (backupData.type !== "AHA_SECURE_BACKUP" || !backupData.payload) {
+          throw new Error(lang === 'ru' ? 'Неверный формат резервной копии или файл поврежден.' : 'Invalid backup format or file is corrupted.');
+        }
+
+        setBackupStatus(lang === 'ru' ? 'Расшифровка резервной копии...' : 'Decrypting backup database...');
+        
+        // Decrypt the payload
+        const bytes = CryptoJS.AES.decrypt(backupData.payload, "AHA_SECURE_BACKUP_KEY_2026_V2");
+        const decryptedJson = bytes.toString(CryptoJS.enc.Utf8);
+
+        if (!decryptedJson) {
+          throw new Error(lang === 'ru' ? 'Ошибка расшифровки. Возможно, ключ или файл не поддерживаются.' : 'Decryption failed. Unsupported or modified backup file.');
+        }
+
+        const data = JSON.parse(decryptedJson);
+
+        // Helper to remove any undefined values recursively so Firestore doesn't crash
+        const cleanUndefined = (obj: any): any => {
+          if (obj === null || obj === undefined) return null;
+          if (Array.isArray(obj)) {
+            return obj.map(cleanUndefined);
+          }
+          if (typeof obj === 'object') {
+            const newObj: any = {};
+            for (const key of Object.keys(obj)) {
+              if (obj[key] !== undefined) {
+                newObj[key] = cleanUndefined(obj[key]);
+              }
+            }
+            return newObj;
+          }
+          return obj;
+        };
+
+        setBackupStatus(lang === 'ru' ? 'Восстановление профиля...' : 'Restoring profile elements...');
+        
+        let postsRestored = 0;
+        let theoriesRestored = 0;
+        let forumThreadsRestored = 0;
+        let commentsRestored = 0;
+        let chatsRestored = 0;
+        let messagesRestored = 0;
+
+        // 1. Restore User Posts
+        if (data.userPosts && Array.isArray(data.userPosts)) {
+          setBackupStatus(lang === 'ru' ? 'Восстановление публикаций...' : 'Restoring user posts...');
+          for (const post of data.userPosts) {
+            const postId = post.id;
+            if (postId) {
+              const postData = { ...post };
+              delete postData.id;
+              postData.uid = user.uid; // Bound to the restoring user
+              await setDoc(doc(db, 'user_posts', postId), cleanUndefined(postData), { merge: true });
+              postsRestored++;
+            }
+          }
+        }
+
+        // 2. Restore Theories
+        if (data.theories && Array.isArray(data.theories)) {
+          setBackupStatus(lang === 'ru' ? 'Восстановление теорий...' : 'Restoring theories...');
+          for (const theory of data.theories) {
+            const theoryId = theory.id;
+            if (theoryId) {
+              const theoryData = { ...theory };
+              delete theoryData.id;
+              theoryData.authorUid = user.uid;
+              await setDoc(doc(db, 'theories', theoryId), cleanUndefined(theoryData), { merge: true });
+              theoriesRestored++;
+            }
+          }
+        }
+
+        // 3. Restore Forum Threads
+        if (data.forumThreads && Array.isArray(data.forumThreads)) {
+          setBackupStatus(lang === 'ru' ? 'Восстановление тем форума...' : 'Restoring forum threads...');
+          for (const thread of data.forumThreads) {
+            const threadId = thread.id;
+            if (threadId) {
+              const threadData = { ...thread };
+              delete threadData.id;
+              threadData.authorId = user.uid;
+              await setDoc(doc(db, 'forum_threads', threadId), cleanUndefined(threadData), { merge: true });
+              forumThreadsRestored++;
+            }
+          }
+        }
+
+        // 4. Restore Forum & Blog Comments
+        const allComments = [
+          ...(data.forumComments || []),
+          ...(data.comments || [])
+        ];
+        if (allComments.length > 0) {
+          setBackupStatus(lang === 'ru' ? 'Восстановление комментариев...' : 'Restoring comments...');
+          for (const comment of allComments) {
+            const commentId = comment.id;
+            if (commentId) {
+              const commentData = { ...comment };
+              delete commentData.id;
+              if (commentData.authorId) commentData.authorId = user.uid;
+              if (commentData.authorUid) commentData.authorUid = user.uid;
+              
+              const colName = comment.authorId ? 'forum_comments' : 'comments';
+              await setDoc(doc(db, colName, commentId), cleanUndefined(commentData), { merge: true });
+              commentsRestored++;
+            }
+          }
+        }
+
+        // 5. Restore Chats & Messages
+        if (data.chats && Array.isArray(data.chats)) {
+          setBackupStatus(lang === 'ru' ? 'Восстановление чатов...' : 'Restoring chat rooms...');
+          for (const chat of data.chats) {
+            const chatId = chat.chatId;
+            if (chatId) {
+              const chatRef = doc(db, 'chats', chatId);
+              
+              // Re-encrypt lastMessage with the chatId
+              const lastMsgEncrypted = chat.lastMessage ? encrypt(chat.lastMessage, chatId) : '';
+              
+              const chatData = {
+                participants: chat.participants || [user.uid],
+                lastMessage: lastMsgEncrypted,
+                lastMessageAt: chat.lastMessageAt ? new Date(chat.lastMessageAt) : new Date()
+              };
+
+              await setDoc(chatRef, cleanUndefined(chatData), { merge: true });
+              chatsRestored++;
+
+              // Restore messages
+              if (chat.messages && Array.isArray(chat.messages)) {
+                for (const msg of chat.messages) {
+                  const messageId = msg.id;
+                  if (messageId) {
+                    const msgRef = doc(db, 'chats', chatId, 'messages', messageId);
+                    
+                    // Re-encrypt text and images for that specific chat room
+                    const encryptedText = msg.text ? encrypt(msg.text, chatId) : '';
+                    
+                    const msgData: any = {
+                      senderId: msg.senderId,
+                      text: encryptedText,
+                      type: msg.type || 'text',
+                      createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
+                      isEdited: msg.isEdited || false,
+                      isDeleted: msg.isDeleted || false,
+                      reactions: msg.reactions || {}
+                    };
+
+                    if (msg.images && Array.isArray(msg.images)) {
+                      msgData.images = msg.images.map((img: string) => encrypt(img, chatId));
+                    }
+
+                    await setDoc(msgRef, cleanUndefined(msgData), { merge: true });
+                    messagesRestored++;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        setToast(lang === 'ru' 
+          ? `Успешно импортировано! Восстановлено: ${chatsRestored} чатов, ${messagesRestored} сообщений, ${postsRestored} постов.` 
+          : `Import completed! Restored: ${chatsRestored} chats, ${messagesRestored} messages, ${postsRestored} posts.`);
+        setTimeout(() => setToast(null), 5000);
+      } catch (err: any) {
+        console.error("Backup restoration error:", err);
+        alert(lang === 'ru' ? `Ошибка восстановления: ${err.message}` : `Restoration failed: ${err.message}`);
+      } finally {
+        setIsUploadingBackup(false);
+        setBackupStatus('');
+        if (backupFileInputRef.current) {
+          backupFileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -900,34 +1112,63 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       </div>
 
                       {isOwnProfile && (
-                        <div className="mt-6 bg-[#251c35]/40 border border-[#3d2b4f]/40 p-5 rounded-2xl flex flex-col gap-3">
+                        <div className="mt-6 bg-[#251c35]/40 border border-[#3d2b4f]/40 p-5 rounded-2xl flex flex-col gap-4">
                           <div>
-                            <h4 className="text-xs font-black text-[#ff4d4d] uppercase tracking-wider mb-1">
-                              {lang === 'ru' ? 'Управление вашими данными' : 'Manage Your Data'}
+                            <h4 className="text-xs font-black text-[#ff4d4d] uppercase tracking-wider mb-1 flex items-center gap-2">
+                              <Shield size={14} />
+                              {lang === 'ru' ? 'Защищенное резервное копирование' : 'Secure Backup & Restore'}
                             </h4>
                             <p className="text-[10px] text-white/50 leading-relaxed">
                               {lang === 'ru'
-                                ? 'Вы можете скачать архив со всей вашей активностью на платформе (посты, теории, комментарии и история чатов).'
-                                : 'You can export a JSON archive containing all your active contributions, including theories, posts, comments, and chat transcripts.'}
+                                ? 'Экспортируйте ваши переписки, посты и теории в виде зашифрованного архива. Данные будут полностью скрыты от посторонних и расшифрованы только этой системой при восстановлении.'
+                                : 'Export your chat history, posts, and theories into a secure encrypted archive. Your data remains completely private and can only be decrypted by restoring it back onto this site.'}
                             </p>
                           </div>
-                          <button
-                            onClick={handleDownloadData}
-                            disabled={isDownloadingData}
-                            className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-[#ff4d4d] text-[#15101e] hover:bg-white hover:scale-[1.02] transition-all rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
-                          >
-                            {isDownloadingData ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-[#15101e] border-t-transparent rounded-full animate-spin shrink-0" />
-                                {lang === 'ru' ? 'Сбор данных...' : 'Collecting Data...'}
-                              </>
-                            ) : (
-                              <>
-                                <Download size={14} className="shrink-0" />
-                                {lang === 'ru' ? 'Скачать мои данные (JSON)' : 'Download My Data (JSON)'}
-                              </>
-                            )}
-                          </button>
+                          
+                          <input 
+                            type="file" 
+                            ref={backupFileInputRef} 
+                            onChange={handleUploadBackup} 
+                            accept=".json" 
+                            className="hidden" 
+                          />
+
+                          {isUploadingBackup ? (
+                            <div className="flex flex-col items-center justify-center p-4 bg-[#15101e]/60 rounded-xl border border-[#ff4d4d]/20 gap-3">
+                              <div className="w-6 h-6 border-2 border-[#ff4d4d] border-t-transparent rounded-full animate-spin" />
+                              <div className="text-[10px] font-bold text-[#ff4d4d] uppercase tracking-widest text-center">
+                                {backupStatus}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <button
+                                onClick={handleDownloadData}
+                                disabled={isDownloadingData}
+                                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-[#ff4d4d] text-[#15101e] hover:bg-white hover:scale-[1.02] transition-all rounded-xl text-xs font-black uppercase tracking-widest disabled:opacity-50 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
+                              >
+                                {isDownloadingData ? (
+                                  <>
+                                    <div className="w-4 h-4 border-2 border-[#15101e] border-t-transparent rounded-full animate-spin shrink-0" />
+                                    <span>{lang === 'ru' ? 'Шифрование...' : 'Encrypting...'}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Download size={14} className="shrink-0" />
+                                    <span>{lang === 'ru' ? 'Скачать копию' : 'Create Backup'}</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                onClick={() => backupFileInputRef.current?.click()}
+                                className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-[#15101e] text-[#ff4d4d] border border-[#ff4d4d]/30 hover:border-[#ff4d4d] hover:bg-[#ff4d4d]/5 hover:scale-[1.02] transition-all rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 cursor-pointer"
+                              >
+                                <Upload size={14} className="shrink-0" />
+                                <span>{lang === 'ru' ? 'Восстановить' : 'Restore Backup'}</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

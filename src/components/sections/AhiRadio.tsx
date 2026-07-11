@@ -178,7 +178,9 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       if (fallbackTimerRef.current) {
         clearTimeout(fallbackTimerRef.current);
       }
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, []);
 
@@ -366,7 +368,9 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         clearTimeout(fallbackTimerRef.current);
         fallbackTimerRef.current = null;
       }
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
       
       setTimeout(async () => {
         if (!isPlayingRef.current) return;
@@ -486,7 +490,10 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       fallbackTimerRef.current = null;
     }
 
-    if (ttsFailedRef.current || !window.speechSynthesis) {
+    const hasSpeechClass = typeof window !== 'undefined' && (window.SpeechSynthesisUtterance || (window as any).webkitSpeechSynthesisUtterance);
+    const hasSpeech = typeof window !== 'undefined' && window.speechSynthesis && hasSpeechClass;
+
+    if (ttsFailedRef.current || !hasSpeech) {
       console.log('TTS: Speech synthesis is currently disabled or failed. Running simulated text-only voice mode.');
       setStatusText(lang === 'ru' ? 'Вещание (Текстовый режим)' : 'Broadcasting (Text mode)');
       
@@ -525,15 +532,18 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         utteranceRef.current.onend = null;
         utteranceRef.current.onerror = null;
       }
-      window.speechSynthesis.cancel();
       
-      // Unstick the TTS engine (fixes some browser bugs where it gets stuck in paused state)
-      window.speechSynthesis.resume();
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        // Unstick the TTS engine (fixes some browser bugs where it gets stuck in paused state)
+        window.speechSynthesis.resume();
+      }
 
       // Small delay to allow cancel to process (fixes some browser bugs)
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      const utterance = new SpeechSynthesisUtterance(cleanJoke);
+      const UtteranceClass = (window as any).SpeechSynthesisUtterance || (window as any).webkitSpeechSynthesisUtterance;
+      const utterance = new UtteranceClass(cleanJoke);
       utteranceRef.current = utterance; // Prevent garbage collection
 
       const targetLang = lang === 'ru' ? 'ru-RU' : 'en-US';
@@ -541,7 +551,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
       
       if (!isRetry) {
         // Try to find a voice that matches the language
-        const voices = window.speechSynthesis.getVoices();
+        const voices = (typeof window !== 'undefined' && window.speechSynthesis) ? window.speechSynthesis.getVoices() : [];
         const targetLangPrefix = targetLang.split('-')[0];
         
         const availableVoices = voices.filter(v => v.lang.startsWith(targetLangPrefix));
@@ -600,7 +610,9 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         }
       };
 
-      window.speechSynthesis.speak(utterance);
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.speak(utterance);
+      }
     } catch (error) {
       console.error('Error with TTS:', error);
       // Fallback immediately to simulated mode on any other exception
@@ -654,15 +666,20 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         clearTimeout(fallbackTimerRef.current);
         fallbackTimerRef.current = null;
       }
-      window.speechSynthesis.cancel();
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
       setStatusText(t.radioOff);
       setCurrentJoke('');
     } else {
       // Synchronously unlock speech synthesis on user interaction
-      window.speechSynthesis.resume(); // Unstick the engine
-      const unlockUtterance = new SpeechSynthesisUtterance(' '); // Space instead of empty string
-      unlockUtterance.volume = 0;
-      window.speechSynthesis.speak(unlockUtterance);
+      if (typeof window !== 'undefined' && window.speechSynthesis && (window.SpeechSynthesisUtterance || (window as any).webkitSpeechSynthesisUtterance)) {
+        window.speechSynthesis.resume(); // Unstick the engine
+        const UtteranceClass = window.SpeechSynthesisUtterance || (window as any).webkitSpeechSynthesisUtterance;
+        const unlockUtterance = new UtteranceClass(' '); // Space instead of empty string
+        unlockUtterance.volume = 0;
+        window.speechSynthesis.speak(unlockUtterance);
+      }
 
       setIsPlaying(true);
       setIsLoading(true);
