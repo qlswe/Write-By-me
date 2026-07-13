@@ -9,7 +9,8 @@ import {
   getLocalMemories, 
   addToSyncQueue, 
   syncOfflineData, 
-  pullMemoriesFromFirebase 
+  pullMemoriesFromFirebase,
+  clearOldLocalMemories
 } from '../utils/aiMemoryDb';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 
@@ -18,6 +19,27 @@ export const useAiMemories = () => {
   const [memories, setMemories] = useState<AiMemory[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(!navigator.onLine);
+
+  // Background IndexedDB performance auto-cleanup of memories older than 7 days
+  useEffect(() => {
+    if (!user) return;
+    
+    const runAutoCleanup = async () => {
+      try {
+        const clearedCount = await clearOldLocalMemories(7);
+        if (clearedCount > 0) {
+          const updated = await getLocalMemories(user.uid);
+          setMemories(updated);
+        }
+      } catch (err) {
+        console.error('Failed to run automatic IndexedDB cleanup:', err);
+      }
+    };
+
+    // Run cleanup as a low-priority background task
+    const timer = setTimeout(runAutoCleanup, 1000);
+    return () => clearTimeout(timer);
+  }, [user]);
 
   // Load memories initially
   const loadMemories = useCallback(async () => {

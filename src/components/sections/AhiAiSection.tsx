@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, ChevronRight, Lock, Trash2, Plus, MessageSquare, Settings, X, Bot, User, Mail, Pencil, Copy, RotateCcw, Bookmark, BookmarkCheck, Wifi, WifiOff, Cloud, CloudOff, Database } from 'lucide-react';
+import { Sparkles, ChevronRight, Lock, Trash2, Plus, MessageSquare, Settings, X, Bot, User, Mail, Pencil, Copy, RotateCcw, Bookmark, BookmarkCheck, Wifi, WifiOff, Cloud, CloudOff, Database, Mic, MicOff } from 'lucide-react';
 import { sdk } from '../../sdk';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
@@ -64,6 +64,67 @@ export const AhiAiSection: React.FC<{
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [systemPromptInput, setSystemPromptInput] = useState('');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Voice Input (Web Speech API)
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognitionClass) {
+      setSpeechSupported(true);
+      const rec = new SpeechRecognitionClass();
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.lang = lang === 'ru' ? 'ru-RU' : 'en-US';
+
+      rec.onstart = () => {
+        setIsListening(true);
+      };
+
+      rec.onresult = (event: any) => {
+        const resultText = event.results[0][0].transcript;
+        if (resultText) {
+          setInput(prev => prev + (prev ? ' ' : '') + resultText);
+        }
+      };
+
+      rec.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+    }
+  }, [lang]);
+
+  // Make sure we stop listening if the user switches chats or active view
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current && isListening) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, [activeChatId, activeView, isListening]);
+
+  const toggleVoiceInput = () => {
+    if (!speechSupported || !recognitionRef.current) return;
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      try {
+        recognitionRef.current.start();
+      } catch (err) {
+        console.error('Failed to start speech recognition:', err);
+      }
+    }
+  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -424,6 +485,14 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
                   ? 'Сохраненные диалоги доступны офлайн и автоматически синхронизируются при восстановлении сети.' 
                   : 'Saved dialogues are accessible offline and auto-sync when network is restored.'}
               </p>
+              <div className="pt-1.5 border-t border-[#3d2b4f]/40 flex items-center gap-1.5 text-[10px] text-[#ff4d4d]">
+                <Sparkles size={11} className="animate-pulse" />
+                <span>
+                  {lang === 'ru'
+                    ? 'Автоочистка локального кэша (>7 дн) активна'
+                    : 'Auto-cleanup of local cache (>7 days) active'}
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -618,7 +687,7 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={t.sdkAskAi || (t as any).sdkAskAI || "Сообщение..."}
+              placeholder={isListening ? (lang === 'ru' ? 'Слушаю... говорите!' : 'Listening... speak now!') : (t.sdkAskAi || (t as any).sdkAskAI || "Сообщение...")}
               className="flex-1 min-w-0 bg-transparent border-none outline-none px-3 py-2 text-sm sm:text-base text-white placeholder-gray-500"
               disabled={!activeChat}
             />
@@ -626,6 +695,21 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
               <div className={`text-xs px-2 shrink-0 ${input.length > 250 ? 'text-red-500 font-bold' : 'text-gray-500'}`}>
                 {input.length}/250
               </div>
+            )}
+            {speechSupported && (
+              <button
+                type="button"
+                onClick={toggleVoiceInput}
+                disabled={!activeChat}
+                className={`shrink-0 p-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center ${
+                  isListening 
+                    ? 'bg-[#ff4d4d] text-[#15101e] animate-pulse shadow-[0_0_15px_rgba(255,77,77,0.5)] border border-[#ff4d4d]' 
+                    : 'bg-[#251c35] text-[#ff4d4d] border border-[#3d2b4f] hover:border-[#ff4d4d] hover:bg-[#ff4d4d]/10 hover:text-white'
+                }`}
+                title={isListening ? (lang === 'ru' ? 'Остановить запись' : 'Stop voice input') : (lang === 'ru' ? 'Голосовой ввод' : 'Voice input')}
+              >
+                <Mic size={18} className={isListening ? "animate-bounce" : ""} />
+              </button>
             )}
             <button 
               type="submit"
@@ -991,6 +1075,14 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
                           ? 'Сохраненные диалоги доступны офлайн и автоматически синхронизируются при восстановлении сети.' 
                           : 'Saved dialogues are accessible offline and auto-sync when network is restored.'}
                       </p>
+                      <div className="pt-1.5 border-t border-[#3d2b4f]/40 flex items-center gap-1.5 text-[10px] text-[#ff4d4d]">
+                        <Sparkles size={11} className="animate-pulse" />
+                        <span>
+                          {lang === 'ru'
+                            ? 'Автоочистка локального кэша (>7 дн) активна'
+                            : 'Auto-cleanup of local cache (>7 days) active'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}

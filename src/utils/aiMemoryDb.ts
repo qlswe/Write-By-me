@@ -244,3 +244,44 @@ export async function pullMemoriesFromFirebase(userId: string): Promise<AiMemory
     return getLocalMemories(userId);
   }
 }
+
+/**
+ * Automatically clear local memories older than 7 days to maintain performance.
+ * We only clear memories that have been successfully synced (synced === true)
+ * so that we don't accidentally delete unsynced offline data.
+ */
+export async function clearOldLocalMemories(daysLimit: number = 7): Promise<number> {
+  const dbInstance = await openDb();
+  const cutoffTime = Date.now() - (daysLimit * 24 * 60 * 60 * 1000);
+  let clearedCount = 0;
+
+  return new Promise((resolve, reject) => {
+    const transaction = dbInstance.transaction('ai_memories', 'readwrite');
+    const store = transaction.objectStore('ai_memories');
+    const request = store.openCursor();
+
+    request.onsuccess = (event) => {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
+      if (cursor) {
+        const memory = cursor.value as AiMemory;
+        // Clean up if older than daysLimit AND is already synced
+        if (memory.createdAt < cutoffTime && memory.synced === true) {
+          cursor.delete();
+          clearedCount++;
+        }
+        cursor.continue();
+      } else {
+        if (clearedCount > 0) {
+          console.log(`[Offline Sync] Cleared ${clearedCount} local memories older than ${daysLimit} days to maintain performance.`);
+        }
+        resolve(clearedCount);
+      }
+    };
+
+    request.onerror = (event) => {
+      console.error('[Offline Sync] Error clearing old local memories:', request.error);
+      reject(request.error);
+    };
+  });
+}
+
