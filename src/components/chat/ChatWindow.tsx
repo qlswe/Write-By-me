@@ -4,11 +4,12 @@ import { useChat, Message } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { Send, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles, Mail, VolumeX, Volume2, Pin, PinOff, Mic, Play, Pause, Trash, Flame, Heart, ThumbsUp, Zap, Star, Crown, Award, Ghost, Skull, Shield, Plus, Settings } from 'lucide-react';
+import { Send, MessageSquare, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles, Mail, VolumeX, Volume2, Pin, PinOff, Mic, Play, Pause, Trash, Flame, Heart, ThumbsUp, Zap, Star, Crown, Award, Ghost, Skull, Shield, Plus, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { ChatsList } from './ChatsList';
 
 const STICKERS = ['👋', '👍', '❤️', '😂', '🔥', '🎉', '👀', '💯'];
 const EXTRA_REACTIONS = ['👑', '💩', '🤡', '💅', '🚀', '👾', '🍿', '💡', '💯', '💰', '💀', '👽', '🔥', '🎉'];
@@ -180,9 +181,10 @@ interface ChatWindowProps {
   recipientPhoto?: string;
   lang: Language;
   onClose: () => void;
+  onSelectChat?: (recipientId: string, name: string, photoURL?: string) => void;
 }
 
-export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientName, recipientPhoto, lang, onClose }) => {
+export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientName, recipientPhoto, lang, onClose, onSelectChat }) => {
   const { user } = useAuth();
   const { chats, messages, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead, pinMessage, unpinMessage } = useChat(recipientId);
   const t = translations[lang] as any;
@@ -643,9 +645,38 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-[#0a0512]/95 backdrop-blur-md flex flex-col items-center justify-center z-50 transition-all duration-300"
       >
-        <div className="w-full max-w-4xl h-full flex flex-col bg-[#0d0714] sm:border-x sm:border-[#311c47] relative shadow-2xl">
-          {/* Header */}
-          <div className="p-3 bg-[#09050d] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20 shadow-lg relative">
+        <div className="w-full max-w-6xl h-full flex bg-[#0d0714] sm:border-x sm:border-[#311c47] relative shadow-2xl overflow-hidden">
+          {/* Left Sidebar for Desktop: chats list */}
+          <div className="hidden md:flex flex-col w-[320px] bg-[#09050d] border-r border-[#311c47] shrink-0">
+            {/* Header */}
+            <div className="p-4 bg-[#07040a] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20">
+              <span className="font-black text-xs text-[#ff4d4d] uppercase tracking-widest flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                {lang === 'ru' ? 'Мои Чаты' : 'My Chats'}
+              </span>
+              <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">
+                {lang === 'ru' ? 'Онлайн' : 'Online'}
+              </span>
+            </div>
+            
+            {/* Chats List container */}
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+              <ChatsList 
+                lang={lang} 
+                onSelectChat={(id, name, photo) => {
+                  if (onSelectChat) {
+                    onSelectChat(id, name, photo);
+                  }
+                }}
+                activeChatId={recipientId}
+              />
+            </div>
+          </div>
+
+          {/* Right main conversation area */}
+          <div className="flex-1 flex flex-col h-full bg-[#0d0714] relative">
+            {/* Header */}
+            <div className="p-3 bg-[#09050d] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20 shadow-lg relative">
           <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[#ff4d4d]/20 to-transparent" />
           <div className="flex items-center gap-2.5">
             <div className="relative">
@@ -1172,6 +1203,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             </div>
           </>
         )}
+          </div>
         </div>
       </motion.div>
     </AnimatePresence>

@@ -983,11 +983,13 @@ export default function App() {
       <AnimatePresence>
         {activeChat && (
           <ChatWindow
+            key={activeChat.uid}
             recipientId={activeChat.uid}
             recipientName={activeChat.displayName}
             recipientPhoto={activeChat.photoURL}
             lang={lang as Language}
             onClose={() => setActiveChat(null)}
+            onSelectChat={(id, name, photo) => setActiveChat({ uid: id, displayName: name, photoURL: photo })}
           />
         )}
       </AnimatePresence>

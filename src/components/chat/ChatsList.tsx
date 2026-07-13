@@ -3,17 +3,19 @@ import { useChat, Chat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff, Mail } from 'lucide-react';
+import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff, Mail, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
 import { ru, enUS, be, de, fr, zhCN } from 'date-fns/locale';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { dbQueryCore } from '../../utils/dbQueryCore';
+import { useUsers } from '../../hooks/useUsers';
 
 interface ChatsListProps {
   lang: Language;
   onSelectChat: (recipientId: string, name: string, photoURL?: string) => void;
+  activeChatId?: string;
 }
 
 const locales = { ru, en: enUS, by: be, de, fr, zh: zhCN };
@@ -61,13 +63,15 @@ const ChatItem = React.memo(({
   currentUserId, 
   lang, 
   profile, 
-  onSelect 
+  onSelect,
+  isActive
 }: { 
   chat: Chat, 
   currentUserId: string, 
   lang: Language, 
   profile: { name: string, photo?: string, lastSeen?: string } | null,
-  onSelect: (id: string, name: string, photo?: string) => void 
+  onSelect: (id: string, name: string, photo?: string) => void,
+  isActive?: boolean
 }) => {
   const recipientId = chat.participants.find(p => p !== currentUserId);
   const isTyping = chat.typing?.[recipientId || ''];
@@ -84,9 +88,15 @@ const ChatItem = React.memo(({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={() => onSelect(recipientId || '', profile?.name || 'User', profile?.photo)}
-      className={`w-full border rounded-2xl p-4 flex items-center gap-4 transition-all text-left group relative overflow-hidden ${isUnread ? 'bg-[#251c35]/60 border-[#ff4d4d]/50 hover:bg-[#251c35]/80' : 'bg-[#15101e]/30 border-[#3d2b4f]/30 hover:bg-[#15101e]/60'}`}
+      className={`w-full border rounded-2xl p-4 flex items-center gap-4 transition-all text-left group relative overflow-hidden ${
+        isActive 
+          ? 'bg-[#ff4d4d]/15 border-[#ff4d4d] hover:bg-[#ff4d4d]/20 shadow-[0_0_15px_rgba(255,77,77,0.15)]' 
+          : isUnread 
+            ? 'bg-[#251c35]/60 border-[#ff4d4d]/50 hover:bg-[#251c35]/80' 
+            : 'bg-[#15101e]/30 border-[#3d2b4f]/30 hover:bg-[#15101e]/60'
+      }`}
     >
-      {isUnread && (
+      {isUnread && !isActive && (
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#ff4d4d] shadow-[0_0_10px_#ff4d4d]" />
       )}
       <div className="relative shrink-0">
@@ -103,11 +113,11 @@ const ChatItem = React.memo(({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
-          <span className={`font-black text-sm truncate uppercase tracking-wider ${isUnread ? 'text-[#ff4d4d]' : 'text-white'}`}>
+          <span className={`font-black text-sm truncate uppercase tracking-wider ${isActive ? 'text-[#ff4d4d]' : isUnread ? 'text-[#ff4d4d]' : 'text-white'}`}>
             {profile?.name || '...'}
           </span>
           {chat.lastMessageAt && (
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnread ? 'text-[#ff4d4d]' : 'text-gray-500'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-[#ff4d4d]' : isUnread ? 'text-[#ff4d4d]' : 'text-gray-500'}`}>
               {formatChatTime(chat.lastMessageAt, lang)}
             </span>
           )}
@@ -118,12 +128,12 @@ const ChatItem = React.memo(({
               {(t as any).chatTyping || t.chatsTyping}
             </p>
           ) : (
-            <p className={`text-xs truncate font-medium ${isUnread ? 'text-white' : 'text-gray-400'}`}>
+            <p className={`text-xs truncate font-medium ${isActive ? 'text-gray-200' : isUnread ? 'text-white' : 'text-gray-400'}`}>
               {chat.lastMessage || '...'}
             </p>
           )}
-          {isUnread && !isTyping && (
-            <Circle className="w-2 h-2 fill-[#ff4d4d] text-[#ff4d4d] shrink-0" />
+          {isUnread && !isTyping && !isActive && (
+            <Circle className="w-2 h-2 fill-[#ff4d4d] text-[#ff4d4d] shrink-0 animate-pulse" />
           )}
         </div>
       </div>
@@ -131,14 +141,28 @@ const ChatItem = React.memo(({
   );
 });
 
-export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
+export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, activeChatId }) => {
   const { user, loginWithGoogle } = useAuth();
   const { chats, loading } = useChat();
+  const { users } = useUsers();
   const t = translations[lang];
   
   const [searchQuery, setSearchQuery] = useState('');
   const [profiles, setProfiles] = useState<Record<string, { name: string, photo?: string, lastSeen?: string }>>({});
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [newChatSearch, setNewChatSearch] = useState('');
+
+  const otherUsers = useMemo(() => {
+    if (!user) return [];
+    const searchLower = newChatSearch.toLowerCase().trim();
+    return users.filter(u => {
+      if (u.uid === user.uid) return false;
+      if (!searchLower) return true;
+      return (u.displayName || '').toLowerCase().includes(searchLower) || (u.email || '').toLowerCase().includes(searchLower);
+    });
+  }, [users, user, newChatSearch]);
 
   const requestNotifications = async () => {
     if ('Notification' in window) {
@@ -264,9 +288,9 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
         </motion.div>
       )}
 
-      {/* Search Bar */}
-      {chats.length > 0 && (
-        <div className="relative">
+      {/* Search Bar & New Chat Button */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-gray-400" />
           </div>
@@ -291,7 +315,80 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
             )}
           </AnimatePresence>
         </div>
-      )}
+
+        <button
+          onClick={() => setShowNewChat(!showNewChat)}
+          className={`shrink-0 p-3 rounded-2xl border transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs ${
+            showNewChat
+              ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#0d0714] shadow-[0_0_15px_rgba(255,77,77,0.3)]'
+              : 'bg-[#3d2b4f]/30 border-[#3d2b4f]/50 text-[#ff4d4d] hover:bg-[#3d2b4f]/50'
+          }`}
+          title={lang === 'ru' ? 'Начать новый чат' : 'Start new chat'}
+        >
+          <UserPlus size={18} />
+        </button>
+      </div>
+
+      {/* New Chat Inline Panel */}
+      <AnimatePresence>
+        {showNewChat && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-[#1b1229]/60 border border-[#ff4d4d]/30 rounded-2xl p-4 overflow-hidden space-y-3 shadow-inner"
+          >
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-black uppercase tracking-widest text-[#ff4d4d]">
+                {lang === 'ru' ? 'Выберите пользователя:' : 'Select a user:'}
+              </span>
+              <button onClick={() => { setShowNewChat(false); setNewChatSearch(''); }} className="text-gray-400 hover:text-white transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+            
+            <input
+              type="text"
+              value={newChatSearch}
+              onChange={(e) => setNewChatSearch(e.target.value)}
+              placeholder={lang === 'ru' ? 'Поиск пользователей...' : 'Search users...'}
+              className="w-full bg-[#0d0714]/60 border border-[#3d2b4f]/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] transition-all"
+            />
+            
+            <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar">
+              {otherUsers.length === 0 ? (
+                <p className="text-xs text-gray-500 italic py-2 text-center">
+                  {lang === 'ru' ? 'Никого не найдено' : 'No users found'}
+                </p>
+              ) : (
+                otherUsers.map(u => (
+                  <button
+                    key={u.uid}
+                    onClick={() => {
+                      onSelectChat(u.uid, u.displayName, u.photoURL);
+                      setShowNewChat(false);
+                      setNewChatSearch('');
+                    }}
+                    className="w-full flex items-center gap-3 p-2 rounded-xl bg-[#0d0714]/40 hover:bg-[#ff4d4d]/10 border border-[#3d2b4f]/20 hover:border-[#ff4d4d]/30 text-left transition-all"
+                  >
+                    {u.photoURL ? (
+                      <img src={u.photoURL} alt="" className="w-8 h-8 rounded-lg object-cover border border-[#3d2b4f]/50" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-[#ff4d4d]/10 flex items-center justify-center border border-[#3d2b4f]/50">
+                        <User className="w-4 h-4 text-[#ff4d4d]" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-white truncate uppercase tracking-wider">{u.displayName || 'User'}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{u.email}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Chat List */}
       <div className="space-y-3">
@@ -320,6 +417,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat }) => {
               lang={lang} 
               profile={profiles[chat.participants.find(p => p !== user?.uid) || ''] || null}
               onSelect={onSelectChat} 
+              isActive={chat.participants.includes(activeChatId || '')}
             />
           ))
         )}
