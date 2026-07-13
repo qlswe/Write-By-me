@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
@@ -8,6 +8,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { ProfileModal } from '../ui/ProfileModal';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { EmailLoginModal } from '../ui/EmailLoginModal';
+import { sdk } from '../../sdk';
 
 interface HeaderProps {
   lang: Language;
@@ -189,6 +190,14 @@ export const Header: React.FC<HeaderProps> = ({
                 {lowPerfMode ? <ZapOff size={18} /> : <Zap size={18} />}
               </button>
             )}
+
+            <button 
+              onClick={() => sdk.reloadApp()}
+              className="flex items-center justify-center p-2 rounded-xl border bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/5"
+              title={lang === 'ru' ? "Обновить сайт вручную (очистить кэш)" : "Force reload & clear cache"}
+            >
+              <RotateCw size={14} className="text-[#ff4d4d]" />
+            </button>
 
             <div className="hidden lg:block relative">
               {user ? (

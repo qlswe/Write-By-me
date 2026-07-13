@@ -448,6 +448,43 @@ export class AhaSDK {
     return this.version;
   }
 
+  public reloadApp() {
+    if (this.logging && typeof this.logging.system === 'function') {
+      this.logging.system("Manual app update requested. Clearing cache keys and doing a hard reload.");
+    } else {
+      console.log("Manual app update requested. Clearing cache keys and doing a hard reload.");
+    }
+    
+    try {
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          for (const name of names) {
+            caches.delete(name);
+          }
+        }).catch((e) => {
+          console.warn('Failed to clear cache keys:', e);
+        });
+      }
+      
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister();
+          }
+        }).catch((e) => {
+          console.warn('Failed to unregister service workers:', e);
+        });
+      }
+    } catch (e) {
+      console.warn('Error during cache cleanup:', e);
+    }
+    
+    // Hard reload by navigating with a unique time query parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set('update_t', Date.now().toString());
+    window.location.replace(url.toString());
+  }
+
   /**
    * Firebase Reporting module
    */
