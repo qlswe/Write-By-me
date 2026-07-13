@@ -194,6 +194,41 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
     const seed = Math.floor(Math.random() * 1000000);
     const prompt = `${basePrompt} ВАЖНО: Выведи ТОЛЬКО готовый текст монолога или шутки без лишних слов, без кавычек и рассуждений. Уникальный ID: ${seed}`;
     
+    // 0. Пытаемся использовать наш надежный прокси-сервер /api/generate
+    // Это работает без VPN в РФ, так как запросы идут к нашему контейнеру на Cloud Run, а он уже запрашивает Gemini.
+    try {
+      console.log('[Aha Radio] Trying backend server proxy /api/generate...');
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          lang: lang,
+          systemInstruction: 'Ты — профессиональный ИИ радиоведущий на радиостанции "Аха". Говори уверенно, харизматично, остроумно и кратко.'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.text) {
+          let text = data.text.trim();
+          text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/"/g, '').trim();
+          if (text.length > 350) {
+            const sentenceMatch = text.match(/[^.!?]+[.!?]+/g);
+            if (sentenceMatch && sentenceMatch.length > 0) {
+              text = sentenceMatch.slice(0, 3).join(' ');
+            }
+          }
+          console.log('[Aha Radio] Backend server proxy succeeded!');
+          return text.trim();
+        }
+      }
+    } catch (proxyErr) {
+      console.warn('[Aha Radio] Backend server proxy failed, falling back to client-side...', proxyErr);
+    }
+
     // First, try direct POST (highly reliable, bypasses CORS issues, no proxy needed)
     try {
       console.log('[Aha Stealth Protocol] Trying direct POST to Pollinations...');
@@ -424,30 +459,58 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
 
       let replyText = '';
       
-      // Try direct POST first (highly reliable, no CORS or proxy issues)
+      // 0. Пытаемся использовать наш надежный прокси-сервер /api/generate (работает в РФ без VPN)
       try {
-        console.log('[Aha Stealth Protocol] Sending custom prompt via direct POST...');
-        const response = await fetch('https://text.pollinations.ai/openai', {
+        console.log('[Aha Radio Custom Prompt] Trying backend server proxy...');
+        const response = await fetch('/api/generate', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            messages: [
-              { role: 'user', content: prompt }
-            ],
-            model: 'openai',
-            seed: seed,
-            temperature: 0.85
+            prompt: prompt,
+            lang: lang,
+            systemInstruction: 'Ты — профессиональный ИИ радиоведущий на радиостанции "Аха", отвечающий на вопросы слушателей в прямом эфире. Отвечай остроумно, весело и харизматично.'
           })
         });
-        
+
         if (response.ok) {
-          const rawText = await response.text();
-          replyText = parsePollinationsResponse(rawText);
+          const data = await response.json();
+          if (data && data.text) {
+            replyText = data.text.trim();
+            console.log('[Aha Radio Custom Prompt] Backend server proxy succeeded!');
+          }
         }
-      } catch (err) {
-        console.warn('[Aha Stealth Protocol] Direct POST failed for custom prompt, trying GET fallback...', err);
+      } catch (proxyErr) {
+        console.warn('[Aha Radio Custom Prompt] Backend server proxy failed, trying client-side...', proxyErr);
+      }
+      
+      if (!replyText) {
+        // Try direct POST first (highly reliable, no CORS or proxy issues)
+        try {
+          console.log('[Aha Stealth Protocol] Sending custom prompt via direct POST...');
+          const response = await fetch('https://text.pollinations.ai/openai', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              messages: [
+                { role: 'user', content: prompt }
+              ],
+              model: 'openai',
+              seed: seed,
+              temperature: 0.85
+            })
+          });
+          
+          if (response.ok) {
+            const rawText = await response.text();
+            replyText = parsePollinationsResponse(rawText);
+          }
+        } catch (err) {
+          console.warn('[Aha Stealth Protocol] Direct POST failed for custom prompt, trying GET fallback...', err);
+        }
       }
 
       if (!replyText) {

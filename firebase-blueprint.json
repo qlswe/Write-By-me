@@ -130,6 +130,20 @@
         "createdAt": { "type": "number" }
       },
       "required": ["userId", "title"]
+    },
+    "ai_memories": {
+      "title": "Aha AI Memory",
+      "description": "User's saved important AI responses and custom interactions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "prompt": { "type": "string" },
+        "response": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "title", "prompt", "response", "createdAt"]
     }
   },
   "firestore": {
@@ -156,6 +170,10 @@
     "/ai_chats/{chatId}": {
       "schema": "ai_chats",
       "description": "Aha AI Chat records."
+    },
+    "/ai_memories/{memoryId}": {
+      "schema": "ai_memories",
+      "description": "Saved important AI interactions."
     }
   }
 }

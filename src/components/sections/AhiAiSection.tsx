@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, ChevronRight, Lock, Trash2, Plus, MessageSquare, Settings, X, Bot, User, Mail, Pencil, Copy, RotateCcw } from 'lucide-react';
+import { Sparkles, ChevronRight, Lock, Trash2, Plus, MessageSquare, Settings, X, Bot, User, Mail, Pencil, Copy, RotateCcw, Bookmark, BookmarkCheck, Wifi, WifiOff, Cloud, CloudOff, Database } from 'lucide-react';
 import { sdk } from '../../sdk';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,6 +8,7 @@ import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { useAiChats } from '../../hooks/useAiChats';
 import { useLimits } from '../../hooks/useLimits';
 import { AdsBlock } from '../ui/AdsBlock';
+import { useAiMemories } from '../../hooks/useAiMemories';
 
 const quickSuggestions = {
   ru: [
@@ -52,6 +53,11 @@ export const AhiAiSection: React.FC<{
   const t = translations[lang];
   const { chats, activeChatId, setActiveChatId, activeChat, createChat, deleteChat, updateChat, addMessage } = useAiChats();
   const { checkLimit, incrementUsage, hasUnlimitedAccess } = useLimits();
+  const { memories, saveMemory, deleteMemory, updateMemoryTitle, isSyncing, isOffline } = useAiMemories();
+
+  const [activeView, setActiveView] = useState<'chat' | 'memory'>('chat');
+  const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null);
+  const [editTitleInput, setEditTitleInput] = useState('');
   
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -313,62 +319,121 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
       >
       {/* Sidebar */}
       <div className="w-64 bg-[#15101e] border-r border-[#3d2b4f] flex flex-col hidden sm:flex shrink-0">
-        <div className="p-4">
+        {/* Navigation Tabs */}
+        <div className="p-4 pb-2 grid grid-cols-2 gap-1 border-b border-[#3d2b4f]/30">
           <button
-            onClick={handleCreateChat}
-            className="w-full flex items-center gap-2 bg-[#ff4d4d] hover:bg-white text-[#15101e] transition-colors py-3 px-4 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(255,77,77,0.2)]"
+            onClick={() => {
+              setActiveView('chat');
+              setIsMobileSidebarOpen(false);
+            }}
+            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all text-center uppercase tracking-wider ${
+              activeView === 'chat' 
+                ? 'bg-[#ff4d4d] text-[#15101e] shadow-md' 
+                : 'bg-transparent text-gray-400 hover:text-white hover:bg-[#3d2b4f]/30'
+            }`}
           >
-            <Plus size={18} />
-            {lang === 'ru' ? 'Новый чат' : 'New Chat'}
+            {lang === 'ru' ? 'Чаты' : 'Chats'}
+          </button>
+          <button
+            onClick={() => {
+              setActiveView('memory');
+              setIsMobileSidebarOpen(false);
+            }}
+            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all text-center uppercase tracking-wider relative flex items-center justify-center gap-1 ${
+              activeView === 'memory' 
+                ? 'bg-[#ff4d4d] text-[#15101e] shadow-md' 
+                : 'bg-transparent text-gray-400 hover:text-white hover:bg-[#3d2b4f]/30'
+            }`}
+          >
+            {lang === 'ru' ? 'Память' : 'Memory'}
+            {memories.length > 0 && (
+              <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-black ${
+                activeView === 'memory' ? 'bg-[#15101e] text-[#ff4d4d]' : 'bg-[#ff4d4d] text-[#15101e]'
+              }`}>
+                {memories.length}
+              </span>
+            )}
           </button>
         </div>
-        
-        <div className="flex-1 overflow-y-auto px-3 space-y-2 scrollbar-thin scrollbar-thumb-[#3d2b4f] scrollbar-track-transparent">
-          {chats.map(chat => (
-            <div 
-              key={chat.id}
-              onClick={() => setActiveChatId(chat.id)}
-              className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all group ${
-                activeChatId === chat.id 
-                  ? 'bg-[#3d2b4f] text-white shadow-md' 
-                  : 'text-gray-400 hover:bg-[#3d2b4f]/50 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
-                <MessageSquare size={16} className="shrink-0 text-[#ff4d4d]" />
-                <span className="truncate text-sm font-medium">{chat.title}</span>
-              </div>
-              <div className="flex items-center gap-1 shrink-0 ml-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRenameChat(chat.id, chat.title);
-                  }}
-                  title={lang === 'ru' ? 'Переименовать' : 'Rename'}
-                  className={`p-1 rounded hover:bg-gray-500/20 hover:text-white transition-colors ${activeChatId === chat.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                >
-                  <Pencil size={12} />
-                </button>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteChat(chat.id);
-                  }}
-                  title={lang === 'ru' ? 'Удалить' : 'Delete'}
-                  className={`p-1 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors ${activeChatId === chat.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
+
+        {activeView === 'chat' ? (
+          <>
+            <div className="p-4">
+              <button
+                onClick={handleCreateChat}
+                className="w-full flex items-center gap-2 bg-[#ff4d4d] hover:bg-white text-[#15101e] transition-colors py-3 px-4 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(255,77,77,0.2)]"
+              >
+                <Plus size={18} />
+                {lang === 'ru' ? 'Новый чат' : 'New Chat'}
+              </button>
             </div>
-          ))}
-        </div>
+            
+            <div className="flex-1 overflow-y-auto px-3 space-y-2 scrollbar-thin scrollbar-thumb-[#3d2b4f] scrollbar-track-transparent">
+              {chats.map(chat => (
+                <div 
+                  key={chat.id}
+                  onClick={() => setActiveChatId(chat.id)}
+                  className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all group ${
+                    activeChatId === chat.id 
+                      ? 'bg-[#3d2b4f] text-white shadow-md' 
+                      : 'text-gray-400 hover:bg-[#3d2b4f]/50 hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
+                    <MessageSquare size={16} className="shrink-0 text-[#ff4d4d]" />
+                    <span className="truncate text-sm font-medium">{chat.title}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRenameChat(chat.id, chat.title);
+                      }}
+                      title={lang === 'ru' ? 'Переименовать' : 'Rename'}
+                      className={`p-1 rounded hover:bg-gray-500/20 hover:text-white transition-colors ${activeChatId === chat.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteChat(chat.id);
+                      }}
+                      title={lang === 'ru' ? 'Удалить' : 'Delete'}
+                      className={`p-1 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors ${activeChatId === chat.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="p-4 text-xs text-gray-400 space-y-3 font-medium">
+            <p className="font-bold text-white uppercase text-[10px] tracking-wider mb-2">
+              {lang === 'ru' ? 'Хранилище' : 'Storage'}
+            </p>
+            <div className="p-3 bg-[#251c35] border border-[#3d2b4f] rounded-2xl space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Database size={14} className="text-[#ff4d4d]" />
+                <span className="font-bold text-gray-200">IndexedDB AI Memory</span>
+              </div>
+              <p className="text-[11px] text-gray-400 leading-relaxed">
+                {lang === 'ru' 
+                  ? 'Сохраненные диалоги доступны офлайн и автоматически синхронизируются при восстановлении сети.' 
+                  : 'Saved dialogues are accessible offline and auto-sync when network is restored.'}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col relative min-w-0">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#3d2b4f]/50 bg-[#15101e]/50 shrink-0 min-w-0">
+      {activeView === 'chat' ? (
+        <div className="flex-1 flex flex-col relative min-w-0">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#3d2b4f]/50 bg-[#15101e]/50 shrink-0 min-w-0">
           <div className="flex items-center gap-3 min-w-0 mr-4">
             <Sparkles className="text-[#ff4d4d] shrink-0" />
             <h2 className="text-lg sm:text-xl font-bold text-white truncate">
@@ -456,16 +521,44 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
                     <p className="text-sm md:text-base font-medium break-words whitespace-pre-wrap">{item.content}</p>
                   </div>
                 )}
-                {item.role === 'assistant' && (
-                  <div className="flex items-start gap-3 w-full max-w-[95%] sm:max-w-[85%]">
-                    <div className="w-8 h-8 rounded-full bg-[#15101e] border border-[#ff4d4d]/30 flex items-center justify-center shrink-0 mt-1">
-                      <Bot size={16} className="text-[#ff4d4d]" />
+                {item.role === 'assistant' && (() => {
+                  const precedingMsg = activeChat?.messages[i - 1];
+                  const promptText = precedingMsg && precedingMsg.role === 'user' ? precedingMsg.content : '';
+                  const alreadySaved = memories.some(m => m.prompt === promptText && m.response === item.content);
+                  
+                  return (
+                    <div className="flex items-start gap-3 w-full max-w-[95%] sm:max-w-[85%] group/msg">
+                      <div className="w-8 h-8 rounded-full bg-[#15101e] border border-[#ff4d4d]/30 flex items-center justify-center shrink-0 mt-1">
+                        <Bot size={16} className="text-[#ff4d4d]" />
+                      </div>
+                      <div className="bg-[#15101e] border border-[#3d2b4f] text-gray-200 px-5 py-4 rounded-2xl rounded-tl-sm text-sm md:text-base break-words whitespace-pre-wrap shadow-xl relative flex-1">
+                        {item.content}
+                        
+                        {promptText && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (alreadySaved) {
+                                const foundMem = memories.find(m => m.prompt === promptText && m.response === item.content);
+                                if (foundMem) deleteMemory(foundMem.id);
+                              } else {
+                                saveMemory(promptText, item.content);
+                              }
+                            }}
+                            className={`absolute right-3 top-3 p-1 rounded hover:bg-[#3d2b4f] transition-all ${
+                              alreadySaved 
+                                ? 'text-[#ff4d4d] opacity-100' 
+                                : 'text-gray-500 hover:text-white opacity-0 group-hover/msg:opacity-100 focus:opacity-100 transition-opacity'
+                            }`}
+                            title={alreadySaved ? (lang === 'ru' ? 'Удалить из памяти' : 'Remove from memory') : (lang === 'ru' ? 'Сохранить в память' : 'Save to memory')}
+                          >
+                            {alreadySaved ? <BookmarkCheck size={16} className="fill-current" /> : <Bookmark size={16} />}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="bg-[#15101e] border border-[#3d2b4f] text-gray-200 px-5 py-4 rounded-2xl rounded-tl-sm text-sm md:text-base break-words whitespace-pre-wrap shadow-xl">
-                      {item.content}
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
                 {item.role === 'system' && (
                   <div className="text-yellow-400/80 italic text-sm self-center bg-yellow-500/10 px-4 py-1.5 rounded-full my-2 border border-yellow-500/20 mx-auto">
                     {item.content}
@@ -543,8 +636,185 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
             </button>
           </div>
         </form>
+      </div>
+      ) : (
+        /* AI Memories List Panel */
+        <div className="flex-1 flex flex-col relative min-w-0 overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#3d2b4f]/50 bg-[#15101e]/50 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <Database className="text-[#ff4d4d]" />
+              <h2 className="text-lg sm:text-xl font-black text-white truncate uppercase tracking-wider">
+                {lang === 'ru' ? 'Память ИИ' : 'AI Memory'}
+              </h2>
+            </div>
+            
+            {/* Sync Badge / Connection status */}
+            <div className="flex items-center gap-2 text-xs">
+              {isSyncing ? (
+                <span className="flex items-center gap-1.5 text-yellow-400 bg-yellow-500/10 px-3 py-1.5 rounded-full border border-yellow-500/20 animate-pulse font-bold">
+                  <Sparkles size={12} className="animate-spin" />
+                  {lang === 'ru' ? 'Синхронизация...' : 'Syncing...'}
+                </span>
+              ) : isOffline ? (
+                <span className="flex items-center gap-1.5 text-orange-400 bg-orange-500/10 px-3 py-1.5 rounded-full border border-orange-500/20 font-bold">
+                  <WifiOff size={12} />
+                  {lang === 'ru' ? 'Офлайн' : 'Offline'}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-green-400 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 font-bold">
+                  <Wifi size={12} className="animate-pulse" />
+                  {lang === 'ru' ? 'В сети (Синхронизировано)' : 'Online (Synced)'}
+                </span>
+              )}
+              
+              <button
+                className="sm:hidden p-2 hover:bg-white/10 text-gray-400 rounded-lg transition-colors flex items-center justify-center relative"
+                onClick={() => setIsMobileSidebarOpen(true)}
+                title={lang === 'ru' ? 'Выбрать чат' : 'Select chat'}
+              >
+                <MessageSquare size={18} />
+              </button>
+            </div>
+          </div>
 
-        {/* Settings Modal */}
+          {/* Memories List */}
+          <div className="flex-1 p-4 sm:p-6 space-y-6 bg-[#15101e]/30">
+            {memories.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-4 max-w-md mx-auto p-4 py-16">
+                <Bookmark size={56} className="text-gray-600" />
+                <p className="font-bold text-white text-lg">
+                  {lang === 'ru' ? 'Память ИИ пока пуста' : 'AI Memory is empty'}
+                </p>
+                <p className="text-gray-400 text-sm">
+                  {lang === 'ru' 
+                    ? 'Сохраняйте важные сообщения ИИ во время общения в чате. Они будут доступны офлайн в любой момент!' 
+                    : 'Save important responses during your chat sessions. They will be fully accessible offline!'}
+                </p>
+                <button
+                  onClick={() => setActiveView('chat')}
+                  className="px-5 py-2.5 bg-[#ff4d4d] text-[#15101e] rounded-xl font-bold text-sm hover:bg-white transition-all active:scale-95"
+                >
+                  {lang === 'ru' ? 'Перейти в чат' : 'Go to Chat'}
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {memories.map((mem) => (
+                  <div 
+                    key={mem.id}
+                    className="bg-[#251c35] border border-[#3d2b4f] hover:border-[#ff4d4d]/50 rounded-2xl p-5 shadow-xl flex flex-col justify-between space-y-4 relative group transition-all animate-fadeIn"
+                  >
+                    {/* Top action row */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        {editingMemoryId === mem.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={editTitleInput}
+                              onChange={(e) => setEditTitleInput(e.target.value)}
+                              className="bg-[#15101e] border border-[#ff4d4d] rounded px-2 py-1 text-xs text-white outline-none w-full font-bold"
+                              maxLength={40}
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => {
+                                updateMemoryTitle(mem.id, editTitleInput);
+                                setEditingMemoryId(null);
+                              }}
+                              className="px-2 py-1 bg-[#ff4d4d] text-[#15101e] hover:bg-white rounded text-[10px] font-black transition-all"
+                            >
+                              OK
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 group/title">
+                            <h3 className="font-bold text-white text-sm truncate uppercase tracking-wide">
+                              {mem.title}
+                            </h3>
+                            <button
+                              onClick={() => {
+                                setEditingMemoryId(mem.id);
+                                setEditTitleInput(mem.title);
+                              }}
+                              className="p-1 text-gray-500 hover:text-white transition-colors"
+                              title={lang === 'ru' ? 'Редактировать название' : 'Edit title'}
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          </div>
+                        )}
+                        <span className="text-[10px] text-gray-500 font-mono block mt-1">
+                          {new Date(mem.createdAt).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US')}
+                        </span>
+                      </div>
+
+                      {/* Sync Badge */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {mem.synced ? (
+                          <span className="text-green-400 text-[10px] bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 font-bold flex items-center gap-1" title="Synced to Firebase">
+                            <Cloud size={10} />
+                            Cloud
+                          </span>
+                        ) : (
+                          <span className="text-yellow-400 text-[10px] bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20 font-bold flex items-center gap-1 animate-pulse" title="Saved locally, pending sync">
+                            <CloudOff size={10} />
+                            Local
+                          </span>
+                        )}
+                        <button
+                          onClick={() => deleteMemory(mem.id)}
+                          className="p-1.5 hover:bg-red-500/20 text-gray-500 hover:text-red-400 rounded-lg transition-colors"
+                          title={lang === 'ru' ? 'Удалить из памяти' : 'Delete memory'}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Content view */}
+                    <div className="space-y-3 flex-1">
+                      <div className="bg-[#15101e]/50 rounded-xl p-3 border border-[#3d2b4f]/30">
+                        <span className="text-[10px] font-black uppercase text-[#ff4d4d]/80 tracking-widest block mb-1">
+                          {lang === 'ru' ? 'Запрос' : 'Prompt'}
+                        </span>
+                        <p className="text-xs text-gray-300 line-clamp-2 break-words">
+                          {mem.prompt}
+                        </p>
+                      </div>
+
+                      <div className="bg-[#15101e]/80 rounded-xl p-3 border border-[#3d2b4f]/60 relative">
+                        <span className="text-[10px] font-black uppercase text-green-400 tracking-widest block mb-1">
+                          {lang === 'ru' ? 'Ответ ИИ' : 'AI Response'}
+                        </span>
+                        <p className="text-xs text-gray-200 line-clamp-4 break-words font-medium leading-relaxed">
+                          {mem.response}
+                        </p>
+                        
+                        {/* Copy memory content */}
+                        <button
+                          onClick={() => {
+                            const fullText = `Prompt: ${mem.prompt}\n\nResponse: ${mem.response}`;
+                            navigator.clipboard.writeText(fullText);
+                            alert(lang === 'ru' ? 'Содержание памяти скопировано!' : 'Memory content copied!');
+                          }}
+                          className="absolute right-2 bottom-2 p-1 hover:bg-[#3d2b4f] text-gray-500 hover:text-white rounded transition-colors"
+                          title="Copy content"
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
         <AnimatePresence>
           {isSettingsOpen && (
             <motion.div 
@@ -613,79 +883,122 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
                 onClick={(e) => e.stopPropagation()}
                 className="w-72 h-full bg-[#15101e] border-r border-[#3d2b4f] flex flex-col p-5 space-y-4"
               >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
-                    <MessageSquare className="text-[#ff4d4d]" size={18} />
-                    {lang === 'ru' ? 'Мои чаты' : 'My Chats'}
-                  </h3>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="grid grid-cols-2 gap-1 w-full mr-1 bg-[#15101e] p-1 border border-[#3d2b4f] rounded-xl">
+                    <button
+                      onClick={() => setActiveView('chat')}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all text-center uppercase tracking-wider ${
+                        activeView === 'chat' 
+                          ? 'bg-[#ff4d4d] text-[#15101e]' 
+                          : 'bg-transparent text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {lang === 'ru' ? 'Чаты' : 'Chats'}
+                    </button>
+                    <button
+                      onClick={() => setActiveView('memory')}
+                      className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all text-center uppercase tracking-wider relative flex items-center justify-center gap-1 ${
+                        activeView === 'memory' 
+                          ? 'bg-[#ff4d4d] text-[#15101e]' 
+                          : 'bg-transparent text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {lang === 'ru' ? 'Память' : 'Memory'}
+                      {memories.length > 0 && (
+                        <span className="bg-[#ff4d4d] text-[#15101e] text-[9px] px-1 rounded-full font-black">
+                          {memories.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
                   <button
                     onClick={() => setIsMobileSidebarOpen(false)}
-                    className="p-1.5 hover:bg-white/5 text-gray-400 hover:text-white rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-white/5 text-gray-400 hover:text-white rounded-lg transition-colors shrink-0"
                   >
                     <X size={20} />
                   </button>
                 </div>
 
-                <button
-                  onClick={() => {
-                    handleCreateChat();
-                    setIsMobileSidebarOpen(false);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 bg-[#ff4d4d] hover:bg-white text-[#15101e] transition-colors py-3 px-4 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(255,77,77,0.2)]"
-                >
-                  <Plus size={18} />
-                  {lang === 'ru' ? 'Новый чат' : 'New Chat'}
-                </button>
-
-                <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-[#3d2b4f]">
-                  {chats.map(chat => (
-                    <div 
-                      key={chat.id}
+                {activeView === 'chat' ? (
+                  <>
+                    <button
                       onClick={() => {
-                        setActiveChatId(chat.id);
+                        handleCreateChat();
                         setIsMobileSidebarOpen(false);
                       }}
-                      className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
-                        activeChatId === chat.id 
-                          ? 'bg-[#3d2b4f] text-white shadow-md' 
-                          : 'text-gray-400 hover:bg-[#3d2b4f]/50 hover:text-white'
-                      }`}
+                      className="w-full flex items-center justify-center gap-2 bg-[#ff4d4d] hover:bg-white text-[#15101e] transition-colors py-3 px-4 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(255,77,77,0.2)]"
                     >
-                      <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
-                        <MessageSquare size={16} className="shrink-0 text-[#ff4d4d]" />
-                        <span className="truncate text-sm font-medium">{chat.title}</span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0 ml-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRenameChat(chat.id, chat.title);
+                      <Plus size={18} />
+                      {lang === 'ru' ? 'Новый чат' : 'New Chat'}
+                    </button>
+
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-[#3d2b4f]">
+                      {chats.map(chat => (
+                        <div 
+                          key={chat.id}
+                          onClick={() => {
+                            setActiveChatId(chat.id);
+                            setIsMobileSidebarOpen(false);
                           }}
-                          title={lang === 'ru' ? 'Переименовать' : 'Rename'}
-                          className="p-1 rounded hover:bg-gray-500/20 hover:text-white transition-colors"
+                          className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
+                            activeChatId === chat.id 
+                              ? 'bg-[#3d2b4f] text-white shadow-md' 
+                              : 'text-gray-400 hover:bg-[#3d2b4f]/50 hover:text-white'
+                          }`}
                         >
-                          <Pencil size={12} />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteChat(chat.id);
-                          }}
-                          title={lang === 'ru' ? 'Удалить' : 'Delete'}
-                          className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
+                          <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
+                            <MessageSquare size={16} className="shrink-0 text-[#ff4d4d]" />
+                            <span className="truncate text-sm font-medium">{chat.title}</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0 ml-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRenameChat(chat.id, chat.title);
+                              }}
+                              title={lang === 'ru' ? 'Переименовать' : 'Rename'}
+                              className="p-1 rounded hover:bg-gray-500/20 hover:text-white transition-colors"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteChat(chat.id);
+                              }}
+                              title={lang === 'ru' ? 'Удалить' : 'Delete'}
+                              className="p-1 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                ) : (
+                  <div className="p-4 text-xs text-gray-400 space-y-3 font-medium">
+                    <p className="font-bold text-white uppercase text-[10px] tracking-wider mb-2">
+                      {lang === 'ru' ? 'Хранилище' : 'Storage'}
+                    </p>
+                    <div className="p-3 bg-[#251c35] border border-[#3d2b4f] rounded-2xl space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Database size={14} className="text-[#ff4d4d]" />
+                        <span className="font-bold text-gray-200">IndexedDB AI Memory</span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 leading-relaxed">
+                        {lang === 'ru' 
+                          ? 'Сохраненные диалоги доступны офлайн и автоматически синхронизируются при восстановлении сети.' 
+                          : 'Saved dialogues are accessible offline and auto-sync when network is restored.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </motion.div>
+      </motion.div>
     </div>
   );
 };
