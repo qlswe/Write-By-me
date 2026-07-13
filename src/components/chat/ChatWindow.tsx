@@ -638,13 +638,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     <>
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 30 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 30 }}
-        className="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[420px] sm:h-[650px] bg-[#110b1a]/95 backdrop-blur-xl sm:border sm:border-[#382650]/80 sm:rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden z-50 transition-all duration-300"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-[#0a0512]/95 backdrop-blur-md flex flex-col items-center justify-center z-50 transition-all duration-300"
       >
-        {/* Header */}
-        <div className="p-3 bg-[#09050d] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20 shadow-lg relative">
+        <div className="w-full max-w-4xl h-full flex flex-col bg-[#0d0714] sm:border-x sm:border-[#311c47] relative shadow-2xl">
+          {/* Header */}
+          <div className="p-3 bg-[#09050d] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20 shadow-lg relative">
           <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[#ff4d4d]/20 to-transparent" />
           <div className="flex items-center gap-2.5">
             <div className="relative">
@@ -1171,6 +1172,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             </div>
           </>
         )}
+        </div>
       </motion.div>
     </AnimatePresence>
     
