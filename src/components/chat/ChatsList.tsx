@@ -5,7 +5,7 @@ import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
 import { ru, enUS, be, de, fr, zhCN } from 'date-fns/locale';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -26,6 +26,23 @@ const getSafeDate = (val: any): Date => {
   if (typeof val === 'string') return new Date(val);
   if (typeof val.seconds === 'number') return new Date(val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000));
   return new Date();
+};
+
+const formatChatTime = (val: any, lang: Language): string => {
+  const date = getSafeDate(val);
+  const t = translations[lang] as any;
+  if (isToday(date)) {
+    return format(date, 'HH:mm');
+  }
+  if (isYesterday(date)) {
+    return t.chatYesterday || 'Yesterday';
+  }
+  const now = new Date();
+  if (date.getFullYear() === now.getFullYear()) {
+    return format(date, 'd MMM', { locale: locales[lang] || locales.en });
+  } else {
+    return format(date, 'dd.MM.yyyy');
+  }
 };
 
 const getMillis = (val: any): number => {
@@ -91,10 +108,7 @@ const ChatItem = React.memo(({
           </span>
           {chat.lastMessageAt && (
             <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnread ? 'text-[#ff4d4d]' : 'text-gray-500'}`}>
-              {formatDistanceToNow(getSafeDate(chat.lastMessageAt), {
-                addSuffix: true,
-                locale: locales[lang] || locales.en
-              })}
+              {formatChatTime(chat.lastMessageAt, lang)}
             </span>
           )}
         </div>

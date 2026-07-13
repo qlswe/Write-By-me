@@ -896,7 +896,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             
                             <div className={`text-[9px] mt-2 font-black tracking-wider opacity-60 flex items-center gap-1 ${isMe ? 'justify-end' : 'justify-start'} ${msg.type === 'sticker' && !msg.isDeleted ? 'text-gray-400' : ''}`}>
                               {msg.isEdited && !msg.isDeleted && <span>({t.edited || "edited"})</span>}
-                              {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'HH:mm') : ''}
+                              {format(getSafeDate(msg.createdAt), 'HH:mm')}
                               {isMe && !msg.isDeleted && (
                                 isRead ? <CheckCheck className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-blue-400' : msg.type === 'voice' ? 'text-[#ff4d4d]' : 'text-[#0d0714]'}`} /> : <Check className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-gray-400' : 'opacity-60'}`} />
                               )}
