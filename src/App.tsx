@@ -77,6 +77,13 @@ export default function App() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [section, setSection] = useState<Section>('home');
+  const [prevSection, setPrevSection] = useState<Section>('home');
+  
+  useEffect(() => {
+    if (section !== 'ai') {
+      setPrevSection(section);
+    }
+  }, [section]);
   
   useEffect(() => {
     if (authError) {
@@ -836,7 +843,11 @@ export default function App() {
               )}
 
               {section === 'ai' && (
-                <AhiAiSection lang={lang as Language} />
+                <AhiAiSection 
+                  lang={lang as Language} 
+                  currentSection={section}
+                  previousSection={prevSection}
+                />
               )}
 
               {section === 'sdk' && (

@@ -155,35 +155,44 @@ export const useAiChats = () => {
   const addMessage = useCallback(async (chatId: string, message: Omit<AiMessage, 'createdAt'>) => {
     if (!user) return;
 
-    const targetChat = chats.find(c => c.id === chatId);
-    if (!targetChat) return;
+    let finalMessages: AiMessage[] = [];
+    let finalTitle = '';
+    let found = false;
 
-    const newMessages = [...targetChat.messages, { ...message, createdAt: Date.now() }];
-    
-    // Generate title if it's the first user message and title is still default
-    let newTitle = targetChat.title;
-    if (newMessages.filter(m => m.role === 'user').length === 1 && message.role === 'user') {
-      newTitle = message.content.slice(0, 20).trim() + (message.content.length > 20 ? '...' : '');
-    }
+    setChats(prev => {
+      const targetChat = prev.find(c => c.id === chatId);
+      if (!targetChat) return prev;
+      found = true;
 
-    // Optimistic UI update
-    setChats(prev => prev.map(c => {
-      if (c.id === chatId) {
-        return { ...c, messages: newMessages, title: newTitle, updatedAt: Date.now() };
+      const newMessages = [...targetChat.messages, { ...message, createdAt: Date.now() }];
+      let newTitle = targetChat.title;
+      if (newMessages.filter(m => m.role === 'user').length === 1 && message.role === 'user') {
+        newTitle = message.content.slice(0, 20).trim() + (message.content.length > 20 ? '...' : '');
       }
-      return c;
-    }));
+
+      finalMessages = newMessages;
+      finalTitle = newTitle;
+
+      return prev.map(c => {
+        if (c.id === chatId) {
+          return { ...c, messages: newMessages, title: newTitle, updatedAt: Date.now() };
+        }
+        return c;
+      });
+    });
+
+    if (!found) return;
 
     try {
       await updateDoc(doc(db, 'ai_chats', chatId), {
-        messages: newMessages,
-        title: newTitle,
+        messages: finalMessages,
+        title: finalTitle,
         updatedAt: Date.now()
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `ai_chats/${chatId}`);
     }
-  }, [user, chats]);
+  }, [user]);
 
   return {
     chats,

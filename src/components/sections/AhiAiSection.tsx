@@ -24,7 +24,30 @@ const quickSuggestions = {
   ]
 };
 
-export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
+const quickPrompts = {
+  ru: [
+    { label: 'Объясни последнее событие 🌌', prompt: 'Объясни, что произошло в последнем крупном обновлении Honkai: Star Rail?' },
+    { label: 'Предложи теорию 🔮', prompt: 'Придумай и предложи безумную фанатскую теорию об истинных мотивах Эона Радости Ахи.' },
+    { label: 'Лучший билд на Ахерона ⚡', prompt: 'Порекомендуй лучший и самый фановый билд для Ахерон в HSR.' },
+    { label: 'Анекдот про Пом-Пом 🚂', prompt: 'Расскажи угарный и добрый анекдот про Пом-Пом и Первопроходца.' },
+    { label: 'Кто такие Недотёпы в масках? 🎭', prompt: 'Расскажи, кто такие Недотёпы в масках и почему они служат Ахе?' },
+    { label: 'Космический совет дня 💫', prompt: 'Дай мне безумное космическое предсказание или совет дня от имени Ахи!' }
+  ],
+  en: [
+    { label: 'Explain last event 🌌', prompt: 'Can you explain what happened in the latest major update of Honkai: Star Rail?' },
+    { label: 'Suggest a theory 🔮', prompt: 'Propose a wild and funny fan theory about the true motives of Aha the Elation.' },
+    { label: 'Best Acheron build ⚡', prompt: 'Recommend the best and most fun build for Acheron in HSR.' },
+    { label: 'Pom-Pom joke 🚂', prompt: 'Tell a hilarious and wholesome joke about Pom-Pom and the Trailblazer.' },
+    { label: 'Who are Masked Fools? 🎭', prompt: 'Tell me who the Masked Fools are and why they follow Aha.' },
+    { label: 'Cosmic advice of the day 💫', prompt: 'Give me a chaotic cosmic prediction or advice of the day from Aha!' }
+  ]
+};
+
+export const AhiAiSection: React.FC<{ 
+  lang: Language;
+  currentSection?: string;
+  previousSection?: string;
+}> = ({ lang, currentSection = 'ai', previousSection = 'home' }) => {
   const { user } = useAuth();
   const t = translations[lang];
   const { chats, activeChatId, setActiveChatId, activeChat, createChat, deleteChat, updateChat, addMessage } = useAiChats();
@@ -70,11 +93,10 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
     incrementUsage('chats_daily');
   };
 
-  const handleExecute = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isProcessing || !activeChatId) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isProcessing || !activeChatId) return;
 
-    const cmd = input.trim();
+    const cmd = text.trim();
 
     if (!hasUnlimitedAccess && cmd.length > 250) {
       alert(lang === 'ru' ? 'Ваше сообщение превышает лимит в 250 символов. Купите Aha Premium для снятия ограничений.' : 'Your message exceeds the 250-character limit. Get Aha Premium to remove this limit.');
@@ -86,8 +108,10 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
       return;
     }
 
+    // Capture the messages array before sending to avoid stale closure references
+    const currentMessages = activeChat ? [...activeChat.messages] : [];
+
     addMessage(activeChatId, { role: 'user', content: cmd });
-    setInput('');
     setIsProcessing(true);
 
     try {
@@ -102,11 +126,83 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
         }
       } else {
         // Ai execution
-        const historyForGenAi = activeChat!.messages
+        const historyForGenAi = currentMessages
           .filter(m => m.role === 'user' || m.role === 'assistant')
           .map(m => ({ role: m.role, content: m.content }));
         
-        const response = await sdk.genai.generate(cmd, lang, activeChat!.systemPrompt, historyForGenAi);
+        const tAny = t as any;
+        const sectionInfoMap: Record<string, { title: string; description: string }> = {
+          home: {
+            title: tAny.navHome || tAny.homeTitle || 'Главная / Home',
+            description: tAny.homeDesc || 'Добро пожаловать на Радиостанцию Ахи! Это ваш персональный ресурс для глубокого погружения во вселенную Honkai: Star Rail.'
+          },
+          forum: {
+            title: tAny.navForum || tAny.forumTitle || 'Активности и Посты / Activities & Posts',
+            description: 'Форум Ахи, обсуждение активностей, постов, событий и игровых новостей.'
+          },
+          canvas: {
+            title: tAny.navCanvas || tAny.canvasTitle || 'Аха Холст / Aha Canvas',
+            description: tAny.canvasDesc || 'Совместный холст в реальном времени. Любые изменения видны всем мгновенно!'
+          },
+          radio: {
+            title: tAny.navRadio || tAny.radioTitle || 'Радио Ахи / Aha Radio',
+            description: 'Радиостанция Ахи, трансляция безумных шуток от ИИ и стендапов.'
+          },
+          theories: {
+            title: tAny.navTheories || 'Всячина / Stuff',
+            description: tAny.theoriesSubTitle || 'Архив Радиостанции Ахи, теории заговора и фанатские гипотезы Honkai: Star Rail.'
+          },
+          blog: {
+            title: tAny.navBlog || 'Блог / Blog',
+            description: tAny.blogSubTitle || 'Официальные хроники, патчноуты и личные заметки администрации.'
+          },
+          chronicle: {
+            title: tAny.navChronicle || 'Хроника событий / Event Chronicle',
+            description: tAny.chronicleDesc || 'Расписание активностей, событий, баннеров и игрового календаря Honkai: Star Rail.'
+          },
+          promo: {
+            title: tAny.navPromo || 'Промокоды / Promo Codes',
+            description: tAny.promoCodesSubtitle || 'Актуальные промокоды Honkai: Star Rail для получения бесплатных наград.'
+          },
+          chats: {
+            title: tAny.navChats || 'Сообщения / Messages',
+            description: 'Раздел личных сообщений и чатов с другими пользователями.'
+          },
+          users: {
+            title: tAny.navUsers || 'Пользователи / Users',
+            description: 'Список зарегистрированных путешественников, управление ролями участников.'
+          },
+          sdk: {
+            title: 'SDK Настройки / SDK Settings',
+            description: tAny.sdkSettingsDesc || 'Параметры окружения, режим производительности, системные виджеты и отладка.'
+          },
+          ai: {
+            title: tAny.sdkTitle || 'Aha AI',
+            description: tAny.sdkDesc || 'Интерактивный ИИ-ассистент, знающий всё о лоре Honkai: Star Rail и командах SDK.'
+          },
+          telemetry: {
+            title: 'Telemetry',
+            description: 'Системные логи, графики активности пользователей, метрики производительности и мониторинг ошибок.'
+          }
+        };
+
+        const activeSectionInfo = sectionInfoMap[currentSection] || sectionInfoMap['ai'];
+        const prevSectionInfo = sectionInfoMap[previousSection] || sectionInfoMap['home'];
+
+        const contextPayload = `[SYSTEM_CONTEXT_PAYLOAD]
+Current Page Title: "${activeSectionInfo.title}"
+Section Description: "${activeSectionInfo.description}"
+
+User came from section: "${prevSectionInfo.title}"
+Previous Section description: "${prevSectionInfo.description}"
+
+Overall App Map for context:
+${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (${info.description})`).join('\n')}
+[END_SYSTEM_CONTEXT_PAYLOAD]`;
+
+        const systemPromptWithContext = `${activeChat!.systemPrompt || ''}\n\n${contextPayload}`;
+
+        const response = await sdk.genai.generate(cmd, lang, systemPromptWithContext, historyForGenAi);
         addMessage(activeChatId, { role: 'assistant', content: response });
       }
     } catch (error) {
@@ -119,11 +215,16 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
     }
   };
 
-  const handleSuggestionClick = (promptText: string) => {
-    setInput(promptText);
-    setTimeout(() => {
-      if (inputRef.current) inputRef.current.focus();
-    }, 50);
+  const handleExecute = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isProcessing || !activeChatId) return;
+    const toSend = input;
+    setInput('');
+    await sendMessage(toSend);
+  };
+
+  const handleSuggestionClick = async (promptText: string) => {
+    await sendMessage(promptText);
   };
 
   const handleRenameChat = (id: string, currentTitle: string) => {
@@ -390,6 +491,31 @@ export const AhiAiSection: React.FC<{ lang: Language }> = ({ lang }) => {
             </div>
           )}
         </div>
+
+        {/* Quick Prompts Grid */}
+        {activeChat && (
+          <div className="px-4 py-2.5 border-t border-[#3d2b4f]/30 bg-[#15101e]/40 shrink-0">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles size={12} className="text-[#ff4d4d]" />
+              <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">
+                {lang === 'ru' ? 'Быстрые запросы' : 'Quick Prompts'}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 max-h-[72px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-[#3d2b4f] scrollbar-track-transparent">
+              {(quickPrompts[lang] || quickPrompts['ru']).map((promptItem, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={() => handleSuggestionClick(promptItem.prompt)}
+                  className="px-3 py-1 bg-[#251c35]/50 hover:bg-[#ff4d4d]/10 border border-[#3d2b4f] hover:border-[#ff4d4d] text-[#ff4d4d]/90 hover:text-white rounded-xl text-xs transition-all active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {promptItem.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Input */}
         <form onSubmit={handleExecute} className="p-3 sm:p-4 border-t border-[#3d2b4f]/50 bg-[#15101e]/80 shrink-0">

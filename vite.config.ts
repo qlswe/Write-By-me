@@ -11,15 +11,29 @@ export default defineConfig(({mode}) => {
       {
         name: 'mock-ws-for-tailwindcss',
         configureServer(server) {
-          if (!server.ws) {
-            server.ws = {
-              send() {},
-              close() {},
-              on() {},
-              off() {},
-              listeners: [],
-              clients: new Set(),
-            } as any;
+          const wsMock = {
+            send() {},
+            close() {},
+            on() {},
+            off() {},
+            listeners: [],
+            clients: new Set(),
+          };
+          try {
+            Object.defineProperty(server, 'ws', {
+              get() {
+                return wsMock;
+              },
+              set(val) {
+                if (val) {
+                  Object.assign(wsMock, val);
+                }
+              },
+              configurable: true,
+              enumerable: true,
+            });
+          } catch (e) {
+            server.ws = wsMock as any;
           }
         },
       },

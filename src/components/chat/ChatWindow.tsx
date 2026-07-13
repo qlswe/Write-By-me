@@ -803,8 +803,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                         )}
                         <motion.div
                           id={`msg-${msg.id}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
+                          initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ 
+                            duration: 0.22, 
+                            ease: [0.215, 0.610, 0.355, 1.000] // smooth cubic-bezier easeOut
+                          }}
                           className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group ${msg.reactions && Object.keys(msg.reactions).some(k => msg.reactions![k].length > 0) ? 'mb-5.5' : ''}`}
                         >
                           {/* Global Portal-based message overlay menu renders at bottom of body instead of absolute inside list */}

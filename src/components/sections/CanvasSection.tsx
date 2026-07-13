@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, useMotionValue, AnimatePresence } from 'framer-motion';
-import { Palette, LogIn, Maximize, RefreshCw, Users, Info, Eraser, Move, PenTool, Save, User as UserIcon, Undo2, Redo2, Mail, Lock, ShieldAlert, PaintBucket, Slash, Square, Grid, Download, LayoutGrid, FolderOpen, Trash2, Plus, Bookmark, X } from 'lucide-react';
+import { Palette, LogIn, Maximize, RefreshCw, Users, Info, Eraser, Move, PenTool, Save, User as UserIcon, Undo2, Redo2, Mail, Lock, ShieldAlert, PaintBucket, Slash, Square, Grid, Download, LayoutGrid, FolderOpen, Trash2, Plus, Bookmark, X, FlipHorizontal, FlipVertical } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCanvas } from '../../hooks/useCanvas';
 import { translations, Language } from '../../data/translations';
@@ -59,7 +59,7 @@ const TEMPLATES: Record<string, { name: string; nameRu: string; pixels: Record<s
       "9,1": "#ffffff", "9,2": "#ffffff", "8,2": "#808080", "10,2": "#808080",
       "8,3": "#ffffff", "9,3": "#ffffff", "10,3": "#ffffff",
       "7,4": "#808080", "8,4": "#ffffff", "9,4": "#ffffff", "10,4": "#ffffff", "11,4": "#808080",
-      "6,5": "#808080", "7,5": "#ffffff", "8,5": "#ffffff", "9,5": "#ffffff", "10,5": "#ffffff", "11,5": "#ffffff",
+      "6,5": "#808080", "7,5": "#ffffff", "8,5": "#ffffff", "9,5": "#ffffff", "10,5": "#ffffff", "11,5": "#808080",
       "5,6": "#808080", "6,6": "#ffffff", "7,6": "#ffffff", "8,6": "#ffffff", "9,6": "#ffffff",
       "4,7": "#808080", "5,7": "#ffffff", "6,7": "#ffffff", "7,7": "#ffffff",
       "3,8": "#808080", "4,8": "#ffffff", "5,8": "#ffffff",
@@ -77,6 +77,48 @@ const TEMPLATES: Record<string, { name: string; nameRu: string; pixels: Record<s
       "3,5": "#ffff4d", "4,5": "#ffff4d", "5,5": "#ffff4d", "6,5": "#ffff4d", "7,5": "#ffff4d",
       "2,6": "#ffff4d", "3,6": "#ffff4d", "4,6": "#ffff4d", "5,6": "#ffff4d", "6,6": "#ffff4d", "7,6": "#ffff4d", "8,6": "#ffff4d",
       "1,7": "#ffff4d", "5,7": "#ffff4d", "9,7": "#ffff4d"
+    }
+  },
+  crown: {
+    name: 'Crown',
+    nameRu: 'Корона',
+    pixels: {
+      "2,2": "#ffff4d", "10,2": "#ffff4d",
+      "3,3": "#ffff4d", "9,3": "#ffff4d",
+      "2,4": "#ffff4d", "6,4": "#ffff4d", "10,4": "#ffff4d",
+      "3,5": "#ffff4d", "5,5": "#ffff4d", "6,5": "#ffff4d", "7,5": "#ffff4d", "9,5": "#ffff4d",
+      "2,6": "#ffff4d", "3,6": "#ffff4d", "4,6": "#ffff4d", "5,6": "#ffff4d", "6,6": "#ffff4d", "7,6": "#ffff4d", "8,6": "#ffff4d", "9,6": "#ffff4d", "10,6": "#ffff4d",
+      "2,7": "#ffff4d", "3,7": "#ffff4d", "4,7": "#ffff4d", "5,7": "#ffff4d", "6,7": "#ffff4d", "7,7": "#ffff4d", "8,7": "#ffff4d", "9,7": "#ffff4d", "10,7": "#ffff4d",
+      "3,8": "#ff8800", "4,8": "#ff8800", "5,8": "#ff8800", "6,8": "#ff8800", "7,8": "#ff8800", "8,8": "#ff8800", "9,8": "#ff8800"
+    }
+  },
+  cat: {
+    name: 'Kitten',
+    nameRu: 'Котик',
+    pixels: {
+      "3,2": "#ffffff", "9,2": "#ffffff",
+      "2,3": "#ffffff", "3,3": "#ffffff", "4,3": "#ffffff", "8,3": "#ffffff", "9,3": "#ffffff", "10,3": "#ffffff",
+      "1,4": "#ffffff", "2,4": "#ffffff", "3,4": "#ffffff", "4,4": "#ffffff", "5,4": "#ffffff", "6,4": "#ffffff", "7,4": "#ffffff", "8,4": "#ffffff", "9,4": "#ffffff", "10,4": "#ffffff", "11,4": "#ffffff",
+      "1,5": "#ffffff", "3,5": "#000000", "9,5": "#000000", "11,5": "#ffffff",
+      "1,6": "#ffffff", "6,6": "#ff4dff", "11,6": "#ffffff",
+      "2,7": "#ffffff", "3,7": "#ffffff", "4,7": "#ffffff", "5,7": "#ffffff", "6,7": "#ffffff", "7,7": "#ffffff", "8,7": "#ffffff", "9,7": "#ffffff", "10,7": "#ffffff",
+      "3,8": "#ffffff", "4,8": "#ffffff", "5,8": "#ffffff", "6,8": "#ffffff", "7,8": "#ffffff", "8,8": "#ffffff", "9,8": "#ffffff",
+      "4,9": "#ffffff", "5,9": "#ffffff", "7,9": "#ffffff", "8,9": "#ffffff"
+    }
+  },
+  potion: {
+    name: 'Potion',
+    nameRu: 'Зелье',
+    pixels: {
+      "5,1": "#ff8800", "6,1": "#ff8800",
+      "5,2": "#ff8800", "6,2": "#ff8800",
+      "4,3": "#ffffff", "5,3": "#ffffff", "6,3": "#ffffff", "7,3": "#ffffff",
+      "4,4": "#ffffff", "5,4": "#ffffff", "6,4": "#ffffff", "7,4": "#ffffff",
+      "3,5": "#ffffff", "4,5": "#8c1aff", "5,5": "#8c1aff", "6,5": "#8c1aff", "7,5": "#8c1aff", "8,5": "#ffffff",
+      "2,6": "#ffffff", "3,6": "#8c1aff", "4,6": "#8c1aff", "5,6": "#8c1aff", "6,6": "#8c1aff", "7,6": "#8c1aff", "8,6": "#8c1aff", "9,6": "#ffffff",
+      "2,7": "#ffffff", "3,7": "#8c1aff", "4,7": "#8c1aff", "5,7": "#ffff4d", "6,7": "#ffff4d", "7,7": "#8c1aff", "8,7": "#8c1aff", "9,7": "#ffffff",
+      "2,8": "#ffffff", "3,8": "#8c1aff", "4,8": "#8c1aff", "5,8": "#8c1aff", "6,8": "#8c1aff", "7,8": "#8c1aff", "8,8": "#8c1aff", "9,8": "#ffffff",
+      "3,9": "#ffffff", "4,9": "#ffffff", "5,9": "#ffffff", "6,9": "#ffffff", "7,9": "#ffffff", "8,9": "#ffffff"
     }
   }
 };
@@ -123,6 +165,8 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [selectedColor, setSelectedColor] = useState<string>(COLORS[2]);
   const [tool, setTool] = useState<Tool>('draw');
   const [scale, setScale] = useState(1);
+  const [symmetryMode, setSymmetryMode] = useState<'none' | 'horizontal' | 'vertical' | 'radial'>('none');
+  const [brushSize, setBrushSize] = useState<number>(1);
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastDrawn, setLastDrawn] = useState<string | null>(null);
 
@@ -476,6 +520,100 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     }
   };
 
+  const getSymmetricCoordinates = (cx: number, cy: number): { x: number; y: number }[] => {
+    const coords = [{ x: cx, y: cy }];
+    if (isGlobal) return coords; // Symmetry only in personal canvas
+    
+    if (symmetryMode === 'horizontal') {
+      coords.push({ x: size - 1 - cx, y: cy });
+    } else if (symmetryMode === 'vertical') {
+      coords.push({ x: cx, y: size - 1 - cy });
+    } else if (symmetryMode === 'radial') {
+      coords.push({ x: size - 1 - cx, y: cy });
+      coords.push({ x: cx, y: size - 1 - cy });
+      coords.push({ x: size - 1 - cx, y: size - 1 - cy });
+    }
+    return coords;
+  };
+
+  const getBrushOffsets = (sz: number): { dx: number; dy: number }[] => {
+    if (sz === 1) return [{ dx: 0, dy: 0 }];
+    if (sz === 2) {
+      return [
+        { dx: 0, dy: 0 },
+        { dx: 1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: 1, dy: 1 }
+      ];
+    }
+    return [
+      { dx: -1, dy: -1 }, { dx: 0, dy: -1 }, { dx: 1, dy: -1 },
+      { dx: -1, dy: 0 },  { dx: 0, dy: 0 },  { dx: 1, dy: 0 },
+      { dx: -1, dy: 1 },  { dx: 0, dy: 1 },  { dx: 1, dy: 1 }
+    ];
+  };
+
+  const isOutOfBounds = (cx: number, cy: number): boolean => {
+    if (isGlobal) return false;
+    return cx < 0 || cx >= size || cy < 0 || cy >= size;
+  };
+
+  const paintPixelsGroup = (cx: number, cy: number) => {
+    if (!user || tool === 'move') return;
+    if (!isVerified) return;
+    
+    const key = `${cx},${cy}`;
+    if (lastDrawn === key) return;
+    setLastDrawn(key);
+
+    const symmetricCenters = getSymmetricCoordinates(cx, cy);
+    const offsets = getBrushOffsets(brushSize);
+    
+    const targetCoords: { x: number; y: number }[] = [];
+    symmetricCenters.forEach(center => {
+      offsets.forEach(offset => {
+        const tx = center.x + offset.dx;
+        const ty = center.y + offset.dy;
+        if (!isOutOfBounds(tx, ty)) {
+          if (!targetCoords.some(c => c.x === tx && c.y === ty)) {
+            targetCoords.push({ x: tx, y: ty });
+          }
+        }
+      });
+    });
+
+    const updates: Record<string, string | null> = {};
+    
+    targetCoords.forEach(({ x, y }) => {
+      const pixelId = `${x},${y}`;
+      const existing = pixels[pixelId];
+      const oldColor = existing ? existing.color : null;
+      
+      if (tool === 'eraser' || selectedColor === 'eraser') {
+        if (!existing) return;
+        if (!currentStrokeRef.current.find(s => s.pixelId === pixelId)) {
+          currentStrokeRef.current.push({ pixelId, oldColor, newColor: null });
+        }
+        updates[pixelId] = null;
+      } else {
+        if (existing && existing.color === selectedColor) return;
+        if (mode === 'global' && pixelsLeft <= 0) {
+          window.dispatchEvent(new CustomEvent('aha_toast', { detail: "Достигнут часовой лимит пикселей!" }));
+          return;
+        }
+        if (!currentStrokeRef.current.find(s => s.pixelId === pixelId)) {
+          currentStrokeRef.current.push({ pixelId, oldColor, newColor: selectedColor });
+        }
+        updates[pixelId] = selectedColor;
+        if (mode === 'global') setPixelsLeft((prev: number) => prev - 1);
+      }
+    });
+
+    if (Object.keys(updates).length > 0) {
+      drawPixelsBatch(updates);
+    }
+  };
+
   const handlePointerDown = (clientX: number, clientY: number) => {
     if (tool === 'move' || !user) return;
     if (!isVerified) {
@@ -498,7 +636,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       setPreviewPixels({});
     } else {
       currentStrokeRef.current = [];
-      paintPixel(x, y);
+      paintPixelsGroup(x, y);
     }
   };
 
@@ -523,7 +661,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         setPreviewPixels(previewMap);
       }
     } else if (tool === 'draw' || tool === 'eraser') {
-      paintPixel(x, y);
+      paintPixelsGroup(x, y);
     }
   };
 
@@ -572,38 +710,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     setStartPoint(null);
     setPreviewPixels({});
     currentStrokeRef.current = [];
-  };
-
-  const paintPixel = (x: number, y: number) => {
-    if (!user || tool === 'move') return;
-    if (!isVerified) return;
-    const pixelId = `${x},${y}`;
-    if (lastDrawn === pixelId) return;
-    
-    const existing = pixels[pixelId];
-    const oldColor = existing ? existing.color : null;
-    
-    if (tool === 'eraser' || selectedColor === 'eraser') {
-      if (!existing) return; 
-      if (!currentStrokeRef.current.find(s => s.pixelId === pixelId)) {
-        currentStrokeRef.current.push({ pixelId, oldColor, newColor: null });
-      }
-      setLastDrawn(pixelId);
-      if (mode === 'global') setPixelsLeft(prev => Math.min(MAX_PIXELS, prev + 1));
-      erasePixel(x, y);
-    } else {
-      if (existing && existing.color === selectedColor) return;
-      if (mode === 'global' && pixelsLeft <= 0) {
-        window.dispatchEvent(new CustomEvent('aha_toast', { detail: "Достигнут часовой лимит пикселей!" }));
-        return;
-      }
-      if (!currentStrokeRef.current.find(s => s.pixelId === pixelId)) {
-        currentStrokeRef.current.push({ pixelId, oldColor, newColor: selectedColor });
-      }
-      setLastDrawn(pixelId);
-      if (mode === 'global') setPixelsLeft(prev => prev - 1);
-      drawPixel(x, y, selectedColor);
-    }
   };
 
   const undo = () => {
@@ -1050,39 +1156,83 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
                {/* Dynamic sub-tool row for personal settings */}
                {mode === 'personal' && (
-                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[#3d2b4f]/30">
-                   <div className="flex items-center gap-2">
-                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                       {lang === 'ru' ? 'РАЗМЕР:' : 'SIZE:'}
-                     </span>
-                     <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
-                       {[16, 32, 64].map(sz => (
-                         <button
-                           key={sz}
-                           onClick={() => setPersonalSize(sz)}
-                           className={`px-2 py-1 rounded text-[10px] font-black transition-all ${personalSize === sz ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
-                         >
-                           {sz}x{sz}
-                         </button>
-                       ))}
+                 <div className="flex flex-col gap-3 pt-2 border-t border-[#3d2b4f]/30">
+                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                     <div className="flex items-center gap-2">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                         {lang === 'ru' ? 'РАЗМЕР:' : 'SIZE:'}
+                       </span>
+                       <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
+                         {[16, 32, 64].map(sz => (
+                           <button
+                             key={sz}
+                             onClick={() => setPersonalSize(sz)}
+                             className={`px-2 py-1 rounded text-[10px] font-black transition-all ${personalSize === sz ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
+                           >
+                             {sz}x{sz}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+
+                     <div className="flex items-center gap-2">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                         {lang === 'ru' ? 'ШАБЛОНЫ:' : 'TEMPLATES:'}
+                       </span>
+                       <div className="flex flex-wrap gap-1 bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
+                         {Object.entries(TEMPLATES).map(([key, val]) => (
+                           <button
+                             key={key}
+                             onClick={() => loadTemplate(key)}
+                             className="px-2 py-0.5 rounded text-[10px] font-bold text-gray-300 hover:text-white hover:bg-[#3d2b4f]/50 flex items-center gap-1 uppercase tracking-tight"
+                           >
+                             <LayoutGrid size={10} className="text-[#ff4d4d]" />
+                             {lang === 'ru' ? val.nameRu : val.name}
+                           </button>
+                         ))}
+                       </div>
                      </div>
                    </div>
 
-                   <div className="flex items-center gap-2">
-                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                       {lang === 'ru' ? 'ШАБЛОНЫ:' : 'TEMPLATES:'}
-                     </span>
-                     <div className="flex flex-wrap gap-1 bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
-                       {Object.entries(TEMPLATES).map(([key, val]) => (
-                         <button
-                           key={key}
-                           onClick={() => loadTemplate(key)}
-                           className="px-2 py-0.5 rounded text-[10px] font-bold text-gray-300 hover:text-white hover:bg-[#3d2b4f]/50 flex items-center gap-1 uppercase tracking-tight"
-                         >
-                           <LayoutGrid size={10} className="text-[#ff4d4d]" />
-                           {lang === 'ru' ? val.nameRu : val.name}
-                         </button>
-                       ))}
+                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[#3d2b4f]/20">
+                     <div className="flex items-center gap-2">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                         {lang === 'ru' ? 'КИСТЬ:' : 'BRUSH:'}
+                       </span>
+                       <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
+                         {[1, 2, 3].map(sz => (
+                           <button
+                             key={sz}
+                             onClick={() => setBrushSize(sz)}
+                             className={`px-2.5 py-1 rounded text-[10px] font-black transition-all ${brushSize === sz ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
+                           >
+                             {sz}px
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+
+                     <div className="flex items-center gap-2">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                         {lang === 'ru' ? 'СИММЕТРИЯ:' : 'SYMMETRY:'}
+                       </span>
+                       <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
+                         {[
+                           { mode: 'none', label: lang === 'ru' ? 'ВЫКЛ' : 'OFF', icon: null },
+                           { mode: 'horizontal', label: lang === 'ru' ? 'ГОР' : 'HOR', icon: <FlipHorizontal size={10} /> },
+                           { mode: 'vertical', label: lang === 'ru' ? 'ВЕР' : 'VER', icon: <FlipVertical size={10} /> },
+                           { mode: 'radial', label: lang === 'ru' ? 'РАД' : 'RAD', icon: <RefreshCw size={10} /> }
+                         ].map(sym => (
+                           <button
+                             key={sym.mode}
+                             onClick={() => setSymmetryMode(sym.mode as any)}
+                             className={`px-2.5 py-1 rounded text-[10px] font-black flex items-center gap-1 transition-all ${symmetryMode === sym.mode ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
+                           >
+                             {sym.icon}
+                             {sym.label}
+                           </button>
+                         ))}
+                       </div>
                      </div>
                    </div>
                  </div>
@@ -1187,6 +1337,43 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                      </div>
                  )}
                </motion.div>
+
+               {/* Radar Live Mini Preview Overlay */}
+               {mode === 'personal' && (
+                 <div className="absolute bottom-3 right-3 bg-[#15101e]/90 border border-[#ff4d4d]/30 backdrop-blur-md rounded-2xl p-2 shadow-xl shadow-black/60 pointer-events-none select-none z-10 flex flex-col items-center gap-1 hover:opacity-10 transition-opacity">
+                   <div className="flex items-center gap-1">
+                     <span className="w-1.5 h-1.5 rounded-full bg-[#ff4d4d] animate-pulse" />
+                     <span className="text-[8px] font-black uppercase tracking-widest text-white/50">RADAR</span>
+                   </div>
+                   <div className="w-16 h-16 bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-lg overflow-hidden relative">
+                     <div 
+                       className="grid w-full h-full"
+                       style={{ 
+                         gridTemplateColumns: `repeat(${size}, 1fr)`,
+                         gridTemplateRows: `repeat(${size}, 1fr)`
+                       }}
+                     >
+                       {Object.keys(pixels).length === 0 ? (
+                         <div className="absolute inset-0 flex items-center justify-center text-[7px] text-white/20 font-mono uppercase tracking-tighter">EMPTY</div>
+                       ) : (
+                         Array.from({ length: size * size }).map((_, idx) => {
+                           const x = idx % size;
+                           const y = Math.floor(idx / size);
+                           const pixelId = `${x},${y}`;
+                           const pixel = pixels[pixelId];
+                           return (
+                             <div
+                               key={idx}
+                               style={{ backgroundColor: pixel?.color || '#15101e' }}
+                               className="w-full h-full"
+                             />
+                           );
+                         })
+                       )}
+                     </div>
+                   </div>
+                 </div>
+               )}
              </div>
              
              <div className="mt-4 flex items-start gap-3 bg-[#251c35] p-3 rounded-xl border border-[#3d2b4f]">

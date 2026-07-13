@@ -808,57 +808,122 @@ export class AhaSDK {
    */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
+      const { defaultSystemPrompt } = await import('../constants/aiPrompt');
+      const finalSystemPrompt = systemInstruction || defaultSystemPrompt;
+
+      // 1. Попытка вызвать собственный прокси-сервер /api/generate
+      // Это работает в РФ БЕЗ ВПН, так как запрос идет к нашему контейнеру на Cloud Run (который не заблокирован),
+      // а сам контейнер (в Европе) уже делает безопасный запрос к Google Gemini API!
       try {
-        const { defaultSystemPrompt } = await import('../constants/aiPrompt');
-        const finalSystemPrompt = systemInstruction || defaultSystemPrompt;
-
-        const messages = [
-          { role: 'system', content: finalSystemPrompt },
-          ...history,
-          { role: 'user', content: prompt }
-        ];
-
-        const response = await fetch('https://text.pollinations.ai/openai', {
+        const response = await fetch('/api/generate', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            messages,
-            model: 'openai',
-            seed: Math.floor(Math.random() * 1000000),
-            temperature: 0.7,
-            max_tokens: 2000,
-            search: true
+            prompt,
+            lang,
+            systemInstruction: finalSystemPrompt,
+            history
           })
         });
 
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.statusText}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.text) {
+            return data.text.trim();
+          }
         }
-
-        const data = await response.json();
-        let text = data.choices[0].message.content;
-
-        // Максимальная очистка от любого мусора
-        text = text
-          .replace(/\[reasoning_content\][\s\S]*?(?=\n\n|\n\[|$)/s, '')
-          .replace(/<thinking>[\s\S]*?<\/thinking>/s, '')
-          .replace(/Thinking step by step:[\s\S]*?(?=\n\n|\n$)/s, '')
-          .replace(/I'm stuck[\s\S]*?(?=\n\n|\n$)/gi, '')
-          .replace(/Let's recall[\s\S]*?(?=\n\n|\n$)/gi, '')
-          .trim();
-
-        if (!text || /reasoning_content|I'm stuck|Let's recall/i.test(text)) {
-          return this.localAi.generate(prompt, lang);
-        }
-
-        return text;
-      } catch (error) {
-        console.error('AI API Error:', error);
-        this.logging.system('Переключение на локальный движок из-за ошибки API.');
-        return this.localAi.generate(prompt, lang);
+      } catch (proxyError) {
+        console.warn('Backend proxy /api/generate error, falling back to direct API...', proxyError);
       }
+
+      // 2. Резервный вариант: Прямой запрос к Google Gemini SDK (если вдруг прокси недоступен)
+      try {
+        const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyAR9BUXDrXdzwYvFbihIKqNVicbFGZ6pVQ';
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build'
+            }
+          }
+        });
+
+        const formattedHistory = history.map(h => ({
+          role: h.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: h.content }]
+        }));
+
+        const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+        let directText = "";
+        for (const modelName of modelsToTry) {
+          try {
+            const response = await ai.models.generateContent({
+              model: modelName,
+              contents: [
+                ...formattedHistory,
+                { role: 'user', parts: [{ text: prompt }] }
+              ],
+              config: {
+                systemInstruction: finalSystemPrompt,
+                temperature: 0.7,
+              }
+            });
+
+            if (response && response.text) {
+              directText = response.text.trim();
+              break;
+            }
+          } catch (modelErr) {
+            console.warn(`Direct model ${modelName} failed:`, modelErr);
+          }
+        }
+
+        if (directText) {
+          return directText;
+        }
+      } catch (geminiError) {
+        console.warn('Gemini API Error, trying Pollinations fallback...', geminiError);
+      }
+
+      // 3. Резервный вариант через Pollinations.ai (GET-запрос для обхода CORS)
+      try {
+        let combinedPrompt = "";
+        if (finalSystemPrompt) {
+          combinedPrompt += `System prompt:\n${finalSystemPrompt}\n\n`;
+        }
+        if (history && history.length > 0) {
+          combinedPrompt += "Chat History:\n";
+          history.forEach(h => {
+            combinedPrompt += `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}\n`;
+          });
+          combinedPrompt += "\n";
+        }
+        combinedPrompt += `User: ${prompt}\nAssistant:`;
+
+        const url = `https://text.pollinations.ai/${encodeURIComponent(combinedPrompt)}?model=openai&cache=false&seed=${Math.floor(Math.random() * 1000000)}`;
+        const response = await fetch(url);
+        if (response.ok) {
+          let text = await response.text();
+          text = text
+            .replace(/\[reasoning_content\][\s\S]*?(?=\n\n|\n\[|$)/s, '')
+            .replace(/<thinking>[\s\S]*?<\/thinking>/s, '')
+            .replace(/Thinking step by step:[\s\S]*?(?=\n\n|\n$)/s, '')
+            .replace(/I'm stuck[\s\S]*?(?=\n\n|\n$)/gi, '')
+            .replace(/Let's recall[\s\S]*?(?=\n\n|\n$)/gi, '')
+            .trim();
+          if (text) {
+            return text;
+          }
+        }
+      } catch (pollinationsError) {
+        console.error('Pollinations API Error:', pollinationsError);
+      }
+
+      // 4. Локальный оффлайн движок если всё остальное недоступно
+      AhaSDK.getInstance().logging.system('Переключение на локальный движок из-за ошибки API.');
+      return AhaSDK.getInstance().localAi.generate(prompt, lang);
     }
   };
 
