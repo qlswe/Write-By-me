@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings, ShieldCheck, Cpu } from 'lucide-react';
+import { Settings, ShieldCheck, Cpu, RotateCw } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { db } from '../../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
