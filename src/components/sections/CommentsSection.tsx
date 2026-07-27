@@ -17,6 +17,7 @@ import { ru, enUS, be, ja, de, fr, zhCN } from 'date-fns/locale';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { useLimits } from '../../hooks/useLimits';
 import { vercelFallback } from '../../utils/vercelFallback';
+import { generatePrefixedId } from '../../utils/idGenerator';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Comment {
@@ -200,7 +201,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
       };
 
       if (vercelFallback.isAvailable()) {
-        const commentId = Date.now().toString() + '_' + user.uid;
+        const commentId = generatePrefixedId('comment') + '_' + user.uid;
         const fullPayload = { ...payload, id: commentId };
         await vercelFallback.lpush(`comments:${targetId}`, JSON.stringify(fullPayload));
         setComments(prev => [fullPayload, ...prev]);

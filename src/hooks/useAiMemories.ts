@@ -13,6 +13,7 @@ import {
   clearOldLocalMemories
 } from '../utils/aiMemoryDb';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
+import { generatePrefixedId } from '../utils/idGenerator';
 
 export const useAiMemories = () => {
   const { user } = useAuth();
@@ -106,7 +107,7 @@ export const useAiMemories = () => {
   const saveMemory = useCallback(async (promptText: string, responseText: string, customTitle?: string) => {
     if (!user) return;
 
-    const memoryId = 'mem_' + Date.now() + Math.random().toString(36).substring(7);
+    const memoryId = generatePrefixedId('mem');
     const title = customTitle?.trim() || promptText.slice(0, 30).trim() + (promptText.length > 30 ? '...' : '');
 
     const newMemory: AiMemory = {

@@ -31,6 +31,12 @@ const generateRollingKey = (seed: string): string => {
 export const encrypt = (text: string, contextId?: string): string => {
   if (!text) return "";
   
+  // Do NOT pass data URLs (images, voice, files) or raw http/blob URLs to AES encrypt,
+  // as multi-megabyte base64 strings cause RangeError: Invalid array length in CryptoJS
+  if (text.startsWith('data:') || text.startsWith('http://') || text.startsWith('https://') || text.startsWith('blob:')) {
+    return text;
+  }
+
   try {
     const dailySeed = getDailyKeySeed();
     const dynamicKey = generateRollingKey(dailySeed + (contextId || ''));
@@ -52,6 +58,11 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
 
   const trimmed = cipherText.trim();
 
+  // If text is a data URL (image, audio, voice, file attachment) or a raw URL, return as-is instantly
+  if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+
   // Helper to check if decrypted string is printable/clean text
   const isPrintable = (str: string): boolean => {
     if (!str) return false;
@@ -64,16 +75,27 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
   if (trimmed.startsWith(PREFIX)) {
     try {
       const payload = trimmed.substring(PREFIX.length);
-      const delimiterIndex = payload.indexOf('|');
       
+      // Try index-based slicing first as the seed is always a 10-char date (YYYY-MM-DD)
+      const seed = payload.substring(0, 10);
+      const actualCipherText = payload.substring(11);
+      const historicalDynamicKey = generateRollingKey(seed + (contextId || ''));
+      const bytes = CryptoJS.AES.decrypt(actualCipherText, historicalDynamicKey);
+      const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+      if (decryptedText && isPrintable(decryptedText)) {
+        return decryptedText;
+      }
+      
+      // Fallback: search for delimiter
+      const delimiterIndex = payload.indexOf('|') !== -1 ? payload.indexOf('|') : payload.indexOf('I');
       if (delimiterIndex !== -1) {
-        const seed = payload.substring(0, delimiterIndex);
-        const actualCipherText = payload.substring(delimiterIndex + 1);
-        const historicalDynamicKey = generateRollingKey(seed + (contextId || ''));
-        const bytes = CryptoJS.AES.decrypt(actualCipherText, historicalDynamicKey);
-        const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
-        if (decryptedText && isPrintable(decryptedText)) {
-          return decryptedText;
+        const altSeed = payload.substring(0, delimiterIndex);
+        const altCipherText = payload.substring(delimiterIndex + 1);
+        const altKey = generateRollingKey(altSeed + (contextId || ''));
+        const altBytes = CryptoJS.AES.decrypt(altCipherText, altKey);
+        const altDecryptedText = altBytes.toString(CryptoJS.enc.Utf8);
+        if (altDecryptedText && isPrintable(altDecryptedText)) {
+          return altDecryptedText;
         }
       }
     } catch (e) {
@@ -93,6 +115,12 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
     } catch (e) {
       // Fallback
     }
+  }
+
+  // If text does NOT start with known prefixes and is not formatted as standard base64 ciphertext
+  // return early to prevent unnecessary CryptoJS decrypt calls on plain text or emojis
+  if (!/^[A-Za-z0-9+/=]+$/.test(trimmed) || trimmed.length < 16) {
+    return cipherText;
   }
 
   // 3. Raw AES Fallback with BASE_SECRET (No prefix)
@@ -132,25 +160,27 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
 
   // 6. Legacy Fallback: XOR Base64 with LEGACY_KEY
   try {
-    if (/^[A-Za-z0-9+/=]+$/.test(trimmed)) {
+    if (/^[A-Za-z0-9+/=]+$/.test(trimmed) && trimmed.length < 100000) {
       const binary = atob(trimmed);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      
-      const encoder = new TextEncoder();
-      const keyBytes = encoder.encode(LEGACY_KEY);
-      const decryptedBytes = new Uint8Array(bytes.length);
-      
-      for (let i = 0; i < bytes.length; i++) {
-        decryptedBytes[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
-      }
-      
-      const decoder = new TextDecoder();
-      const result = decoder.decode(decryptedBytes);
-      if (isPrintable(result)) {
-        return result;
+      if (binary.length > 0 && binary.length < 100000) {
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        
+        const encoder = new TextEncoder();
+        const keyBytes = encoder.encode(LEGACY_KEY);
+        const decryptedBytes = new Uint8Array(bytes.length);
+        
+        for (let i = 0; i < bytes.length; i++) {
+          decryptedBytes[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+        }
+        
+        const decoder = new TextDecoder();
+        const result = decoder.decode(decryptedBytes);
+        if (isPrintable(result)) {
+          return result;
+        }
       }
     }
   } catch (e) {
@@ -159,25 +189,27 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
 
   // 7. Legacy Fallback: XOR Base64 with BASE_SECRET
   try {
-    if (/^[A-Za-z0-9+/=]+$/.test(trimmed)) {
+    if (/^[A-Za-z0-9+/=]+$/.test(trimmed) && trimmed.length < 100000) {
       const binary = atob(trimmed);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      
-      const encoder = new TextEncoder();
-      const keyBytes = encoder.encode(BASE_SECRET);
-      const decryptedBytes = new Uint8Array(bytes.length);
-      
-      for (let i = 0; i < bytes.length; i++) {
-        decryptedBytes[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
-      }
-      
-      const decoder = new TextDecoder();
-      const result = decoder.decode(decryptedBytes);
-      if (isPrintable(result)) {
-        return result;
+      if (binary.length > 0 && binary.length < 100000) {
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        
+        const encoder = new TextEncoder();
+        const keyBytes = encoder.encode(BASE_SECRET);
+        const decryptedBytes = new Uint8Array(bytes.length);
+        
+        for (let i = 0; i < bytes.length; i++) {
+          decryptedBytes[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+        }
+        
+        const decoder = new TextDecoder();
+        const result = decoder.decode(decryptedBytes);
+        if (isPrintable(result)) {
+          return result;
+        }
       }
     }
   } catch (e) {
@@ -186,7 +218,7 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
 
   // 8. Plain Base64 Fallback
   try {
-    if (/^[A-Za-z0-9+/=]+$/.test(trimmed) && trimmed.length > 4) {
+    if (/^[A-Za-z0-9+/=]+$/.test(trimmed) && trimmed.length > 4 && trimmed.length < 100000) {
       const decoded = atob(trimmed);
       if (isPrintable(decoded) && decoded.length > 0) {
         return decoded;
@@ -222,6 +254,10 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
 export const encryptImage = (dataUrl: string): string => {
   if (!dataUrl) return "";
   if (dataUrl.startsWith("IMG_AES:")) return dataUrl; // Already encrypted
+  if (dataUrl.length > 500000) {
+    // Avoid CryptoJS array length overflow on large image data URLs
+    return dataUrl;
+  }
   try {
     const encrypted = CryptoJS.AES.encrypt(dataUrl, BASE_SECRET).toString();
     return `IMG_AES:${encrypted}`;
@@ -240,10 +276,11 @@ export const decryptImage = (cipherText: string): string => {
   try {
     const cipher = cipherText.substring("IMG_AES:".length);
     const bytes = CryptoJS.AES.decrypt(cipher, BASE_SECRET);
-    return bytes.toString(CryptoJS.enc.Utf8);
+    const result = bytes.toString(CryptoJS.enc.Utf8);
+    return result || cipherText;
   } catch (e) {
     console.error("Image decryption error:", e);
-    return "";
+    return cipherText;
   }
 };
 

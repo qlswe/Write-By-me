@@ -79,8 +79,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
         setBackupStatus(lang === 'ru' ? 'Расшифровка резервной копии...' : 'Decrypting backup database...');
         
         // Decrypt the payload
-        const bytes = CryptoJS.AES.decrypt(backupData.payload, "AHA_SECURE_BACKUP_KEY_2026_V2");
-        const decryptedJson = bytes.toString(CryptoJS.enc.Utf8);
+        let decryptedJson = '';
+        try {
+          const bytes = CryptoJS.AES.decrypt(backupData.payload, "AHA_SECURE_BACKUP_KEY_2026_V2");
+          decryptedJson = bytes.toString(CryptoJS.enc.Utf8);
+        } catch (e) {
+          console.error("Backup decryption error:", e);
+        }
 
         if (!decryptedJson) {
           throw new Error(lang === 'ru' ? 'Ошибка расшифровки. Возможно, ключ или файл не поддерживаются.' : 'Decryption failed. Unsupported or modified backup file.');
@@ -377,18 +382,31 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   if (!isOpen || !user) return null;
 
   const handleUpdateName = async () => {
-    if (!newName.trim() || newName === user.displayName) {
+    const trimmedName = newName.trim();
+    if (!trimmedName || trimmedName === user.displayName) {
       setIsEditingName(false);
+      return;
+    }
+
+    if (trimmedName.length > 20) {
+      setToast((t as any).nicknameLengthLimit || 'Максимальная длина никнейма — 20 символов');
+      setTimeout(() => setToast(null), 3000);
+      return;
+    }
+
+    if (trimmedName.length < 2) {
+      setToast(lang === 'ru' ? 'Минимальная длина никнейма — 2 символа' : 'Nickname must be at least 2 characters');
+      setTimeout(() => setToast(null), 3000);
       return;
     }
 
     setIsUpdating(true);
     try {
       if (currentUser) {
-        await updateAuthProfile(currentUser, { displayName: newName.trim() });
+        await updateAuthProfile(currentUser, { displayName: trimmedName });
         // Also update public profile
         await setDoc(doc(db, 'public_profiles', currentUser.uid), {
-          displayName: newName.trim()
+          displayName: trimmedName
         }, { merge: true });
         
         setIsEditingName(false);
@@ -834,23 +852,28 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
                 <div>
                   {isEditingName && isOwnProfile ? (
-                    <div className="flex items-center gap-2 w-full">
-                      <input
-                        type="text"
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        className="flex-1 min-w-0 bg-[#15101e] border border-[#ff4d4d] rounded-xl px-4 py-2 text-white focus:outline-none text-xl font-bold"
-                        placeholder={t.profileEnterName}
-                        maxLength={30}
-                        autoFocus
-                      />
-                      <button
-                        onClick={handleUpdateName}
-                        disabled={isUpdating}
-                        className="shrink-0 p-2.5 bg-[#ff4d4d] text-[#15101e] rounded-xl hover:bg-[#ff7a7a] transition-colors disabled:opacity-50"
-                      >
-                        <Check size={20} />
-                      </button>
+                    <div className="flex flex-col gap-1 w-full">
+                      <div className="flex items-center gap-2 w-full">
+                        <input
+                          type="text"
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          className="flex-1 min-w-0 bg-[#15101e] border border-[#ff4d4d] rounded-xl px-4 py-2 text-white focus:outline-none text-xl font-bold"
+                          placeholder={t.profileEnterName}
+                          maxLength={20}
+                          autoFocus
+                        />
+                        <button
+                          onClick={handleUpdateName}
+                          disabled={isUpdating}
+                          className="shrink-0 p-2.5 bg-[#ff4d4d] text-[#15101e] rounded-xl hover:bg-[#ff7a7a] transition-colors disabled:opacity-50"
+                        >
+                          <Check size={20} />
+                        </button>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono self-end font-bold px-1">
+                        {newName.length}/20 {lang === 'ru' ? 'символов' : 'chars'}
+                      </span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 group">

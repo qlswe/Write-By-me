@@ -6,6 +6,7 @@ import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Setting
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { CachedAvatar } from '../ui/CachedAvatar';
 
 interface UsersListProps {
   lang: Language;
@@ -131,11 +132,12 @@ const UserListItem = React.memo(({
           onClick={() => onViewProfile?.(user)}
           className="relative shrink-0 hover:scale-110 transition-transform"
         >
-          <img
-            src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`}
+          <CachedAvatar
+            src={user.photoURL}
             alt={user.displayName}
-            className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover border-2 border-[#3d2b4f]/50 group-hover:border-[#ff4d4d] transition-colors shadow-lg"
-            referrerPolicy="no-referrer"
+            customSizeClass="w-12 h-12 sm:w-14 sm:h-14"
+            className="rounded-2xl border-2 border-[#3d2b4f]/50 group-hover:border-[#ff4d4d] transition-colors shadow-lg"
+            fallbackText={user.displayName}
           />
           <div className={`absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-4 border-[#0d0b14] ${
             user.lastSeen && (Date.now() - new Date(user.lastSeen).getTime() < 3 * 60 * 1000)

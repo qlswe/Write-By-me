@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
 import { vercelFallback } from '../../utils/vercelFallback';
+import { generatePrefixedId } from '../../utils/idGenerator';
 
 interface BlogEditorProps {
   post?: any;
@@ -54,7 +55,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
       };
 
       if (vercelFallback.isAvailable()) {
-        const uid = post?.id || Date.now().toString() + '_' + user?.uid;
+        const uid = post?.id || generatePrefixedId('blog') + '_' + user?.uid;
         const payload = {
             ...postData,
             id: uid,

@@ -1,15 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useChat, Message } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { Send, MessageSquare, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles, Mail, VolumeX, Volume2, Pin, PinOff, Mic, Play, Pause, Trash, Flame, Heart, ThumbsUp, Zap, Star, Crown, Award, Ghost, Skull, Shield, Plus, Settings } from 'lucide-react';
+import { Send, MessageSquare, X, User, Reply, Smile, Sticker, Pencil, Trash2, Ban, Copy, Check, CheckCheck, ChevronDown, Image as ImageIcon, ShieldAlert, Sparkles, Mail, VolumeX, Volume2, Pin, PinOff, Mic, Play, Pause, Trash, Flame, Heart, ThumbsUp, Zap, Star, Crown, Award, Ghost, Skull, Shield, Plus, Settings, Bot } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, updateDoc, collection, getDocs, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { ChatsList } from './ChatsList';
+import { CachedAvatar } from '../ui/CachedAvatar';
+import { useUsers } from '../../hooks/useUsers';
+import { Paintbrush, Paperclip, Search, Shuffle, Download } from 'lucide-react';
+import { compressImageFile } from '../../utils/imageCompressor';
+import { sdk } from '../../sdk';
 
 const STICKERS = ['👋', '👍', '❤️', '😂', '🔥', '🎉', '👀', '💯'];
 const EXTRA_REACTIONS = ['👑', '💩', '🤡', '💅', '🚀', '👾', '🍿', '💡', '💯', '💰', '💀', '👽', '🔥', '🎉'];
@@ -77,11 +82,13 @@ export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language; initial
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState<number | null>(initialDuration || null);
   const [currentTime, setCurrentTime] = useState(0);
+  const [speed, setSpeed] = useState<number>(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const audio = new Audio(src);
     audioRef.current = audio;
+    audio.playbackRate = speed;
 
     const handleLoadedMetadata = () => {
       if (audio.duration && !isNaN(audio.duration) && audio.duration !== Infinity) {
@@ -121,6 +128,13 @@ export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language; initial
     };
   }, [src, initialDuration]);
 
+  // Sync playback rate speed
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speed;
+    }
+  }, [speed, isPlaying]);
+
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!audioRef.current) return;
@@ -136,6 +150,15 @@ export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language; initial
     }
   };
 
+  const toggleSpeed = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSpeed(prev => {
+      if (prev === 1) return 1.5;
+      if (prev === 1.5) return 2;
+      return 1;
+    });
+  };
+
   const formatTime = (time: number) => {
     if (isNaN(time) || time === Infinity) return '0:00';
     const mins = Math.floor(time / 60);
@@ -145,9 +168,13 @@ export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language; initial
 
   const progressPercent = duration && duration !== Infinity ? (currentTime / duration) * 100 : 0;
 
+  // Generate wave visual h multipliers
+  const waveBars = [6, 12, 18, 10, 16, 24, 14, 8, 20, 12, 16, 10, 22, 18, 12, 6];
+
   return (
-    <div className="flex items-center gap-3 bg-[#11071a]/90 border border-[#ff4d4d]/30 rounded-2xl p-3 shadow-[0_0_15px_rgba(255,77,77,0.15)] min-w-[220px] sm:min-w-[260px] relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-3 bg-[#11071a]/90 border border-[#ff4d4d]/30 rounded-2xl p-3 shadow-[0_0_15px_rgba(255,77,77,0.15)] min-w-[240px] sm:min-w-[280px] relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
       <div className="absolute top-0 left-0 w-1.5 h-full bg-[#ff4d4d] shadow-[0_0_8px_#ff4d4d]" />
+      
       <button
         type="button"
         onClick={togglePlay}
@@ -156,19 +183,53 @@ export const VoiceMessagePlayer: React.FC<{ src: string; lang: Language; initial
         {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
       </button>
 
-      <div className="flex-1 min-w-0 flex flex-col gap-1">
-        <div className="flex items-center gap-1.5 h-6">
-          <div className="flex-1 h-1 bg-[#28153c] rounded-full overflow-hidden relative">
-            <div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#ff4d4d] to-pink-500 rounded-full shadow-[0_0_8px_#ff4d4d]" 
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+        {/* Animated Waveform Display */}
+        <div className="flex items-end gap-[3px] h-7 px-1 pt-1.5 overflow-hidden relative">
+          {waveBars.map((h, i) => {
+            const barProgress = (i / waveBars.length) * 100;
+            const isFilled = progressPercent >= barProgress;
+            return (
+              <motion.div
+                key={i}
+                animate={isPlaying ? {
+                  height: [h, h * 2.2, h * 0.6, h]
+                } : {
+                  height: h
+                }}
+                transition={{
+                  duration: 0.8 + (i % 3) * 0.15,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: (i % 4) * 0.1
+                }}
+                className={`w-[3px] rounded-full transition-colors ${
+                  isFilled 
+                    ? 'bg-gradient-to-t from-[#ff4d4d] to-pink-500 shadow-[0_0_4px_#ff4d4d]' 
+                    : 'bg-[#28153c]'
+                }`}
+                style={{ height: `${h}px` }}
+              />
+            );
+          })}
         </div>
 
+        {/* Time and Speed Controls */}
         <div className="flex justify-between items-center text-[10px] text-gray-400 font-mono">
-          <span className="text-[#ff4d4d] font-bold">{formatTime(currentTime)}</span>
-          <span>{duration && duration !== Infinity ? formatTime(duration) : '🎤 ' + (lang === 'ru' ? 'Голосовое' : 'Voice')}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#ff4d4d] font-bold">{formatTime(currentTime)}</span>
+            <span className="opacity-40">/</span>
+            <span>{duration && duration !== Infinity ? formatTime(duration) : '🎤 ' + (lang === 'ru' ? 'Голосовое' : 'Voice')}</span>
+          </div>
+          
+          <button
+            type="button"
+            onClick={toggleSpeed}
+            className="px-2 py-0.5 bg-[#25133d] hover:bg-[#ff4d4d] border border-[#ff4d4d]/20 hover:border-[#ff4d4d] text-[#ff4d4d] hover:text-[#0d0714] font-black text-[9px] uppercase tracking-widest rounded-md transition-all active:scale-90"
+            title="Speed Control"
+          >
+            {speed}x
+          </button>
         </div>
       </div>
     </div>
@@ -186,7 +247,7 @@ interface ChatWindowProps {
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientName, recipientPhoto, lang, onClose, onSelectChat }) => {
   const { user } = useAuth();
-  const { chats, messages, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead, pinMessage, unpinMessage } = useChat(recipientId);
+  const { chats, messages, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead, pinMessage, unpinMessage, deleteChat, blockUser, unblockUser } = useChat(recipientId);
   const t = translations[lang] as any;
   const [inputText, setInputText] = useState('');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -211,6 +272,135 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   // Voice Recording states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  // New features state variables
+  const { users } = useUsers();
+
+  // Search History State
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchHistoryQuery, setSearchHistoryQuery] = useState('');
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
+
+  // Theme Customization State
+  const [showThemeSelector, setShowThemeSelector] = useState(false);
+
+  // Pre-send file attachment state
+  const [selectedFile, setSelectedFile] = useState<{ url: string; name: string; size: number; fileType: string } | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    if (file.type.startsWith('image/')) {
+      try {
+        const compressed = await compressImageFile(file, 800, 800, 0.65);
+        setSelectedImages(prev => [...prev, compressed]);
+      } catch (err) {
+        console.error('Error compressing dropped image:', err);
+      }
+    } else {
+      if (file.size > 750 * 1024) {
+        alert(lang === 'ru' ? 'Файл слишком большой (макс. 750 КБ).' : 'File is too large (max 750 KB).');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedFile({
+          url: reader.result as string,
+          name: file.name,
+          size: file.size,
+          fileType: file.type || 'application/octet-stream'
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Group Management & Info State
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
+  const [groupSearchText, setGroupSearchText] = useState('');
+  const [editGroupName, setEditGroupName] = useState('');
+  const [editGroupAvatar, setEditGroupAvatar] = useState('');
+
+  // Memoized query matches for Dialog history
+  const matchedMessageIds = useMemo(() => {
+    if (!searchHistoryQuery.trim()) return [];
+    const q = searchHistoryQuery.toLowerCase();
+    return messages
+      .filter(m => !m.isDeleted && m.text && m.text.toLowerCase().includes(q))
+      .map(m => m.id);
+  }, [messages, searchHistoryQuery]);
+
+  // Navigate to a specific search match
+  const scrollToMessageId = (msgId: string) => {
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('bg-[#ff4d4d]/30', 'transition-all');
+      setTimeout(() => {
+        el.classList.remove('bg-[#ff4d4d]/30');
+      }, 2000);
+    }
+  };
+
+  useEffect(() => {
+    if (matchedMessageIds.length > 0) {
+      setCurrentMatchIndex(matchedMessageIds.length - 1); // Select the most recent match by default
+    } else {
+      setCurrentMatchIndex(-1);
+    }
+  }, [matchedMessageIds]);
+
+  useEffect(() => {
+    if (currentMatchIndex >= 0 && currentMatchIndex < matchedMessageIds.length) {
+      scrollToMessageId(matchedMessageIds[currentMatchIndex]);
+    }
+  }, [currentMatchIndex]);
+
+  const updateChatTheme = async (wallpaper: string, glowColor: string) => {
+    if (!activeChatId) return;
+    try {
+      await updateDoc(doc(db, 'chats', activeChatId), {
+        theme: { wallpaper, glowColor }
+      });
+      window.dispatchEvent(new CustomEvent('aha_toast', {
+        detail: lang === 'ru' ? 'Тема оформления обновлена!' : 'Theme customization updated!'
+      }));
+    } catch (e) {
+      console.error('Error saving theme:', e);
+    }
+  };
+
+  const getWallpaperClasses = () => {
+    const wp = currentChat?.theme?.wallpaper;
+    if (wp === 'cyberpunk') return 'bg-[#09030d] bg-[radial-gradient(circle_at_center,rgba(244,63,94,0.08)_0,transparent_100%)]';
+    if (wp === 'matrix') return 'bg-[#030d05] bg-[radial-gradient(circle_at_center,rgba(57,255,20,0.08)_0,transparent_100%)]';
+    if (wp === 'nebula') return 'bg-gradient-to-tr from-[#020108] via-[#0b041a] to-[#15032a]';
+    if (wp === 'sunset') return 'bg-gradient-to-b from-[#100318] via-[#240620] to-[#340c1e]';
+    return 'bg-[#0d0714]';
+  };
+
+  const getGlowColor = () => {
+    return currentChat?.theme?.glowColor || '#ff4d4d';
+  };
+
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -444,9 +634,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     }
   }, [user, recipientId, onClose]);
 
-  const activeChatId = user ? [user.uid, recipientId].sort().join('_') : '';
+  const activeChatId = user ? (recipientId.startsWith('group_') ? recipientId : [user.uid, recipientId].sort().join('_')) : '';
   const currentChat = chats.find(c => c.id === activeChatId);
-  const isRecipientTyping = currentChat?.typing?.[recipientId];
+  const isRecipientTyping = !recipientId.startsWith('group_') && currentChat?.typing?.[recipientId];
+
+  const groupTypingNames = useMemo(() => {
+    if (!recipientId.startsWith('group_') || !currentChat?.typing) return [];
+    return Object.keys(currentChat.typing)
+      .filter(uid => uid !== user?.uid && currentChat.typing?.[uid])
+      .map(uid => {
+        const u = users.find(usr => usr.uid === uid);
+        return u?.displayName || 'User';
+      });
+  }, [recipientId, currentChat?.typing, users, user?.uid]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -475,7 +675,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
   }, [messages.length, recipientId]);
 
   useEffect(() => {
-    if (!recipientId || typeof recipientId !== 'string' || recipientId.trim() === '') return;
+    if (!recipientId || typeof recipientId !== 'string' || recipientId.trim() === '' || recipientId.startsWith('group_')) return;
     const unsub = onSnapshot(doc(db, 'public_profiles', recipientId), (doc) => {
       if (doc.exists()) {
         setRecipientProfile(doc.data());
@@ -513,44 +713,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    files.forEach(file => {
-      if (file.size > 5 * 1024 * 1024) {
+    files.forEach(async (file) => {
+      if (file.size > 10 * 1024 * 1024) {
         alert(t.chatFileTooLarge);
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1200;
-          const MAX_HEIGHT = 1200;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          const base64String = canvas.toDataURL('image/jpeg', 0.7);
-          setSelectedImages(prev => [...prev, base64String]);
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImageFile(file, 800, 800, 0.65);
+        setSelectedImages(prev => [...prev, compressed]);
+      } catch (err) {
+        console.error('Error compressing uploaded image:', err);
+      }
     });
     
     e.target.value = '';
@@ -560,25 +734,107 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 750 * 1024) {
+      alert(lang === 'ru' ? 'Файл слишком большой (макс. 750 КБ).' : 'File is too large (max 750 KB).');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSelectedFile({
+        url: reader.result as string,
+        name: file.name,
+        size: file.size,
+        fileType: file.type || 'application/octet-stream'
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const [isJukyTyping, setIsJukyTyping] = useState(false);
+
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if ((!inputText.trim() && selectedImages.length === 0) || isSending) return;
+    if ((!inputText.trim() && selectedImages.length === 0 && !selectedFile) || isSending) return;
     
+    const currentInput = inputText.trim();
     setIsSending(true);
     try {
       if (editingMessage) {
         await editMessage(editingMessage.id, recipientId, inputText);
         setEditingMessage(null);
+      } else if (selectedFile) {
+        await sendMessage(
+          inputText || selectedFile.name,
+          recipientId,
+          'file',
+          replyingTo?.id,
+          undefined,
+          undefined,
+          selectedFile
+        );
+        setSelectedFile(null);
+        playSound('send');
       } else {
         const type = selectedImages.length > 0 ? 'image' : 'text';
         await sendMessage(inputText, recipientId, type, replyingTo?.id, selectedImages);
         playSound('send');
       }
+
       setInputText('');
       setSelectedImages([]);
       setReplyingTo(null);
       setTyping(recipientId, false);
       setIsTyping(false);
+
+      // --- JUKY BOT AI RESPONSES ---
+      const isJukyTarget = recipientId === 'bot_juky' || recipientId.startsWith('juky_');
+      const isGroupJukyMention = recipientId.startsWith('group_') && (
+        currentInput.toLowerCase().includes('@juky') || 
+        currentInput.toLowerCase().includes('@жуки') || 
+        currentInput.toLowerCase().includes('@bot')
+      );
+
+      if (isJukyTarget) {
+        setIsJukyTyping(true);
+        setTimeout(async () => {
+          try {
+            const systemPrompt = `Ты - Juky AI (Жуки 🤖), умный, позитивный и отзывчивый ИИ-ассистент платформы Aha Station.
+Отвечай развернуто, вежливо и информативно на языке запроса пользователя (текущий язык интерфейса: ${lang}).
+Используй аккуратное Markdown форматирование (жирный текст, списки) и подходящие эмодзи.`;
+            const aiReply = await sdk.genai.generate(currentInput || 'Привет', lang, systemPrompt);
+            const finalReply = aiReply || (lang === 'ru' ? 'Я тут! Чем могу помочь? 🤖' : 'I am here! How can I help? 🤖');
+            await sendMessage(finalReply, recipientId, 'text', undefined, undefined, undefined, null, 'bot_juky');
+          } catch (botErr) {
+            console.error('Juky Bot AI response error:', botErr);
+          } finally {
+            setIsJukyTyping(false);
+          }
+        }, 600);
+      } else if (isGroupJukyMention) {
+        setIsJukyTyping(true);
+        setTimeout(async () => {
+          try {
+            const systemPrompt = `Ты - Juky AI (Жуки 🤖), ассистент участников группового чата Aha Station.
+Отвечай с юмором, позитивно и емко (1-3 предложения) на языке ${lang}.`;
+            const aiReply = await sdk.genai.generate(currentInput, lang, systemPrompt);
+            if (aiReply) {
+              await sendMessage(`🤖 @Juky: ${aiReply}`, recipientId, 'text', undefined, undefined, undefined, null, 'bot_juky');
+            }
+          } catch (botErr) {
+            console.error('Group Juky Bot response error:', botErr);
+          } finally {
+            setIsJukyTyping(false);
+          }
+        }, 800);
+      }
+
     } catch (error) {
       console.error("Error sending message:", error);
     } finally {
@@ -643,9 +899,325 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-[#0a0512]/95 backdrop-blur-md flex flex-col items-center justify-center z-50 transition-all duration-300"
+        className="fixed inset-0 bg-[#0d0714] flex flex-col items-center justify-center z-50 transition-all duration-300 p-0"
       >
-        <div className="w-full max-w-6xl h-full flex bg-[#0d0714] sm:border-x sm:border-[#311c47] relative shadow-2xl overflow-hidden">
+        <div 
+          className="w-full h-full flex bg-[#0d0714] relative overflow-hidden"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Fullscreen drag-and-drop backdrop overlay */}
+          <AnimatePresence>
+            {isDraggingFile && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-[#09030d]/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-8 border-4 border-dashed border-[#00f0ff] m-4 rounded-3xl shadow-[0_0_40px_rgba(0,240,255,0.2)]"
+              >
+                <div className="p-6 bg-[#00f0ff]/10 rounded-full text-[#00f0ff] animate-bounce mb-4 border border-[#00f0ff]/30">
+                  <Paperclip className="w-10 h-10 shrink-0" />
+                </div>
+                <h3 className="text-xl font-black text-white uppercase tracking-widest text-center mb-1">
+                  {lang === 'ru' ? 'БРОСЬТЕ ФАЙЛЫ СЮДА' : 'DROP FILES HERE'}
+                </h3>
+                <p className="text-xs font-black uppercase tracking-widest text-[#00f0ff]">
+                  {lang === 'ru' ? 'для мгновенной отправки в чат' : 'for instant upload to this chat'}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Bento Group Settings Panel */}
+          <AnimatePresence>
+            {showGroupSettings && recipientId.startsWith('group_') && (
+              <motion.div
+                initial={{ opacity: 0, x: '100%' }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="absolute right-0 top-0 bottom-0 w-full sm:w-[400px] bg-[#0c0612]/98 backdrop-blur-lg border-l border-[#311c47] shadow-2xl z-40 flex flex-col custom-scrollbar overflow-y-auto"
+              >
+                {/* Header */}
+                <div className="p-5 border-b border-[#311c47] flex items-center justify-between bg-[#08030c] shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-[#00f0ff] shadow-[0_0_8px_rgba(0,240,255,0.3)]" />
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                      {lang === 'ru' ? 'НАСТРОЙКИ ГРУППЫ' : 'GROUP SETTINGS'}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setShowGroupSettings(false)}
+                    className="p-1.5 hover:bg-red-500 hover:text-[#0d0714] text-gray-400 rounded-lg transition-all"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Body Content */}
+                <div className="p-5 space-y-6 flex-1">
+                  {/* Group Profile Card */}
+                  <div className="bg-[#120a1c] border border-[#3e245a]/50 p-4 rounded-3xl space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block">
+                        {lang === 'ru' ? 'Профиль Группы' : 'Group Profile'}
+                      </span>
+                      {currentChat?.admins?.includes(user?.uid || '') ? (
+                        <span className="text-[9px] font-black uppercase text-[#00f0ff] tracking-widest bg-[#00f0ff]/10 px-2 py-0.5 rounded-md border border-[#00f0ff]/30">
+                          👑 {lang === 'ru' ? 'Вы - Админ' : 'You are Admin'}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest bg-gray-500/10 px-2 py-0.5 rounded-md border border-gray-500/20">
+                          👤 {lang === 'ru' ? 'Участник' : 'Member'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative group/avatar">
+                        <img
+                          src={editGroupAvatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${editGroupName || 'group'}`}
+                          alt="Group avatar"
+                          className="w-20 h-20 rounded-3xl object-cover border-2 border-[#00f0ff] shadow-[0_0_15px_rgba(0,240,255,0.2)]"
+                        />
+                        {currentChat?.admins?.includes(user?.uid || '') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newSeed = Math.random().toString(36).substring(7);
+                              setEditGroupAvatar(`https://api.dicebear.com/7.x/identicon/svg?seed=${newSeed}`);
+                            }}
+                            className="absolute -bottom-1.5 -right-1.5 p-2 bg-[#00f0ff] text-[#0d0714] rounded-xl hover:bg-white transition-all shadow-[0_0_10px_rgba(0,240,255,0.5)] active:scale-95"
+                            title={lang === 'ru' ? 'Случайная аватарка' : 'Random Avatar'}
+                          >
+                            <Shuffle size={12} className="stroke-[3]" />
+                          </button>
+                        )}
+                      </div>
+
+                      {currentChat?.admins?.includes(user?.uid || '') ? (
+                        <div className="w-full space-y-2">
+                          <input
+                            type="text"
+                            value={editGroupName}
+                            onChange={(e) => setEditGroupName(e.target.value)}
+                            placeholder={lang === 'ru' ? 'Название группы...' : 'Group name...'}
+                            className="w-full bg-[#0d0714] border border-[#311c47] rounded-xl py-2 px-3 text-sm text-white focus:outline-none focus:border-[#00f0ff]"
+                          />
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!editGroupName.trim()) return;
+                              try {
+                                await updateDoc(doc(db, 'chats', activeChatId), {
+                                  name: editGroupName,
+                                  avatar: editGroupAvatar
+                                });
+                                window.dispatchEvent(new CustomEvent('aha_toast', {
+                                  detail: lang === 'ru' ? 'Профиль группы сохранен!' : 'Group profile saved!'
+                                }));
+                              } catch (e) {
+                                console.error('Error updating group profile:', e);
+                              }
+                            }}
+                            className="w-full py-2 bg-gradient-to-r from-[#00f0ff] to-cyan-500 text-[#0d0714] font-black uppercase tracking-widest text-xs rounded-xl shadow-[0_0_12px_rgba(0,240,255,0.3)] hover:brightness-110 active:scale-95 transition-all"
+                          >
+                            {lang === 'ru' ? 'Сохранить изменения' : 'Save Changes'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-center space-y-1">
+                          <h4 className="text-base font-black text-white">{currentChat?.name || editGroupName}</h4>
+                          <p className="text-[10px] text-amber-400/90 font-bold bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl">
+                            {(t as any).groupOnlyAdminsEdit || 'Только администраторы могут изменять параметры группы'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Add Participants Panel - Admin Only */}
+                  {currentChat?.admins?.includes(user?.uid || '') && (
+                    <div className="bg-[#120a1c] border border-[#3e245a]/50 p-4 rounded-3xl space-y-4">
+                      <span className="text-[9px] font-black uppercase text-[#00f0ff] tracking-widest block">
+                        {lang === 'ru' ? 'ДОБАВИТЬ УЧАСТНИКА' : 'ADD PARTICIPANT'}
+                      </span>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={groupSearchText}
+                          onChange={(e) => setGroupSearchText(e.target.value)}
+                          placeholder={lang === 'ru' ? 'Поиск контактов...' : 'Search contacts...'}
+                          className="w-full bg-[#0d0714] border border-[#311c47] rounded-xl py-2 pl-9 pr-3 text-xs text-white focus:outline-none focus:border-[#00f0ff]"
+                        />
+                      </div>
+
+                      <div className="max-h-[160px] overflow-y-auto space-y-2 custom-scrollbar">
+                        {users
+                          .filter(u => u.uid !== user?.uid && !currentChat?.participants?.includes(u.uid))
+                          .filter(u => !groupSearchText || u.displayName?.toLowerCase().includes(groupSearchText.toLowerCase()))
+                          .map(u => (
+                            <div key={u.uid} className="flex items-center justify-between p-2 rounded-xl bg-[#0d0714]/60 border border-[#311c47]/40 hover:border-[#00f0ff]/30 transition-all">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <CachedAvatar
+                                  src={u.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${u.uid}`}
+                                  alt={u.displayName || ''}
+                                  customSizeClass="w-7 h-7"
+                                  className="rounded-lg"
+                                  fallbackText={u.displayName}
+                                />
+                                <span className="text-xs font-bold text-gray-200 truncate">{u.displayName}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    await updateDoc(doc(db, 'chats', activeChatId), {
+                                      participants: arrayUnion(u.uid)
+                                    });
+                                    window.dispatchEvent(new CustomEvent('aha_toast', {
+                                      detail: lang === 'ru' ? `${u.displayName} добавлен в группу!` : `${u.displayName} added to group!`
+                                    }));
+                                  } catch (e) {
+                                    console.error('Error adding participant:', e);
+                                  }
+                                }}
+                                className="px-2.5 py-1 bg-[#00f0ff]/10 hover:bg-[#00f0ff] text-[#00f0ff] hover:text-[#0d0714] text-[10px] font-black uppercase tracking-wider rounded-lg transition-all"
+                              >
+                                + {lang === 'ru' ? 'Добавить' : 'Add'}
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* List of current members */}
+                  <div className="bg-[#120a1c] border border-[#3e245a]/50 p-4 rounded-3xl space-y-3">
+                    <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest block mb-2">
+                      {lang === 'ru' ? 'Список участников' : 'Current Participants'} ({currentChat?.participants?.length || 0})
+                    </span>
+                    <div className="space-y-2">
+                      {currentChat?.participants?.map(uid => {
+                        const memberUser = users.find(u => u.uid === uid);
+                        const isAdmin = currentChat?.admins?.includes(uid);
+                        const isMeAdmin = currentChat?.admins?.includes(user?.uid || '');
+                        const isSelf = uid === user?.uid;
+
+                        return (
+                          <div key={uid} className="flex items-center justify-between p-2 rounded-xl bg-[#0d0714]/40 border border-[#311c47]/20">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <CachedAvatar
+                                src={memberUser?.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${uid}`}
+                                alt={memberUser?.displayName || 'User'}
+                                customSizeClass="w-7 h-7"
+                                className="rounded-lg"
+                                fallbackText={memberUser?.displayName}
+                              />
+                              <div className="min-w-0">
+                                <span className="text-xs font-bold text-gray-200 truncate block">
+                                  {memberUser?.displayName || 'User'} {isSelf && `(${lang === 'ru' ? 'Вы' : 'You'})`}
+                                </span>
+                                {isAdmin && (
+                                  <span className="text-[8px] font-black uppercase tracking-widest text-[#00f0ff]">
+                                    👑 {lang === 'ru' ? 'Администратор' : 'Admin'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Admin actions */}
+                            {!isSelf && isMeAdmin && (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      const nextAdmins = isAdmin 
+                                        ? currentChat.admins.filter(id => id !== uid)
+                                        : [...(currentChat.admins || []), uid];
+                                      await updateDoc(doc(db, 'chats', activeChatId), {
+                                        admins: nextAdmins
+                                      });
+                                    } catch (e) {
+                                      console.error('Error toggling admin:', e);
+                                    }
+                                  }}
+                                  className={`px-1.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg border transition-all ${
+                                    isAdmin 
+                                      ? 'bg-red-950/20 border-red-500/30 text-red-400'
+                                      : 'bg-emerald-950/20 border-emerald-500/30 text-emerald-400'
+                                  }`}
+                                  title={isAdmin ? 'Demote admin' : 'Make admin'}
+                                >
+                                  {isAdmin ? 'Demote' : 'Admin'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      await updateDoc(doc(db, 'chats', activeChatId), {
+                                        participants: arrayRemove(uid),
+                                        admins: arrayRemove(uid)
+                                      });
+                                    } catch (e) {
+                                      console.error('Error removing participant:', e);
+                                    }
+                                  }}
+                                  className="p-1 hover:bg-red-500 hover:text-white border border-red-500/20 text-red-500 rounded-lg transition-all"
+                                  title="Remove member"
+                                >
+                                  <Trash size={12} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer buttons */}
+                <div className="p-5 border-t border-[#311c47] bg-[#08030c] flex flex-col gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!user) return;
+                      const hasOtherParticipants = currentChat?.participants?.some(id => id !== user.uid);
+                      const isSoleAdmin = currentChat?.admins?.includes(user.uid) && currentChat.admins.length === 1;
+                      
+                      try {
+                        let updates: any = {
+                          participants: arrayRemove(user.uid),
+                          admins: arrayRemove(user.uid)
+                        };
+                        
+                        // If sole admin leaves but others exist, assign a new admin randomly
+                        if (isSoleAdmin && hasOtherParticipants) {
+                          const otherParticipants = currentChat.participants.filter(id => id !== user.uid);
+                          const nextAdmin = otherParticipants[0];
+                          updates.admins = [nextAdmin];
+                        }
+                        
+                        await updateDoc(doc(db, 'chats', activeChatId), updates);
+                        setShowGroupSettings(false);
+                        onClose();
+                      } catch (e) {
+                        console.error('Error leaving group:', e);
+                      }
+                    }}
+                    className="w-full py-2.5 bg-red-950/30 hover:bg-red-600 border border-red-500/30 hover:border-red-600 text-red-400 hover:text-[#0d0714] font-black uppercase tracking-widest text-xs rounded-xl shadow-lg transition-all active:scale-95"
+                  >
+                    🚪 {lang === 'ru' ? 'Выйти из группы' : 'Leave Group'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Left Sidebar for Desktop: chats list */}
           <div className="hidden md:flex flex-col w-[320px] bg-[#09050d] border-r border-[#311c47] shrink-0">
             {/* Header */}
@@ -680,37 +1252,113 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
           <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[#ff4d4d]/20 to-transparent" />
           <div className="flex items-center gap-2.5">
             <div className="relative">
-              {recipientPhoto ? (
-                <img src={recipientPhoto} alt="" className="w-8 h-8 rounded-full object-cover border border-[#ff4d4d]/30" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-[#ff4d4d]/10 flex items-center justify-center border border-[#ff4d4d]/30">
-                  <User className="w-4 h-4 text-[#ff4d4d]" />
-                </div>
+              <CachedAvatar
+                src={recipientPhoto}
+                alt={recipientName}
+                customSizeClass="w-8 h-8"
+                className="rounded-full border border-[#ff4d4d]/30"
+                fallbackText={recipientName}
+              />
+              {recipientId === 'bot_juky' && (
+                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-[#09050d] bg-[#00f0ff] rounded-full shadow-[0_0_6px_rgba(0,240,255,0.8)]" />
               )}
-              <div className={`absolute bottom-0 right-0 w-2 h-2 border-2 border-[#09050d] rounded-full ${
-                isUserOnline() 
-                  ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]' 
-                  : 'bg-gray-600'
-              }`} />
             </div>
             <div className="min-w-0">
               <span className="font-bold text-white text-sm sm:text-base uppercase tracking-wider block leading-none truncate max-w-[150px] sm:max-w-[200px]">{recipientName}</span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                {isUserOnline() ? (
-                  <span className="text-[8px] text-emerald-400 font-bold uppercase tracking-widest flex items-center gap-1">
-                    <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-                    {t.chatOnline}
+                {recipientId === 'bot_juky' ? (
+                  <span className="text-[8px] text-[#00f0ff] font-bold uppercase tracking-widest flex items-center gap-1">
+                    🤖 {t.botJukyBadge || 'БОТ'}
+                  </span>
+                ) : recipientId.startsWith('group_') ? (
+                  <span className="text-[8px] text-purple-400 font-bold uppercase tracking-widest">
+                    👥 {lang === 'ru' ? 'ГРУППОВОЙ ЧАТ' : 'GROUP CHAT'}
                   </span>
                 ) : (
-                  <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1">
-                    <span className="w-1 h-1 rounded-full bg-[#3d2b4f]"></span>
-                    {t.chatOffline}
+                  <span className="text-[8px] text-gray-400 font-medium tracking-wide">
+                    {lang === 'ru' ? 'Личный чат' : 'Private chat'}
                   </span>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {recipientId.startsWith('group_') && (
+              <button
+                onClick={() => {
+                  setEditGroupName(currentChat?.name || '');
+                  setEditGroupAvatar(currentChat?.avatar || '');
+                  setShowGroupSettings(!showGroupSettings);
+                }}
+                className={`p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center ${
+                  showGroupSettings
+                    ? 'bg-[#00f0ff]/20 border-[#00f0ff] text-[#00f0ff] shadow-[0_0_10px_rgba(0,240,255,0.3)]'
+                    : 'bg-[#150e24] border-[#3e245a] text-gray-300 hover:border-[#00f0ff]/50 hover:text-white'
+                }`}
+                title={lang === 'ru' ? 'Настройки группы' : 'Group settings'}
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                setShowSearch(!showSearch);
+                if (showSearch) {
+                  setSearchHistoryQuery('');
+                }
+              }}
+              className={`p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center ${
+                showSearch
+                  ? 'bg-[#ff4d4d]/20 border-[#ff4d4d] text-[#ff4d4d] shadow-[0_0_10px_rgba(255,77,77,0.3)]'
+                  : 'bg-[#150e24] border-[#3e245a] text-gray-300 hover:border-[#ff4d4d]/50 hover:text-white'
+              }`}
+              title={lang === 'ru' ? 'Поиск по истории' : 'Search history'}
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => setShowThemeSelector(!showThemeSelector)}
+              className={`p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center ${
+                showThemeSelector
+                  ? 'bg-fuchsia-950/20 border-fuchsia-500/50 text-fuchsia-400 shadow-[0_0_10px_rgba(244,63,94,0.3)]'
+                  : 'bg-[#150e24] border-[#3e245a] text-gray-300 hover:border-fuchsia-500/50 hover:text-white'
+              }`}
+              title={lang === 'ru' ? 'Кастомизация темы' : 'Theme customization'}
+            >
+              <Paintbrush className="w-4 h-4" />
+            </button>
+
+            {!recipientId.startsWith('group_') && recipientId !== 'bot_juky' && (
+              <button
+                onClick={async () => {
+                  if (confirm(t.blockUserBtn ? `${t.blockUserBtn} ${recipientName}?` : `Заблокировать ${recipientName}?`)) {
+                    await blockUser(recipientId);
+                    window.dispatchEvent(new CustomEvent('aha_toast', { detail: `${recipientName} ${t.userBlockedNotice || 'заблокирован'}` }));
+                  }
+                }}
+                className="p-2 bg-[#150e24] hover:bg-amber-500/20 border border-[#3e245a] hover:border-amber-500/50 text-amber-400 rounded-xl transition-all active:scale-95 flex items-center justify-center"
+                title={t.blockUserBtn || "Заблокировать"}
+              >
+                <Ban className="w-4 h-4" />
+              </button>
+            )}
+
+            <button
+              onClick={async () => {
+                if (confirm(t.deleteChatConfirm || "Вы уверены, что хотите удалить этот чат?")) {
+                  await deleteChat(recipientId);
+                  window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Чат удален' : 'Chat deleted' }));
+                  onClose();
+                }
+              }}
+              className="p-2 bg-[#150e24] hover:bg-red-500/20 border border-[#3e245a] hover:border-red-500/50 text-red-400 rounded-xl transition-all active:scale-95 flex items-center justify-center"
+              title={t.deleteChatBtn || "Удалить чат"}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+
             <button
               onClick={() => setIsMuted(!isMuted)}
               className={`p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center ${
@@ -730,6 +1378,118 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             </button>
           </div>
         </div>
+
+        {/* Search Inside History Bar */}
+        <AnimatePresence>
+          {showSearch && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-[#11071a] border-b border-[#311c47] p-3 flex flex-col sm:flex-row items-center gap-3 shrink-0 z-10 w-full"
+            >
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchHistoryQuery}
+                  onChange={(e) => setSearchHistoryQuery(e.target.value)}
+                  placeholder={lang === 'ru' ? 'Поиск слов в этом диалоге...' : 'Search words in this conversation...'}
+                  className="w-full bg-[#0d0714] border border-[#3d2b4f]/60 rounded-xl py-2 pl-9 pr-24 text-xs text-white focus:outline-none focus:border-[#ff4d4d]"
+                />
+                {searchHistoryQuery && (
+                  <button
+                    onClick={() => setSearchHistoryQuery('')}
+                    className="absolute right-3 top-2 text-xs font-bold text-gray-400 hover:text-white"
+                  >
+                    {lang === 'ru' ? 'Сброс' : 'Clear'}
+                  </button>
+                )}
+              </div>
+              
+              {matchedMessageIds.length > 0 && (
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-between shrink-0">
+                  <span className="text-[10px] font-mono text-gray-400">
+                    {currentMatchIndex + 1} / {matchedMessageIds.length}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setCurrentMatchIndex(prev => Math.max(0, prev - 1))}
+                      disabled={currentMatchIndex <= 0}
+                      className="p-1.5 bg-[#1a0f28] hover:bg-[#311c47] rounded-lg text-white disabled:opacity-40"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      onClick={() => setCurrentMatchIndex(prev => Math.min(matchedMessageIds.length - 1, prev + 1))}
+                      disabled={currentMatchIndex >= matchedMessageIds.length - 1}
+                      className="p-1.5 bg-[#1a0f28] hover:bg-[#311c47] rounded-lg text-white disabled:opacity-40"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Theme Customization Bar */}
+        <AnimatePresence>
+          {showThemeSelector && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-[#11071a] border-b border-[#311c47] p-3 space-y-3 shrink-0 z-10 w-full"
+            >
+              <div>
+                <span className="text-[10px] font-black uppercase text-fuchsia-400 tracking-widest block mb-2">
+                  {lang === 'ru' ? 'ВЫБЕРИТЕ ОБОИ ЧАТА' : 'SELECT CHAT WALLPAPER'}
+                </span>
+                <div className="grid grid-cols-5 gap-2">
+                  {['default', 'cyberpunk', 'matrix', 'nebula', 'sunset'].map(wp => (
+                    <button
+                      key={wp}
+                      onClick={() => updateChatTheme(wp, getGlowColor())}
+                      className={`py-1.5 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${
+                        (currentChat?.theme?.wallpaper || 'default') === wp
+                          ? 'bg-fuchsia-950/40 border-fuchsia-500 text-fuchsia-300'
+                          : 'bg-[#0d0714] border-[#311c47] text-gray-400 hover:border-fuchsia-500/40'
+                      }`}
+                    >
+                      {wp}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-black uppercase text-fuchsia-400 tracking-widest block mb-2">
+                  {lang === 'ru' ? 'ЦВЕТ НЕОНОВОГО СВЕЧЕНИЯ' : 'NEON GLOW COLOR'}
+                </span>
+                <div className="flex items-center gap-3">
+                  {[
+                    { hex: '#ff4d4d', name: lang === 'ru' ? 'Красный' : 'Red' },
+                    { hex: '#00f0ff', name: lang === 'ru' ? 'Голубой' : 'Cyan' },
+                    { hex: '#39ff14', name: lang === 'ru' ? 'Зеленый' : 'Green' },
+                    { hex: '#ff007f', name: lang === 'ru' ? 'Розовый' : 'Pink' }
+                  ].map(color => (
+                    <button
+                      key={color.hex}
+                      onClick={() => updateChatTheme(currentChat?.theme?.wallpaper || 'default', color.hex)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#0d0714] border hover:bg-[#11071a] transition-all"
+                      style={{ borderColor: getGlowColor() === color.hex ? color.hex : '#311c47' }}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color.hex, boxShadow: `0 0 6px ${color.hex}` }} />
+                      <span className="text-[9px] font-bold text-gray-300 uppercase tracking-wider">{color.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Pinned Message Bar */}
         {currentChat?.pinnedMessage && (
@@ -791,20 +1551,54 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             <div 
               ref={messagesContainerRef}
               onScroll={handleScroll}
-              className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar bg-[#0d0714] relative"
+              className={`flex-1 overflow-y-auto p-4 sm:p-5 space-y-5 custom-scrollbar relative ${getWallpaperClasses()}`}
             >
               {activeMessageId && (
                 <div className="fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px]" onClick={() => setActiveMessageId(null)} />
               )}
               {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4 opacity-40">
-                  <div className="w-16 h-16 bg-[#ff4d4d]/5 rounded-3xl flex items-center justify-center border border-[#ff4d4d]/10">
-                    <Send className="w-6 h-6 text-[#ff4d4d]" />
+                recipientId === 'bot_juky' || recipientId.startsWith('juky_') ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-5 max-w-md mx-auto my-auto">
+                    <div className="w-16 h-16 bg-[#00f0ff]/10 rounded-3xl flex items-center justify-center border border-[#00f0ff]/30 shadow-[0_0_25px_rgba(0,240,255,0.25)]">
+                      <Bot className="w-8 h-8 text-[#00f0ff]" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <h3 className="text-base font-black text-white uppercase tracking-wider">
+                        {(t as any).botJukyTitle || 'Juky AI (Жуки 🤖)'}
+                      </h3>
+                      <p className="text-xs text-gray-300 leading-relaxed font-medium">
+                        {(t as any).botJukyWelcome || 'Привет! Я Жуки (Juky AI) — твой умный помощник на Aha Station 🤖✨ Спрашивай что угодно!'}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2 w-full pt-2">
+                      {[
+                        (t as any).botJukyQuickPrompt1 || '💡 Секреты Aha Station',
+                        (t as any).botJukyQuickPrompt2 || '🔮 Безумная теория',
+                        (t as any).botJukyQuickPrompt3 || '❓ Как работают права?'
+                      ].map((prompt, pIdx) => (
+                        <button
+                          key={pIdx}
+                          onClick={() => {
+                            setInputText(prompt);
+                          }}
+                          className="w-full text-left px-4 py-2.5 bg-[#170e24] hover:bg-[#00f0ff]/15 border border-[#3e245a] hover:border-[#00f0ff] rounded-2xl text-xs text-gray-200 font-bold transition-all active:scale-98 flex items-center justify-between group"
+                        >
+                          <span>{prompt}</span>
+                          <Send size={12} className="text-[#00f0ff] group-hover:translate-x-1 transition-transform" />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-xs font-black uppercase tracking-widest text-gray-400">
-                    {t.chatStartConversation}
-                  </p>
-                </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-4 opacity-40">
+                    <div className="w-16 h-16 bg-[#ff4d4d]/5 rounded-3xl flex items-center justify-center border border-[#ff4d4d]/10">
+                      <Send className="w-6 h-6 text-[#ff4d4d]" />
+                    </div>
+                    <p className="text-xs font-black uppercase tracking-widest text-gray-400">
+                      {t.chatStartConversation}
+                    </p>
+                  </div>
+                )
               ) : (
                 (() => {
                   let lastDate: Date | null = null;
@@ -841,21 +1635,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             duration: 0.22, 
                             ease: [0.215, 0.610, 0.355, 1.000] // smooth cubic-bezier easeOut
                           }}
-                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group ${msg.reactions && Object.keys(msg.reactions).some(k => msg.reactions![k].length > 0) ? 'mb-5.5' : ''}`}
+                          className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group ${msg.reactions && Object.keys(msg.reactions).some(k => msg.reactions![k].length > 0) ? 'mb-6' : ''}`}
                         >
+                          {/* Sender Display Name for Group Chats */}
+                          {!isMe && recipientId.startsWith('group_') && !msg.isDeleted && (
+                            <span className="text-[10px] font-black uppercase text-[#00f0ff] tracking-widest mb-1.5 ml-2.5">
+                              {users.find(u => u.uid === msg.senderId)?.displayName || 'User'}
+                            </span>
+                          )}
+
                           {/* Global Portal-based message overlay menu renders at bottom of body instead of absolute inside list */}
 
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!msg.isDeleted) {
-                                if (activeMessageId === msg.id) {
-                                  setActiveMessageId(null);
-                                  setMenuPosition(null);
-                                } else {
-                                  setActiveMessageId(msg.id);
+                                  setActiveMessageId(activeMessageId === msg.id ? null : msg.id);
                                   setMenuPosition({ x: e.clientX, y: e.clientY });
-                                }
                               }
                             }}
                             onContextMenu={(e) => {
@@ -867,7 +1663,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               }
                             }}
                             className={`max-w-[85%] p-3.5 sm:p-4 rounded-3xl text-sm sm:text-base shadow-lg relative cursor-pointer transition-all duration-200 active:scale-[0.98] ${
-                              (msg.type === 'sticker' || msg.type === 'voice') && !msg.isDeleted
+                              (msg.type === 'sticker' || msg.type === 'voice' || msg.type === 'file') && !msg.isDeleted
                                 ? 'bg-transparent shadow-none p-0' 
                                 : isMe
                                   ? 'bg-gradient-to-br from-[#ff3d5a] to-[#cc1b36] text-white rounded-tr-sm font-medium border border-[#ff4d4d]/20'
@@ -877,10 +1673,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             {repliedMsg && msg.type !== 'sticker' && !msg.isDeleted && (
                               <div className={`mb-2.5 p-2 rounded-xl text-xs border-l-2 ${isMe ? 'bg-[#0d0714]/15 border-[#0d0714]/40' : 'bg-[#0d0714]/40 border-[#ff4d4d]/50'}`}>
                                 <span className="font-bold opacity-70 block mb-0.5">
-                                  {repliedMsg.senderId === user?.uid ? (t.chatYou || "You") : recipientName}
+                                  {repliedMsg.senderId === user?.uid ? (t.chatYou || "You") : (recipientId.startsWith('group_') ? (users.find(u => u.uid === repliedMsg.senderId)?.displayName || 'User') : recipientName)}
                                 </span>
                                 <span className="opacity-80 line-clamp-1">
-                                  {repliedMsg.isDeleted ? (t.chatMessageDeleted || "Deleted") : (repliedMsg.type === 'sticker' ? 'Sticker' : repliedMsg.type === 'voice' ? '🎤 ' + (lang === 'ru' ? 'Голосовое' : 'Voice') : repliedMsg.text)}
+                                  {repliedMsg.isDeleted ? (t.chatMessageDeleted || "Deleted") : (repliedMsg.type === 'sticker' ? 'Sticker' : repliedMsg.type === 'voice' ? '🎤 ' + (lang === 'ru' ? 'Голосовое' : 'Voice') : repliedMsg.type === 'file' ? '📁 ' + (lang === 'ru' ? 'Файл' : 'File') : repliedMsg.text)}
                                 </span>
                               </div>
                             )}
@@ -894,6 +1690,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               <div className="text-6xl filter drop-shadow-[0_10px_15px_rgba(0,0,0,0.5)] transform hover:scale-110 transition-transform">{msg.text}</div>
                             ) : msg.type === 'voice' ? (
                               <VoiceMessagePlayer src={msg.text} lang={lang} initialDuration={msg.voiceDuration} />
+                            ) : msg.type === 'file' ? (
+                              <div className="flex items-center gap-3 bg-[#11071a]/90 border border-[#00f0ff]/30 rounded-2xl p-3 min-w-[200px] sm:min-w-[240px] relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                <div className="absolute top-0 left-0 w-1 h-full bg-[#00f0ff] shadow-[0_0_8px_#00f0ff]" />
+                                <div className="p-2.5 bg-[#00f0ff]/10 rounded-xl shrink-0 text-[#00f0ff]">
+                                  <Paperclip size={18} />
+                                </div>
+                                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                  <p className="text-xs font-black text-white truncate uppercase tracking-wider">{msg.fileAttachment?.name || msg.text || 'Document'}</p>
+                                  <span className="text-[9px] text-gray-400 font-mono">
+                                    {msg.fileAttachment?.size ? `${(msg.fileAttachment.size / 1024).toFixed(1)} KB` : 'Document'}
+                                  </span>
+                                </div>
+                                <a
+                                  href={msg.fileAttachment?.url || msg.text}
+                                  download={msg.fileAttachment?.name || 'file'}
+                                  className="p-2 bg-[#00f0ff] text-[#0d0714] rounded-xl hover:bg-white transition-all shadow-[0_0_8px_rgba(0,240,255,0.4)]"
+                                  title="Download"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Download size={14} className="stroke-[3]" />
+                                </a>
+                              </div>
                             ) : msg.type === 'image' ? (
                               <div className="flex flex-col gap-2">
                                 {msg.images && msg.images.length > 0 ? (
@@ -989,6 +1807,31 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                         <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-1.5 h-1.5 bg-[#ff4d4d] rounded-full" />
                         <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} className="w-1.5 h-1.5 bg-[#ff4d4d] rounded-full" />
                         <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} className="w-1.5 h-1.5 bg-[#ff4d4d] rounded-full" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Group Typing Indicator as a message bubble */}
+              <AnimatePresence>
+                {recipientId.startsWith('group_') && groupTypingNames.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="flex justify-start mb-2"
+                  >
+                    <div className="bg-[#150e21] border border-[#2e1d44]/70 rounded-3xl rounded-bl-sm px-4 py-3 flex items-center gap-3 shadow-md">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-wider">
+                          {groupTypingNames.join(', ')} {groupTypingNames.length === 1 ? (lang === 'ru' ? 'печатает' : 'is typing') : (lang === 'ru' ? 'печатают' : 'are typing')}...
+                        </span>
+                        <div className="flex gap-1.5 items-center px-1 py-1">
+                          <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} className="w-1.5 h-1.5 bg-[#00f0ff] rounded-full" />
+                          <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} className="w-1.5 h-1.5 bg-[#00f0ff] rounded-full" />
+                          <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} className="w-1.5 h-1.5 bg-[#00f0ff] rounded-full" />
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -1119,6 +1962,35 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                 )}
               </AnimatePresence>
 
+              {/* Pre-send File Attachment Preview */}
+              <AnimatePresence>
+                {selectedFile && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="px-4 py-3 bg-[#0a050f] flex items-center justify-between border-t border-[#311c47]/40"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-[#00f0ff]/10 text-[#00f0ff] rounded-xl border border-[#00f0ff]/20">
+                        <Paperclip className="w-4 h-4 shrink-0" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-white truncate uppercase tracking-wider max-w-[200px] sm:max-w-xs">{selectedFile.name}</p>
+                        <span className="text-[9px] text-gray-500 font-mono">{(selectedFile.size / 1024).toFixed(1)} KB</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFile(null)}
+                      className="p-1.5 bg-red-500/10 hover:bg-red-500 hover:text-[#0d0714] text-red-400 rounded-lg transition-all"
+                    >
+                      <X size={14} />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {isRecording ? (
                 <div className="p-3 bg-[#09050d] z-20">
                   <div className="flex items-center justify-between bg-[#150a1c] rounded-full p-2 border border-[#ff4d4d]/30 shadow-[0_0_15px_rgba(255,77,77,0.1)]">
@@ -1130,7 +2002,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                     >
                       <Trash size={16} />
                     </button>
-
+ 
                     <div className="flex items-center gap-3">
                       <motion.div
                         animate={{ scale: [1, 1.25, 1] }}
@@ -1144,7 +2016,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                         {formatRecordingTime(recordingSeconds)}
                       </span>
                     </div>
-
+ 
                     <button
                       type="button"
                       onClick={stopAndSendRecording}
@@ -1165,9 +2037,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                     >
                       <Sticker className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
                     </button>
-                    <label className="shrink-0 p-2.5 rounded-full transition-all text-gray-400 hover:text-[#ff4d4d] hover:bg-[#1a0f26] cursor-pointer flex items-center justify-center">
+                    <label className="shrink-0 p-2.5 rounded-full transition-all text-gray-400 hover:text-[#ff4d4d] hover:bg-[#1a0f26] cursor-pointer flex items-center justify-center" title={lang === 'ru' ? 'Прикрепить картинку' : 'Attach image'}>
                       <ImageIcon className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
                       <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={isSending} />
+                    </label>
+                    <label className="shrink-0 p-2.5 rounded-full transition-all text-gray-400 hover:text-[#00f0ff] hover:bg-[#1a0f26] cursor-pointer flex items-center justify-center" title={lang === 'ru' ? 'Прикрепить документ' : 'Attach file'}>
+                      <Paperclip className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
+                      <input type="file" className="hidden" onChange={handleFileUpload} disabled={isSending} />
                     </label>
                     <input
                       type="text"
@@ -1403,9 +2279,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                     <Reply className="w-3.5 h-3.5 text-gray-400" />
                   </button>
 
+                  {/* Pin / Unpin with Admin rights check */}
                   {currentChat?.pinnedMessage?.id === activeMsg.id ? (
                     <button
                       onClick={() => {
+                        const isGroup = recipientId.startsWith('group_');
+                        const isMeAdmin = currentChat?.admins?.includes(user?.uid || '') || currentChat?.ownerId === user?.uid;
+                        if (isGroup && !isMeAdmin) {
+                          window.dispatchEvent(new CustomEvent('aha_toast', { detail: (t as any).groupOnlyAdminsPin || 'Только администраторы могут откреплять сообщения' }));
+                          return;
+                        }
                         unpinMessage(recipientId);
                         setActiveMessageId(null);
                         setMenuPosition(null);
@@ -1418,6 +2301,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   ) : (
                     <button
                       onClick={() => {
+                        const isGroup = recipientId.startsWith('group_');
+                        const isMeAdmin = currentChat?.admins?.includes(user?.uid || '') || currentChat?.ownerId === user?.uid;
+                        if (isGroup && !isMeAdmin) {
+                          window.dispatchEvent(new CustomEvent('aha_toast', { detail: (t as any).groupOnlyAdminsPin || 'Только администраторы могут закреплять сообщения' }));
+                          return;
+                        }
                         pinMessage(recipientId, activeMsg);
                         setActiveMessageId(null);
                         setMenuPosition(null);
@@ -1459,7 +2348,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                     </button>
                   )}
 
-                  {isMe && (
+                  {/* Delete message button: available to sender OR group admin */}
+                  {(isMe || (recipientId.startsWith('group_') && (currentChat?.admins?.includes(user?.uid || '') || currentChat?.ownerId === user?.uid))) && (
                     <button
                       onClick={() => {
                         deleteMessage(activeMsg.id, recipientId);

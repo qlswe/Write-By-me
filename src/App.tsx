@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar, Shield, Target } from 'lucide-react';
 import { collection, addDoc, doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -36,6 +36,7 @@ import { UserData } from './hooks/useUsers';
 import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
 import { AhaSecurityBadge, SafeHtml } from './components/security/AhaSecurity';
 import { DisguisePage } from './components/security/DisguisePage';
+import { DevConsoleWidget } from './components/ui/DevConsoleWidget';
 
 const getMillis = (val: any): number => {
   if (!val) return 0;
@@ -61,8 +62,9 @@ const AhiAiSection = lazy(() => import('./components/sections/AhiAiSection').the
 const SdkSettingsSection = lazy(() => import('./components/sections/SdkSettingsSection').then(m => ({ default: m.SdkSettingsSection })));
 const CanvasSection = lazy(() => import('./components/sections/CanvasSection').then(m => ({ default: m.CanvasSection })));
 const TelemetrySection = lazy(() => import('./components/sections/TelemetrySection').then(m => ({ default: m.TelemetrySection })));
+const NatoGameSection = lazy(() => import('./components/sections/NatoGameSection').then(m => ({ default: m.NatoGameSection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry' | 'nato';
 
 let hasPrintedStopWarning = false;
 
@@ -287,6 +289,8 @@ export default function App() {
     return saved ? JSON.parse(saved) : false;
   });
 
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
+
   const toggleLoadWidget = () => {
     setShowLoadWidget((prev: boolean) => {
       const next = !prev;
@@ -485,6 +489,7 @@ export default function App() {
     { id: 'chronicle' as const, label: t.navChronicle || 'Хроника событий', icon: Calendar },
     { id: 'promo' as const, label: t.navPromo || 'Промокоды', icon: Ticket },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
+    { id: 'nato' as const, label: (t as any).navNatoGame || 'Инструктор НАТО 🪖', icon: Target },
     { id: 'users' as const, label: t.navUsers, icon: User },
     ...((role === 'admin' || role === 'moderator') ? [{ id: 'telemetry' as const, label: 'Telemetry', icon: Settings }] : []),
     { id: 'sdk', label: 'SDK', icon: Settings },
@@ -671,6 +676,8 @@ export default function App() {
         toggleLowPerfMode={toggleLowPerfMode}
         role={role}
         unreadCount={unreadCount}
+        onToggleConsole={() => setIsConsoleOpen(prev => !prev)}
+        isConsoleOpen={isConsoleOpen}
       />
 
       {/* Offline Banner */}
@@ -943,6 +950,9 @@ export default function App() {
                   </div>
                 </div>
               )}
+              {section === 'nato' && (
+                <NatoGameSection lang={lang as Language} />
+              )}
               {section === 'telemetry' && (role === 'admin' || role === 'moderator') && (
                 <TelemetrySection lang={lang as Language} />
               )}
@@ -1055,6 +1065,13 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* Real-time Site Console Widget */}
+      <DevConsoleWidget
+        isOpen={isConsoleOpen}
+        onClose={() => setIsConsoleOpen(false)}
+        onToggle={() => setIsConsoleOpen(prev => !prev)}
+      />
     </div>
   );
 }

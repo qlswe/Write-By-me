@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw, Terminal } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
@@ -24,6 +24,8 @@ interface HeaderProps {
   toggleLowPerfMode?: () => void;
   role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
   unreadCount?: number;
+  onToggleConsole?: () => void;
+  isConsoleOpen?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,7 +41,9 @@ export const Header: React.FC<HeaderProps> = ({
   lowPerfMode,
   toggleLowPerfMode,
   role,
-  unreadCount = 0
+  unreadCount = 0,
+  onToggleConsole,
+  isConsoleOpen = false
 }) => {
   const t = translations[lang];
   const { user, loginWithGoogle, logout } = useAuth();
@@ -198,6 +202,20 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <RotateCw size={14} className="text-[#ff4d4d]" />
             </button>
+
+            {onToggleConsole && (
+              <button 
+                onClick={onToggleConsole}
+                className={`flex items-center justify-center p-2 rounded-xl border transition-all duration-300 active:scale-95 shadow-md ${
+                  isConsoleOpen
+                    ? 'bg-[#ff4d4d] border-white/30 text-white shadow-[0_0_12px_rgba(255,77,77,0.5)]'
+                    : 'bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d]'
+                }`}
+                title={lang === 'ru' ? "Консоль сайта (Логи)" : "Site Console"}
+              >
+                <Terminal size={14} className={isConsoleOpen ? 'text-white' : 'text-[#ff4d4d]'} />
+              </button>
+            )}
 
             <div className="hidden lg:block relative">
               {user ? (

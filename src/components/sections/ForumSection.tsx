@@ -16,6 +16,7 @@ import { CanvasSection } from './CanvasSection';
 import { PromoSection } from './PromoSection';
 import { ChronicleSection } from './ChronicleSection';
 import { decryptImage, encryptImage } from '../../utils/encryption';
+import { generatePrefixedId } from '../../utils/idGenerator';
 import { sdk } from '../../sdk';
 
 
@@ -620,14 +621,14 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
         imageUrl: attachedImage ? encryptImage(attachedImage) : ''
       };
 
-      let threadId = Date.now().toString() + '_' + user.uid;
+      let threadId = generatePrefixedId('thread') + '_' + user.uid;
 
       if (vercelFallback.isAvailable()) {
         const payload = { ...threadData, id: threadId, createdAt: new Date().toISOString() };
         await vercelFallback.lpush('forum_threads', JSON.stringify(payload));
         
         const botPayload = {
-          id: Date.now().toString() + '_bot',
+          id: generatePrefixedId('bot'),
           threadId: threadId,
           content: (t as any).forumBotWelcome || "Welcome to the forum!",
           authorId: 'system-bot',
@@ -706,7 +707,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
       };
 
       if (vercelFallback.isAvailable()) {
-        const commentId = Date.now().toString() + '_' + user.uid;
+        const commentId = generatePrefixedId('comment') + '_' + user.uid;
         const payload = { ...commentData, id: commentId, createdAt: new Date().toISOString() };
         await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
         setComments(prev => [...prev, payload]);
@@ -763,7 +764,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
             };
 
             if (vercelFallback.isAvailable()) {
-              const botCommentId = 'comment_bot_' + Date.now();
+              const botCommentId = generatePrefixedId('comment_bot');
               const payload = { ...botCommentData, id: botCommentId, createdAt: new Date().toISOString() };
               await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
               setComments(prev => [...prev, payload]);

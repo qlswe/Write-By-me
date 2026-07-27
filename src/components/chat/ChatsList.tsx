@@ -3,14 +3,16 @@ import { useChat, Chat } from '../../hooks/useChat';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff, Mail, UserPlus } from 'lucide-react';
+import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff, Mail, UserPlus, Plus, Users, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
 import { ru, enUS, be, de, fr, zhCN } from 'date-fns/locale';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { dbQueryCore } from '../../utils/dbQueryCore';
 import { useUsers } from '../../hooks/useUsers';
+import { generatePrefixedId } from '../../utils/idGenerator';
+import { CachedAvatar } from '../ui/CachedAvatar';
 
 interface ChatsListProps {
   lang: Language;
@@ -73,21 +75,41 @@ const ChatItem = React.memo(({
   onSelect: (id: string, name: string, photo?: string) => void,
   isActive?: boolean
 }) => {
-  const recipientId = chat.participants.find(p => p !== currentUserId);
-  const isTyping = chat.typing?.[recipientId || ''];
+  const isGroup = chat.isGroup;
+  const recipientId = isGroup ? chat.id : chat.participants.find(p => p !== currentUserId);
+
+  let isTyping = false;
+  let typingText = '';
+  const t = translations[lang];
+
+  if (isGroup) {
+    const typingUids = Object.keys(chat.typing || {}).filter(uid => uid !== currentUserId && chat.typing?.[uid]);
+    if (typingUids.length > 0) {
+      isTyping = true;
+      typingText = lang === 'ru' ? 'Кто-то печатает...' : 'Someone is typing...';
+    }
+  } else {
+    isTyping = !!chat.typing?.[recipientId || ''];
+    typingText = (t as any).chatTyping || t.chatsTyping || 'Typing...';
+  }
   
   const lastRead = getMillis(chat.lastReadAt?.[currentUserId]);
   const lastMsg = getMillis(chat.lastMessageAt);
   const isUnread = lastMsg > lastRead && chat.lastMessage;
 
-  const t = translations[lang];
-  const isOnline = profile?.lastSeen ? (Date.now() - new Date(profile.lastSeen).getTime() < 3 * 60 * 1000) : false;
+  const isOnline = !isGroup && profile?.lastSeen 
+    ? (Date.now() - new Date(profile.lastSeen).getTime() < 3 * 60 * 1000) 
+    : false;
+
+  const isJukyBot = recipientId === 'bot_juky';
+  const chatName = isGroup ? chat.name : (isJukyBot ? 'Juky AI (Жуки 🤖)' : (profile?.name || 'User'));
+  const chatPhoto = isGroup ? chat.avatar : (isJukyBot ? 'https://api.dicebear.com/7.x/bottts/svg?seed=JukyBotAha' : profile?.photo);
 
   return (
     <motion.button
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      onClick={() => onSelect(recipientId || '', profile?.name || 'User', profile?.photo)}
+      onClick={() => onSelect(recipientId || '', chatName || 'Group', chatPhoto)}
       className={`w-full border rounded-2xl p-4 flex items-center gap-4 transition-all text-left group relative overflow-hidden ${
         isActive 
           ? 'bg-[#ff4d4d]/15 border-[#ff4d4d] hover:bg-[#ff4d4d]/20 shadow-[0_0_15px_rgba(255,77,77,0.15)]' 
@@ -100,21 +122,31 @@ const ChatItem = React.memo(({
         <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#ff4d4d] shadow-[0_0_10px_#ff4d4d]" />
       )}
       <div className="relative shrink-0">
-        {profile?.photo ? (
-          <img src={profile.photo} alt="" className="w-12 h-12 rounded-2xl object-cover border-2 border-[#3d2b4f]/50 group-hover:border-[#ff4d4d] transition-colors" />
-        ) : (
-          <div className="w-12 h-12 rounded-2xl bg-[#ff4d4d]/20 flex items-center justify-center border-2 border-[#3d2b4f]/50 group-hover:border-[#ff4d4d] transition-colors">
-            <User className="w-6 h-6 text-[#ff4d4d]" />
-          </div>
+        <CachedAvatar
+          src={chatPhoto}
+          alt={chatName}
+          customSizeClass="w-12 h-12"
+          className="rounded-2xl border-2 border-[#3d2b4f]/50 group-hover:border-[#ff4d4d] transition-colors"
+          fallbackText={chatName}
+        />
+        {!isGroup && isJukyBot && (
+          <div className="absolute -bottom-1 -right-1 w-4 h-4 border-4 border-[#15101e] rounded-full shadow-lg bg-[#00f0ff]" />
         )}
-        <div className={`absolute -bottom-1 -right-1 w-4 h-4 border-4 border-[#15101e] rounded-full shadow-lg ${
-          isOnline ? 'bg-green-500' : 'bg-gray-500 shadow-none'
-        }`} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-1">
-          <span className={`font-black text-sm truncate uppercase tracking-wider ${isActive ? 'text-[#ff4d4d]' : isUnread ? 'text-[#ff4d4d]' : 'text-white'}`}>
-            {profile?.name || '...'}
+          <span className={`font-black text-sm truncate uppercase tracking-wider flex items-center gap-1.5 ${isActive ? 'text-[#ff4d4d]' : isUnread ? 'text-[#ff4d4d]' : 'text-white'}`}>
+            {chatName || '...'}
+            {isGroup && (
+              <span className="text-[9px] bg-[#ff4d4d]/20 text-[#ff4d4d] border border-[#ff4d4d]/30 px-1 rounded font-bold font-mono uppercase tracking-normal">
+                {lang === 'ru' ? 'ГРУППА' : 'GROUP'}
+              </span>
+            )}
+            {isJukyBot && (
+              <span className="text-[9px] bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/30 px-1.5 py-0.5 rounded font-black font-mono uppercase tracking-wider">
+                {(t as any).botJukyBadge || '🤖 BOT'}
+              </span>
+            )}
           </span>
           {chat.lastMessageAt && (
             <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-[#ff4d4d]' : isUnread ? 'text-[#ff4d4d]' : 'text-gray-500'}`}>
@@ -125,7 +157,7 @@ const ChatItem = React.memo(({
         <div className="flex items-center gap-2">
           {isTyping ? (
             <p className="text-xs text-[#ff4d4d] font-bold italic truncate">
-              {(t as any).chatTyping || t.chatsTyping}
+              {typingText}
             </p>
           ) : (
             <p className={`text-xs truncate font-medium ${isActive ? 'text-gray-200' : isUnread ? 'text-white' : 'text-gray-400'}`}>
@@ -154,6 +186,11 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
   const [showNewChat, setShowNewChat] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
 
+  const [showNewGroup, setShowNewGroup] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
+  const [groupSearchQuery, setGroupSearchQuery] = useState('');
+
   const otherUsers = useMemo(() => {
     if (!user) return [];
     const searchLower = newChatSearch.toLowerCase().trim();
@@ -163,6 +200,16 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
       return (u.displayName || '').toLowerCase().includes(searchLower) || (u.email || '').toLowerCase().includes(searchLower);
     });
   }, [users, user, newChatSearch]);
+
+  const groupUsersFiltered = useMemo(() => {
+    if (!user) return [];
+    const searchLower = groupSearchQuery.toLowerCase().trim();
+    return users.filter(u => {
+      if (u.uid === user.uid) return false;
+      if (!searchLower) return true;
+      return (u.displayName || '').toLowerCase().includes(searchLower) || (u.email || '').toLowerCase().includes(searchLower);
+    });
+  }, [users, user, groupSearchQuery]);
 
   const requestNotifications = async () => {
     if ('Notification' in window) {
@@ -181,6 +228,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
       let hasNew = false;
       
       for (const chat of chats) {
+        if (chat.isGroup) continue;
         const recipientId = chat.participants.find(p => p !== user.uid);
         if (recipientId && !profiles[recipientId]) {
           hasNew = true;
@@ -210,13 +258,70 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
     
     const query = searchQuery.toLowerCase();
     return chats.filter(chat => {
+      if (chat.isGroup) {
+        return (chat.name || '').toLowerCase().includes(query);
+      }
       const recipientId = chat.participants.find(p => p !== user?.uid);
       if (!recipientId) return false;
+      if (recipientId === 'bot_juky') return 'juky ai (жуки 🤖) bot'.includes(query);
       const profile = profiles[recipientId];
-      if (!profile) return true; // Show while loading profile
+      if (!profile) return true;
       return profile.name.toLowerCase().includes(query);
     });
   }, [chats, searchQuery, profiles, user]);
+
+  const displayChats = useMemo(() => {
+    let list = [...filteredChats];
+    const hasJukyChat = list.some(c => !c.isGroup && c.participants.includes('bot_juky'));
+    if (!hasJukyChat && user) {
+      const virtualJukyChat = {
+        id: `juky_${user.uid}`,
+        participants: [user.uid, 'bot_juky'],
+        isGroup: false,
+        name: 'Juky AI (Жуки 🤖)',
+        lastMessage: (t as any).botJukyWelcome || 'Привет! Я Жуки (Juky AI) — твой умный помощник на Aha Station 🤖✨',
+        lastMessageAt: new Date().toISOString(),
+        unreadCount: 0
+      };
+      list.unshift(virtualJukyChat as any);
+    }
+    return list;
+  }, [filteredChats, user, t]);
+
+  const handleCreateGroup = async () => {
+    if (!groupName.trim() || selectedParticipants.length === 0 || !user) return;
+    const groupId = generatePrefixedId('group');
+    const chatRef = doc(db, 'chats', groupId);
+    try {
+      const gAvatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(groupName)}`;
+      await setDoc(chatRef, {
+        id: groupId,
+        isGroup: true,
+        name: groupName.trim(),
+        avatar: gAvatar,
+        participants: [user.uid, ...selectedParticipants],
+        admins: [user.uid],
+        createdAt: serverTimestamp(),
+        lastMessage: lang === 'ru' ? 'Группа создана' : 'Group created',
+        lastMessageAt: serverTimestamp()
+      });
+      setGroupName('');
+      setSelectedParticipants([]);
+      setShowNewGroup(false);
+      window.dispatchEvent(new CustomEvent('aha_toast', { 
+        detail: lang === 'ru' ? 'Группа успешно создана!' : 'Group successfully created!' 
+      }));
+      onSelectChat(groupId, groupName.trim(), gAvatar);
+    } catch (e) {
+      console.error('Error creating group:', e);
+    }
+  };
+
+  const toggleGroupParticipant = (uid: string) => {
+    setSelectedParticipants(prev => 
+      prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]
+    );
+  };
 
   if (!user) {
     return (
@@ -288,7 +393,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
         </motion.div>
       )}
 
-      {/* Search Bar & New Chat Button */}
+      {/* Search Bar & Actions */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -316,8 +421,22 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
           </AnimatePresence>
         </div>
 
+        {/* Create Group Chat */}
         <button
-          onClick={() => setShowNewChat(!showNewChat)}
+          onClick={() => { setShowNewGroup(!showNewGroup); setShowNewChat(false); }}
+          className={`shrink-0 p-3 rounded-2xl border transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs ${
+            showNewGroup
+              ? 'bg-[#00f0ff] border-[#00f0ff] text-[#0d0714] shadow-[0_0_15px_rgba(0,240,255,0.3)]'
+              : 'bg-[#3d2b4f]/30 border-[#3d2b4f]/50 text-[#00f0ff] hover:bg-[#3d2b4f]/50'
+          }`}
+          title={lang === 'ru' ? 'Создать групповой чат' : 'Create Group Chat'}
+        >
+          <Users size={18} />
+        </button>
+
+        {/* Start New Direct Chat */}
+        <button
+          onClick={() => { setShowNewChat(!showNewChat); setShowNewGroup(false); }}
           className={`shrink-0 p-3 rounded-2xl border transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs ${
             showNewChat
               ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#0d0714] shadow-[0_0_15px_rgba(255,77,77,0.3)]'
@@ -328,6 +447,92 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
           <UserPlus size={18} />
         </button>
       </div>
+
+      {/* New Group Chat Inline Panel */}
+      <AnimatePresence>
+        {showNewGroup && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-[#1b1229]/60 border border-[#00f0ff]/30 rounded-2xl p-4 overflow-hidden space-y-3 shadow-inner"
+          >
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-black uppercase tracking-widest text-[#00f0ff]">
+                {lang === 'ru' ? 'Создание группы:' : 'Create Group:'}
+              </span>
+              <button onClick={() => setShowNewGroup(false)} className="text-gray-400 hover:text-white transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              placeholder={lang === 'ru' ? 'Название группы...' : 'Group name...'}
+              className="w-full bg-[#0d0714]/60 border border-[#3d2b4f]/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00f0ff] transition-all"
+            />
+
+            <input
+              type="text"
+              value={groupSearchQuery}
+              onChange={(e) => setGroupSearchQuery(e.target.value)}
+              placeholder={lang === 'ru' ? 'Поиск участников...' : 'Search participants...'}
+              className="w-full bg-[#0d0714]/60 border border-[#3d2b4f]/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00f0ff] transition-all"
+            />
+
+            <div className="max-h-40 overflow-y-auto space-y-1.5 custom-scrollbar">
+              {groupUsersFiltered.length === 0 ? (
+                <p className="text-xs text-gray-500 italic py-2 text-center">
+                  {lang === 'ru' ? 'Пользователи не найдены' : 'No users found'}
+                </p>
+              ) : (
+                groupUsersFiltered.map(u => {
+                  const isSelected = selectedParticipants.includes(u.uid);
+                  return (
+                    <button
+                      key={u.uid}
+                      onClick={() => toggleGroupParticipant(u.uid)}
+                      className={`w-full flex items-center justify-between p-2 rounded-xl border text-left transition-all ${
+                        isSelected 
+                          ? 'bg-[#00f0ff]/10 border-[#00f0ff]/40' 
+                          : 'bg-[#0d0714]/40 border-[#3d2b4f]/20 hover:border-[#00f0ff]/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {u.photoURL ? (
+                          <img src={u.photoURL} alt="" className="w-7 h-7 rounded-lg object-cover border border-[#3d2b4f]/50" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-lg bg-[#00f0ff]/10 flex items-center justify-center border border-[#3d2b4f]/50">
+                            <User className="w-3.5 h-3.5 text-[#00f0ff]" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-xs font-black text-white truncate uppercase tracking-wider">{u.displayName || 'User'}</p>
+                        </div>
+                      </div>
+                      <div className={`w-4 h-4 rounded flex items-center justify-center border ${
+                        isSelected ? 'bg-[#00f0ff] border-[#00f0ff]' : 'border-gray-500'
+                      }`}>
+                        {isSelected && <Check size={10} className="text-[#0d0714] stroke-[3]" />}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <button
+              onClick={handleCreateGroup}
+              disabled={!groupName.trim() || selectedParticipants.length === 0}
+              className="w-full py-2 bg-[#00f0ff] hover:bg-white text-[#0d0714] rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:hover:bg-[#00f0ff]"
+            >
+              {lang === 'ru' ? 'Создать группу' : 'Create Group'}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* New Chat Inline Panel */}
       <AnimatePresence>
@@ -392,12 +597,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
 
       {/* Chat List */}
       <div className="space-y-3">
-        {chats.length === 0 ? (
-          <div className="text-center py-16 text-gray-500 bg-[#15101e]/20 rounded-3xl border border-[#3d2b4f]/20">
-            <MessageSquare className="mx-auto mb-4 opacity-10" size={48} />
-            <p className="text-sm font-black uppercase tracking-widest">{t.noChats}</p>
-          </div>
-        ) : filteredChats.length === 0 ? (
+        {displayChats.length === 0 ? (
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -409,15 +609,15 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
             </p>
           </motion.div>
         ) : (
-          filteredChats.map((chat) => (
+          displayChats.map((chat) => (
             <ChatItem 
               key={chat.id} 
               chat={chat} 
               currentUserId={user?.uid || ''} 
               lang={lang} 
-              profile={profiles[chat.participants.find(p => p !== user?.uid) || ''] || null}
+              profile={chat.isGroup ? null : (profiles[chat.participants.find(p => p !== user?.uid) || ''] || null)}
               onSelect={onSelectChat} 
-              isActive={chat.participants.includes(activeChatId || '')}
+              isActive={chat.id === activeChatId || chat.participants.includes(activeChatId || '')}
             />
           ))
         )}

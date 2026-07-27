@@ -13,15 +13,29 @@ export interface UserData {
   lastLogin: string;
   lastSeen?: string;
   isVerified?: boolean;
+  isBot?: boolean;
 }
 
+export const JUKY_BOT_USER: UserData = {
+  uid: 'bot_juky',
+  displayName: 'Juky AI (Жуки 🤖)',
+  email: 'juky.bot@ahastation.internal',
+  photoURL: 'https://api.dicebear.com/7.x/bottts/svg?seed=JukyBotAha',
+  role: 'admin',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  lastLogin: new Date().toISOString(),
+  isVerified: true,
+  isBot: true
+};
+
 export function useUsers() {
-  const [users, setUsers] = useState<UserData[]>([]);
+  const [users, setUsers] = useState<UserData[]>([JUKY_BOT_USER]);
   const [loading, setLoading] = useState(true);
   const { isAdmin, role: currentRole, user } = useAuth();
 
   useEffect(() => {
     if (!user) {
+      setUsers([JUKY_BOT_USER]);
       setLoading(false);
       return;
     }
@@ -37,10 +51,16 @@ export function useUsers() {
         ...doc.data(),
         uid: doc.id
       } as UserData));
+      
+      // Always include Juky Bot if missing
+      if (!usersData.some(u => u.uid === JUKY_BOT_USER.uid)) {
+        usersData.unshift(JUKY_BOT_USER);
+      }
       setUsers(usersData);
       setLoading(false);
     }, (error) => {
       console.error(`Error fetching ${collectionName}:`, error);
+      setUsers([JUKY_BOT_USER]);
       setLoading(false);
     });
 

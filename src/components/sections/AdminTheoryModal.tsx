@@ -5,6 +5,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Language, translations } from '../../data/translations';
 import { CustomSelect } from '../ui/CustomSelect';
+import { generatePrefixedId } from '../../utils/idGenerator';
 
 interface AdminTheoryModalProps {
   isOpen: boolean;
@@ -74,7 +75,7 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
     
     setIsSaving(true);
     try {
-      const theoryId = theoryToEdit?.id || `theory_${Date.now()}`;
+      const theoryId = theoryToEdit?.id || generatePrefixedId('theory');
       const theoryData = {
         id: theoryId,
         title: { ru: titleRu, en: titleEn || titleRu },

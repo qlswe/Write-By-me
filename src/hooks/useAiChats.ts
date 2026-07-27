@@ -3,6 +3,7 @@ import { useAuth } from './useAuth';
 import { db } from '../firebase';
 import { collection, doc, query, where, onSnapshot, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
+import { generatePrefixedId } from '../utils/idGenerator';
 
 export interface AiMessage {
   role: 'user' | 'assistant' | 'system' | 'info';
@@ -91,7 +92,7 @@ export const useAiChats = () => {
   const createChat = useCallback(async (systemPrompt: string = '', title: string = 'Новый чат') => {
     if (!user) return null;
 
-    const newChatId = Date.now().toString() + Math.random().toString(36).substring(7);
+    const newChatId = generatePrefixedId('aichat');
     const newChat: AiChat = {
       id: newChatId,
       userId: user.uid,

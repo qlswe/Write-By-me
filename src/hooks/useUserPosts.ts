@@ -3,6 +3,7 @@ import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp,
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
 import { vercelFallback } from '../utils/vercelFallback';
+import { generatePrefixedId } from '../utils/idGenerator';
 
 export interface UserPost {
   id: string;
@@ -104,7 +105,7 @@ export function useUserPosts(userId?: string) {
       if (pixelsSnapshot) postData.pixelsSnapshot = pixelsSnapshot;
 
       if (vercelFallback.isAvailable()) {
-          const payload = { ...postData, id: Date.now().toString() + '_' + user.uid };
+          const payload = { ...postData, id: generatePrefixedId('post') + '_' + user.uid };
           await vercelFallback.lpush(`user_posts:${user.uid}`, JSON.stringify(payload));
           setPosts(prev => [payload as any, ...prev]);
       } else {

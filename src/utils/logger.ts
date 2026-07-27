@@ -3,12 +3,46 @@ import { useEffect, useCallback, useRef } from 'react';
 type LogLevel = 'info' | 'warn' | 'error' | 'perf' | 'system' | 'action';
 
 interface LogEntry {
+  id?: number;
   timestamp: string;
   level: LogLevel;
   message: string;
   data?: any;
   component?: string;
   meta?: any;
+}
+
+const DB_NAME = 'AhaConsoleLogsDB';
+const DB_VERSION = 1;
+const DB_STORE_NAME = 'logs';
+
+/**
+ * Safely clone payloads so non-serializable objects (DOM nodes, functions, circular structures)
+ * don't cause DataCloneError in IndexedDB.
+ */
+function safeClone(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === 'number' || typeof obj === 'string' || typeof obj === 'boolean') return obj;
+  if (typeof obj === 'function' || typeof obj === 'symbol') return String(obj);
+
+  try {
+    return JSON.parse(
+      JSON.stringify(obj, (_key, value) => {
+        if (typeof value === 'function' || typeof value === 'symbol') {
+          return String(value);
+        }
+        if (value instanceof Error) {
+          return { name: value.name, message: value.message, stack: value.stack };
+        }
+        if (typeof Element !== 'undefined' && value instanceof Element) {
+          return `<${value.tagName.toLowerCase()} class="${value.className}">`;
+        }
+        return value;
+      })
+    );
+  } catch {
+    return String(obj);
+  }
 }
 
 class Logger {
@@ -18,9 +52,197 @@ class Logger {
   private sessionStart = performance.now();
   private listeners: ((log: LogEntry) => void)[] = [];
   private hasWarned = false;
+  private dbPromise: Promise<IDBDatabase | null> | null = null;
 
   constructor() {
     this.initSystemInfo();
+    this.interceptConsole();
+    this.loadHistoricalLogs();
+  }
+
+  private getDB(): Promise<IDBDatabase | null> {
+    if (this.dbPromise) return this.dbPromise;
+
+    this.dbPromise = new Promise((resolve) => {
+      if (typeof window === 'undefined' || !window.indexedDB) {
+        return resolve(null);
+      }
+
+      try {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains(DB_STORE_NAME)) {
+            db.createObjectStore(DB_STORE_NAME, { keyPath: 'id', autoIncrement: true });
+          }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+
+    return this.dbPromise;
+  }
+
+  private async loadHistoricalLogs() {
+    try {
+      const db = await this.getDB();
+      if (!db) return;
+
+      const storedLogs = await new Promise<LogEntry[]>((resolve) => {
+        const tx = db.transaction(DB_STORE_NAME, 'readonly');
+        const store = tx.objectStore(DB_STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      });
+
+      if (storedLogs && storedLogs.length > 0) {
+        // Merge historical logs before current session startup logs
+        const combined = [...storedLogs, ...this.logs];
+        // Sort chronologically by timestamp
+        combined.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        // Limit to maxLogs
+        if (combined.length > this.maxLogs) {
+          this.logs = combined.slice(combined.length - this.maxLogs);
+        } else {
+          this.logs = combined;
+        }
+
+        this.notifyListeners();
+      }
+    } catch (e) {
+      // Fail gracefully if IndexedDB is blocked or disabled
+    }
+  }
+
+  private async saveLogToIDB(entry: LogEntry) {
+    try {
+      const db = await this.getDB();
+      if (!db) return;
+
+      const safeEntry: LogEntry = {
+        timestamp: entry.timestamp,
+        level: entry.level,
+        message: entry.message,
+        data: entry.data !== undefined ? safeClone(entry.data) : undefined,
+        component: entry.component,
+        meta: entry.meta !== undefined ? safeClone(entry.meta) : undefined
+      };
+
+      const tx = db.transaction(DB_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(DB_STORE_NAME);
+      store.add(safeEntry);
+
+      // Periodic pruning if store grows beyond 1.5x maxLogs
+      const countReq = store.count();
+      countReq.onsuccess = () => {
+        if (countReq.result > this.maxLogs * 1.5) {
+          this.pruneOldIDBLogs(db);
+        }
+      };
+    } catch {
+      // ignore IndexedDB write errors
+    }
+  }
+
+  private pruneOldIDBLogs(db: IDBDatabase) {
+    try {
+      const tx = db.transaction(DB_STORE_NAME, 'readwrite');
+      const store = tx.objectStore(DB_STORE_NAME);
+      const req = store.openCursor();
+      let deletedCount = 0;
+      const targetDelete = 500;
+
+      req.onsuccess = (e) => {
+        const cursor = (e.target as IDBRequest).result;
+        if (cursor && deletedCount < targetDelete) {
+          cursor.delete();
+          deletedCount++;
+          cursor.continue();
+        }
+      };
+    } catch {
+      // ignore
+    }
+  }
+
+  private async clearIDB() {
+    try {
+      const db = await this.getDB();
+      if (!db) return;
+
+      const tx = db.transaction(DB_STORE_NAME, 'readwrite');
+      tx.objectStore(DB_STORE_NAME).clear();
+    } catch {
+      // ignore
+    }
+  }
+
+  private notifyListeners(entry?: LogEntry) {
+    setTimeout(() => {
+      this.listeners.forEach((listener) => listener(entry || this.logs[this.logs.length - 1]));
+    }, 0);
+  }
+
+  private interceptConsole() {
+    if (typeof window === 'undefined') return;
+    
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    const originalInfo = console.info;
+
+    let isCapturing = false;
+
+    console.log = (...args: any[]) => {
+      originalLog.apply(console, args);
+      if (isCapturing) return;
+      isCapturing = true;
+      try {
+        if (args.length > 0 && typeof args[0] === 'string' && args[0].includes('%c')) {
+          // ignore styled internal logger logs
+        } else {
+          this.info(typeof args[0] === 'string' ? args[0] : 'console.log', args.length > 1 ? args.slice(1) : (typeof args[0] !== 'string' ? args[0] : undefined), 'CONSOLE');
+        }
+      } catch {}
+      isCapturing = false;
+    };
+
+    console.warn = (...args: any[]) => {
+      originalWarn.apply(console, args);
+      if (isCapturing) return;
+      isCapturing = true;
+      try {
+        this.warn(typeof args[0] === 'string' ? args[0] : 'console.warn', args.length > 1 ? args.slice(1) : (typeof args[0] !== 'string' ? args[0] : undefined), 'CONSOLE');
+      } catch {}
+      isCapturing = false;
+    };
+
+    console.error = (...args: any[]) => {
+      originalError.apply(console, args);
+      if (isCapturing) return;
+      isCapturing = true;
+      try {
+        this.error(typeof args[0] === 'string' ? args[0] : 'console.error', args.length > 1 ? args.slice(1) : (typeof args[0] !== 'string' ? args[0] : undefined), 'CONSOLE');
+      } catch {}
+      isCapturing = false;
+    };
+
+    console.info = (...args: any[]) => {
+      originalInfo.apply(console, args);
+      if (isCapturing) return;
+      isCapturing = true;
+      try {
+        this.info(typeof args[0] === 'string' ? args[0] : 'console.info', args.length > 1 ? args.slice(1) : (typeof args[0] !== 'string' ? args[0] : undefined), 'CONSOLE');
+      } catch {}
+      isCapturing = false;
+    };
   }
 
   subscribe(listener: (log: LogEntry) => void) {
@@ -78,6 +300,8 @@ class Logger {
       this.logs.shift();
     }
 
+    this.saveLogToIDB(entry);
+
     // Defer the listener notification to avoid React warning:
     // "Cannot update a component while rendering a different component"
     setTimeout(() => {
@@ -116,7 +340,11 @@ class Logger {
 
   getLogs() { return [...this.logs]; }
   getLogsString() { return JSON.stringify(this.logs, null, 2); }
-  clear() { this.logs = []; }
+  clear() {
+    this.logs = [];
+    this.clearIDB();
+    this.notifyListeners();
+  }
   
   exportLogs() {
     try {

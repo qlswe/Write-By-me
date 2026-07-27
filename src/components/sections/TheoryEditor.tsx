@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
 import { vercelFallback } from '../../utils/vercelFallback';
+import { generatePrefixedId } from '../../utils/idGenerator';
 
 interface TheoryEditorProps {
   theory?: any;
@@ -54,7 +55,7 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
       };
 
       if (vercelFallback.isAvailable()) {
-        const uid = theory?.id || Date.now().toString() + '_' + user?.uid;
+        const uid = theory?.id || generatePrefixedId('th') + '_' + user?.uid;
         const payload = {
             ...theoryData,
             id: uid,

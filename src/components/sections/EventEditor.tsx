@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
 import { vercelFallback } from '../../utils/vercelFallback';
+import { generatePrefixedId } from '../../utils/idGenerator';
 
 interface EventEditorProps {
   event?: any;
@@ -73,7 +74,7 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
       }
 
       if (vercelFallback.isAvailable()) {
-        const uid = event?.id || Date.now().toString() + '_' + user?.uid;
+        const uid = event?.id || generatePrefixedId('evt') + '_' + user?.uid;
         const payload = {
             ...eventData,
             id: uid,
