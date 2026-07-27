@@ -197,7 +197,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button 
               onClick={() => sdk.reloadApp()}
-              className="flex items-center justify-center p-2 rounded-xl border bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/5"
+              className="hidden sm:flex items-center justify-center p-2 rounded-xl border bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/5"
               title={lang === 'ru' ? "Обновить сайт вручную (очистить кэш)" : "Force reload & clear cache"}
             >
               <RotateCw size={14} className="text-[#ff4d4d]" />
@@ -206,7 +206,7 @@ export const Header: React.FC<HeaderProps> = ({
             {onToggleConsole && (
               <button 
                 onClick={onToggleConsole}
-                className={`flex items-center justify-center p-2 rounded-xl border transition-all duration-300 active:scale-95 shadow-md ${
+                className={`hidden sm:flex items-center justify-center p-2 rounded-xl border transition-all duration-300 active:scale-95 shadow-md ${
                   isConsoleOpen
                     ? 'bg-[#ff4d4d] border-white/30 text-white shadow-[0_0_12px_rgba(255,77,77,0.5)]'
                     : 'bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d]'
@@ -315,7 +315,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <button 
-              className="lg:hidden p-2 text-gray-300 hover:text-[#ff4d4d]"
+              className="lg:hidden p-2 text-gray-300 hover:text-[#ff4d4d] shrink-0"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
@@ -361,6 +361,30 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             
             <div className="p-6 border-t border-[#3d2b4f] mt-auto shrink-0 flex flex-col gap-4">
+              {/* Quick Actions Grid for Mobile */}
+              <div className="grid grid-cols-2 gap-2.5 sm:hidden">
+                <button 
+                  onClick={() => { sdk.reloadApp(); setMobileMenuOpen(false); }}
+                  className="flex items-center justify-center gap-2 bg-[#15101e] border border-[#3d2b4f] text-gray-200 p-3 rounded-xl text-xs font-bold hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all"
+                >
+                  <RotateCw size={16} className="text-[#ff4d4d]" />
+                  <span>{lang === 'ru' ? 'Обновить' : 'Reload'}</span>
+                </button>
+
+                {onToggleConsole && (
+                  <button 
+                    onClick={() => { onToggleConsole(); setMobileMenuOpen(false); }}
+                    className={`flex items-center justify-center gap-2 border p-3 rounded-xl text-xs font-bold transition-all ${
+                      isConsoleOpen
+                        ? 'bg-[#ff4d4d] border-white/30 text-white shadow-[0_0_10px_rgba(255,77,77,0.4)]'
+                        : 'bg-[#15101e] border-[#3d2b4f] text-gray-200 hover:text-[#ff4d4d]'
+                    }`}
+                  >
+                    <Terminal size={16} className={isConsoleOpen ? 'text-white' : 'text-[#ff4d4d]'} />
+                    <span>{lang === 'ru' ? 'Консоль' : 'Console'}</span>
+                  </button>
+                )}
+              </div>
               {toggleLowPerfMode && (
                 <button 
                   onClick={toggleLowPerfMode}
