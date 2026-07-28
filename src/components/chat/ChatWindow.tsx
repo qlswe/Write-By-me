@@ -1248,14 +1248,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
           {/* Right main conversation area */}
           <div className="flex-1 flex flex-col h-full bg-[#0d0714] relative">
             {/* Header */}
-            <div className="p-3 bg-[#09050d] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20 shadow-lg relative">
+            <div className="p-2.5 sm:p-3 bg-[#09050d] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20 shadow-lg relative gap-2">
           <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[#ff4d4d]/20 to-transparent" />
-          <div className="flex items-center gap-2.5">
-            <div className="relative">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="relative shrink-0">
               <CachedAvatar
                 src={recipientPhoto}
                 alt={recipientName}
-                customSizeClass="w-8 h-8"
+                customSizeClass="w-8 h-8 sm:w-9 sm:h-9"
                 className="rounded-full border border-[#ff4d4d]/30"
                 fallbackText={recipientName}
               />
@@ -1264,25 +1264,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
               )}
             </div>
             <div className="min-w-0">
-              <span className="font-bold text-white text-sm sm:text-base uppercase tracking-wider block leading-none truncate max-w-[150px] sm:max-w-[200px]">{recipientName}</span>
-              <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="font-bold text-white text-xs sm:text-base uppercase tracking-wider block leading-tight truncate max-w-[100px] xs:max-w-[150px] sm:max-w-[240px]">{recipientName}</span>
+              <div className="flex items-center gap-1 mt-0.5">
                 {recipientId === 'bot_juky' ? (
-                  <span className="text-[8px] text-[#00f0ff] font-bold uppercase tracking-widest flex items-center gap-1">
+                  <span className="text-[8px] sm:text-[9px] text-[#00f0ff] font-bold uppercase tracking-widest flex items-center gap-1">
                     🤖 {t.botJukyBadge || 'БОТ'}
                   </span>
                 ) : recipientId.startsWith('group_') ? (
-                  <span className="text-[8px] text-purple-400 font-bold uppercase tracking-widest">
+                  <span className="text-[8px] sm:text-[9px] text-purple-400 font-bold uppercase tracking-widest truncate">
                     👥 {lang === 'ru' ? 'ГРУППОВОЙ ЧАТ' : 'GROUP CHAT'}
                   </span>
                 ) : (
-                  <span className="text-[8px] text-gray-400 font-medium tracking-wide">
+                  <span className="text-[8px] sm:text-[9px] text-gray-400 font-medium tracking-wide truncate">
                     {lang === 'ru' ? 'Личный чат' : 'Private chat'}
                   </span>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0 overflow-x-auto no-scrollbar max-w-[55vw] sm:max-w-none">
             {recipientId.startsWith('group_') && (
               <button
                 onClick={() => {
@@ -1290,7 +1290,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   setEditGroupAvatar(currentChat?.avatar || '');
                   setShowGroupSettings(!showGroupSettings);
                 }}
-                className={`p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center ${
+                className={`p-1.5 sm:p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center shrink-0 ${
                   showGroupSettings
                     ? 'bg-[#00f0ff]/20 border-[#00f0ff] text-[#00f0ff] shadow-[0_0_10px_rgba(0,240,255,0.3)]'
                     : 'bg-[#150e24] border-[#3e245a] text-gray-300 hover:border-[#00f0ff]/50 hover:text-white'
@@ -1308,7 +1308,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   setSearchHistoryQuery('');
                 }
               }}
-              className={`p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center ${
+              className={`p-1.5 sm:p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center shrink-0 ${
                 showSearch
                   ? 'bg-[#ff4d4d]/20 border-[#ff4d4d] text-[#ff4d4d] shadow-[0_0_10px_rgba(255,77,77,0.3)]'
                   : 'bg-[#150e24] border-[#3e245a] text-gray-300 hover:border-[#ff4d4d]/50 hover:text-white'
@@ -1320,7 +1320,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
 
             <button
               onClick={() => setShowThemeSelector(!showThemeSelector)}
-              className={`p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center ${
+              className={`p-1.5 sm:p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center shrink-0 ${
                 showThemeSelector
                   ? 'bg-fuchsia-950/20 border-fuchsia-500/50 text-fuchsia-400 shadow-[0_0_10px_rgba(244,63,94,0.3)]'
                   : 'bg-[#150e24] border-[#3e245a] text-gray-300 hover:border-fuchsia-500/50 hover:text-white'
@@ -1338,7 +1338,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                     window.dispatchEvent(new CustomEvent('aha_toast', { detail: `${recipientName} ${t.userBlockedNotice || 'заблокирован'}` }));
                   }
                 }}
-                className="p-2 bg-[#150e24] hover:bg-amber-500/20 border border-[#3e245a] hover:border-amber-500/50 text-amber-400 rounded-xl transition-all active:scale-95 flex items-center justify-center"
+                className="p-1.5 sm:p-2 bg-[#150e24] hover:bg-amber-500/20 border border-[#3e245a] hover:border-amber-500/50 text-amber-400 rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0"
                 title={t.blockUserBtn || "Заблокировать"}
               >
                 <Ban className="w-4 h-4" />
@@ -1353,7 +1353,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   onClose();
                 }
               }}
-              className="p-2 bg-[#150e24] hover:bg-red-500/20 border border-[#3e245a] hover:border-red-500/50 text-red-400 rounded-xl transition-all active:scale-95 flex items-center justify-center"
+              className="p-1.5 sm:p-2 bg-[#150e24] hover:bg-red-500/20 border border-[#3e245a] hover:border-red-500/50 text-red-400 rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0"
               title={t.deleteChatBtn || "Удалить чат"}
             >
               <Trash2 className="w-4 h-4" />
@@ -1361,7 +1361,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
 
             <button
               onClick={() => setIsMuted(!isMuted)}
-              className={`p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center ${
+              className={`p-1.5 sm:p-2 border rounded-xl transition-all active:scale-90 flex items-center justify-center shrink-0 ${
                 isMuted 
                   ? 'bg-red-950/20 border-red-500/30 text-red-400 hover:bg-red-950/40 hover:border-red-500/60 shadow-[0_0_8px_rgba(239,68,68,0.2)]' 
                   : 'bg-[#150e24] border-[#3e245a] text-gray-300 hover:border-[#ff4d4d]/50 hover:text-white'
@@ -1372,7 +1372,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
             </button>
             <button
               onClick={onClose}
-              className="p-2 bg-[#150e24] hover:bg-[#ff4d4d] border border-[#3e245a] hover:border-[#ff4d4d] text-gray-300 hover:text-[#0d0714] rounded-xl transition-all active:scale-95 flex items-center justify-center"
+              className="p-1.5 sm:p-2 bg-[#150e24] hover:bg-[#ff4d4d] border border-[#3e245a] hover:border-[#ff4d4d] text-gray-300 hover:text-[#0d0714] rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1663,11 +1663,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               }
                             }}
                             className={`max-w-[85%] p-3.5 sm:p-4 rounded-3xl text-sm sm:text-base shadow-lg relative cursor-pointer transition-all duration-200 active:scale-[0.98] ${
-                              (msg.type === 'sticker' || msg.type === 'voice' || msg.type === 'file') && !msg.isDeleted
+                              (msg.type === 'sticker' || msg.type === 'voice') && !msg.isDeleted
                                 ? 'bg-transparent shadow-none p-0' 
-                                : isMe
-                                  ? 'bg-gradient-to-br from-[#ff3d5a] to-[#cc1b36] text-white rounded-tr-sm font-medium border border-[#ff4d4d]/20'
-                                  : 'bg-[#181125]/95 text-gray-100 rounded-tl-sm border border-[#3e245a]/40 hover:border-[#ff4d4d]/30 shadow-[0_4px_20px_rgba(0,0,0,0.15)]'
+                                : msg.type === 'file' && !msg.isDeleted
+                                  ? 'bg-[#12071f] border border-[#00f0ff]/40 text-white rounded-2xl shadow-[0_4px_20px_rgba(0,240,255,0.15)] p-3'
+                                  : isMe
+                                    ? 'bg-gradient-to-br from-[#ff3d5a] to-[#cc1b36] text-white rounded-tr-sm font-medium border border-[#ff4d4d]/20'
+                                    : 'bg-[#181125]/95 text-gray-100 rounded-tl-sm border border-[#3e245a]/40 hover:border-[#ff4d4d]/30 shadow-[0_4px_20px_rgba(0,0,0,0.15)]'
                             } ${msg.isDeleted ? 'opacity-40 italic' : ''}`}
                           >
                             {repliedMsg && msg.type !== 'sticker' && !msg.isDeleted && (
@@ -1691,21 +1693,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                             ) : msg.type === 'voice' ? (
                               <VoiceMessagePlayer src={msg.text} lang={lang} initialDuration={msg.voiceDuration} />
                             ) : msg.type === 'file' ? (
-                              <div className="flex items-center gap-3 bg-[#11071a]/90 border border-[#00f0ff]/30 rounded-2xl p-3 min-w-[200px] sm:min-w-[240px] relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                                <div className="absolute top-0 left-0 w-1 h-full bg-[#00f0ff] shadow-[0_0_8px_#00f0ff]" />
-                                <div className="p-2.5 bg-[#00f0ff]/10 rounded-xl shrink-0 text-[#00f0ff]">
+                              <div className="flex items-center gap-3 relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                <div className="p-2.5 bg-[#00f0ff]/15 rounded-xl shrink-0 text-[#00f0ff] border border-[#00f0ff]/30">
                                   <Paperclip size={18} />
                                 </div>
                                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                                   <p className="text-xs font-black text-white truncate uppercase tracking-wider">{msg.fileAttachment?.name || msg.text || 'Document'}</p>
-                                  <span className="text-[9px] text-gray-400 font-mono">
+                                  <span className="text-[9px] text-[#00f0ff]/80 font-mono font-bold">
                                     {msg.fileAttachment?.size ? `${(msg.fileAttachment.size / 1024).toFixed(1)} KB` : 'Document'}
                                   </span>
                                 </div>
                                 <a
                                   href={msg.fileAttachment?.url || msg.text}
                                   download={msg.fileAttachment?.name || 'file'}
-                                  className="p-2 bg-[#00f0ff] text-[#0d0714] rounded-xl hover:bg-white transition-all shadow-[0_0_8px_rgba(0,240,255,0.4)]"
+                                  className="p-2 bg-[#00f0ff] text-[#0d0714] rounded-xl hover:bg-white transition-all shadow-[0_0_10px_rgba(0,240,255,0.5)] shrink-0"
                                   title="Download"
                                   onClick={(e) => e.stopPropagation()}
                                 >
@@ -1744,11 +1745,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                               </div>
                             )}
                             
-                            <div className={`text-[9px] mt-2 font-black tracking-wider opacity-60 flex items-center gap-1 ${isMe ? 'justify-end' : 'justify-start'} ${msg.type === 'sticker' && !msg.isDeleted ? 'text-gray-400' : ''}`}>
+                            <div className={`text-[9px] mt-1.5 font-black tracking-wider opacity-80 flex items-center gap-1 ${isMe ? 'justify-end' : 'justify-start'} ${
+                              msg.type === 'file' ? 'text-[#00f0ff]/90' : msg.type === 'sticker' && !msg.isDeleted ? 'text-gray-400' : ''
+                            }`}>
                               {msg.isEdited && !msg.isDeleted && <span>({t.edited || "edited"})</span>}
                               {format(getSafeDate(msg.createdAt), 'HH:mm')}
                               {isMe && !msg.isDeleted && (
-                                isRead ? <CheckCheck className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-blue-400' : msg.type === 'voice' ? 'text-[#ff4d4d]' : 'text-[#0d0714]'}`} /> : <Check className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'sticker' ? 'text-gray-400' : 'opacity-60'}`} />
+                                isRead ? <CheckCheck className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'file' ? 'text-[#00f0ff]' : msg.type === 'sticker' ? 'text-blue-400' : msg.type === 'voice' ? 'text-[#ff4d4d]' : 'text-white'}`} /> : <Check className={`w-3.5 h-3.5 ml-0.5 ${msg.type === 'file' ? 'text-[#00f0ff]/70' : msg.type === 'sticker' ? 'text-gray-400' : 'opacity-70'}`} />
                               )}
                             </div>
 

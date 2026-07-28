@@ -15,6 +15,7 @@ import { TimeAgo } from '../ui/TimeAgo';
 
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { SafeHtml } from '../security/AhaSecurity';
+import { MediaViewer } from '../ui/MediaViewer';
 
 interface BlogSectionProps {
   lang: Language;
@@ -167,6 +168,12 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                 </button>
               </div>
             </div>
+
+            {selectedPost.mediaUrl && (
+              <div className="mb-8">
+                <MediaViewer url={selectedPost.mediaUrl} maxHeight="max-h-[550px]" title={selectedPost.title[lang] || 'Blog Media'} />
+              </div>
+            )}
 
             <SafeHtml 
               html={selectedPost.content[lang] || selectedPost.content['en']}

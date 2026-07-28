@@ -26,11 +26,11 @@ export const sanitizeContent = (dirty: string) => {
   // In strict mode, we strip out images, links, and code blocks to prevent ANY media/external links
   const allowedTags = isStrict 
     ? ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'span', 'div'] 
-    : ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'img', 'span', 'div'];
+    : ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'img', 'video', 'source', 'iframe', 'span', 'div'];
 
   const clean = DOMPurify.sanitize(text, {
     ALLOWED_TAGS: allowedTags,
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class', 'className'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class', 'className', 'controls', 'autoplay', 'loop', 'muted', 'poster', 'type', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'style'],
   });
 
   // Count removed items (DOMPurify.removed is an array of removed elements/attributes)

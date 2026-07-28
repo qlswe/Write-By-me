@@ -4,7 +4,7 @@ import { Star, Edit, Trash2, ArrowRight, Calendar, Share2 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { TimeAgo } from '../ui/TimeAgo';
-
+import { MediaViewer } from '../ui/MediaViewer';
 
 interface BlogCardProps {
   post: any;
@@ -97,6 +97,12 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
         {post.title[lang] || post.title['en']}
       </h3>
       
+      {post.mediaUrl && (
+        <div className="mb-4 overflow-hidden rounded-2xl">
+          <MediaViewer url={post.mediaUrl} maxHeight="max-h-[220px]" title={post.title[lang] || 'Blog Media'} />
+        </div>
+      )}
+
       <div className="relative mb-6 group-hover:text-white/80 transition-colors">
         <p className="text-white/40 text-xs sm:text-sm line-clamp-3 font-medium leading-relaxed">
           {post.summary[lang] || post.summary['en']}

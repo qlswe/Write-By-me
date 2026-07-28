@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar, Shield, Target } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar, Shield, Target, BarChart2 } from 'lucide-react';
 import { collection, addDoc, doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -491,7 +491,7 @@ export default function App() {
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'nato' as const, label: (t as any).navNatoGame || 'Инструктор НАТО 🪖', icon: Target },
     { id: 'users' as const, label: t.navUsers, icon: User },
-    ...((role === 'admin' || role === 'moderator') ? [{ id: 'telemetry' as const, label: 'Telemetry', icon: Settings }] : []),
+    { id: 'telemetry' as const, label: lang === 'ru' ? 'Статистика' : 'Telemetry', icon: BarChart2 },
     { id: 'sdk', label: 'SDK', icon: Settings },
     { id: 'ai', label: 'Aha AI', icon: Sparkles },
   ];
@@ -953,7 +953,7 @@ export default function App() {
               {section === 'nato' && (
                 <NatoGameSection lang={lang as Language} />
               )}
-              {section === 'telemetry' && (role === 'admin' || role === 'moderator') && (
+              {section === 'telemetry' && (
                 <TelemetrySection lang={lang as Language} />
               )}
             </Suspense>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Plus, Search, User as UserIcon, Shield, Clock, ArrowLeft, Send, Trash2, ChevronUp, ChevronDown, Pencil, X, Check, Camera, Palette as PaletteIcon, Activity, Key, ShieldAlert, ShieldCheck, Cpu, RefreshCw, Ticket, Info, Sparkles } from 'lucide-react';
+import { MessageSquare, Plus, Search, User as UserIcon, Shield, Clock, ArrowLeft, Send, Trash2, ChevronUp, ChevronDown, Pencil, X, Check, Camera, Palette as PaletteIcon, Activity, Key, ShieldAlert, ShieldCheck, Cpu, RefreshCw, Ticket, Info, Sparkles, Video, Link as LinkIcon } from 'lucide-react';
+import { MediaViewer } from '../ui/MediaViewer';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { db } from '../../firebase';
@@ -458,13 +459,22 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
     if (!file) return;
     setIsUploading(true);
     try {
-      const base64 = await compressAndGetBase64(file);
-      setAttachedImage(base64);
-      addSecurityLog('SUCCESS', `Image loaded successfully: ${file.name} compressed.`);
+      if (file.type.startsWith('video/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAttachedImage(reader.result as string);
+          setIsUploading(false);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        const base64 = await compressAndGetBase64(file);
+        setAttachedImage(base64);
+        setIsUploading(false);
+      }
+      addSecurityLog('SUCCESS', `Media file loaded successfully: ${file.name}`);
     } catch (err) {
       console.error(err);
-      addSecurityLog('ALERT', 'Failed to compress or upload image.');
-    } finally {
+      addSecurityLog('ALERT', 'Failed to compress or upload media file.');
       setIsUploading(false);
     }
   };
@@ -1166,45 +1176,16 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                 ) : selectedThread.content}
               </p>
               
-              {selectedThread.imageUrl && (() => {
-                const isThreadProtected = protectedViewFeatureEnabled && (selectedThread.isProtected !== false);
-                return (
-                  <div className="mb-6 rounded-3xl overflow-hidden border border-[#3d2b4f]/40 h-[320px] sm:h-[400px] w-full flex items-center justify-center bg-black/40 relative">
-                    <img 
-                      src={decryptImage(selectedThread.imageUrl)} 
-                      alt="Attached visual" 
-                      className={`w-full h-full object-cover ${isThreadProtected ? 'select-none pointer-events-none' : ''}`} 
-                      onContextMenu={isThreadProtected ? (e) => e.preventDefault() : undefined}
-                      onDragStart={isThreadProtected ? (e) => e.preventDefault() : undefined}
-                    />
-                    {isThreadProtected ? (
-                      <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-[#ff4d4d]/30 text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-1.5 select-none pointer-events-none">
-                        <ShieldAlert size={12} className="text-[#ff4d4d]" />
-                        {lang === 'ru' ? 'Защищенный просмотр' : 'Secure View'}
-                      </div>
-                    ) : (
-                      <div className="absolute bottom-4 right-4 flex gap-2">
-                        <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-green-500/30 text-[10px] font-black uppercase tracking-widest text-green-400 flex items-center gap-1.5 select-none pointer-events-none">
-                          <ShieldCheck size={12} className="text-green-400" />
-                          {lang === 'ru' ? 'Открытый просмотр' : 'Public View'}
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (!selectedThread.imageUrl) return;
-                            const link = document.createElement('a');
-                            link.href = decryptImage(selectedThread.imageUrl);
-                            link.download = `${selectedThread.title.toLowerCase().replace(/[^a-z0-9]+/g, '_') || 'drawing'}.png`;
-                            link.click();
-                          }}
-                          className="bg-[#ff4d4d] hover:bg-white text-[#15101e] px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(255,77,77,0.3)] flex items-center gap-1 cursor-pointer"
-                        >
-                          📥 {lang === 'ru' ? 'Скачать' : 'Download'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+              {selectedThread.imageUrl && (
+                <div className="mb-6">
+                  <MediaViewer
+                    url={selectedThread.imageUrl}
+                    isProtected={protectedViewFeatureEnabled && (selectedThread.isProtected !== false)}
+                    title={selectedThread.title}
+                    maxHeight="max-h-[500px]"
+                  />
+                </div>
+              )}
               
               <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-xl border border-[#3d2b4f]/30 w-fit">
                 <button
@@ -1312,13 +1293,13 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                 <Camera size={16} className="text-[#ff4d4d]" />
                 {lang === 'ru' ? 'Прикрепить контент' : 'Attach Visual Content'}
               </span>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {/* File Upload Button */}
                 <input
                   type="file"
                   id="forum-photo-upload"
                   className="hidden"
-                  accept="image/*"
+                  accept="image/*,video/*"
                   onChange={handleFileUpload}
                   disabled={isUploading}
                 />
@@ -1327,8 +1308,21 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                   className={`bg-[#15101e] border border-[#3d2b4f]/50 text-white hover:text-[#ff4d4d] hover:border-[#ff4d4d]/50 px-4 py-2 rounded-xl text-xs font-black cursor-pointer flex items-center gap-2 transition-all ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
                 >
                   <Camera size={14} />
-                  {lang === 'ru' ? 'Загрузить фото' : 'Upload Photo'}
+                  {lang === 'ru' ? 'Загрузить видео/фото' : 'Upload Video/Photo'}
                 </label>
+
+                {/* Direct Video / Photo URL button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = prompt(lang === 'ru' ? 'Вставьте ссылку на YouTube, MP4 или Фото:' : 'Paste YouTube, MP4, or Photo URL:');
+                    if (url) setAttachedImage(url.trim());
+                  }}
+                  className="bg-[#15101e] border border-[#3d2b4f]/50 text-white hover:text-[#ff4d4d] hover:border-[#ff4d4d]/50 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all"
+                >
+                  <LinkIcon size={14} />
+                  {lang === 'ru' ? 'Ссылка' : 'URL Link'}
+                </button>
 
                 {/* Draw Doodle Toggle */}
                 <button
@@ -1424,18 +1418,14 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
               </div>
             )}
 
-            {/* Attached Image Preview */}
+            {/* Attached Media Preview */}
             {attachedImage && (
-              <div className="relative w-fit bg-[#15101e] border border-[#3d2b4f]/60 rounded-2xl p-2 group">
-                <img
-                  src={attachedImage}
-                  alt="Attachment preview"
-                  className="max-h-[120px] rounded-xl object-contain"
-                />
+              <div className="relative max-w-md bg-[#15101e] border border-[#3d2b4f]/60 rounded-2xl p-2 group">
+                <MediaViewer url={attachedImage} maxHeight="max-h-[220px]" />
                 <button
                   type="button"
                   onClick={() => setAttachedImage(null)}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors z-10"
                 >
                   <X size={14} />
                 </button>
@@ -1569,20 +1559,16 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                     ) : thread.content}
                   </p>
 
-                  {thread.imageUrl && (() => {
-                    const isThreadProtected = protectedViewFeatureEnabled && (thread.isProtected !== false);
-                    return (
-                      <div className="mb-4 rounded-xl overflow-hidden border border-[#3d2b4f]/20 h-[140px] w-[240px] max-w-full flex items-center bg-black/40 relative">
-                        <img 
-                          src={decryptImage(thread.imageUrl)} 
-                          alt="Post attachment" 
-                          className={`w-full h-full object-cover ${isThreadProtected ? 'select-none pointer-events-none' : ''}`} 
-                          onContextMenu={isThreadProtected ? (e) => e.preventDefault() : undefined}
-                          onDragStart={isThreadProtected ? (e) => e.preventDefault() : undefined}
-                        />
-                      </div>
-                    );
-                  })()}
+                  {thread.imageUrl && (
+                    <div className="mb-4 max-w-sm">
+                      <MediaViewer
+                        url={thread.imageUrl}
+                        isProtected={protectedViewFeatureEnabled && (thread.isProtected !== false)}
+                        title={thread.title}
+                        maxHeight="max-h-[220px]"
+                      />
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-3">
                     <img 

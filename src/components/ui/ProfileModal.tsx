@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload, Download } from 'lucide-react';
+import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload, Download, Sparkles } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { updateProfile as updateAuthProfile } from 'firebase/auth';
@@ -54,11 +54,87 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const [isEditingPhoto, setIsEditingPhoto] = useState(false);
   const [newPhotoURL, setNewPhotoURL] = useState(photoURL || '');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [showChats, setShowChats] = useState(false);
   const [showPosts, setShowPosts] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleGenerateAiAvatar = async () => {
+    if (!user || isGeneratingAi) return;
+
+    setIsGeneratingAi(true);
+    try {
+      const seed = `${user.uid}_${Date.now()}`;
+      const nameStr = user.displayName || 'User';
+
+      const styles = [
+        `High quality 3D digital art avatar portrait of ${nameStr}, futuristic cyberpunk glowing lights, dark background, 8k render, profile avatar`,
+        `Stylized futuristic anime portrait of ${nameStr}, vibrant neon purple aesthetic, detailed avatar icon`,
+        `Cool 3D character portrait of ${nameStr}, dark tech background with cyan neon accents, highly detailed 3D avatar`,
+        `Futuristic digital avatar of ${nameStr}, soft lighting, epic avatar icon, 3D render`
+      ];
+      const selectedStyle = styles[Math.floor(Math.random() * styles.length)];
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(selectedStyle)}?width=512&height=512&seed=${encodeURIComponent(seed)}&nologo=true`;
+
+      let finalPhotoData = imageUrl;
+
+      const response = await fetch(imageUrl, { mode: 'cors' }).catch(() => null);
+
+      if (response && response.ok) {
+        const blob = await response.blob();
+        const base64Data = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+              canvas.width = 256;
+              canvas.height = 256;
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, 256, 256);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+              } else {
+                resolve(reader.result as string);
+              }
+            };
+            img.onerror = () => resolve(imageUrl);
+            img.src = reader.result as string;
+          };
+          reader.onerror = () => resolve(imageUrl);
+          reader.readAsDataURL(blob);
+        });
+        finalPhotoData = base64Data;
+      } else {
+        finalPhotoData = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(seed)}`;
+      }
+
+      if (updateGlobalPhoto) {
+        updateGlobalPhoto(finalPhotoData);
+      }
+      await updateUserData('', '', 0, '', '', finalPhotoData);
+      await setDoc(doc(db, 'public_profiles', user.uid), {
+        photoURL: finalPhotoData
+      }, { merge: true });
+
+      setNewPhotoURL(finalPhotoData);
+      setIsEditingPhoto(false);
+      setToast(lang === 'ru' ? 'ИИ аватар успешно сгенерирован!' : 'AI avatar generated successfully!');
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      console.error('Error generating AI avatar:', err);
+      const fallbackUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}_${Date.now()}`;
+      if (updateGlobalPhoto) updateGlobalPhoto(fallbackUrl);
+      await updateUserData('', '', 0, '', '', fallbackUrl);
+      await setDoc(doc(db, 'public_profiles', user.uid), { photoURL: fallbackUrl }, { merge: true });
+      setToast(lang === 'ru' ? 'Сгенерирован уникальный аватар!' : 'Unique avatar generated!');
+      setTimeout(() => setToast(null), 3000);
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
 
   const performRestoreBackup = async (file: File) => {
     if (!file || !user) return;
@@ -743,7 +819,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
             {/* Scrollable Content */}
             <div className="px-8 pt-6 pb-8 flex-1 overflow-y-auto custom-scrollbar">
               {/* Avatar - Now part of the content flow as requested */}
-              <div className="flex justify-center mb-8">
+              <div className="flex flex-col items-center justify-center mb-8 gap-4">
                 <div className="relative group">
                   <img 
                     src={photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} 
@@ -762,9 +838,55 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                     <Award size={24} />
                   </div>
                 </div>
+
+                {/* AI Avatar Generator Button */}
+                {isOwnProfile && (
+                  <button
+                    onClick={handleGenerateAiAvatar}
+                    disabled={isGeneratingAi}
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 via-[#ff4d4d] to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg hover:shadow-[0_0_20px_rgba(255,77,77,0.4)] transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Sparkles size={16} className={isGeneratingAi ? 'animate-spin text-yellow-300' : 'animate-pulse text-yellow-300'} />
+                    <span>
+                      {isGeneratingAi
+                        ? (lang === 'ru' ? 'ИИ генерирует аватар...' : 'AI generating avatar...')
+                        : (!photoURL 
+                            ? (lang === 'ru' ? 'Сгенерировать аватар' : 'Generate Avatar')
+                            : (lang === 'ru' ? 'Сгенерировать аватар (ИИ)' : 'Generate AI Avatar'))
+                      }
+                    </span>
+                  </button>
+                )}
               </div>
               {isEditingPhoto && isOwnProfile && (
                 <div className="mb-6 p-6 bg-[#1a1326] rounded-[2rem] border-2 border-dashed border-[#ff4d4d]/30 hover:border-[#ff4d4d]/60 transition-colors space-y-6 relative overflow-hidden shadow-2xl">
+                  {/* AI Quick Generator inside editing box */}
+                  <div className="p-4 bg-gradient-to-r from-purple-900/40 via-[#ff4d4d]/10 to-indigo-900/40 border border-purple-500/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-purple-500/20 rounded-xl text-yellow-300 border border-purple-500/30">
+                        <Sparkles size={20} className="animate-pulse" />
+                      </div>
+                      <div>
+                        <h6 className="text-xs font-black text-white uppercase tracking-wider">
+                          {lang === 'ru' ? 'Генерация через ИИ' : 'Generate with AI'}
+                        </h6>
+                        <p className="text-[10px] text-white/50">
+                          {lang === 'ru' ? 'Создать уникальный аватар на основе имени' : 'Create unique avatar based on your name'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleGenerateAiAvatar}
+                      disabled={isGeneratingAi}
+                      className="w-full sm:w-auto px-4 py-2.5 bg-[#ff4d4d] hover:bg-[#ff6666] text-[#15101e] font-black text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50 active:scale-95 shrink-0"
+                    >
+                      {isGeneratingAi 
+                        ? (lang === 'ru' ? 'Генерация...' : 'Generating...') 
+                        : (lang === 'ru' ? 'Сгенерировать' : 'Generate')
+                      }
+                    </button>
+                  </div>
+
                   {/* Drag-and-drop zone */}
                   <div
                     onDragOver={handleDragOver}

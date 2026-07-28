@@ -44,7 +44,7 @@ async function startServer() {
       }));
 
       // Try multiple models in sequence to avoid 503/UNAVAILABLE errors
-      const modelsToTry = ['gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+      const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash'];
       let responseText = "";
       let lastError: any = null;
 
@@ -71,6 +71,20 @@ async function startServer() {
         } catch (err: any) {
           console.warn(`Model ${modelName} failed or was unavailable:`, err.message || err);
           lastError = err;
+        }
+      }
+
+      if (!responseText) {
+        // Fallback to Pollinations AI text endpoint if Gemini models are experiencing high demand (503)
+        try {
+          console.log("Gemini models unavailable, attempting Pollinations AI fallback...");
+          const pollinationsPrompt = encodeURIComponent(`${systemInstruction ? systemInstruction + '\n' : ''}${prompt}`);
+          const pollRes = await fetch(`https://text.pollinations.ai/${pollinationsPrompt}`);
+          if (pollRes.ok) {
+            responseText = await pollRes.text();
+          }
+        } catch (pollErr) {
+          console.warn("Pollinations fallback failed:", pollErr);
         }
       }
 

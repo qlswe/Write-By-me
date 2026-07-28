@@ -19,6 +19,13 @@ let cachedProxiedUser: User | null = null;
 let lastGlobalPhotoURL: string | null = null;
 let lastGlobalUser: User | null = null;
 
+const ADMIN_EMAILS = ['semegladysev527@gmail.com'];
+
+const isSuperAdminEmail = (email?: string | null): boolean => {
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email.trim().toLowerCase());
+};
+
 const getProxiedUser = (): User | null => {
   if (!globalUser) {
     cachedProxiedUser = null;
@@ -101,11 +108,13 @@ const initAuth = () => {
         const fallbackName = user.displayName || user.email?.split('@')[0] || 'User';
         const fallbackPhoto = user.photoURL || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(fallbackName)}`;
 
+        const isSuperAdmin = isSuperAdminEmail(user.email);
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
-          const initialRole = 'user';
-          const initialVerified = user.emailVerified || false;
+          const initialRole = isSuperAdmin ? 'admin' : 'user';
+          const initialVerified = isSuperAdmin ? true : (user.emailVerified || false);
+          const initialPremium = isSuperAdmin ? true : false;
           const userData = {
             uid: user.uid,
             displayName: fallbackName,
@@ -113,6 +122,7 @@ const initAuth = () => {
             photoURL: fallbackPhoto,
             role: initialRole,
             isVerified: initialVerified,
+            isPremium: initialPremium,
             createdAt: new Date().toISOString(),
             lastLogin: new Date().toISOString()
           };
@@ -124,13 +134,13 @@ const initAuth = () => {
             photoURL: fallbackPhoto,
             role: initialRole,
             isVerified: initialVerified,
-            isPremium: false,
+            isPremium: initialPremium,
             createdAt: new Date().toISOString(),
           });
 
           globalRole = initialRole;
-          globalIsPremium = false;
-          globalIsAdmin = false;
+          globalIsPremium = initialPremium;
+          globalIsAdmin = isSuperAdmin;
           globalIsVerified = initialVerified;
           globalPhotoURL = fallbackPhoto;
           globalLoading = false;
@@ -138,10 +148,21 @@ const initAuth = () => {
         } else {
           // Warm up synchronous state immediately with the fetched doc
           const userData = userDoc.data();
-          globalRole = userData.role || 'user';
-          globalIsPremium = userData.isPremium || false;
+          if (isSuperAdmin && (userData.role !== 'admin' || !userData.isVerified || !userData.isPremium)) {
+            userData.role = 'admin';
+            userData.isVerified = true;
+            userData.isPremium = true;
+            try {
+              await setDoc(userDocRef, { role: 'admin', isVerified: true, isPremium: true }, { merge: true });
+              await setDoc(doc(db, 'public_profiles', user.uid), { role: 'admin', isVerified: true, isPremium: true }, { merge: true });
+            } catch (err) {
+              console.error("Error auto-granting super admin rights:", err);
+            }
+          }
+          globalRole = isSuperAdmin ? 'admin' : (userData.role || 'user');
+          globalIsPremium = isSuperAdmin ? true : (userData.isPremium || false);
           globalIsAdmin = globalRole === 'admin';
-          globalIsVerified = userData.isVerified || globalRole === 'admin' || globalRole === 'moderator' || globalRole === 'beta-tester' || user.emailVerified || false;
+          globalIsVerified = isSuperAdmin ? true : (userData.isVerified || globalRole === 'admin' || globalRole === 'moderator' || globalRole === 'beta-tester' || user.emailVerified || false);
           globalPhotoURL = userData.photoURL || fallbackPhoto;
           globalLoading = false;
           notifySubscribers();
@@ -151,10 +172,10 @@ const initAuth = () => {
         userDocUnsubscribe = onSnapshot(userDocRef, async (snapshot) => {
           if (snapshot.exists()) {
             const userData = snapshot.data();
-            globalRole = userData.role || 'user';
-            globalIsPremium = userData.isPremium || false;
+            globalRole = isSuperAdmin ? 'admin' : (userData.role || 'user');
+            globalIsPremium = isSuperAdmin ? true : (userData.isPremium || false);
             globalIsAdmin = globalRole === 'admin';
-            globalIsVerified = userData.isVerified || globalRole === 'admin' || globalRole === 'moderator' || globalRole === 'beta-tester' || user.emailVerified || false;
+            globalIsVerified = isSuperAdmin ? true : (userData.isVerified || globalRole === 'admin' || globalRole === 'moderator' || globalRole === 'beta-tester' || user.emailVerified || false);
             globalPhotoURL = userData.photoURL || fallbackPhoto;
 
             // Auto-verify if firebase auth says emailVerified but DB is false
