@@ -714,8 +714,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     if (files.length === 0) return;
 
     files.forEach(async (file) => {
-      if (file.size > 10 * 1024 * 1024) {
-        alert(t.chatFileTooLarge);
+      if (file.size > 30 * 1024 * 1024) {
+        alert(t.chatFileTooLarge || (lang === 'ru' ? 'Файл слишком большой (макс 30 МБ)' : 'File too large (max 30 MB)'));
+        return;
+      }
+
+      if (file.type.startsWith('video/')) {
+        const reader = new FileReader();
+        reader.onerror = () => {
+          alert(lang === 'ru' ? 'Ошибка чтения видеофайла' : 'Error reading video file');
+        };
+        reader.onload = () => {
+          if (reader.result) {
+            setSelectedFile({
+              url: reader.result as string,
+              name: file.name,
+              size: file.size,
+              fileType: file.type || 'video/mp4'
+            });
+          }
+        };
+        reader.readAsDataURL(file);
         return;
       }
 
@@ -738,20 +757,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 750 * 1024) {
-      alert(lang === 'ru' ? 'Файл слишком большой (макс. 750 КБ).' : 'File is too large (max 750 KB).');
+    if (file.size > 30 * 1024 * 1024) {
+      alert(lang === 'ru' ? 'Файл слишком большой (макс. 30 МБ).' : 'File is too large (max 30 MB).');
       e.target.value = '';
       return;
     }
 
     const reader = new FileReader();
+    reader.onerror = () => {
+      alert(lang === 'ru' ? 'Ошибка загрузки файла' : 'Failed to read file');
+      e.target.value = '';
+    };
     reader.onloadend = () => {
-      setSelectedFile({
-        url: reader.result as string,
-        name: file.name,
-        size: file.size,
-        fileType: file.type || 'application/octet-stream'
-      });
+      if (reader.result) {
+        setSelectedFile({
+          url: reader.result as string,
+          name: file.name,
+          size: file.size,
+          fileType: file.type || 'application/octet-stream'
+        });
+      }
     };
     reader.readAsDataURL(file);
     e.target.value = '';

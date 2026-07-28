@@ -27,9 +27,8 @@ export const isVideoMedia = (rawUrl: string): boolean => {
   if (!rawUrl) return false;
   const url = resolveMediaUrl(rawUrl);
   if (url.startsWith('data:video')) return true;
-  if (/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url)) return true;
-  if (/(youtube\.com|youtu\.be|vimeo\.com|vk\.com\/video|ipfs\.io\/ipfs|127\.0\.0\.1:8080\/ipfs|localhost:8080\/ipfs)/i.test(url)) return true;
-  if (url.includes('/ipfs/') || url.startsWith('ipfs://')) return true;
+  if (/\.(mp4|webm|ogg|mov|m4v|mkv|3gp|avi|flv)(\?.*)?$/i.test(url)) return true;
+  if (/(youtube\.com|youtu\.be|vimeo\.com|vk\.com\/video)/i.test(url)) return true;
   return false;
 };
 
@@ -47,11 +46,13 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   isProtected = false,
   title = "attachment"
 }) => {
+  const [videoError, setVideoError] = React.useState(false);
+
   if (!url) return null;
 
   const resolved = resolveMediaUrl(url);
   const ytEmbed = getYouTubeEmbedUrl(resolved);
-  const isVideo = isVideoMedia(url);
+  const isVideo = isVideoMedia(url) && !videoError;
 
   if (ytEmbed) {
     return (
@@ -75,6 +76,7 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
           controls
           playsInline
           preload="metadata"
+          onError={() => setVideoError(true)}
           className={`w-full ${maxHeight} object-contain rounded-xl mx-auto`}
         />
         <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg border border-red-500/30 text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-1">
