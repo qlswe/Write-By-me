@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUsers, UserData } from '../../hooks/useUsers';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
-import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Settings, Lock, Trash2, Ban, ImageOff, Plus, Mail } from 'lucide-react';
+import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Settings, Lock, Trash2, Ban, ImageOff, Plus, Mail, Smartphone, Copy, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -109,7 +109,10 @@ const UserListItem = React.memo(({
   deleteUser,
   toggleBlockUser,
   deleteAvatar,
-  currentUserId
+  currentUserId,
+  blockedDeviceIds = [],
+  blockDeviceId,
+  unblockDeviceId
 }: { 
   user: UserData, 
   isAdmin: boolean, 
@@ -125,16 +128,22 @@ const UserListItem = React.memo(({
   deleteUser: (uid: string) => void,
   toggleBlockUser: (uid: string, currentStatus?: boolean) => void,
   deleteAvatar: (uid: string) => void,
-  currentUserId?: string
+  currentUserId?: string,
+  blockedDeviceIds?: string[],
+  blockDeviceId?: (id: string) => void,
+  unblockDeviceId?: (id: string) => void
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmAvatar, setConfirmAvatar] = useState(false);
+  const [copiedDevice, setCopiedDevice] = useState(false);
+
+  const isDeviceBlocked = user.deviceId ? blockedDeviceIds.includes(user.deviceId) : false;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-[#15101e] border ${user.isBlocked ? 'border-red-500/50 bg-red-950/10' : 'border-[#3d2b4f]/30'} rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-[#ff4d4d]/30 transition-all hover:bg-[#251c35] relative ${openDropdownId === user.uid ? 'z-50' : 'z-10'}`}
+      className={`bg-[#15101e] border ${user.isBlocked || isDeviceBlocked ? 'border-red-500/50 bg-red-950/10' : 'border-[#3d2b4f]/30'} rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-[#ff4d4d]/30 transition-all hover:bg-[#251c35] relative ${openDropdownId === user.uid ? 'z-50' : 'z-10'}`}
     >
       <div className="flex items-center gap-4 sm:gap-5 flex-1 min-w-0">
         <button 
@@ -155,17 +164,43 @@ const UserListItem = React.memo(({
           }`} />
         </button>
         <div className="min-w-0 flex-1">
-          <h3 className="font-black text-white flex items-center gap-2 sm:gap-3 truncate uppercase tracking-tighter text-sm sm:text-base">
+          <h3 className="font-black text-white flex items-center gap-2 sm:gap-3 truncate uppercase tracking-tighter text-sm sm:text-base flex-wrap">
             <span className="truncate">{user.displayName}</span>
             {user.isBlocked && (
               <span className="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded-lg border border-red-500/30 uppercase tracking-widest font-black">
                 {lang === 'ru' ? 'Заблокирован' : 'Blocked'}
               </span>
             )}
+            {isDeviceBlocked && (
+              <span className="bg-purple-500/20 text-purple-300 text-[10px] px-2 py-0.5 rounded-lg border border-purple-500/40 uppercase tracking-widest font-black flex items-center gap-1">
+                <Smartphone size={10} />
+                {lang === 'ru' ? 'Устройство заблокировано' : 'Device Blocked'}
+              </span>
+            )}
             {user.isVerified && <UserCheck className="w-4.5 h-4.5 text-green-500 shrink-0" />}
             {user.role === 'admin' && <Shield className="w-4 h-4 text-red-500 shrink-0" />}
           </h3>
-          {isAdmin && user.email && <p className="text-[10px] text-gray-500 truncate font-black uppercase tracking-[0.2em] mt-1">{user.email}</p>}
+          <div className="flex items-center gap-3 flex-wrap mt-1">
+            {isAdmin && user.email && <p className="text-[10px] text-gray-500 truncate font-black uppercase tracking-[0.2em]">{user.email}</p>}
+            {isAdmin && user.deviceId && (
+              <div className="flex items-center gap-1 text-[10px] font-mono text-purple-400/90 bg-purple-950/40 border border-purple-500/30 px-2 py-0.5 rounded-lg">
+                <Smartphone size={10} className="text-purple-400 shrink-0" />
+                <span className="truncate max-w-[150px]">{user.deviceId}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(user.deviceId!);
+                    setCopiedDevice(true);
+                    setTimeout(() => setCopiedDevice(false), 2000);
+                  }}
+                  className="hover:text-white transition-colors ml-1 cursor-pointer shrink-0"
+                  title={lang === 'ru' ? 'Скопировать ID устройства' : 'Copy Device ID'}
+                >
+                  {copiedDevice ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -251,10 +286,33 @@ const UserListItem = React.memo(({
                   ? 'bg-red-600 text-white border-red-500'
                   : 'bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border-red-500/30'
               }`}
-              title={user.isBlocked ? (lang === 'ru' ? 'Разблокировать' : 'Unblock') : (lang === 'ru' ? 'Заблокировать' : 'Block')}
+              title={user.isBlocked ? (lang === 'ru' ? 'Разблокировать аккаунт' : 'Unblock Account') : (lang === 'ru' ? 'Заблокировать аккаунт' : 'Block Account')}
             >
               <Ban className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
+
+            {user.deviceId && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isDeviceBlocked) {
+                    unblockDeviceId?.(user.deviceId!);
+                  } else {
+                    blockDeviceId?.(user.deviceId!);
+                  }
+                }}
+                className={`p-2.5 sm:p-3 rounded-2xl transition-all active:scale-90 border shadow-lg cursor-pointer ${
+                  isDeviceBlocked
+                    ? 'bg-purple-600 text-white border-purple-500'
+                    : 'bg-purple-500/10 hover:bg-purple-600 text-purple-400 hover:text-white border-purple-500/30'
+                }`}
+                title={isDeviceBlocked 
+                  ? (lang === 'ru' ? 'Разблокировать устройство' : 'Unblock Device') 
+                  : (lang === 'ru' ? 'Заблокировать устройство (Device ID)' : 'Block Device ID')}
+              >
+                <Smartphone className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            )}
 
             {user.uid !== currentUserId && (
               confirmDelete ? (
@@ -314,6 +372,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
   const {
     users,
     blockedEmails,
+    blockedDeviceIds = [],
     loading,
     updateUserRole,
     updateUserVerification,
@@ -321,7 +380,9 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
     toggleBlockUser,
     deleteAvatar,
     blockEmail,
-    unblockEmail
+    unblockEmail,
+    blockDeviceId,
+    unblockDeviceId
   } = useUsers();
 
   const { isAdmin, role: currentRole, user: currentUser } = useAuth();
@@ -330,6 +391,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [newBlockEmailInput, setNewBlockEmailInput] = useState('');
+  const [newBlockDeviceIdInput, setNewBlockDeviceIdInput] = useState('');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [securityHidden, setSecurityHidden] = useState(false);
   const [protectedViewFeatureEnabled, setProtectedViewFeatureEnabled] = useState(true);
@@ -381,6 +443,14 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
     if (newBlockEmailInput.trim()) {
       blockEmail(newBlockEmailInput.trim());
       setNewBlockEmailInput('');
+    }
+  };
+
+  const handleAddBlockDeviceId = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newBlockDeviceIdInput.trim()) {
+      blockDeviceId(newBlockDeviceIdInput.trim());
+      setNewBlockDeviceIdInput('');
     }
   };
 
@@ -455,6 +525,69 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
                         onClick={() => unblockEmail(email)}
                         className="text-gray-400 hover:text-white transition-colors cursor-pointer"
                         title="Unblock email"
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Device ID Blocking Admin Tool */}
+          <div className="bg-[#15101e] border border-purple-500/30 rounded-3xl p-5 shadow-xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-purple-500/20 text-purple-400">
+                <Smartphone size={22} />
+              </div>
+              <div>
+                <h3 className="font-black text-white uppercase tracking-widest text-sm">
+                  {lang === 'ru' ? 'Блокировка по ID Устройства (Device ID)' : 'Device ID Blocking'}
+                </h3>
+                <p className="text-xs text-gray-400">
+                  {lang === 'ru' 
+                    ? 'Блокировка доступа по уникальному идентификатору устройства с сохранением в Firestore' 
+                    : 'Block access by unique device identifier with state saved in Firestore'}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddBlockDeviceId} className="flex gap-2">
+              <div className="relative flex-1">
+                <Smartphone className="absolute left-4 top-3.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={newBlockDeviceIdInput}
+                  onChange={(e) => setNewBlockDeviceIdInput(e.target.value)}
+                  placeholder="dev_1234abc..."
+                  className="w-full bg-[#251c35] border border-[#3d2b4f] rounded-2xl py-3 pl-11 pr-4 text-xs text-white placeholder-gray-500 font-mono focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!newBlockDeviceIdInput.trim()}
+                className="bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-widest px-5 py-3 rounded-2xl transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <Plus size={16} />
+                {lang === 'ru' ? 'Заблокировать ID' : 'Block Device'}
+              </button>
+            </form>
+
+            {blockedDeviceIds.length > 0 && (
+              <div className="pt-2 border-t border-[#3d2b4f]/50">
+                <p className="text-[11px] font-bold text-purple-300 uppercase tracking-widest mb-2">
+                  {lang === 'ru' ? 'Заблокированные устройства:' : 'Blocked devices:'} ({blockedDeviceIds.length})
+                </p>
+                <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar">
+                  {blockedDeviceIds.map((devId) => (
+                    <span key={devId} className="inline-flex items-center gap-2 bg-purple-950/50 text-purple-300 border border-purple-500/40 px-3 py-1 rounded-xl text-xs font-mono">
+                      <Smartphone size={12} className="shrink-0 text-purple-400" />
+                      <span className="truncate max-w-[180px]">{devId}</span>
+                      <button
+                        onClick={() => unblockDeviceId(devId)}
+                        className="text-gray-400 hover:text-white transition-colors cursor-pointer shrink-0"
+                        title="Unblock device ID"
                       >
                         <X size={14} />
                       </button>
@@ -612,6 +745,9 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
               toggleBlockUser={toggleBlockUser}
               deleteAvatar={deleteAvatar}
               currentUserId={currentUser?.uid}
+              blockedDeviceIds={blockedDeviceIds}
+              blockDeviceId={blockDeviceId}
+              unblockDeviceId={unblockDeviceId}
             />
           ))
         )}

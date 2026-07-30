@@ -21,7 +21,7 @@ export const sanitizeContent = (dirty: string) => {
   let text = dirty;
   if (isCensored) {
     const badWords = ['fuck', 'shit', 'bitch', 'asshole', 'dick', 'cunt'];
-    const rx = new RegExp(badWords.join('|'), 'gi');
+    const rx = new RegExp(`\\b(${badWords.join('|')})\\b`, 'gi');
     text = text.replace(rx, '***');
   }
 

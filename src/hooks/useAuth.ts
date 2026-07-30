@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
 import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { getDeviceId } from '../utils/deviceId';
 
 // --- GLOBAL SINGLETON STATE ---
 let globalUser: User | null = null;
@@ -10,9 +11,26 @@ let globalIsAdmin = false;
 let globalRole: 'admin' | 'moderator' | 'user' | 'beta-tester' = 'user';
 let globalIsPremium = false;
 let globalIsVerified = false;
+let globalIsBlocked = false;
 let globalPhotoURL: string | null = null;
 let authInitialized = false;
 let userDocUnsubscribe: (() => void) | null = null;
+let blockedDevicesList: string[] = [];
+let blockedEmailsList: string[] = [];
+let userIsBlockedDoc = false;
+
+const checkBlockingState = () => {
+  const currentDevId = getDeviceId();
+  const userEmail = globalUser?.email?.toLowerCase() || '';
+  const isDevBlocked = currentDevId ? blockedDevicesList.includes(currentDevId) : false;
+  const isEmailBlocked = userEmail ? blockedEmailsList.includes(userEmail) : false;
+  
+  const newBlockedState = userIsBlockedDoc || isDevBlocked || isEmailBlocked;
+  if (globalIsBlocked !== newBlockedState) {
+    globalIsBlocked = newBlockedState;
+    notifySubscribers();
+  }
+};
 
 // Global cache to maintain stable object reference for user Proxy
 let cachedProxiedUser: User | null = null;
@@ -58,16 +76,39 @@ const getProxiedUser = (): User | null => {
 
 const subscribers = new Set<() => void>();
 
+let notifyScheduled = false;
 const notifySubscribers = () => {
-  subscribers.forEach(fn => fn());
+  if (notifyScheduled) return;
+  notifyScheduled = true;
+  queueMicrotask(() => {
+    notifyScheduled = false;
+    subscribers.forEach(fn => fn());
+  });
 };
 
 const initAuth = () => {
   if (authInitialized) return;
   authInitialized = true;
 
-  getRedirectResult(auth).catch((error) => {
-    console.error("Error getting redirect result", error);
+  queueMicrotask(() => {
+    getRedirectResult(auth).catch((error) => {
+      console.warn("Redirect result check:", error);
+    });
+  });
+
+  // Listen to blocked_devices and blocked_emails settings in real-time
+  onSnapshot(doc(db, 'settings', 'blocked_devices'), (docSnap) => {
+    if (docSnap.exists()) {
+      blockedDevicesList = docSnap.data().deviceIds || [];
+      checkBlockingState();
+    }
+  });
+
+  onSnapshot(doc(db, 'settings', 'blocked_emails'), (docSnap) => {
+    if (docSnap.exists()) {
+      blockedEmailsList = docSnap.data().emails || [];
+      checkBlockingState();
+    }
   });
 
   onAuthStateChanged(auth, async (user) => {
@@ -111,6 +152,8 @@ const initAuth = () => {
         const isSuperAdmin = isSuperAdminEmail(user.email);
         const userDoc = await getDoc(userDocRef);
 
+        const currentDeviceId = getDeviceId();
+
         if (!userDoc.exists()) {
           const initialRole = isSuperAdmin ? 'admin' : 'user';
           const initialVerified = isSuperAdmin ? true : (user.emailVerified || false);
@@ -123,6 +166,7 @@ const initAuth = () => {
             role: initialRole,
             isVerified: initialVerified,
             isPremium: initialPremium,
+            deviceId: currentDeviceId,
             createdAt: new Date().toISOString(),
             lastLogin: new Date().toISOString()
           };
@@ -135,6 +179,7 @@ const initAuth = () => {
             role: initialRole,
             isVerified: initialVerified,
             isPremium: initialPremium,
+            deviceId: currentDeviceId,
             createdAt: new Date().toISOString(),
           });
 
@@ -148,6 +193,17 @@ const initAuth = () => {
         } else {
           // Warm up synchronous state immediately with the fetched doc
           const userData = userDoc.data();
+
+          // Sync current deviceId to user doc if not present or changed
+          if (userData.deviceId !== currentDeviceId) {
+            try {
+              await setDoc(userDocRef, { deviceId: currentDeviceId, lastLogin: new Date().toISOString() }, { merge: true });
+              await setDoc(doc(db, 'public_profiles', user.uid), { deviceId: currentDeviceId }, { merge: true });
+            } catch (err) {
+              console.warn("Could not sync deviceId to Firestore:", err);
+            }
+          }
+
           if (isSuperAdmin && (userData.role !== 'admin' || !userData.isVerified || !userData.isPremium)) {
             userData.role = 'admin';
             userData.isVerified = true;
@@ -177,6 +233,8 @@ const initAuth = () => {
             globalIsAdmin = globalRole === 'admin';
             globalIsVerified = isSuperAdmin ? true : (userData.isVerified || globalRole === 'admin' || globalRole === 'moderator' || globalRole === 'beta-tester' || user.emailVerified || false);
             globalPhotoURL = userData.photoURL || fallbackPhoto;
+            userIsBlockedDoc = !!userData.isBlocked;
+            checkBlockingState();
 
             // Auto-verify if firebase auth says emailVerified but DB is false
             if (user.emailVerified && !userData.isVerified) {
@@ -256,16 +314,26 @@ export function useAuth() {
     try {
       await signInWithPopup(auth, provider);
       localStorage.setItem('auth_session_start_time', Date.now().toString());
-    } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
+    } catch (err: any) {
+      console.warn("Google Auth error:", err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setIsLoggingIn(false);
         return;
       }
-      setError(error.message);
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
-        try {
-          await signInWithRedirect(auth, provider);
-        } catch (redirectError: any) {
-          setError(redirectError.message);
+      const isIframe = window.self !== window.top;
+      if (isIframe) {
+        setError(err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request'
+          ? "POPUP_BLOCKED_IFRAME"
+          : (err.message || "Google sign-in restricted in preview frame. Please open in a new tab."));
+      } else {
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+          try {
+            await signInWithRedirect(auth, provider);
+          } catch (redirectError: any) {
+            setError(redirectError.message);
+          }
+        } else {
+          setError(err.message || "Error signing in with Google");
         }
       }
     } finally {
@@ -328,6 +396,8 @@ export function useAuth() {
     role: globalRole, 
     isPremium: globalIsPremium,
     isVerified: globalIsVerified,
+    isBlocked: globalIsBlocked,
+    deviceId: getDeviceId(),
     error, 
     loginWithGoogle, 
     loginWithEmail, 

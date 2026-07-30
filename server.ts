@@ -56,8 +56,11 @@ async function startServer() {
 
       if (fileName && fileName.includes(".")) {
         const parts = fileName.split(".");
-        ext = parts[parts.length - 1].toLowerCase();
+        ext = parts[parts.length - 1].toLowerCase().replace(/[^a-z0-9]/g, "");
+      } else {
+        ext = ext.replace(/[^a-z0-9]/g, "");
       }
+      if (!ext) ext = "bin";
 
       const safeName = `media_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
       const filePath = path.join(uploadsDir, safeName);
@@ -128,15 +131,18 @@ async function startServer() {
       }
 
       // Lazy-initialization inside handler
-      const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyAR9BUXDrXdzwYvFbihIKqNVicbFGZ6pVQ';
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build'
+      const apiKey = process.env.GEMINI_API_KEY;
+      let ai: GoogleGenAI | null = null;
+      if (apiKey) {
+        ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build'
+            }
           }
-        }
-      });
+        });
+      }
 
       const formattedHistory = history.map((h: { role: string; content: string }) => ({
         role: h.role === 'assistant' ? 'model' : 'user',
@@ -148,29 +154,31 @@ async function startServer() {
       let responseText = "";
       let lastError: any = null;
 
-      for (const modelName of modelsToTry) {
-        try {
-          console.log(`Attempting generation with model: ${modelName}`);
-          const response = await ai.models.generateContent({
-            model: modelName,
-            contents: [
-              ...formattedHistory,
-              { role: 'user', parts: [{ text: prompt }] }
-            ],
-            config: {
-              systemInstruction: systemInstruction,
-              temperature: 0.7,
-            }
-          });
+      if (ai) {
+        for (const modelName of modelsToTry) {
+          try {
+            console.log(`Attempting generation with model: ${modelName}`);
+            const response = await ai.models.generateContent({
+              model: modelName,
+              contents: [
+                ...formattedHistory,
+                { role: 'user', parts: [{ text: prompt }] }
+              ],
+              config: {
+                systemInstruction: systemInstruction,
+                temperature: 0.7,
+              }
+            });
 
-          if (response && response.text) {
-            responseText = response.text;
-            console.log(`Successfully generated content using model: ${modelName}`);
-            break;
+            if (response && response.text) {
+              responseText = response.text;
+              console.log(`Successfully generated content using model: ${modelName}`);
+              break;
+            }
+          } catch (err: any) {
+            console.warn(`Model ${modelName} failed or was unavailable:`, err.message || err);
+            lastError = err;
           }
-        } catch (err: any) {
-          console.warn(`Model ${modelName} failed or was unavailable:`, err.message || err);
-          lastError = err;
         }
       }
 

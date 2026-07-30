@@ -891,19 +891,19 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
           </div>
         </div>
       ) : (
-        <div className="bg-[#15101e]/60 border border-[#3d2b4f]/20 rounded-[2.5rem] p-8 sm:p-12 text-center mb-12 backdrop-blur-md">
-          <MessageSquare size={44} className="mx-auto text-[#ff4d4d]/60 mb-5" />
+        <div className="bg-[#15101e]/80 border border-[#3d2b4f]/60 rounded-3xl p-6 sm:p-10 text-center mb-12 backdrop-blur-md shadow-2xl max-w-xl mx-auto">
+          <MessageSquare size={40} className="mx-auto text-[#ff4d4d]/70 mb-4" />
           <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
             {lang === 'ru' ? 'Авторизация' : 'Authorization'}
           </h4>
-          <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-xs max-w-md mx-auto">
+          <p className="text-gray-300 mb-6 font-bold uppercase tracking-wider text-xs max-w-sm mx-auto leading-relaxed">
             {t.loginToComment || "Войдите, чтобы оставить комментарий"}
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-            <GoogleLoginButton lang={lang} />
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center w-full max-w-md mx-auto">
+            <GoogleLoginButton lang={lang} className="w-full sm:w-auto" size="md" />
             <button
               onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/50 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-wider text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl cursor-pointer"
             >
               <Mail size={16} />
               {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}

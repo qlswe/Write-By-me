@@ -784,19 +784,19 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
 
   if (!user) {
     return (
-      <div className="bg-[#15101e]/60 border border-[#3d2b4f]/20 rounded-[2.5rem] p-8 sm:p-12 text-center max-w-2xl mx-auto my-12 backdrop-blur-md">
-        <Lock className="mx-auto text-[#ff4d4d]/60 mb-5" size={44} />
+      <div className="bg-[#15101e]/80 border border-[#3d2b4f]/60 rounded-3xl p-6 sm:p-10 text-center max-w-xl mx-auto my-12 backdrop-blur-md shadow-2xl">
+        <Lock className="mx-auto text-[#ff4d4d]/70 mb-4" size={40} />
         <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
           {lang === 'ru' ? 'Авторизация' : 'Authorization'}
         </h4>
-        <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-xs max-w-md mx-auto">
+        <p className="text-gray-300 mb-6 font-bold uppercase tracking-wider text-xs max-w-sm mx-auto leading-relaxed">
           {(t as any).radioAuthRequired || (lang === 'ru' ? 'Доступ к радиостанциям и эфирам возможен только после входа в аккаунт.' : 'Access to the radio stations is only possible after logging in.')}
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-          <GoogleLoginButton lang={lang} />
+        <div className="flex flex-col sm:flex-row gap-3 items-center justify-center w-full max-w-md mx-auto">
+          <GoogleLoginButton lang={lang} className="w-full sm:w-auto" size="md" />
           <button
             onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/50 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-wider text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl cursor-pointer"
           >
             <Mail size={16} />
             {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}

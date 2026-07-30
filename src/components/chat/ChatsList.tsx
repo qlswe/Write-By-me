@@ -325,21 +325,21 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
 
   if (!user) {
     return (
-      <div className="bg-[#15101e]/60 border border-[#3d2b4f]/20 rounded-[2.5rem] p-8 sm:p-12 text-center max-w-2xl mx-auto my-12 backdrop-blur-md">
-        <User className="mx-auto text-[#ff4d4d]/60 mb-5" size={44} />
-        <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
+      <div className="bg-[#15101e]/80 border border-[#3d2b4f]/60 rounded-3xl p-5 sm:p-8 text-center w-full max-w-md mx-auto my-4 backdrop-blur-md shadow-2xl">
+        <User className="mx-auto text-[#ff4d4d]/70 mb-3" size={38} />
+        <h4 className="text-lg font-black text-white uppercase tracking-wider mb-1.5">
           {lang === 'ru' ? 'Авторизация' : 'Authorization'}
         </h4>
-        <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-xs max-w-md mx-auto">
+        <p className="text-gray-300 mb-6 font-bold uppercase tracking-wider text-[11px] max-w-xs mx-auto leading-relaxed">
           {(t as any).chatLoginToView || t.chatsLoginToView || (lang === 'ru' ? 'Войдите, чтобы просмотреть чаты' : 'Log in to view chats')}
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-          <GoogleLoginButton lang={lang} />
+        <div className="flex flex-col gap-3 items-stretch w-full max-w-xs mx-auto">
+          <GoogleLoginButton lang={lang} className="w-full" size="md" />
           <button
             onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#3d2b4f]/50 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-wider text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-lg cursor-pointer"
           >
-            <Mail size={16} />
+            <Mail size={15} />
             {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
           </button>
         </div>

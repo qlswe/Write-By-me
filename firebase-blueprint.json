@@ -144,6 +144,23 @@
         "createdAt": { "type": "number" }
       },
       "required": ["id", "userId", "title", "prompt", "response", "createdAt"]
+    },
+    "admin_audit_logs": {
+      "title": "Admin Audit Log",
+      "description": "Log of critical administrator actions (user deletions, bans, role changes, content removal).",
+      "type": "object",
+      "properties": {
+        "adminUid": { "type": "string" },
+        "adminEmail": { "type": "string" },
+        "adminName": { "type": "string" },
+        "action": { "type": "string" },
+        "actionType": { "type": "string", "enum": ["user_management", "content_management", "system"] },
+        "targetId": { "type": "string" },
+        "targetName": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["adminUid", "action", "actionType"]
     }
   },
   "firestore": {
@@ -174,6 +191,10 @@
     "/ai_memories/{memoryId}": {
       "schema": "ai_memories",
       "description": "Saved important AI interactions."
+    },
+    "/admin_audit_logs/{logId}": {
+      "schema": "admin_audit_logs",
+      "description": "Audit history of admin actions."
     }
   }
 }

@@ -1,16 +1,31 @@
 {
   "name": "Министерство Ахахи",
   "short_name": "Aha Ministry",
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0d0b14",
+  "orientation": "any",
+  "background_color": "#15101e",
   "theme_color": "#ff4d4d",
-  "description": "Приложение Министерства Ахахи",
+  "description": "Приложение Министерства Ахахи с поддержкой офлайн режима и мгновенной установкой",
+  "categories": ["social", "entertainment", "utilities"],
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64",
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
+    },
+    {
+      "src": "https://www.svgrepo.com/show/530438/shield.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://www.svgrepo.com/show/530438/shield.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw, Terminal } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw, Terminal, Smartphone } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
@@ -8,6 +8,8 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { ProfileModal } from '../ui/ProfileModal';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { EmailLoginModal } from '../ui/EmailLoginModal';
+import { PwaInstallModal } from '../ui/PwaInstallModal';
+import { usePWA } from '../../hooks/usePWA';
 import { sdk } from '../../sdk';
 
 interface HeaderProps {
@@ -47,11 +49,13 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const t = translations[lang];
   const { user, loginWithGoogle, logout } = useAuth();
+  const { canInstall, isInstalled, installPWA } = usePWA();
   const [profileOpen, setProfileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [emailLoginModalOpen, setEmailLoginModalOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const { trackRender } = usePerfLogger('Header');
   trackRender();
 
@@ -180,20 +184,6 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </AnimatePresence>
             </div>
-
-            {toggleLowPerfMode && (
-              <button 
-                onClick={toggleLowPerfMode}
-                className={`hidden lg:flex items-center justify-center p-1.5 rounded-lg border transition-colors ${
-                  lowPerfMode 
-                    ? 'bg-yellow-400/10 border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/20' 
-                    : 'bg-[#15101e] border-[#3d2b4f] text-gray-300 hover:text-white hover:border-[#ff4d4d]'
-                }`}
-                title={lowPerfMode ? (t.lowPerfModeOn || "Performance Mode: ON") : (t.lowPerfModeOff || "Performance Mode: OFF")}
-              >
-                {lowPerfMode ? <ZapOff size={18} /> : <Zap size={18} />}
-              </button>
-            )}
 
             <button 
               onClick={() => sdk.reloadApp()}
@@ -362,42 +352,15 @@ export const Header: React.FC<HeaderProps> = ({
             
             <div className="p-6 border-t border-[#3d2b4f] mt-auto shrink-0 flex flex-col gap-4">
               {/* Quick Actions Grid for Mobile */}
-              <div className="grid grid-cols-2 gap-2.5 sm:hidden">
+              <div className="sm:hidden">
                 <button 
                   onClick={() => { sdk.reloadApp(); setMobileMenuOpen(false); }}
-                  className="flex items-center justify-center gap-2 bg-[#15101e] border border-[#3d2b4f] text-gray-200 p-3 rounded-xl text-xs font-bold hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all"
+                  className="w-full flex items-center justify-center gap-2 bg-[#15101e] border border-[#3d2b4f] text-gray-200 p-3 rounded-xl text-xs font-bold hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all"
                 >
                   <RotateCw size={16} className="text-[#ff4d4d]" />
                   <span>{lang === 'ru' ? 'Обновить' : 'Reload'}</span>
                 </button>
-
-                {onToggleConsole && (
-                  <button 
-                    onClick={() => { onToggleConsole(); setMobileMenuOpen(false); }}
-                    className={`flex items-center justify-center gap-2 border p-3 rounded-xl text-xs font-bold transition-all ${
-                      isConsoleOpen
-                        ? 'bg-[#ff4d4d] border-white/30 text-white shadow-[0_0_10px_rgba(255,77,77,0.4)]'
-                        : 'bg-[#15101e] border-[#3d2b4f] text-gray-200 hover:text-[#ff4d4d]'
-                    }`}
-                  >
-                    <Terminal size={16} className={isConsoleOpen ? 'text-white' : 'text-[#ff4d4d]'} />
-                    <span>{lang === 'ru' ? 'Консоль' : 'Console'}</span>
-                  </button>
-                )}
               </div>
-              {toggleLowPerfMode && (
-                <button 
-                  onClick={toggleLowPerfMode}
-                  className={`w-full flex items-center justify-center gap-2 bg-[#15101e] border border-[#3d2b4f] px-4 py-3 rounded-xl font-bold transition-colors ${
-                    lowPerfMode 
-                      ? 'text-yellow-400 hover:bg-yellow-400/10' 
-                      : 'text-gray-300 hover:bg-[#251c35]'
-                  }`}
-                >
-                  {lowPerfMode ? <ZapOff size={20} /> : <Zap size={20} />}
-                  {lowPerfMode ? (t.lowPerfModeOn || "Performance Mode: ON") : (t.lowPerfModeOff || "Performance Mode: OFF")}
-                </button>
-              )}
 
               {user ? (
                 <>
@@ -470,6 +433,11 @@ export const Header: React.FC<HeaderProps> = ({
       <EmailLoginModal
         isOpen={emailLoginModalOpen}
         onClose={() => setEmailLoginModalOpen(false)}
+        lang={lang}
+      />
+      <PwaInstallModal
+        isOpen={pwaModalOpen}
+        onClose={() => setPwaModalOpen(false)}
         lang={lang}
       />
     </>

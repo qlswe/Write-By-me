@@ -28,6 +28,8 @@ import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
+import { AdminAuditLogs } from '../admin/AdminAuditLogs';
+import { logAdminAction } from '../../utils/auditLogger';
 
 interface TelemetryLog {
   id: string;
@@ -82,6 +84,7 @@ const getSectionLabel = (sec: string, lang: Language) => {
 
 export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
   const { user, role, loading: authLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'audit_logs'>('telemetry');
   const [logs, setLogs] = useState<TelemetryLog[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -282,6 +285,10 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
     if (window.confirm(lang === 'ru' ? 'Вы уверены, что хотите удалить эту запись телеметрии?' : 'Delete this telemetry log?')) {
       try {
         await deleteDoc(doc(db, 'telemetry', id));
+        logAdminAction(user, 'DELETE_TELEMETRY_LOG', 'system', {
+          targetId: id,
+          details: `Удалена запись телеметрии ${id}`
+        });
       } catch (err) {
         console.error('Failed to delete log:', err);
       }
@@ -298,6 +305,10 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
         batch.delete(docSnap.ref);
       });
       await batch.commit();
+
+      logAdminAction(user, 'CLEAR_TELEMETRY', 'system', {
+        details: `Очищено ${snap.docs.length} записей телеметрии`
+      });
     } catch (err) {
       console.error('Failed to purge logs:', err);
     } finally {
@@ -372,19 +383,19 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   if (!user) {
     return (
-      <div className="bg-[#15101e]/60 border border-[#3d2b4f]/20 rounded-[2.5rem] p-8 sm:p-12 text-center max-w-2xl mx-auto my-12 backdrop-blur-md">
-        <Lock className="mx-auto text-[#ff4d4d]/60 mb-5" size={44} />
+      <div className="bg-[#15101e]/80 border border-[#3d2b4f]/60 rounded-3xl p-6 sm:p-10 text-center max-w-xl mx-auto my-12 backdrop-blur-md shadow-2xl">
+        <Lock className="mx-auto text-[#ff4d4d]/70 mb-4" size={40} />
         <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
           {lang === 'ru' ? 'Авторизация' : 'Authorization'}
         </h4>
-        <p className="text-white/60 mb-8 font-black uppercase tracking-widest text-xs max-w-md mx-auto">
+        <p className="text-gray-300 mb-6 font-bold uppercase tracking-wider text-xs max-w-sm mx-auto leading-relaxed">
           {lang === 'ru' ? 'Войдите в систему, чтобы получить доступ к разделу телеметрии.' : 'Please log in to get access to telemetry section.'}
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-          <GoogleLoginButton lang={lang} />
+        <div className="flex flex-col sm:flex-row gap-3 items-center justify-center w-full max-w-md mx-auto">
+          <GoogleLoginButton lang={lang} className="w-full sm:w-auto" size="md" />
           <button
             onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/50 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-wider text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl cursor-pointer"
           >
             <Mail size={16} />
             {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
@@ -448,7 +459,37 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
         </div>
       </div>
 
-      {/* Filter Controls Bar */}
+      {/* Sub Tab Switcher */}
+      <div className="flex items-center gap-2 bg-[#15101e] border border-[#3d2b4f]/60 p-1.5 rounded-2xl w-fit">
+        <button
+          onClick={() => setActiveTab('telemetry')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            activeTab === 'telemetry'
+              ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg font-black'
+              : 'text-gray-400 hover:text-white hover:bg-[#251c35]'
+          }`}
+        >
+          <BarChart2 size={16} />
+          {lang === 'ru' ? 'Телеметрия и Визиты' : 'Telemetry & Engagement'}
+        </button>
+        <button
+          onClick={() => setActiveTab('audit_logs')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            activeTab === 'audit_logs'
+              ? 'bg-[#a855f7] text-white shadow-lg font-black'
+              : 'text-gray-400 hover:text-white hover:bg-[#251c35]'
+          }`}
+        >
+          <ShieldCheck size={16} />
+          {lang === 'ru' ? 'Журнал Действий Админов' : 'Admin Audit Log'}
+        </button>
+      </div>
+
+      {activeTab === 'audit_logs' ? (
+        <AdminAuditLogs lang={lang} />
+      ) : (
+        <>
+          {/* Filter Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1e152d] border border-[#3d2b4f] p-3 rounded-2xl">
         <div className="flex items-center gap-2">
           <Filter size={15} className="text-[#ff4d4d] ml-1" />
@@ -1000,6 +1041,8 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
           </div>
         )}
       </AnimatePresence>
+        </>
+      )}
     </div>
   );
 };

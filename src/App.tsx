@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar, Shield, Target, BarChart2, Tv } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar, Shield, Target, BarChart2, Smartphone } from 'lucide-react';
 import { collection, addDoc, doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { sdk } from './sdk';
 import { decrypt } from './utils/encryption';
 import { dbQueryCore } from './utils/dbQueryCore';
+import { usePWA } from './hooks/usePWA';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -26,6 +27,7 @@ import { ProfileModal } from './components/ui/ProfileModal';
 import { ContentModal } from './components/ui/ContentModal';
 import { FeedbackModal } from './components/ui/FeedbackModal';
 import { PerformanceWidget } from './components/ui/PerformanceWidget';
+import { PwaInstallModal } from './components/ui/PwaInstallModal';
 import { TheoryEditor } from './components/sections/TheoryEditor';
 import { BlogEditor } from './components/sections/BlogEditor';
 import { EventEditor } from './components/sections/EventEditor';
@@ -61,9 +63,8 @@ const AhiAiSection = lazy(() => import('./components/sections/AhiAiSection').the
 const SdkSettingsSection = lazy(() => import('./components/sections/SdkSettingsSection').then(m => ({ default: m.SdkSettingsSection })));
 const CanvasSection = lazy(() => import('./components/sections/CanvasSection').then(m => ({ default: m.CanvasSection })));
 const TelemetrySection = lazy(() => import('./components/sections/TelemetrySection').then(m => ({ default: m.TelemetrySection })));
-const StreamsSection = lazy(() => import('./components/sections/StreamsSection').then(m => ({ default: m.StreamsSection })));
 
-type Section = 'home' | 'streams' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry';
 
 let hasPrintedStopWarning = false;
 
@@ -74,7 +75,7 @@ export default function App() {
   const { trackRender } = usePerfLogger('App');
   trackRender();
 
-  const { user, loading: authLoading, error: authError } = useAuth();
+  const { user, loading: authLoading, error: authError, isBlocked, deviceId } = useAuth();
   
   const [isLoading, setIsLoading] = useState(true);
   const [section, setSection] = useState<Section>('home');
@@ -105,6 +106,8 @@ export default function App() {
   const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role } = useUserData('ru');
   const { theories, blogPosts, events, promoCodes } = useContent();
   const { i18n } = useTranslation();
+  const { canInstall, isInstalled, installPWA } = usePWA();
+  const [homePwaModalOpen, setHomePwaModalOpen] = useState(false);
 
   useEffect(() => {
     if (i18n.language !== lang) {
@@ -489,7 +492,6 @@ export default function App() {
 
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
-    { id: 'streams' as const, label: (t as any).navStreams || (lang === 'ru' ? 'Стримы' : 'Streams'), icon: Tv },
     { id: 'forum' as const, label: t.navForum, icon: Activity },
     { id: 'canvas' as const, label: t.navCanvas || 'Aha Canvas', icon: Palette },
     { id: 'theories', label: t.navTheories, icon: Book },
@@ -647,6 +649,46 @@ export default function App() {
 
   const isAuthorizedForMaintenance = role === 'admin' || role === 'moderator' || role === 'beta-tester';
 
+  if (isBlocked && role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-[#0d0b14] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans">
+        <Starfield lowPerfMode={false} />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-[#15101e] border border-red-500/40 rounded-3xl p-8 text-center space-y-6 shadow-[0_0_50px_rgba(239,68,68,0.2)] relative z-10"
+        >
+          <div className="w-16 h-16 bg-red-500/20 border border-red-500/40 text-red-500 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+            <Shield size={32} />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black uppercase tracking-tight text-white">
+              {lang === 'ru' ? 'Доступ заблокирован' : 'Access Blocked'}
+            </h1>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              {lang === 'ru'
+                ? 'Ваш аккаунт или устройство было заблокировано администратором платформы.'
+                : 'Your account or device identifier has been blocked by platform administrators.'}
+            </p>
+          </div>
+          {deviceId && (
+            <div className="bg-[#251c35] border border-[#3d2b4f] p-3 rounded-2xl text-left space-y-1">
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block">
+                {lang === 'ru' ? 'ID вашего устройства:' : 'Your Device ID:'}
+              </span>
+              <code className="text-xs font-mono text-purple-300 break-all block">{deviceId}</code>
+            </div>
+          )}
+          <p className="text-[11px] text-gray-500 italic">
+            {lang === 'ru'
+              ? 'Если вы считаете, что это ошибка, обратитесь в службу поддержки.'
+              : 'If you believe this is an error, please contact support.'}
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (!isLoading && maintenanceMode && !isAuthorizedForMaintenance) {
     return <MaintenanceScreen lang={lang as Language} />;
   }
@@ -766,6 +808,49 @@ export default function App() {
                       </button>
                     )}
                   </div>
+
+                  {/* Web-App Installation Card on Main Screen */}
+                  <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-[#15101e] border border-[#ff4d4d]/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 bg-[#ff4d4d]/10 border border-[#ff4d4d]/30 rounded-xl text-[#ff4d4d] flex items-center justify-center shrink-0">
+                        <Smartphone size={24} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <h3 className="font-black text-white text-base tracking-tight">
+                            {lang === 'ru' ? 'Приложение Web-App' : 'Web-App Application'}
+                          </h3>
+                          {isInstalled ? (
+                            <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                              {lang === 'ru' ? 'Установлено' : 'Installed'}
+                            </span>
+                          ) : (
+                            <span className="bg-[#ff4d4d]/20 text-[#ff4d4d] border border-[#ff4d4d]/30 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                              PWA
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 leading-snug">
+                          {lang === 'ru'
+                            ? 'Установите веб-приложение на ваш рабочий стол или главный экран смартфона для быстрого доступа'
+                            : 'Install Web-App directly on your home screen or desktop for instant access'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (canInstall) {
+                          await installPWA();
+                        } else {
+                          setHomePwaModalOpen(true);
+                        }
+                      }}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-[#ff4d4d] hover:bg-[#ff6666] text-[#15101e] font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-[#ff4d4d]/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95 shrink-0"
+                    >
+                      <Smartphone size={16} />
+                      <span>{canInstall ? (lang === 'ru' ? 'Установить Web-App' : 'Install Web-App') : (lang === 'ru' ? 'Инструкция Web-App' : 'Web-App Guide')}</span>
+                    </button>
+                  </div>
                   
                   {isEditingHome ? (
                     <div className="mb-6 space-y-4">
@@ -832,10 +917,6 @@ export default function App() {
                     )}
                   </div>
                 </div>
-              )}
-
-              {section === 'streams' && (
-                <StreamsSection lang={lang as Language} role={role} />
               )}
 
               {section === 'forum' && (
@@ -1075,6 +1156,12 @@ export default function App() {
         isOpen={isConsoleOpen}
         onClose={() => setIsConsoleOpen(false)}
         onToggle={() => setIsConsoleOpen(prev => !prev)}
+      />
+
+      <PwaInstallModal 
+        isOpen={homePwaModalOpen} 
+        onClose={() => setHomePwaModalOpen(false)} 
+        lang={lang as Language} 
       />
     </div>
   );

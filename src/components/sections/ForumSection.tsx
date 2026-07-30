@@ -20,6 +20,7 @@ import { decryptImage, encryptImage } from '../../utils/encryption';
 import { generatePrefixedId } from '../../utils/idGenerator';
 import { sdk } from '../../sdk';
 import { uploadMediaFile } from '../../utils/mediaUploader';
+import { logAdminAction } from '../../utils/auditLogger';
 
 
 interface ForumThread {
@@ -796,9 +797,16 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
 
   const confirmDeleteThread = async () => {
     if (!threadToDelete) return;
+    const threadItem = threads.find(t => t.id === threadToDelete);
     try {
       await deleteDoc(doc(db, 'forum_threads', threadToDelete));
       if (selectedThread?.id === threadToDelete) setSelectedThread(null);
+
+      logAdminAction(user, 'DELETE_FORUM_THREAD', 'content_management', {
+        targetId: threadToDelete,
+        targetName: threadItem?.title || threadToDelete,
+        details: `Тема форума "${threadItem?.title || threadToDelete}" была удалена`
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `forum_threads/${threadToDelete}`);
     } finally {
@@ -817,6 +825,12 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
           commentCount: Math.max(0, (threadDoc.data().commentCount || 1) - 1)
         });
       }
+
+      logAdminAction(user, 'DELETE_FORUM_COMMENT', 'content_management', {
+        targetId: commentToDelete.id,
+        targetName: commentToDelete.threadId,
+        details: `Комментарий к теме ${commentToDelete.threadId} был удален`
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `forum_comments/${commentToDelete.id}`);
     } finally {

@@ -1237,31 +1237,33 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
           </AnimatePresence>
 
           {/* Left Sidebar for Desktop: chats list */}
-          <div className="hidden md:flex flex-col w-[320px] bg-[#09050d] border-r border-[#311c47] shrink-0">
-            {/* Header */}
-            <div className="p-4 bg-[#07040a] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20">
-              <span className="font-black text-xs text-[#ff4d4d] uppercase tracking-widest flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                {lang === 'ru' ? 'Мои Чаты' : 'My Chats'}
-              </span>
-              <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">
-                {lang === 'ru' ? 'Онлайн' : 'Online'}
-              </span>
+          {user && (
+            <div className="hidden md:flex flex-col w-[320px] bg-[#09050d] border-r border-[#311c47] shrink-0">
+              {/* Header */}
+              <div className="p-4 bg-[#07040a] border-b border-[#311c47] flex items-center justify-between shrink-0 z-20">
+                <span className="font-black text-xs text-[#ff4d4d] uppercase tracking-widest flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  {lang === 'ru' ? 'Мои Чаты' : 'My Chats'}
+                </span>
+                <span className="text-[9px] font-mono text-gray-500 uppercase tracking-widest">
+                  {lang === 'ru' ? 'Онлайн' : 'Online'}
+                </span>
+              </div>
+              
+              {/* Chats List container */}
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <ChatsList 
+                  lang={lang} 
+                  onSelectChat={(id, name, photo) => {
+                    if (onSelectChat) {
+                      onSelectChat(id, name, photo);
+                    }
+                  }}
+                  activeChatId={recipientId}
+                />
+              </div>
             </div>
-            
-            {/* Chats List container */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-              <ChatsList 
-                lang={lang} 
-                onSelectChat={(id, name, photo) => {
-                  if (onSelectChat) {
-                    onSelectChat(id, name, photo);
-                  }
-                }}
-                activeChatId={recipientId}
-              />
-            </div>
-          </div>
+          )}
 
           {/* Right main conversation area */}
           <div className="flex-1 flex flex-col h-full bg-[#0d0714] relative">
@@ -1556,7 +1558,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
               <GoogleLoginButton lang={lang} className="w-full" />
               <button
                 onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
-                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl cursor-pointer"
               >
                 <Mail size={14} />
                 {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
