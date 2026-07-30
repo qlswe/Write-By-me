@@ -54,26 +54,30 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
         updatedAt: new Date().toISOString()
       };
 
+      let createdDocId = '';
+      if (theory?.id) {
+        await setDoc(doc(db, 'theories', theory.id), {
+          ...theoryData,
+          createdAt: theory.createdAt || new Date().toISOString()
+        });
+      } else {
+        const newDoc = await addDoc(collection(db, 'theories'), {
+          ...theoryData,
+          createdAt: new Date().toISOString()
+        });
+        createdDocId = newDoc.id;
+      }
+
       if (vercelFallback.isAvailable()) {
-        const uid = theory?.id || generatePrefixedId('th') + '_' + user?.uid;
-        const payload = {
+        try {
+          const uid = theory?.id || createdDocId || generatePrefixedId('th') + '_' + user?.uid;
+          const payload = {
             ...theoryData,
             id: uid,
             createdAt: theory?.createdAt || new Date().toISOString()
-        };
-        await vercelFallback.lpush('theories', JSON.stringify(payload));
-      } else {
-        if (theory?.id) {
-          await setDoc(doc(db, 'theories', theory.id), {
-            ...theoryData,
-            createdAt: theory.createdAt || new Date().toISOString()
-          });
-        } else {
-          await addDoc(collection(db, 'theories'), {
-            ...theoryData,
-            createdAt: new Date().toISOString()
-          });
-        }
+          };
+          await vercelFallback.lpush('theories', JSON.stringify(payload));
+        } catch (e) {}
       }
       onClose();
     } catch (error) {

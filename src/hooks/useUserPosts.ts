@@ -104,13 +104,15 @@ export function useUserPosts(userId?: string) {
       };
       if (pixelsSnapshot) postData.pixelsSnapshot = pixelsSnapshot;
 
+      const docRef = await addDoc(collection(db, 'user_posts'), postData);
+      const payload = { ...postData, id: docRef.id };
+
       if (vercelFallback.isAvailable()) {
-          const payload = { ...postData, id: generatePrefixedId('post') + '_' + user.uid };
+        try {
           await vercelFallback.lpush(`user_posts:${user.uid}`, JSON.stringify(payload));
-          setPosts(prev => [payload as any, ...prev]);
-      } else {
-          await addDoc(collection(db, 'user_posts'), postData);
+        } catch (e) {}
       }
+      setPosts(prev => [payload as any, ...prev.filter(p => p.id !== payload.id)]);
     } catch (error) {
       console.error("Error creating post:", error);
     }

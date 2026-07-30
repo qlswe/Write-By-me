@@ -171,7 +171,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
 
             {selectedPost.mediaUrl && (
               <div className="mb-8">
-                <MediaViewer url={selectedPost.mediaUrl} maxHeight="max-h-[550px]" title={selectedPost.title[lang] || 'Blog Media'} />
+                <MediaViewer url={selectedPost.mediaUrl} maxHeight="max-h-[550px]" title={selectedPost.title[lang] || 'Blog Media'} isCompact={false} />
               </div>
             )}
 

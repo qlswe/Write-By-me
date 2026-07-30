@@ -19,6 +19,7 @@ import { ChronicleSection } from './ChronicleSection';
 import { decryptImage, encryptImage } from '../../utils/encryption';
 import { generatePrefixedId } from '../../utils/idGenerator';
 import { sdk } from '../../sdk';
+import { uploadMediaFile } from '../../utils/mediaUploader';
 
 
 interface ForumThread {
@@ -460,15 +461,13 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
     setIsUploading(true);
     try {
       if (file.type.startsWith('video/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setAttachedImage(reader.result as string);
-          setIsUploading(false);
-        };
-        reader.readAsDataURL(file);
+        const uploadedUrl = await uploadMediaFile(file);
+        setAttachedImage(uploadedUrl);
+        setIsUploading(false);
       } else {
         const base64 = await compressAndGetBase64(file);
-        setAttachedImage(base64);
+        const uploadedUrl = await uploadMediaFile(base64, file.name);
+        setAttachedImage(uploadedUrl);
         setIsUploading(false);
       }
       addSecurityLog('SUCCESS', `Media file loaded successfully: ${file.name}`);
@@ -633,45 +632,33 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
 
       let threadId = generatePrefixedId('thread') + '_' + user.uid;
 
+      const threadRef = await addDoc(collection(db, 'forum_threads'), {
+        ...threadData,
+        createdAt: serverTimestamp()
+      });
+      
+      threadId = threadRef.id;
+
+      await addDoc(collection(db, 'forum_comments'), {
+        threadId: threadRef.id,
+        content: (t as any).forumBotWelcome || "Welcome to the forum!",
+        authorId: 'system-bot',
+        authorName: 'Aha Bot',
+        authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
+        createdAt: serverTimestamp(),
+        upvotes: [],
+        downvotes: [],
+        isBot: true
+      });
+
+      const payload = { ...threadData, id: threadId, createdAt: new Date().toISOString() };
       if (vercelFallback.isAvailable()) {
-        const payload = { ...threadData, id: threadId, createdAt: new Date().toISOString() };
-        await vercelFallback.lpush('forum_threads', JSON.stringify(payload));
-        
-        const botPayload = {
-          id: generatePrefixedId('bot'),
-          threadId: threadId,
-          content: (t as any).forumBotWelcome || "Welcome to the forum!",
-          authorId: 'system-bot',
-          authorName: 'Aha Bot',
-          authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
-          createdAt: new Date().toISOString(),
-          upvotes: [],
-          downvotes: [],
-          isBot: true
-        };
-        await vercelFallback.lpush(`forum_comments:${threadId}`, JSON.stringify(botPayload));
-
-        setThreads(prev => [payload, ...prev]);
-      } else {
-        const threadRef = await addDoc(collection(db, 'forum_threads'), {
-          ...threadData,
-          createdAt: serverTimestamp()
-        });
-        
-        threadId = threadRef.id;
-
-        await addDoc(collection(db, 'forum_comments'), {
-          threadId: threadRef.id,
-          content: (t as any).forumBotWelcome || "Welcome to the forum!",
-          authorId: 'system-bot',
-          authorName: 'Aha Bot',
-          authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
-          createdAt: serverTimestamp(),
-          upvotes: [],
-          downvotes: [],
-          isBot: true
-        });
+        try {
+          await vercelFallback.lpush('forum_threads', JSON.stringify(payload));
+        } catch (e) {}
       }
+
+      setThreads(prev => [payload, ...prev.filter(t => t.id !== threadId)]);
 
       setIsCreating(false);
       setNewTitle('');
@@ -716,24 +703,25 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
         ...(replyToId ? { replyToId } : {})
       };
 
+      const docRef = await addDoc(collection(db, 'forum_comments'), {
+        ...commentData,
+        createdAt: serverTimestamp()
+      });
+      
+      const commentId = docRef.id;
+      const payload = { ...commentData, id: commentId, createdAt: new Date().toISOString() };
+
+      const threadRef = doc(db, 'forum_threads', selectedThread.id);
+      await updateDoc(threadRef, {
+        commentCount: increment(1)
+      }).catch(() => {});
+
       if (vercelFallback.isAvailable()) {
-        const commentId = generatePrefixedId('comment') + '_' + user.uid;
-        const payload = { ...commentData, id: commentId, createdAt: new Date().toISOString() };
-        await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
-        setComments(prev => [...prev, payload]);
-        // Update local state for comment count since we can't do a partial update easily in KV array
-        setSelectedThread(prev => prev ? { ...prev, commentCount: (prev.commentCount || 0) + 1 } : null);
-      } else {
-        await addDoc(collection(db, 'forum_comments'), {
-          ...commentData,
-          createdAt: serverTimestamp()
-        });
-        
-        const threadRef = doc(db, 'forum_threads', selectedThread.id);
-        await updateDoc(threadRef, {
-          commentCount: increment(1)
-        });
+        try {
+          await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
+        } catch (e) {}
       }
+      setComments(prev => [...prev.filter(c => c.id !== commentId), payload]);
       
       if (replyToId) {
         setReplyContent('');
@@ -773,22 +761,25 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
               pokeCount: 0
             };
 
+            const botRef = await addDoc(collection(db, 'forum_comments'), {
+              ...botCommentData,
+              createdAt: serverTimestamp()
+            });
+            
+            const botCommentId = botRef.id;
+            const payload = { ...botCommentData, id: botCommentId, createdAt: new Date().toISOString() };
+
+            const threadRef = doc(db, 'forum_threads', selectedThread.id);
+            await updateDoc(threadRef, {
+              commentCount: increment(1)
+            }).catch(() => {});
+
             if (vercelFallback.isAvailable()) {
-              const botCommentId = generatePrefixedId('comment_bot');
-              const payload = { ...botCommentData, id: botCommentId, createdAt: new Date().toISOString() };
-              await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
-              setComments(prev => [...prev, payload]);
-            } else {
-              await addDoc(collection(db, 'forum_comments'), {
-                ...botCommentData,
-                createdAt: serverTimestamp()
-              });
-              
-              const threadRef = doc(db, 'forum_threads', selectedThread.id);
-              await updateDoc(threadRef, {
-                commentCount: increment(1)
-              });
+              try {
+                await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
+              } catch (e) {}
             }
+            setComments(prev => [...prev.filter(c => c.id !== botCommentId), payload]);
           } catch (e) {
             console.error('Aha Bot failed to reply:', e);
           }
@@ -1183,6 +1174,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                     isProtected={protectedViewFeatureEnabled && (selectedThread.isProtected !== false)}
                     title={selectedThread.title}
                     maxHeight="max-h-[500px]"
+                    isCompact={false}
                   />
                 </div>
               )}
@@ -1566,6 +1558,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                         isProtected={protectedViewFeatureEnabled && (thread.isProtected !== false)}
                         title={thread.title}
                         maxHeight="max-h-[220px]"
+                        isCompact={true}
                       />
                     </div>
                   )}

@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { createRoot, Root } from 'react-dom/client';
 import DOMPurify from 'dompurify';
 import { ShieldCheck, X, Activity, EyeOff, Lock, ShieldAlert, Trash2, Siren, Ghost, FileText, FileWarning, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
+import { KuruVideoPlayer } from '../ui/KuruVideoPlayer';
 
 // Global threat counter
 let globalThreatsBlocked = parseInt(localStorage.getItem('aha_threats_blocked') || '0', 10);
@@ -57,7 +59,41 @@ export const sanitizeContent = (dirty: string) => {
 // 2. Safe HTML Component
 export const SafeHtml: React.FC<{ html: string; className?: string }> = ({ html, className }) => {
   const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const rootsRef = useRef<Root[]>([]);
   const cleanHtml = sanitizeContent(html);
+
+  useEffect(() => {
+    // Unmount old roots when html updates
+    rootsRef.current.forEach(r => {
+      try { r.unmount(); } catch (e) {}
+    });
+    rootsRef.current = [];
+
+    if (!containerRef.current) return;
+
+    // Upgrade all <video> elements in the HTML to KuruVideoPlayer
+    const videoElements = Array.from(containerRef.current.querySelectorAll('video'));
+    videoElements.forEach(vid => {
+      const src = vid.getAttribute('src') || vid.querySelector('source')?.getAttribute('src');
+      if (src) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'my-4 w-full';
+        vid.parentNode?.replaceChild(wrapper, vid);
+
+        const root = createRoot(wrapper);
+        root.render(<KuruVideoPlayer src={src} isCompact={false} />);
+        rootsRef.current.push(root);
+      }
+    });
+
+    return () => {
+      rootsRef.current.forEach(r => {
+        try { r.unmount(); } catch (e) {}
+      });
+      rootsRef.current = [];
+    };
+  }, [cleanHtml]);
 
   const handleClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).tagName === 'IMG') {
@@ -69,7 +105,7 @@ export const SafeHtml: React.FC<{ html: string; className?: string }> = ({ html,
 
   return (
     <>
-      <div className={className} dangerouslySetInnerHTML={{ __html: cleanHtml }} onClick={handleClick} />
+      <div ref={containerRef} className={className} dangerouslySetInnerHTML={{ __html: cleanHtml }} onClick={handleClick} />
       
       {/* Fullscreen Image Modal for SafeHtml */}
       {typeof document !== 'undefined' && document.body && createPortal(

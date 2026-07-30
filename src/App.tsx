@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar, Shield, Target, BarChart2 } from 'lucide-react';
+import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar, Shield, Target, BarChart2, Tv } from 'lucide-react';
 import { collection, addDoc, doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
@@ -56,15 +56,14 @@ const ChronicleSection = lazy(() => import('./components/sections/ChronicleSecti
 const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
 const UsersList = lazy(() => import('./components/admin/UsersList').then(m => ({ default: m.UsersList })));
 const ChatsList = lazy(() => import('./components/chat/ChatsList').then(m => ({ default: m.ChatsList })));
-const AhiRadio = lazy(() => import('./components/sections/AhiRadio').then(m => ({ default: m.AhiRadio })));
 const ForumSection = lazy(() => import('./components/sections/ForumSection').then(m => ({ default: m.ForumSection })));
 const AhiAiSection = lazy(() => import('./components/sections/AhiAiSection').then(m => ({ default: m.AhiAiSection })));
 const SdkSettingsSection = lazy(() => import('./components/sections/SdkSettingsSection').then(m => ({ default: m.SdkSettingsSection })));
 const CanvasSection = lazy(() => import('./components/sections/CanvasSection').then(m => ({ default: m.CanvasSection })));
 const TelemetrySection = lazy(() => import('./components/sections/TelemetrySection').then(m => ({ default: m.TelemetrySection })));
-const NatoGameSection = lazy(() => import('./components/sections/NatoGameSection').then(m => ({ default: m.NatoGameSection })));
+const StreamsSection = lazy(() => import('./components/sections/StreamsSection').then(m => ({ default: m.StreamsSection })));
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'radio' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry' | 'nato';
+type Section = 'home' | 'streams' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry';
 
 let hasPrintedStopWarning = false;
 
@@ -479,19 +478,27 @@ export default function App() {
     }
   }, [toast]);
 
+  useEffect(() => {
+    if (section === 'telemetry' && role !== 'admin') {
+      setSection('home');
+    }
+    if ((section as string) === 'radio' || (section as string) === 'nato') {
+      setSection('home');
+    }
+  }, [section, role]);
+
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
+    { id: 'streams' as const, label: (t as any).navStreams || (lang === 'ru' ? 'Стримы' : 'Streams'), icon: Tv },
     { id: 'forum' as const, label: t.navForum, icon: Activity },
     { id: 'canvas' as const, label: t.navCanvas || 'Aha Canvas', icon: Palette },
-    { id: 'radio' as const, label: t.navRadio, icon: Radio },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
     { id: 'chronicle' as const, label: t.navChronicle || 'Хроника событий', icon: Calendar },
     { id: 'promo' as const, label: t.navPromo || 'Промокоды', icon: Ticket },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
-    { id: 'nato' as const, label: (t as any).navNatoGame || 'Инструктор НАТО 🪖', icon: Target },
     { id: 'users' as const, label: t.navUsers, icon: User },
-    { id: 'telemetry' as const, label: lang === 'ru' ? 'Статистика' : 'Telemetry', icon: BarChart2 },
+    ...(role === 'admin' ? [{ id: 'telemetry' as const, label: lang === 'ru' ? 'Статистика' : 'Telemetry', icon: BarChart2 }] : []),
     { id: 'sdk', label: 'SDK', icon: Settings },
     { id: 'ai', label: 'Aha AI', icon: Sparkles },
   ];
@@ -827,6 +834,10 @@ export default function App() {
                 </div>
               )}
 
+              {section === 'streams' && (
+                <StreamsSection lang={lang as Language} role={role} />
+              )}
+
               {section === 'forum' && (
                 <ForumSection 
                   lang={lang as Language}
@@ -843,10 +854,6 @@ export default function App() {
 
               {section === 'canvas' && (
                 <CanvasSection lang={lang as Language} />
-              )}
-
-              {section === 'radio' && (
-                <AhiRadio lang={lang as Language} />
               )}
 
               {section === 'ai' && (
@@ -950,10 +957,7 @@ export default function App() {
                   </div>
                 </div>
               )}
-              {section === 'nato' && (
-                <NatoGameSection lang={lang as Language} />
-              )}
-              {section === 'telemetry' && (
+              {section === 'telemetry' && role === 'admin' && (
                 <TelemetrySection lang={lang as Language} />
               )}
             </Suspense>

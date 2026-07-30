@@ -9,6 +9,7 @@ import { translations, Language } from '../../data/translations';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { generatePrefixedId } from '../../utils/idGenerator';
 import { MediaViewer, isVideoMedia, getYouTubeEmbedUrl } from '../ui/MediaViewer';
+import { uploadMediaFile } from '../../utils/mediaUploader';
 
 interface BlogEditorProps {
   post?: any;
@@ -42,7 +43,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
   
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 50 * 1024 * 1024) {
@@ -50,12 +51,15 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
       return;
     }
     setIsUploading(true);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setMediaUrl(reader.result as string);
+    try {
+      const uploadedUrl = await uploadMediaFile(file);
+      setMediaUrl(uploadedUrl);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Error uploading file');
+    } finally {
       setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleApplyUrl = () => {
@@ -101,26 +105,30 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
         updatedAt: new Date().toISOString()
       };
 
+      let createdDocId = '';
+      if (post?.id) {
+        await setDoc(doc(db, 'blogPosts', post.id), {
+          ...postData,
+          createdAt: post.createdAt || new Date().toISOString()
+        });
+      } else {
+        const newDoc = await addDoc(collection(db, 'blogPosts'), {
+          ...postData,
+          createdAt: new Date().toISOString()
+        });
+        createdDocId = newDoc.id;
+      }
+
       if (vercelFallback.isAvailable()) {
-        const uid = post?.id || generatePrefixedId('blog') + '_' + user?.uid;
-        const payload = {
+        try {
+          const uid = post?.id || createdDocId || generatePrefixedId('blog') + '_' + user?.uid;
+          const payload = {
             ...postData,
             id: uid,
             createdAt: post?.createdAt || new Date().toISOString()
-        };
-        await vercelFallback.lpush('blogPosts', JSON.stringify(payload));
-      } else {
-        if (post?.id) {
-          await setDoc(doc(db, 'blogPosts', post.id), {
-            ...postData,
-            createdAt: post.createdAt || new Date().toISOString()
-          });
-        } else {
-          await addDoc(collection(db, 'blogPosts'), {
-            ...postData,
-            createdAt: new Date().toISOString()
-          });
-        }
+          };
+          await vercelFallback.lpush('blogPosts', JSON.stringify(payload));
+        } catch (e) {}
       }
       onClose();
     } catch (error) {

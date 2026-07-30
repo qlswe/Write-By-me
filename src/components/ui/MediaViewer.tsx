@@ -1,6 +1,7 @@
 import React from 'react';
 import { decryptImage } from '../../utils/encryption';
-import { Video, Image as ImageIcon, ShieldAlert, ShieldCheck, Download } from 'lucide-react';
+import { Video, Image as ImageIcon, ShieldAlert, ShieldCheck, Download, Disc } from 'lucide-react';
+import { KuruVideoPlayer } from './KuruVideoPlayer';
 
 interface MediaViewerProps {
   url?: string;
@@ -8,11 +9,12 @@ interface MediaViewerProps {
   maxHeight?: string;
   isProtected?: boolean;
   title?: string;
+  isCompact?: boolean;
 }
 
 export const resolveMediaUrl = (rawUrl: string): string => {
   if (!rawUrl) return '';
-  let url = rawUrl.startsWith('enc:') ? decryptImage(rawUrl) : rawUrl;
+  let url = (rawUrl.startsWith('enc:') || rawUrl.startsWith('IMG_AES:')) ? decryptImage(rawUrl) : rawUrl;
   
   // Resolve ipfs:// protocol to local IPFS node / public gateway fallback
   if (url.startsWith('ipfs://')) {
@@ -26,17 +28,38 @@ export const resolveMediaUrl = (rawUrl: string): string => {
 export const isVideoMedia = (rawUrl: string): boolean => {
   if (!rawUrl) return false;
   const url = resolveMediaUrl(rawUrl);
+  if (url.startsWith('data:image')) return false;
   if (url.startsWith('data:video')) return true;
   if (/\.(mp4|webm|ogg|mov|m4v|mkv|3gp|avi|flv)(\?.*)?$/i.test(url)) return true;
   if (/(youtube\.com|youtu\.be|vimeo\.com|vk\.com\/video)/i.test(url)) return true;
+  if (url.includes('/uploads/') || url.includes('media_')) {
+    if (!/\.(png|jpg|jpeg|webp|gif|svg)(\?.*)?$/i.test(url)) return true;
+  }
   return false;
 };
 
-export const getYouTubeEmbedUrl = (rawUrl: string): string | null => {
+export const getEmbedVideoUrl = (rawUrl: string): { type: string; url: string } | null => {
   if (!rawUrl) return null;
   const url = resolveMediaUrl(rawUrl);
-  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
-  return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=0&rel=0` : null;
+  
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i);
+  if (ytMatch) {
+    return { type: 'YouTube', url: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=0&rel=0&modestbranding=1` };
+  }
+  
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/i);
+  if (vimeoMatch) {
+    return { type: 'Vimeo', url: `https://player.vimeo.com/video/${vimeoMatch[1]}` };
+  }
+
+  return null;
+};
+
+export const getYouTubeEmbedUrl = (rawUrl: string): string | null => {
+  const embed = getEmbedVideoUrl(rawUrl);
+  return embed ? embed.url : null;
 };
 
 export const MediaViewer: React.FC<MediaViewerProps> = ({
@@ -44,21 +67,32 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   className = "",
   maxHeight = "max-h-[500px]",
   isProtected = false,
-  title = "attachment"
+  title = "attachment",
+  isCompact = false
 }) => {
   const [videoError, setVideoError] = React.useState(false);
 
   if (!url) return null;
 
   const resolved = resolveMediaUrl(url);
-  const ytEmbed = getYouTubeEmbedUrl(resolved);
+  const embedInfo = getEmbedVideoUrl(resolved);
   const isVideo = isVideoMedia(url) && !videoError;
 
-  if (ytEmbed) {
+  if (embedInfo) {
     return (
-      <div className={`relative w-full aspect-video rounded-2xl overflow-hidden border border-[#3d2b4f]/40 shadow-2xl bg-black ${className}`}>
+      <div className={`relative w-full aspect-video rounded-2xl overflow-hidden border border-[#3d2b4f]/60 shadow-2xl bg-black ${className}`}>
+        {/* Kuru Video Custom Embed Header Badge */}
+        <div className="absolute top-3 left-3 pointer-events-none z-20">
+          <div className="bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-red-500/40 text-xs font-black uppercase tracking-wider text-red-400 flex items-center gap-2 shadow-lg">
+            <Disc size={15} className="text-red-400 animate-[spin_3s_linear_infinite]" />
+            <span className="bg-gradient-to-r from-red-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
+              Kuru Video • {embedInfo.type}
+            </span>
+          </div>
+        </div>
+
         <iframe
-          src={ytEmbed}
+          src={embedInfo.url}
           title={title}
           className="w-full h-full border-0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -70,20 +104,14 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
 
   if (isVideo) {
     return (
-      <div className={`relative w-full rounded-2xl overflow-hidden border border-[#3d2b4f]/40 shadow-2xl bg-black/90 p-1 ${className}`}>
-        <video
-          src={resolved}
-          controls
-          playsInline
-          preload="metadata"
-          onError={() => setVideoError(true)}
-          className={`w-full ${maxHeight} object-contain rounded-xl mx-auto`}
-        />
-        <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-lg border border-red-500/30 text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-1">
-          <Video size={12} />
-          <span>{url.includes('ipfs') ? 'IPFS Видео' : 'Видео'}</span>
-        </div>
-      </div>
+      <KuruVideoPlayer
+        src={resolved}
+        className={className}
+        maxHeight={maxHeight}
+        title={title}
+        isCompact={isCompact}
+        onError={() => setVideoError(true)}
+      />
     );
   }
 

@@ -14,6 +14,7 @@ import { CachedAvatar } from '../ui/CachedAvatar';
 import { useUsers } from '../../hooks/useUsers';
 import { Paintbrush, Paperclip, Search, Shuffle, Download } from 'lucide-react';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { uploadMediaFile } from '../../utils/mediaUploader';
 import { sdk } from '../../sdk';
 
 const STICKERS = ['👋', '👍', '❤️', '😂', '🔥', '🎉', '👀', '💯'];
@@ -714,33 +715,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     if (files.length === 0) return;
 
     files.forEach(async (file) => {
-      if (file.size > 30 * 1024 * 1024) {
-        alert(t.chatFileTooLarge || (lang === 'ru' ? 'Файл слишком большой (макс 30 МБ)' : 'File too large (max 30 MB)'));
+      if (file.size > 50 * 1024 * 1024) {
+        alert(t.chatFileTooLarge || (lang === 'ru' ? 'Файл слишком большой (макс 50 МБ)' : 'File too large (max 50 MB)'));
         return;
       }
 
       if (file.type.startsWith('video/')) {
-        const reader = new FileReader();
-        reader.onerror = () => {
-          alert(lang === 'ru' ? 'Ошибка чтения видеофайла' : 'Error reading video file');
-        };
-        reader.onload = () => {
-          if (reader.result) {
-            setSelectedFile({
-              url: reader.result as string,
-              name: file.name,
-              size: file.size,
-              fileType: file.type || 'video/mp4'
-            });
-          }
-        };
-        reader.readAsDataURL(file);
+        try {
+          const uploadedUrl = await uploadMediaFile(file);
+          setSelectedFile({
+            url: uploadedUrl,
+            name: file.name,
+            size: file.size,
+            fileType: file.type || 'video/mp4'
+          });
+        } catch (err: any) {
+          alert(err.message || (lang === 'ru' ? 'Ошибка загрузки видеофайла' : 'Error uploading video file'));
+        }
         return;
       }
 
       try {
         const compressed = await compressImageFile(file, 800, 800, 0.65);
-        setSelectedImages(prev => [...prev, compressed]);
+        const uploadedUrl = await uploadMediaFile(compressed, file.name);
+        setSelectedImages(prev => [...prev, uploadedUrl]);
       } catch (err) {
         console.error('Error compressing uploaded image:', err);
       }
@@ -753,32 +751,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 30 * 1024 * 1024) {
-      alert(lang === 'ru' ? 'Файл слишком большой (макс. 30 МБ).' : 'File is too large (max 30 MB).');
+    if (file.size > 50 * 1024 * 1024) {
+      alert(lang === 'ru' ? 'Файл слишком большой (макс. 50 МБ).' : 'File is too large (max 50 MB).');
       e.target.value = '';
       return;
     }
 
-    const reader = new FileReader();
-    reader.onerror = () => {
-      alert(lang === 'ru' ? 'Ошибка загрузки файла' : 'Failed to read file');
-      e.target.value = '';
-    };
-    reader.onloadend = () => {
-      if (reader.result) {
-        setSelectedFile({
-          url: reader.result as string,
-          name: file.name,
-          size: file.size,
-          fileType: file.type || 'application/octet-stream'
-        });
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const uploadedUrl = await uploadMediaFile(file);
+      setSelectedFile({
+        url: uploadedUrl,
+        name: file.name,
+        size: file.size,
+        fileType: file.type || 'application/octet-stream'
+      });
+    } catch (err: any) {
+      alert(err.message || (lang === 'ru' ? 'Ошибка загрузки файла' : 'Failed to upload file'));
+    }
     e.target.value = '';
   };
 

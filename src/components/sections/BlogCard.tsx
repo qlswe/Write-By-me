@@ -99,7 +99,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
       
       {post.mediaUrl && (
         <div className="mb-4 overflow-hidden rounded-2xl">
-          <MediaViewer url={post.mediaUrl} maxHeight="max-h-[220px]" title={post.title[lang] || 'Blog Media'} />
+          <MediaViewer url={post.mediaUrl} maxHeight="max-h-[220px]" title={post.title[lang] || 'Blog Media'} isCompact={true} />
         </div>
       )}
 

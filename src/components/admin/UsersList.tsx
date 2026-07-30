@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUsers, UserData } from '../../hooks/useUsers';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
-import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Settings, Lock } from 'lucide-react';
+import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Settings, Lock, Trash2, Ban, ImageOff, Plus, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -106,6 +106,9 @@ const UserListItem = React.memo(({
   onOpenChat, 
   updateUserRole,
   updateUserVerification,
+  deleteUser,
+  toggleBlockUser,
+  deleteAvatar,
   currentUserId
 }: { 
   user: UserData, 
@@ -119,18 +122,24 @@ const UserListItem = React.memo(({
   onOpenChat: (uid: string, name: string, photoURL?: string) => void, 
   updateUserRole: (uid: string, role: 'admin' | 'user' | 'moderator' | 'beta-tester') => void,
   updateUserVerification: (uid: string, isVerified: boolean) => void,
+  deleteUser: (uid: string) => void,
+  toggleBlockUser: (uid: string, currentStatus?: boolean) => void,
+  deleteAvatar: (uid: string) => void,
   currentUserId?: string
 }) => {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmAvatar, setConfirmAvatar] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-[#ff4d4d]/30 transition-all hover:bg-[#251c35] relative ${openDropdownId === user.uid ? 'z-50' : 'z-10'}`}
+      className={`bg-[#15101e] border ${user.isBlocked ? 'border-red-500/50 bg-red-950/10' : 'border-[#3d2b4f]/30'} rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-[#ff4d4d]/30 transition-all hover:bg-[#251c35] relative ${openDropdownId === user.uid ? 'z-50' : 'z-10'}`}
     >
       <div className="flex items-center gap-4 sm:gap-5 flex-1 min-w-0">
         <button 
           onClick={() => onViewProfile?.(user)}
-          className="relative shrink-0 hover:scale-110 transition-transform"
+          className="relative shrink-0 hover:scale-105 transition-transform cursor-pointer"
         >
           <CachedAvatar
             src={user.photoURL}
@@ -148,6 +157,11 @@ const UserListItem = React.memo(({
         <div className="min-w-0 flex-1">
           <h3 className="font-black text-white flex items-center gap-2 sm:gap-3 truncate uppercase tracking-tighter text-sm sm:text-base">
             <span className="truncate">{user.displayName}</span>
+            {user.isBlocked && (
+              <span className="bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded-lg border border-red-500/30 uppercase tracking-widest font-black">
+                {lang === 'ru' ? 'Заблокирован' : 'Blocked'}
+              </span>
+            )}
             {user.isVerified && <UserCheck className="w-4.5 h-4.5 text-green-500 shrink-0" />}
             {user.role === 'admin' && <Shield className="w-4 h-4 text-red-500 shrink-0" />}
           </h3>
@@ -158,7 +172,7 @@ const UserListItem = React.memo(({
       <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-wrap justify-end">
         <button
           onClick={() => onViewProfile?.(user)}
-          className="p-2.5 sm:p-3 bg-[#3d2b4f]/30 hover:bg-[#ff4d4d] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#ff4d4d]/30 shadow-lg"
+          className="p-2.5 sm:p-3 bg-[#3d2b4f]/30 hover:bg-[#ff4d4d] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#ff4d4d]/30 shadow-lg cursor-pointer"
           title={t.adminProfile}
         >
           <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -166,7 +180,7 @@ const UserListItem = React.memo(({
         {user.uid !== currentUserId && (
           <button
             onClick={() => onOpenChat(user.uid, user.displayName, user.photoURL)}
-            className="p-2.5 sm:p-3 bg-[#3d2b4f]/30 hover:bg-[#ff4d4d] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#ff4d4d]/30 shadow-lg"
+            className="p-2.5 sm:p-3 bg-[#3d2b4f]/30 hover:bg-[#ff4d4d] text-white rounded-2xl transition-all active:scale-90 border border-transparent hover:border-[#ff4d4d]/30 shadow-lg cursor-pointer"
             title={t.sendMessage}
           >
             <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -176,7 +190,7 @@ const UserListItem = React.memo(({
         {isModeratorOrAdmin && (
           <button
             onClick={() => updateUserVerification(user.uid, !user.isVerified)}
-            className={`p-2.5 sm:p-3 rounded-2xl transition-all active:scale-90 border shadow-lg ${
+            className={`p-2.5 sm:p-3 rounded-2xl transition-all active:scale-90 border shadow-lg cursor-pointer ${
               user.isVerified 
                 ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500 hover:text-white' 
                 : 'bg-[#3d2b4f]/30 hover:bg-green-500/10 text-white border-transparent hover:bg-green-500 hover:text-[#0d0b14]'
@@ -187,16 +201,109 @@ const UserListItem = React.memo(({
           </button>
         )}
 
-        {isAdmin && (
-          <RoleSelector 
-            user={user} 
-            updateUserRole={updateUserRole} 
-            t={t} 
-            lang={lang}
-            isOpen={openDropdownId === user.uid}
-            onToggle={() => setOpenDropdownId(openDropdownId === user.uid ? null : user.uid)}
-            onClose={() => setOpenDropdownId(null)}
-          />
+        {/* Admin Actions: Delete Avatar, Block, Delete User */}
+        {isAdmin && !user.isBot && (
+          <>
+            {user.photoURL && (
+              confirmAvatar ? (
+                <div className="flex items-center gap-1 bg-amber-950/80 border border-amber-500/50 p-1 rounded-2xl animate-fadeIn">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteAvatar(user.uid);
+                      setConfirmAvatar(false);
+                    }}
+                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase px-2.5 py-1.5 rounded-xl transition-all cursor-pointer"
+                  >
+                    {lang === 'ru' ? 'Удалить' : 'Delete'}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmAvatar(false);
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-white cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmAvatar(true);
+                  }}
+                  className="p-2.5 sm:p-3 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-white rounded-2xl transition-all active:scale-90 border border-amber-500/30 shadow-lg cursor-pointer"
+                  title={lang === 'ru' ? 'Удалить аватарку' : 'Delete Avatar'}
+                >
+                  <ImageOff className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              )
+            )}
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleBlockUser(user.uid, user.isBlocked);
+              }}
+              className={`p-2.5 sm:p-3 rounded-2xl transition-all active:scale-90 border shadow-lg cursor-pointer ${
+                user.isBlocked
+                  ? 'bg-red-600 text-white border-red-500'
+                  : 'bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border-red-500/30'
+              }`}
+              title={user.isBlocked ? (lang === 'ru' ? 'Разблокировать' : 'Unblock') : (lang === 'ru' ? 'Заблокировать' : 'Block')}
+            >
+              <Ban className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
+            {user.uid !== currentUserId && (
+              confirmDelete ? (
+                <div className="flex items-center gap-1.5 bg-red-950/90 border border-red-500/50 p-1 rounded-2xl animate-fadeIn">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteUser(user.uid);
+                      setConfirmDelete(false);
+                    }}
+                    className="bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase px-3 py-2 rounded-xl transition-all cursor-pointer shadow-md"
+                  >
+                    {lang === 'ru' ? 'Да, удалить' : 'Confirm'}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmDelete(false);
+                    }}
+                    className="p-2 bg-[#3d2b4f]/40 hover:bg-[#3d2b4f] text-gray-300 rounded-xl cursor-pointer"
+                    title="Cancel"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmDelete(true);
+                  }}
+                  className="p-2.5 sm:p-3 bg-red-500/20 hover:bg-red-600 text-red-400 hover:text-white rounded-2xl transition-all active:scale-90 border border-red-500/40 shadow-lg cursor-pointer"
+                  title={lang === 'ru' ? 'Удалить пользователя' : 'Delete User'}
+                >
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              )
+            )}
+
+            <RoleSelector 
+              user={user} 
+              updateUserRole={updateUserRole} 
+              t={t} 
+              lang={lang}
+              isOpen={openDropdownId === user.uid}
+              onToggle={() => setOpenDropdownId(openDropdownId === user.uid ? null : user.uid)}
+              onClose={() => setOpenDropdownId(null)}
+            />
+          </>
         )}
       </div>
     </motion.div>
@@ -204,12 +311,25 @@ const UserListItem = React.memo(({
 });
 
 export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewProfile }) => {
-  const { users, loading, updateUserRole, updateUserVerification } = useUsers();
+  const {
+    users,
+    blockedEmails,
+    loading,
+    updateUserRole,
+    updateUserVerification,
+    deleteUser,
+    toggleBlockUser,
+    deleteAvatar,
+    blockEmail,
+    unblockEmail
+  } = useUsers();
+
   const { isAdmin, role: currentRole, user: currentUser } = useAuth();
   const isModeratorOrAdmin = isAdmin || currentRole === 'moderator';
   const t = translations[lang];
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [newBlockEmailInput, setNewBlockEmailInput] = useState('');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [securityHidden, setSecurityHidden] = useState(false);
   const [protectedViewFeatureEnabled, setProtectedViewFeatureEnabled] = useState(true);
@@ -256,6 +376,14 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
     }
   };
 
+  const handleAddBlockEmail = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newBlockEmailInput.trim()) {
+      blockEmail(newBlockEmailInput.trim());
+      setNewBlockEmailInput('');
+    }
+  };
+
   const filteredUsers = React.useMemo(() => {
     if (!searchQuery.trim()) return users;
     const query = searchQuery.toLowerCase();
@@ -274,9 +402,69 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
   }
 
   return (
-    <div className="space-y-4 pb-32">
+    <div className="space-y-6 pb-32">
       {isAdmin && (
         <div className="grid grid-cols-1 gap-4 mb-6">
+          {/* Email Blocking Admin Tool */}
+          <div className="bg-[#15101e] border border-red-500/30 rounded-3xl p-5 shadow-xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-red-500/20 text-red-400">
+                <Ban size={22} />
+              </div>
+              <div>
+                <h3 className="font-black text-white uppercase tracking-widest text-sm">
+                  {lang === 'ru' ? 'Блокировка по Email' : 'Email Address Blocking'}
+                </h3>
+                <p className="text-xs text-gray-400">
+                  {lang === 'ru' ? 'Введите email для полной блокировки аккаунта пользователя' : 'Enter an email address to block/ban users'}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddBlockEmail} className="flex gap-2">
+              <div className="relative flex-1">
+                <Mail className="absolute left-4 top-3.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="email"
+                  value={newBlockEmailInput}
+                  onChange={(e) => setNewBlockEmailInput(e.target.value)}
+                  placeholder="user@example.com"
+                  className="w-full bg-[#251c35] border border-[#3d2b4f] rounded-2xl py-3 pl-11 pr-4 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!newBlockEmailInput.trim()}
+                className="bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-widest px-5 py-3 rounded-2xl transition-all disabled:opacity-40 cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus size={16} />
+                {lang === 'ru' ? 'Заблокировать Email' : 'Block Email'}
+              </button>
+            </form>
+
+            {blockedEmails.length > 0 && (
+              <div className="pt-2 border-t border-[#3d2b4f]/50">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                  {lang === 'ru' ? 'Заблокированные адреса:' : 'Blocked addresses:'} ({blockedEmails.length})
+                </p>
+                <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto no-scrollbar">
+                  {blockedEmails.map((email) => (
+                    <span key={email} className="inline-flex items-center gap-2 bg-red-950/40 text-red-300 border border-red-500/30 px-3 py-1 rounded-xl text-xs font-mono">
+                      {email}
+                      <button
+                        onClick={() => unblockEmail(email)}
+                        className="text-gray-400 hover:text-white transition-colors cursor-pointer"
+                        title="Unblock email"
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-xl ${maintenanceMode ? 'bg-red-500/20 text-red-400' : 'bg-[#3d2b4f]/30 text-[#ff4d4d]'}`}>
@@ -293,7 +481,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
             </div>
             <button
               onClick={toggleMaintenanceMode}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
                 maintenanceMode ? 'bg-red-500' : 'bg-[#0d0b14]'
               }`}
             >
@@ -321,7 +509,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
             </div>
             <button
               onClick={toggleSecurityHidden}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
                 securityHidden ? 'bg-red-500' : 'bg-[#0d0b14]'
               }`}
             >
@@ -351,7 +539,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
             </div>
             <button
               onClick={toggleProtectedViewFeature}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
                 protectedViewFeatureEnabled ? 'bg-green-500' : 'bg-[#0d0b14]'
               }`}
             >
@@ -384,7 +572,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white transition-colors"
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </motion.button>
@@ -420,6 +608,9 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
               onOpenChat={onOpenChat}
               updateUserRole={updateUserRole}
               updateUserVerification={updateUserVerification}
+              deleteUser={deleteUser}
+              toggleBlockUser={toggleBlockUser}
+              deleteAvatar={deleteAvatar}
               currentUserId={currentUser?.uid}
             />
           ))
@@ -428,3 +619,4 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
     </div>
   );
 };
+

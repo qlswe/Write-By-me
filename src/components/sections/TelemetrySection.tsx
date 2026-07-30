@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Activity, Search, ShieldCheck, Database, Trash2, 
   Monitor, Cpu, Globe, Key, Clock, LogIn, ExternalLink, Mail, Lock,
-  TrendingUp, BarChart2, Layers, Users, Calendar
+  TrendingUp, BarChart2, Layers, Users, Calendar, Download, RefreshCw,
+  PieChart as PieIcon, Smartphone, Laptop, Eye, X, Filter, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -13,16 +14,19 @@ import {
   Bar, 
   LineChart, 
   Line, 
+  PieChart,
+  Pie,
+  Cell,
   XAxis, 
   YAxis, 
   Tooltip, 
   CartesianGrid, 
   Legend 
 } from 'recharts';
-import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
-import { Language, translations } from '../../data/translations';
+import { Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 
 interface TelemetryLog {
@@ -48,20 +52,25 @@ interface TelemetryLog {
 
 const SECTION_CONFIG: Record<string, { labelRu: string; labelEn: string; color: string }> = {
   home: { labelRu: 'Главная', labelEn: 'Home', color: '#ff4d4d' },
+  chats: { labelRu: 'Чаты', labelEn: 'Chats', color: '#00f0ff' },
   chat: { labelRu: 'Чаты', labelEn: 'Chat', color: '#00f0ff' },
   ai: { labelRu: 'Ahi AI', labelEn: 'Ahi AI', color: '#a855f7' },
-  games: { labelRu: 'Игры', labelEn: 'Games', color: '#10b981' },
+  streams: { labelRu: 'Стримы', labelEn: 'Streams', color: '#10b981' },
   forum: { labelRu: 'Форум', labelEn: 'Forum', color: '#f59e0b' },
-  profile: { labelRu: 'Профиль', labelEn: 'Profile', color: '#ec4899' },
-  telemetry: { labelRu: 'Телеметрия', labelEn: 'Telemetry', color: '#3b82f6' },
-  security: { labelRu: 'Безопасность', labelEn: 'Security', color: '#14b8a6' },
-  admin: { labelRu: 'Админка', labelEn: 'Admin', color: '#f43f5e' }
+  canvas: { labelRu: 'Aha Canvas', labelEn: 'Aha Canvas', color: '#ec4899' },
+  theories: { labelRu: 'Теории', labelEn: 'Theories', color: '#3b82f6' },
+  blog: { labelRu: 'Блог', labelEn: 'Blog', color: '#14b8a6' },
+  chronicle: { labelRu: 'Хроника', labelEn: 'Chronicle', color: '#8b5cf6' },
+  telemetry: { labelRu: 'Телеметрия', labelEn: 'Telemetry', color: '#f43f5e' },
+  users: { labelRu: 'Пользователи', labelEn: 'Users', color: '#6366f1' },
+  sdk: { labelRu: 'SDK', labelEn: 'SDK', color: '#eab308' }
 };
+
+const PIE_COLORS = ['#ff4d4d', '#00f0ff', '#a855f7', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6'];
 
 const getSectionColor = (sec: string, index: number) => {
   if (SECTION_CONFIG[sec]) return SECTION_CONFIG[sec].color;
-  const fallbackColors = ['#8b5cf6', '#06b6d4', '#eab308', '#f97316', '#64748b'];
-  return fallbackColors[index % fallbackColors.length];
+  return PIE_COLORS[index % PIE_COLORS.length];
 };
 
 const getSectionLabel = (sec: string, lang: Language) => {
@@ -78,6 +87,11 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [loading, setLoading] = useState(true);
   const [chartType, setChartType] = useState<'area' | 'bar' | 'line'>('area');
   const [selectedSectionFilter, setSelectedSectionFilter] = useState<string>('ALL');
+  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d' | 'all'>('7d');
+  const [selectedLog, setSelectedLog] = useState<TelemetryLog | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [logsPerPage] = useState(15);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -89,7 +103,7 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
     const q = query(
       collection(db, 'telemetry'),
       orderBy('timestamp', 'desc'),
-      limit(500)
+      limit(1000)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -109,15 +123,49 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
     });
 
     return () => unsubscribe();
-  }, [user, role]);
+  }, [user, role, authLoading]);
 
-  // Process last 7 days chart data
-  const { chartData, activeSections, total7dVisits, topSection, activeUsers7d } = useMemo(() => {
+  // Filter logs by timeRange first
+  const timeFilteredLogs = useMemo(() => {
+    if (timeRange === 'all') return logs;
+    const now = Date.now();
+    let limitMs = 7 * 24 * 60 * 60 * 1000; // default 7d
+    if (timeRange === '24h') limitMs = 24 * 60 * 60 * 1000;
+    if (timeRange === '30d') limitMs = 30 * 24 * 60 * 60 * 1000;
+
+    return logs.filter(log => {
+      let timeMs: number | null = null;
+      if (log.timestamp) {
+        if (typeof log.timestamp.toDate === 'function') timeMs = log.timestamp.toDate().getTime();
+        else if (log.timestamp.seconds) timeMs = log.timestamp.seconds * 1000;
+        else if (typeof log.timestamp === 'number') timeMs = log.timestamp;
+      }
+      if (!timeMs && log.localTime) {
+        const d = new Date(log.localTime);
+        if (!isNaN(d.getTime())) timeMs = d.getTime();
+      }
+      if (!timeMs) return true;
+      return (now - timeMs) <= limitMs;
+    });
+  }, [logs, timeRange]);
+
+  // Process activity over time, OS distribution, Browser distribution, Hourly peak
+  const { 
+    chartData, 
+    activeSections, 
+    totalVisits, 
+    topSection, 
+    activeUsersCount,
+    osDistribution,
+    hourlyActivity
+  } = useMemo(() => {
     const daysMap = new Map<string, { label: string; counts: Record<string, number>; total: number }>();
     const daysArray: { key: string; label: string }[] = [];
 
+    const numDays = timeRange === '24h' ? 1 : timeRange === '30d' ? 30 : 7;
     const now = new Date();
-    for (let i = 6; i >= 0; i--) {
+
+    for (let i = numDays - 1; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const year = d.getFullYear();
@@ -135,19 +183,18 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
 
     const sectionsSet = new Set<string>();
     const uniqueUsersSet = new Set<string>();
-    let totalVisits = 0;
+    const osMap: Record<string, number> = {};
+    const hoursCount = new Array(24).fill(0);
+    let totalVisitsCount = 0;
     const sectionTotals: Record<string, number> = {};
 
-    logs.forEach((log) => {
+    timeFilteredLogs.forEach((log) => {
       let logDate: Date | null = null;
       if (log.timestamp) {
-        if (typeof log.timestamp.toDate === 'function') {
-          logDate = log.timestamp.toDate();
-        } else if (log.timestamp.seconds) {
-          logDate = new Date(log.timestamp.seconds * 1000);
-        } else if (typeof log.timestamp === 'number') {
-          logDate = new Date(log.timestamp);
-        } else if (typeof log.timestamp === 'string') {
+        if (typeof log.timestamp.toDate === 'function') logDate = log.timestamp.toDate();
+        else if (log.timestamp.seconds) logDate = new Date(log.timestamp.seconds * 1000);
+        else if (typeof log.timestamp === 'number') logDate = new Date(log.timestamp);
+        else if (typeof log.timestamp === 'string') {
           const d = new Date(log.timestamp);
           if (!isNaN(d.getTime())) logDate = d;
         }
@@ -157,25 +204,40 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
         if (!isNaN(d.getTime())) logDate = d;
       }
 
-      if (!logDate) return;
+      if (logDate) {
+        // Hour peak
+        hoursCount[logDate.getHours()]++;
 
-      const year = logDate.getFullYear();
-      const month = String(logDate.getMonth() + 1).padStart(2, '0');
-      const dayStr = String(logDate.getDate()).padStart(2, '0');
-      const dayKey = `${year}-${month}-${dayStr}`;
+        const year = logDate.getFullYear();
+        const month = String(logDate.getMonth() + 1).padStart(2, '0');
+        const dayStr = String(logDate.getDate()).padStart(2, '0');
+        const dayKey = `${year}-${month}-${dayStr}`;
 
-      if (daysMap.has(dayKey)) {
-        const sec = (log.currentSection || 'home').toLowerCase();
-        sectionsSet.add(sec);
-        if (log.userId) uniqueUsersSet.add(log.userId);
+        if (daysMap.has(dayKey)) {
+          const sec = (log.currentSection || 'home').toLowerCase();
+          sectionsSet.add(sec);
+          if (log.userId) uniqueUsersSet.add(log.userId);
 
-        const dayData = daysMap.get(dayKey)!;
-        dayData.counts[sec] = (dayData.counts[sec] || 0) + 1;
-        dayData.total += 1;
-        totalVisits += 1;
+          const dayData = daysMap.get(dayKey)!;
+          dayData.counts[sec] = (dayData.counts[sec] || 0) + 1;
+          dayData.total += 1;
+          totalVisitsCount += 1;
 
-        sectionTotals[sec] = (sectionTotals[sec] || 0) + 1;
+          sectionTotals[sec] = (sectionTotals[sec] || 0) + 1;
+        }
       }
+
+      // OS / Platform parse
+      let platformName = log.platform || 'Unknown';
+      if (log.userAgent) {
+        const ua = log.userAgent.toLowerCase();
+        if (ua.includes('windows')) platformName = 'Windows';
+        else if (ua.includes('macintosh') || ua.includes('mac os')) platformName = 'macOS';
+        else if (ua.includes('android')) platformName = 'Android';
+        else if (ua.includes('iphone') || ua.includes('ipad')) platformName = 'iOS';
+        else if (ua.includes('linux')) platformName = 'Linux';
+      }
+      osMap[platformName] = (osMap[platformName] || 0) + 1;
     });
 
     const data = daysArray.map((day) => {
@@ -190,7 +252,6 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
       return item;
     });
 
-    // Find top section
     let topSecName = 'home';
     let topSecCount = -1;
     Object.entries(sectionTotals).forEach(([sec, count]) => {
@@ -200,17 +261,25 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
       }
     });
 
+    const osData = Object.entries(osMap).map(([name, value]) => ({ name, value }));
+    const hourData = hoursCount.map((count, hour) => ({
+      hour: `${String(hour).padStart(2, '0')}:00`,
+      visits: count
+    }));
+
     return {
       chartData: data,
       activeSections: Array.from(sectionsSet),
-      total7dVisits: totalVisits,
+      totalVisits: totalVisitsCount,
       topSection: getSectionLabel(topSecName, lang),
-      activeUsers7d: uniqueUsersSet.size
+      activeUsersCount: uniqueUsersSet.size,
+      osDistribution: osData,
+      hourlyActivity: hourData
     };
-  }, [logs, lang]);
+  }, [timeFilteredLogs, timeRange, lang]);
 
   const handleDeleteLog = async (id: string) => {
-    if (window.confirm('Вы уверены, что хотите удалить эту запись телеметрии?')) {
+    if (window.confirm(lang === 'ru' ? 'Вы уверены, что хотите удалить эту запись телеметрии?' : 'Delete this telemetry log?')) {
       try {
         await deleteDoc(doc(db, 'telemetry', id));
       } catch (err) {
@@ -219,20 +288,79 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
     }
   };
 
-  const filteredLogs = logs.filter((log) => {
+  const handleClearAllLogs = async () => {
+    if (!window.confirm(lang === 'ru' ? 'ВНИМАНИЕ: Очистить все записи телеметрии в базе данных?' : 'WARNING: Purge all telemetry logs from Firestore?')) return;
+    setIsDeletingAll(true);
+    try {
+      const snap = await getDocs(collection(db, 'telemetry'));
+      const batch = writeBatch(db);
+      snap.docs.forEach(docSnap => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Failed to purge logs:', err);
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
+  const exportToCSV = () => {
+    if (filteredLogs.length === 0) return;
+    const headers = ['ID', 'User ID', 'Email', 'Name', 'Section', 'Platform', 'Screen', 'Viewport', 'Language', 'Timezone', 'Cores', 'Memory', 'Local Time'];
+    const csvRows = [headers.join(',')];
+
+    filteredLogs.forEach(log => {
+      const row = [
+        `"${log.id}"`,
+        `"${log.userId || ''}"`,
+        `"${log.userEmail || ''}"`,
+        `"${(log.displayName || '').replace(/"/g, '""')}"`,
+        `"${log.currentSection || ''}"`,
+        `"${log.platform || ''}"`,
+        `"${log.screen || ''}"`,
+        `"${log.viewport || ''}"`,
+        `"${log.language || ''}"`,
+        `"${log.timezone || ''}"`,
+        `"${log.cores || ''}"`,
+        `"${log.memory || ''}"`,
+        `"${log.localTime || ''}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `telemetry_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const filteredLogs = timeFilteredLogs.filter((log) => {
     const term = searchQuery.toLowerCase();
     const matchesSearch = (
       (log.displayName || '').toLowerCase().includes(term) ||
       (log.userEmail || '').toLowerCase().includes(term) ||
       (log.currentSection || '').toLowerCase().includes(term) ||
       (log.platform || '').toLowerCase().includes(term) ||
-      (log.timezone || '').toLowerCase().includes(term)
+      (log.timezone || '').toLowerCase().includes(term) ||
+      (log.userAgent || '').toLowerCase().includes(term)
     );
 
     const matchesSection = selectedSectionFilter === 'ALL' || (log.currentSection || '').toLowerCase() === selectedSectionFilter.toLowerCase();
 
     return matchesSearch && matchesSection;
   });
+
+  // Pagination calculation
+  const totalPages = Math.ceil(filteredLogs.length / logsPerPage) || 1;
+  const paginatedLogs = useMemo(() => {
+    const start = (currentPage - 1) * logsPerPage;
+    return filteredLogs.slice(start, start + logsPerPage);
+  }, [filteredLogs, currentPage, logsPerPage]);
 
   if (authLoading) {
     return (
@@ -256,7 +384,7 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
           <GoogleLoginButton lang={lang} />
           <button
             onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-widest text-sm hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl cursor-pointer"
           >
             <Mail size={16} />
             {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
@@ -266,142 +394,193 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
     );
   }
 
-  // Statistics and charts are available for all users.
-  // Deleting logs is reserved for admins/moderators.
-
   return (
-    <div className="max-w-6xl mx-auto space-y-6 selection:bg-[#ff4d4d]/30">
+    <div className="max-w-6xl mx-auto space-y-6 selection:bg-[#ff4d4d]/30 pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-[#ff4d4d] uppercase flex items-center gap-3 tracking-widest">
-            <Activity className="w-8 h-8 text-[#ff4d4d] animate-pulse" />
-            Telemetry & Security Audit
+          <h2 className="text-2xl sm:text-3xl font-black text-[#ff4d4d] uppercase flex items-center gap-3 tracking-widest">
+            <Activity className="w-8 h-8 text-[#ff4d4d] animate-pulse shrink-0" />
+            Telemetry & Analytics Center
           </h2>
-          <p className="text-sm text-gray-400 mt-1">Реальное логирование и интерактивная аналитика активности за 7 дней.</p>
+          <p className="text-sm text-gray-400 mt-1">
+            {lang === 'ru' ? 'Мониторинг пользовательской активности, устройств и посещаемости раздела.' : 'Real-time user monitoring, device audit, and section engagement analytics.'}
+          </p>
         </div>
         
-        {/* Search Input */}
-        <div className="relative max-w-xs w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-          <input
-            type="text"
-            placeholder="Поиск логов..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#15101e] border border-[#3d2b4f] focus:border-[#ff4d4d] text-white pl-10 pr-4 py-2.5 rounded-2xl text-sm font-medium outline-none transition-all placeholder:text-gray-500"
-          />
+        {/* Actions & Search */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <input
+              type="text"
+              placeholder={lang === 'ru' ? 'Поиск по логам...' : 'Search logs...'}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-[#15101e] border border-[#3d2b4f] focus:border-[#ff4d4d] text-white pl-10 pr-4 py-2.5 rounded-2xl text-xs sm:text-sm font-medium outline-none transition-all placeholder:text-gray-500"
+            />
+          </div>
+
+          <button
+            onClick={exportToCSV}
+            disabled={filteredLogs.length === 0}
+            className="px-4 py-2.5 bg-[#251c35] hover:bg-[#ff4d4d] text-gray-200 hover:text-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] rounded-2xl text-xs font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg"
+            title="Export CSV"
+          >
+            <Download size={14} />
+            <span className="hidden sm:inline">CSV</span>
+          </button>
+
+          {role === 'admin' && (
+            <button
+              onClick={handleClearAllLogs}
+              disabled={isDeletingAll || logs.length === 0}
+              className="px-3.5 py-2.5 bg-red-950/40 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg"
+              title={lang === 'ru' ? 'Очистить все логи' : 'Purge All Logs'}
+            >
+              <Trash2 size={14} />
+              <span className="hidden sm:inline">{lang === 'ru' ? 'Очистить' : 'Purge'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filter Controls Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1e152d] border border-[#3d2b4f] p-3 rounded-2xl">
+        <div className="flex items-center gap-2">
+          <Filter size={15} className="text-[#ff4d4d] ml-1" />
+          <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">{lang === 'ru' ? 'Период:' : 'Period:'}</span>
+          <div className="flex items-center bg-[#15101e] border border-[#3d2b4f] rounded-xl p-1">
+            {(['24h', '7d', '30d', 'all'] as const).map(p => (
+              <button
+                key={p}
+                onClick={() => {
+                  setTimeRange(p);
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  timeRange === p ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                {p.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{lang === 'ru' ? 'Раздел:' : 'Section:'}</span>
+          <select
+            value={selectedSectionFilter}
+            onChange={(e) => {
+              setSelectedSectionFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="bg-[#15101e] border border-[#3d2b4f] text-gray-200 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#ff4d4d] cursor-pointer"
+          >
+            <option value="ALL">{lang === 'ru' ? 'Все разделы' : 'All Sections'}</option>
+            {activeSections.map((sec) => (
+              <option key={sec} value={sec}>{getSectionLabel(sec, lang)}</option>
+            ))}
+          </select>
         </div>
       </div>
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4">
+        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4 hover:border-[#ff4d4d]/50 transition-all">
           <div className="p-3 bg-red-500/20 text-[#ff4d4d] rounded-2xl border border-red-500/30">
             <TrendingUp size={24} />
           </div>
           <div>
             <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-              {lang === 'ru' ? 'Событий за 7 дней' : '7-Day Activity'}
+              {lang === 'ru' ? 'Всего событий' : 'Total Events'}
             </div>
-            <div className="text-2xl font-black text-white mt-0.5">{total7dVisits}</div>
+            <div className="text-2xl font-black text-white mt-0.5">{totalVisits}</div>
           </div>
         </div>
 
-        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4">
+        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4 hover:border-cyan-500/50 transition-all">
           <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-2xl border border-cyan-500/30">
             <Layers size={24} />
           </div>
           <div>
             <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-              {lang === 'ru' ? 'Топ Раздел' : 'Top Section'}
+              {lang === 'ru' ? 'Популярный раздел' : 'Popular Section'}
             </div>
             <div className="text-xl font-black text-white mt-0.5 truncate max-w-[140px]">{topSection}</div>
           </div>
         </div>
 
-        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4">
+        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4 hover:border-purple-500/50 transition-all">
           <div className="p-3 bg-purple-500/20 text-purple-400 rounded-2xl border border-purple-500/30">
             <Users size={24} />
           </div>
           <div>
             <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-              {lang === 'ru' ? 'Активных Юзеров' : 'Active Users'}
+              {lang === 'ru' ? 'Активные пользователи' : 'Active Users'}
             </div>
-            <div className="text-2xl font-black text-white mt-0.5">{activeUsers7d}</div>
+            <div className="text-2xl font-black text-white mt-0.5">{activeUsersCount}</div>
           </div>
         </div>
 
-        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4">
+        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4 hover:border-emerald-500/50 transition-all">
           <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl border border-emerald-500/30">
-            <Calendar size={24} />
+            <Database size={24} />
           </div>
           <div>
             <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-              {lang === 'ru' ? 'Период Анализа' : 'Analysis Period'}
+              {lang === 'ru' ? 'Записей в выборке' : 'Filtered Logs'}
             </div>
-            <div className="text-sm font-bold text-white mt-1">7 дней (Firebase)</div>
+            <div className="text-2xl font-black text-white mt-0.5">{filteredLogs.length}</div>
           </div>
         </div>
       </div>
 
-      {/* RECHARTS SECTION ACTIVITY DYNAMICS CHART */}
+      {/* MAIN CHART: Section Activity Dynamics */}
       <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
               <BarChart2 className="text-[#ff4d4d]" size={20} />
-              {lang === 'ru' ? 'Динамика активности по разделам (7 дней)' : 'Section Activity Dynamics (7 Days)'}
+              {lang === 'ru' ? 'Динамика активности по разделам' : 'Section Activity Dynamics'}
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              {lang === 'ru' ? 'Распределение посещений разделов приложения по дням' : 'Distribution of app section visits over time'}
+              {lang === 'ru' ? 'Количество переходов и просмотров в разрезе времени' : 'Visual breakdown of user events by section over time'}
             </p>
           </div>
 
-          {/* Chart controls */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center bg-[#15101e] border border-[#3d2b4f] rounded-xl p-1">
-              <button
-                onClick={() => setChartType('area')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  chartType === 'area' ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Область
-              </button>
-              <button
-                onClick={() => setChartType('bar')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  chartType === 'bar' ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Столбцы
-              </button>
-              <button
-                onClick={() => setChartType('line')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  chartType === 'line' ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                Линии
-              </button>
-            </div>
-
-            {/* Filter by Section */}
-            <select
-              value={selectedSectionFilter}
-              onChange={(e) => setSelectedSectionFilter(e.target.value)}
-              className="bg-[#15101e] border border-[#3d2b4f] text-gray-200 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#ff4d4d]"
+          <div className="flex items-center bg-[#15101e] border border-[#3d2b4f] rounded-xl p-1 shrink-0">
+            <button
+              onClick={() => setChartType('area')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                chartType === 'area' ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
+              }`}
             >
-              <option value="ALL">{lang === 'ru' ? 'Все разделы' : 'All Sections'}</option>
-              {activeSections.map((sec) => (
-                <option key={sec} value={sec}>{getSectionLabel(sec, lang)}</option>
-              ))}
-            </select>
+              {lang === 'ru' ? 'Область' : 'Area'}
+            </button>
+            <button
+              onClick={() => setChartType('bar')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                chartType === 'bar' ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {lang === 'ru' ? 'Столбцы' : 'Bar'}
+            </button>
+            <button
+              onClick={() => setChartType('line')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                chartType === 'line' ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {lang === 'ru' ? 'Линии' : 'Line'}
+            </button>
           </div>
         </div>
 
-        {/* Recharts Container */}
         <div className="w-full h-72 sm:h-80 pt-2">
           <ResponsiveContainer width="100%" height="100%">
             {chartType === 'area' ? (
@@ -514,108 +693,221 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
         </div>
       </div>
 
+      {/* SECONDARY CHARTS GRID: OS Distribution & Hourly Peak Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* OS & Platform Distribution */}
+        <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
+              <PieIcon className="text-cyan-400" size={18} />
+              {lang === 'ru' ? 'Распределение по ОС и платформам' : 'OS & Platform Breakdown'}
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">
+              {lang === 'ru' ? 'Операционные системы активных пользователей' : 'Operating systems detected in session logs'}
+            </p>
+          </div>
+
+          <div className="w-full h-56">
+            {osDistribution.length === 0 ? (
+              <div className="flex justify-center items-center h-full text-gray-500 text-xs">Нет данных</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={osDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={4}
+                    dataKey="value"
+                  >
+                    {osDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#120a21',
+                      borderColor: '#3d2b4f',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      color: '#fff'
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Hourly Peak Activity */}
+        <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
+              <Clock className="text-purple-400" size={18} />
+              {lang === 'ru' ? 'Пиковая активность по часам (24h)' : 'Peak Activity Hours (24h)'}
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">
+              {lang === 'ru' ? 'Распределение посещений по времени суток' : 'Events distribution throughout 24-hour cycle'}
+            </p>
+          </div>
+
+          <div className="w-full h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={hourlyActivity} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#3d2b4f" opacity={0.3} />
+                <XAxis dataKey="hour" stroke="#9ca3af" fontSize={10} interval={3} tickLine={false} />
+                <YAxis stroke="#9ca3af" fontSize={10} tickLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#120a21',
+                    borderColor: '#3d2b4f',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    color: '#fff'
+                  }}
+                />
+                <Bar dataKey="visits" name={lang === 'ru' ? 'События' : 'Visits'} fill="#a855f7" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
       {/* Table Section */}
       <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-        <h3 className="text-lg font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Database className="text-[#ff4d4d]" size={20} />
-          {lang === 'ru' ? 'Записи логов телеметрии' : 'Telemetry Log Records'}
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h3 className="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+            <Database className="text-[#ff4d4d]" size={20} />
+            {lang === 'ru' ? 'Записи логов телеметрии' : 'Telemetry Audit Logs'}
+            <span className="text-xs font-mono font-normal text-gray-400 ml-2">({filteredLogs.length})</span>
+          </h3>
+
+          {/* Pagination status */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">
+              {lang === 'ru' ? `Страница ${currentPage} из ${totalPages}` : `Page ${currentPage} of ${totalPages}`}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className="p-1.5 bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-300 disabled:opacity-30 rounded-lg transition-all cursor-pointer"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                className="p-1.5 bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-300 disabled:opacity-30 rounded-lg transition-all cursor-pointer"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-48">
-            <span className="text-gray-400 animate-pulse text-sm">Загрузка данных телеметрии...</span>
+            <span className="text-gray-400 animate-pulse text-sm">
+              {lang === 'ru' ? 'Загрузка логов телеметрии...' : 'Loading telemetry records...'}
+            </span>
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center text-gray-400">
             <Database className="w-12 h-12 text-gray-600 mb-2" />
-            <p className="text-sm">Логи не найдены или список пуст.</p>
+            <p className="text-sm">{lang === 'ru' ? 'Логи не найдены или список пуст.' : 'No logs found for selected query.'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-[#15101e]/60 border-b border-[#3d2b4f]/70 text-gray-400 uppercase tracking-widest text-[10px]">
-                  <th className="py-3.5 px-4 font-bold">Пользователь</th>
-                  <th className="py-3.5 px-4 font-bold">Раздел</th>
-                  <th className="py-3.5 px-4 font-bold">Система & Браузер</th>
-                  <th className="py-3.5 px-4 font-bold">Параметры Экрана</th>
-                  <th className="py-3.5 px-4 font-bold">Локализация</th>
-                  <th className="py-3.5 px-4 font-bold">Сеть & Железо</th>
-                  <th className="py-3.5 px-4 font-bold text-right">Действия</th>
+                  <th className="py-3.5 px-4 font-bold">{lang === 'ru' ? 'Пользователь' : 'User'}</th>
+                  <th className="py-3.5 px-4 font-bold">{lang === 'ru' ? 'Раздел' : 'Section'}</th>
+                  <th className="py-3.5 px-4 font-bold">{lang === 'ru' ? 'Платформа & ОС' : 'Platform & OS'}</th>
+                  <th className="py-3.5 px-4 font-bold">{lang === 'ru' ? 'Параметры Экрана' : 'Screen & Viewport'}</th>
+                  <th className="py-3.5 px-4 font-bold">{lang === 'ru' ? 'Язык & Таймзона' : 'Locale'}</th>
+                  <th className="py-3.5 px-4 font-bold">{lang === 'ru' ? 'Железо & Сеть' : 'Hardware'}</th>
+                  <th className="py-3.5 px-4 font-bold text-right">{lang === 'ru' ? 'Действия' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#3d2b4f]/40">
                 <AnimatePresence initial={false}>
-                  {filteredLogs.map((log) => (
+                  {paginatedLogs.map((log) => (
                     <motion.tr 
                       key={log.id}
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="hover:bg-[#15101e]/30 transition-colors"
+                      onClick={() => setSelectedLog(log)}
+                      className="hover:bg-[#15101e]/40 transition-colors cursor-pointer group"
                     >
-                      <td className="py-4 px-4">
-                        <div className="font-bold text-white max-w-[150px] truncate" title={log.displayName}>
-                          {log.displayName || 'Guest'}
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-white max-w-[150px] truncate group-hover:text-[#ff4d4d] transition-colors" title={log.displayName}>
+                          {log.displayName || 'Guest User'}
                         </div>
                         <div className="text-[10px] text-gray-400 max-w-[150px] truncate" title={log.userEmail}>
                           {log.userEmail || 'anonymous'}
                         </div>
-                        <div className="text-[9px] text-[#ff4d4d] max-w-[120px] truncate font-mono">
-                          ID: {log.userId || 'anonymous'}
-                        </div>
                       </td>
-                      <td className="py-4 px-4 font-mono font-bold">
-                        <span className="px-2 py-1 bg-[#15101e] text-[#ff4d4d] rounded-md uppercase tracking-wider text-[10px] border border-[#ff4d4d]/10">
-                          {log.currentSection}
+                      <td className="py-3.5 px-4 font-mono font-bold">
+                        <span className="px-2 py-1 bg-[#15101e] text-[#ff4d4d] rounded-md uppercase tracking-wider text-[10px] border border-[#ff4d4d]/20">
+                          {getSectionLabel(log.currentSection || 'home', lang)}
                         </span>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5 text-gray-300">
                           <Monitor size={12} className="text-[#ff4d4d]" />
                           <span className="font-semibold">{log.platform || 'unknown'}</span>
                         </div>
-                        <div className="text-[10px] text-gray-400 max-w-[200px] truncate mt-1" title={log.userAgent}>
+                        <div className="text-[10px] text-gray-500 max-w-[180px] truncate mt-0.5" title={log.userAgent}>
                           {log.userAgent}
                         </div>
                       </td>
-                      <td className="py-4 px-4 font-mono text-gray-300">
-                        <div>Экран: {log.screen || 'unknown'}</div>
-                        <div className="text-[10px] text-gray-500">Окно: {log.viewport || 'unknown'}</div>
+                      <td className="py-3.5 px-4 font-mono text-gray-300">
+                        <div>{log.screen || 'unknown'}</div>
+                        <div className="text-[10px] text-gray-500">{log.viewport || 'unknown'}</div>
                       </td>
-                      <td className="py-4 px-4 text-gray-300">
+                      <td className="py-3.5 px-4 text-gray-300">
                         <div className="flex items-center gap-1">
                           <Globe size={12} className="text-gray-400" />
                           <span>{log.language || 'unknown'}</span>
                         </div>
-                        <div className="text-[10px] text-gray-500 max-w-[130px] truncate mt-1" title={log.timezone}>
+                        <div className="text-[10px] text-gray-500 max-w-[120px] truncate mt-0.5" title={log.timezone}>
                           {log.timezone}
                         </div>
                       </td>
-                      <td className="py-4 px-4 text-gray-300">
+                      <td className="py-3.5 px-4 text-gray-300">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] flex items-center gap-0.5 text-gray-400">
-                            <Cpu size={11} /> {log.cores} Cores
+                            <Cpu size={11} /> {log.cores || '?'} Cores
                           </span>
                           <span className="text-[10px] text-gray-400">
-                            {log.memory} GB RAM
+                            {log.memory || '?'} GB RAM
                           </span>
                         </div>
-                        <div className="text-[10px] text-emerald-400/80 font-semibold mt-1">
-                          Сеть: {log.connectionType || 'unknown'}
-                        </div>
                       </td>
-                      <td className="py-4 px-4 text-right">
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
-                          <div className="text-right mr-2">
-                            <div className="text-gray-400 font-bold">{log.localTime?.split(', ')?.[1] || ''}</div>
+                          <div className="text-right mr-1">
+                            <div className="text-gray-300 font-bold text-[11px]">{log.localTime?.split(', ')?.[1] || ''}</div>
                             <div className="text-[9px] text-gray-500">{log.localTime?.split(', ')?.[0] || ''}</div>
                           </div>
+                          <button
+                            onClick={() => setSelectedLog(log)}
+                            className="p-1.5 text-gray-400 hover:text-cyan-400 bg-[#15101e] border border-[#3d2b4f]/60 hover:border-cyan-500/40 rounded-lg transition-colors cursor-pointer"
+                            title="Inspect Log"
+                          >
+                            <Eye size={13} />
+                          </button>
                           {(role === 'admin' || role === 'moderator') && (
                             <button
                               onClick={() => handleDeleteLog(log.id)}
-                              className="p-1.5 text-gray-500 hover:text-red-500 bg-[#15101e] border border-[#3d2b4f]/60 hover:border-red-500/40 rounded-lg transition-colors"
-                              title="Удалить запись"
+                              className="p-1.5 text-gray-500 hover:text-red-500 bg-[#15101e] border border-[#3d2b4f]/60 hover:border-red-500/40 rounded-lg transition-colors cursor-pointer"
+                              title="Delete Record"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -630,7 +922,86 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
           </div>
         )}
       </div>
+
+      {/* DETAILED LOG INSPECTION MODAL */}
+      <AnimatePresence>
+        {selectedLog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#1c1429] border border-[#3d2b4f] rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl relative overflow-hidden space-y-6"
+            >
+              <div className="flex items-center justify-between border-b border-[#3d2b4f] pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-[#ff4d4d]/10 border border-[#ff4d4d]/30 text-[#ff4d4d] rounded-2xl">
+                    <Activity size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white uppercase tracking-wider">
+                      {lang === 'ru' ? 'Детали лога телеметрии' : 'Telemetry Log Details'}
+                    </h3>
+                    <p className="text-xs text-mono text-gray-400">ID: {selectedLog.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedLog(null)}
+                  className="p-2 text-gray-400 hover:text-white bg-[#15101e] border border-[#3d2b4f] rounded-xl hover:bg-[#ff4d4d] transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+                <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl space-y-1">
+                  <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">User Information</span>
+                  <div className="text-white font-bold">{selectedLog.displayName || 'Guest'}</div>
+                  <div className="text-gray-400">{selectedLog.userEmail || 'N/A'}</div>
+                  <div className="text-[#ff4d4d] text-[10px]">UID: {selectedLog.userId || 'anonymous'}</div>
+                </div>
+
+                <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl space-y-1">
+                  <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">Session & Environment</span>
+                  <div className="text-cyan-400 font-bold">Section: {selectedLog.currentSection}</div>
+                  <div className="text-gray-400">Time: {selectedLog.localTime}</div>
+                  <div className="text-purple-400 text-[10px]">Session ID: {selectedLog.sessionId || 'N/A'}</div>
+                </div>
+
+                <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl space-y-1">
+                  <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">Display & Viewport</span>
+                  <div className="text-gray-200">Screen: {selectedLog.screen}</div>
+                  <div className="text-gray-400">Viewport: {selectedLog.viewport}</div>
+                  <div className="text-gray-400">Timezone: {selectedLog.timezone}</div>
+                </div>
+
+                <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl space-y-1">
+                  <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">Hardware & Network</span>
+                  <div className="text-emerald-400">CPU Cores: {selectedLog.cores}</div>
+                  <div className="text-emerald-400">Device Memory: {selectedLog.memory} GB</div>
+                  <div className="text-gray-400">Network: {selectedLog.connectionType || 'Unknown'}</div>
+                </div>
+              </div>
+
+              <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl">
+                <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold mb-1">User Agent</span>
+                <p className="text-gray-300 font-mono text-[11px] break-all leading-relaxed">{selectedLog.userAgent}</p>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setSelectedLog(null)}
+                  className="px-6 py-2.5 bg-[#ff4d4d] hover:bg-white text-[#15101e] font-black uppercase text-xs rounded-2xl transition-all cursor-pointer shadow-lg"
+                >
+                  {lang === 'ru' ? 'Закрыть' : 'Close'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+
 

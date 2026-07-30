@@ -31,9 +31,9 @@ const generateRollingKey = (seed: string): string => {
 export const encrypt = (text: string, contextId?: string): string => {
   if (!text) return "";
   
-  // Do NOT pass data URLs (images, voice, files) or raw http/blob URLs to AES encrypt,
+  // Do NOT pass data URLs (images, voice, files) or raw http/blob/relative URLs to AES encrypt,
   // as multi-megabyte base64 strings cause RangeError: Invalid array length in CryptoJS
-  if (text.startsWith('data:') || text.startsWith('http://') || text.startsWith('https://') || text.startsWith('blob:')) {
+  if (text.startsWith('data:') || text.startsWith('http://') || text.startsWith('https://') || text.startsWith('blob:') || text.startsWith('/') || text.startsWith('ipfs://')) {
     return text;
   }
 
@@ -253,7 +253,11 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
  */
 export const encryptImage = (dataUrl: string): string => {
   if (!dataUrl) return "";
-  if (dataUrl.startsWith("IMG_AES:")) return dataUrl; // Already encrypted
+  if (dataUrl.startsWith("IMG_AES:") || dataUrl.startsWith("enc:")) return dataUrl; // Already encrypted
+  // Do NOT encrypt web URLs, relative paths, blobs, or data URIs (drawings/photos)
+  if (dataUrl.startsWith("http://") || dataUrl.startsWith("https://") || dataUrl.startsWith("/") || dataUrl.startsWith("blob:") || dataUrl.startsWith("data:") || dataUrl.startsWith("ipfs://")) {
+    return dataUrl;
+  }
   if (dataUrl.length > 500000) {
     // Avoid CryptoJS array length overflow on large image data URLs
     return dataUrl;
@@ -272,9 +276,10 @@ export const encryptImage = (dataUrl: string): string => {
  */
 export const decryptImage = (cipherText: string): string => {
   if (!cipherText) return "";
-  if (!cipherText.startsWith("IMG_AES:")) return cipherText; // Not encrypted
+  if (!cipherText.startsWith("IMG_AES:") && !cipherText.startsWith("enc:")) return cipherText; // Not encrypted
   try {
-    const cipher = cipherText.substring("IMG_AES:".length);
+    const prefix = cipherText.startsWith("IMG_AES:") ? "IMG_AES:" : "enc:";
+    const cipher = cipherText.substring(prefix.length);
     const bytes = CryptoJS.AES.decrypt(cipher, BASE_SECRET);
     const result = bytes.toString(CryptoJS.enc.Utf8);
     return result || cipherText;

@@ -84,7 +84,7 @@ export const CachedAvatar: React.FC<CachedAvatarProps> = ({
   return (
     <div className={`relative inline-block shrink-0 ${getSizeClasses()} ${className}`}>
       {isLoading ? (
-        <div className="w-full h-full rounded-full bg-[#2a1745] animate-pulse border border-[#3d2b4f] flex items-center justify-center text-xs text-gray-500">
+        <div className="w-full h-full rounded-2xl bg-[#2a1745] animate-pulse border border-[#3d2b4f] flex items-center justify-center text-xs text-gray-500">
           ...
         </div>
       ) : !hasError && (cachedUrl || src) ? (
@@ -93,21 +93,21 @@ export const CachedAvatar: React.FC<CachedAvatarProps> = ({
           alt={alt}
           referrerPolicy="no-referrer"
           onError={() => setHasError(true)}
-          className="w-full h-full object-cover rounded-full border border-white/10 shadow-sm"
+          className="w-full h-full object-cover rounded-2xl border border-white/10 shadow-sm"
         />
       ) : initials ? (
-        <div className="w-full h-full rounded-full bg-gradient-to-tr from-purple-800 to-indigo-600 flex items-center justify-center font-black text-white border border-white/20 uppercase tracking-tight shadow-sm">
+        <div className="w-full h-full rounded-2xl bg-gradient-to-tr from-purple-800 to-indigo-600 flex items-center justify-center font-black text-white border border-white/20 uppercase tracking-tight shadow-sm">
           {initials}
         </div>
       ) : (
-        <div className="w-full h-full rounded-full bg-[#1b112c] flex items-center justify-center text-gray-400 border border-[#3d2b4f]">
+        <div className="w-full h-full rounded-2xl bg-[#1b112c] flex items-center justify-center text-gray-400 border border-[#3d2b4f]">
           <User className="w-1/2 h-1/2" />
         </div>
       )}
 
       {showOnlineStatus && (
         <span
-          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#120a1f] ${
+          className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#120a1f] ${
             isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-gray-600'
           }`}
         />

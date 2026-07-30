@@ -837,40 +837,28 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         isProtected: protectedViewFeatureEnabled ? publishIsProtected : false
       };
 
-      // 4. Save thread to Firestore (using vercelFallback bypass if active)
+      // 4. Save thread to Firestore
+      const threadRef = await addDoc(collection(db, 'forum_threads'), threadData);
+      
+      // Add default bot comment
+      await addDoc(collection(db, 'forum_comments'), {
+        threadId: threadRef.id,
+        content: lang === 'ru' ? 'Добро пожаловать в обсуждение этого рисунка!' : 'Welcome to the discussion of this pixel art artwork!',
+        authorId: 'system-bot',
+        authorName: 'Aha Bot',
+        authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
+        createdAt: serverTimestamp(),
+        upvotes: [],
+        downvotes: [],
+        isBot: true
+      });
+
       const { vercelFallback } = await import('../../utils/vercelFallback');
       if (vercelFallback.isAvailable()) {
-        const threadId = 'canvas_thread_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-        const payload = { ...threadData, id: threadId };
-        await vercelFallback.lpush('forum_threads', JSON.stringify(payload));
-        
-        // Add default bot comment
-        await vercelFallback.lpush('forum_comments', JSON.stringify({
-          id: 'comment_bot_' + Date.now(),
-          threadId: threadId,
-          content: lang === 'ru' ? 'Добро пожаловать в обсуждение этого рисунка!' : 'Welcome to the discussion of this pixel art artwork!',
-          authorId: 'system-bot',
-          authorName: 'Aha Bot',
-          authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
-          createdAt: new Date().toISOString(),
-          upvotes: [],
-          downvotes: [],
-          isBot: true
-        }));
-      } else {
-        const threadRef = await addDoc(collection(db, 'forum_threads'), threadData);
-        // Add default bot comment
-        await addDoc(collection(db, 'forum_comments'), {
-          threadId: threadRef.id,
-          content: lang === 'ru' ? 'Добро пожаловать в обсуждение этого рисунка!' : 'Welcome to the discussion of this pixel art artwork!',
-          authorId: 'system-bot',
-          authorName: 'Aha Bot',
-          authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
-          createdAt: serverTimestamp(),
-          upvotes: [],
-          downvotes: [],
-          isBot: true
-        });
+        try {
+          const payload = { ...threadData, id: threadRef.id };
+          await vercelFallback.lpush('forum_threads', JSON.stringify(payload));
+        } catch (e) {}
       }
 
       window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Рисунок успешно опубликован в Активность!' : 'Drawing successfully published to Activities!' }));
