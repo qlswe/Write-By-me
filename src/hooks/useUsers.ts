@@ -17,6 +17,12 @@ export interface UserData {
   isBot?: boolean;
   isBlocked?: boolean;
   deviceId?: string;
+  bio?: string;
+  tagColor?: string;
+  statusMessage?: string;
+  signature?: string;
+  xp?: number;
+  reputation?: number;
 }
 
 export const JUKY_BOT_USER: UserData = {

@@ -64,11 +64,14 @@ export const SafeHtml: React.FC<{ html: string; className?: string }> = ({ html,
   const cleanHtml = sanitizeContent(html);
 
   useEffect(() => {
-    // Unmount old roots when html updates
-    rootsRef.current.forEach(r => {
-      try { r.unmount(); } catch (e) {}
-    });
+    // Safely unmount old roots asynchronously after current render cycle
+    const oldRoots = rootsRef.current;
     rootsRef.current = [];
+    oldRoots.forEach(r => {
+      setTimeout(() => {
+        try { r.unmount(); } catch (e) {}
+      }, 0);
+    });
 
     if (!containerRef.current) return;
 
@@ -88,10 +91,13 @@ export const SafeHtml: React.FC<{ html: string; className?: string }> = ({ html,
     });
 
     return () => {
-      rootsRef.current.forEach(r => {
-        try { r.unmount(); } catch (e) {}
-      });
+      const rootsToUnmount = rootsRef.current;
       rootsRef.current = [];
+      rootsToUnmount.forEach(r => {
+        setTimeout(() => {
+          try { r.unmount(); } catch (e) {}
+        }, 0);
+      });
     };
   }, [cleanHtml]);
 

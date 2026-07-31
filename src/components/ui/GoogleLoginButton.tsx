@@ -56,28 +56,36 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       </button>
 
       {error && (
-        <div className="text-[11px] text-red-400 font-medium text-center bg-red-950/30 border border-red-500/20 px-3 py-1.5 rounded-xl max-w-xs">
-          {error === 'POPUP_BLOCKED_IFRAME' ? (
-            <div className="space-y-1">
-              <span>
+        <div className="text-[11px] text-red-300 font-medium text-center bg-[#1c132c]/95 border border-[#ff4d4d]/40 px-3.5 py-2.5 rounded-xl max-w-xs shadow-lg">
+          {error === 'IFRAME_AUTH_RESTRICTED' || error === 'POPUP_BLOCKED_IFRAME' || isIframe ? (
+            <div className="space-y-2">
+              <p className="text-gray-200 text-[11px] leading-snug">
                 {lang === 'ru'
-                  ? 'Вход заблокирован во фрейме.'
-                  : 'Google Auth blocked in iframe.'}
-              </span>
-              {isIframe && (
-                <button
-                  type="button"
-                  onClick={() => window.open(window.location.href, '_blank')}
-                  className="block mx-auto text-purple-300 underline hover:text-white font-bold cursor-pointer"
-                >
-                  {lang === 'ru' ? 'Открыть в новой вкладке' : 'Open in new tab'}
-                </button>
-              )}
+                  ? 'Встроенное окно превью (iframe) блокирует авторизацию Google из-за политик безопасности браузера.'
+                  : 'Embedded preview frame blocks Google sign-in due to browser security policies.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => window.open(window.location.href, '_blank')}
+                className="w-full py-2 px-3 bg-[#ff4d4d] text-[#15101e] hover:bg-[#ff6666] font-black rounded-lg transition-all shadow-md cursor-pointer block"
+              >
+                {lang === 'ru' ? '🚀 Открыть в новой вкладке для входа' : '🚀 Open in new tab to sign in'}
+              </button>
             </div>
           ) : (
             <span>{error}</span>
           )}
         </div>
+      )}
+
+      {isIframe && !error && (
+        <button
+          type="button"
+          onClick={() => window.open(window.location.href, '_blank')}
+          className="text-[10px] text-gray-400 hover:text-white underline transition-colors cursor-pointer"
+        >
+          {lang === 'ru' ? 'Не входит? Откройте в новой вкладке' : 'Login blocked? Open in new tab'}
+        </button>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { auth, db } from '../firebase';
-import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
+import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { getDeviceId } from '../utils/deviceId';
 
@@ -322,9 +322,7 @@ export function useAuth() {
       }
       const isIframe = window.self !== window.top;
       if (isIframe) {
-        setError(err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request'
-          ? "POPUP_BLOCKED_IFRAME"
-          : (err.message || "Google sign-in restricted in preview frame. Please open in a new tab."));
+        setError("IFRAME_AUTH_RESTRICTED");
       } else {
         if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
           try {
@@ -359,7 +357,18 @@ export function useAuth() {
     }
   };
 
-  const registerWithEmail = async (email: string, password?: string) => {
+  const registerWithEmail = async (
+    email: string, 
+    password?: string, 
+    profile?: { 
+      displayName?: string; 
+      photoURL?: string; 
+      bio?: string; 
+      tagColor?: string; 
+      statusMessage?: string; 
+      signature?: string; 
+    }
+  ) => {
     setError(null);
     if (!password) {
       setError("Please provide a password.");
@@ -367,8 +376,27 @@ export function useAuth() {
     }
     setIsLoggingIn(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
       localStorage.setItem('auth_session_start_time', Date.now().toString());
+      if (profile && cred.user) {
+        const dName = profile.displayName || email.split('@')[0];
+        const pUrl = profile.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`;
+        await updateProfile(cred.user, { displayName: dName, photoURL: pUrl }).catch(e => console.warn('updateProfile:', e));
+        await setDoc(doc(db, 'public_profiles', cred.user.uid), {
+          displayName: dName,
+          photoURL: pUrl,
+          bio: profile.bio || '',
+          tagColor: profile.tagColor || '#ff4d4d',
+          statusMessage: profile.statusMessage || '',
+          signature: profile.signature || '',
+          xp: 100,
+          reputation: 25,
+          email: email,
+          isVerified: false,
+          isPremium: false,
+          createdAt: Date.now()
+        }, { merge: true }).catch(e => console.warn('save profile:', e));
+      }
     } catch (error: any) {
       setError(error.message);
       throw error;
