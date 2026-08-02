@@ -4,6 +4,7 @@ import { Star, Search, ArrowLeft, Share2, Check, Plus, Edit, BookOpen, Sparkles,
 import { theoriesData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
+import { useDebounce } from '../../utils/performanceOptimizer';
 import { CommentsSection } from './CommentsSection';
 import { TheoryCard } from './TheoryCard';
 
@@ -49,6 +50,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('TheoriesSection');
+  const debouncedTheorySearch = useDebounce(theorySearch, 150);
   const [selectedTheoryId, setSelectedTheoryId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [theoryToDelete, setTheoryToDelete] = useState<string | null>(null);
@@ -95,12 +97,12 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
     return theories.filter(theory => {
       const matchesCat = theoryCategory === 'all' || 
                          (theoryCategory === 'favorites' ? favorites.includes(theory.id) : theory.category === theoryCategory);
-      const search = theorySearch.toLowerCase();
+      const search = debouncedTheorySearch.toLowerCase();
       const matchesSearch = (theory.title[lang] || theory.title['en']).toLowerCase().includes(search) || 
                              (theory.summary[lang] || theory.summary['en']).toLowerCase().includes(search);
       return matchesCat && matchesSearch;
     });
-  }, [theoryCategory, theorySearch, lang, favorites, theories]);
+  }, [theoryCategory, debouncedTheorySearch, lang, favorites, theories]);
 
   const selectedTheory = useMemo(() => {
     return selectedTheoryId ? theories.find(t => t.id === selectedTheoryId) : null;

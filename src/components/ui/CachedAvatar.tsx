@@ -11,6 +11,7 @@ interface CachedAvatarProps {
   fallbackText?: string;
   showOnlineStatus?: boolean;
   isOnline?: boolean;
+  style?: React.CSSProperties;
 }
 
 export const CachedAvatar: React.FC<CachedAvatarProps> = ({
@@ -21,7 +22,8 @@ export const CachedAvatar: React.FC<CachedAvatarProps> = ({
   customSizeClass,
   fallbackText,
   showOnlineStatus = false,
-  isOnline = false
+  isOnline = false,
+  style
 }) => {
   const [cachedUrl, setCachedUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -82,7 +84,7 @@ export const CachedAvatar: React.FC<CachedAvatarProps> = ({
   const initials = getInitials();
 
   return (
-    <div className={`relative inline-block shrink-0 ${getSizeClasses()} ${className}`}>
+    <div className={`relative inline-block shrink-0 ${getSizeClasses()} ${className}`} style={style}>
       {isLoading ? (
         <div className="w-full h-full rounded-2xl bg-[#2a1745] animate-pulse border border-[#3d2b4f] flex items-center justify-center text-xs text-gray-500">
           ...

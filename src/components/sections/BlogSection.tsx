@@ -4,6 +4,7 @@ import { Star, Search, ArrowLeft, Plus, Edit, Newspaper, Sparkles, Clock, User }
 import { blogPostsData } from '../../data/content';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
+import { useDebounce } from '../../utils/performanceOptimizer';
 import { CommentsSection } from './CommentsSection';
 import { BlogCard } from './BlogCard';
 
@@ -50,6 +51,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
 }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('BlogSection');
+  const debouncedBlogSearch = useDebounce(blogSearch, 150);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const { user } = useAuth();
@@ -71,12 +73,12 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
     return blogPosts.filter(post => {
       const matchesCat = blogCategory === 'all' || 
                          (blogCategory === 'favorites' ? favorites.includes(post.id) : post.category === blogCategory);
-      const search = blogSearch.toLowerCase();
+      const search = debouncedBlogSearch.toLowerCase();
       const matchesSearch = (post.title[lang] || post.title['en']).toLowerCase().includes(search) || 
                             (post.summary[lang] || post.summary['en']).toLowerCase().includes(search);
       return matchesCat && matchesSearch;
     });
-  }, [blogCategory, blogSearch, lang, favorites, blogPosts]);
+  }, [blogCategory, debouncedBlogSearch, lang, favorites, blogPosts]);
 
   const selectedPost = useMemo(() => {
     return selectedPostId ? blogPosts.find(p => p.id === selectedPostId) : null;

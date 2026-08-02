@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Terminal, X, Trash2, Download, Search, Copy, Check, Filter, AlertTriangle, AlertCircle, Info, Zap, Shield, Play, Pause, Maximize2, Minimize2 } from 'lucide-react';
+import {
+  Terminal, X, Trash2, Download, Search, Copy, Check, Filter,
+  AlertTriangle, AlertCircle, Info, Zap, Shield, Play, Pause,
+  Maximize2, Minimize2, Database, Key, Cpu, Activity, RefreshCw,
+  Layers, HardDrive, Smartphone, Globe, Bug, Flame, ClipboardCheck
+} from 'lucide-react';
 import { logger } from '../../utils/logger';
+import { useAuth } from '../../hooks/useAuth';
+import { auth, db } from '../../firebase';
+import { getDeviceId } from '../../utils/deviceId';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface DevConsoleWidgetProps {
   isOpen: boolean;
@@ -14,7 +23,9 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
   onClose,
   onToggle
 }) => {
+  const { user } = useAuth();
   const [logs, setLogs] = useState(() => logger.getLogs());
+  const [activeTab, setActiveTab] = useState<'logs' | 'auth_db' | 'env_state' | 'tests'>('logs');
   const [filterLevel, setFilterLevel] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedLogIndex, setExpandedLogIndex] = useState<number | null>(null);
@@ -22,21 +33,40 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
 
+  // Debug inspector state
+  const [dbLatency, setDbLatency] = useState<number | null>(null);
+  const [testingDb, setTestingDb] = useState<boolean>(false);
+  const [tokenCopied, setTokenCopied] = useState<boolean>(false);
+  const [uidCopied, setUidCopied] = useState<boolean>(false);
+  const [reportCopied, setReportCopied] = useState<boolean>(false);
+
   const logsEndRef = useRef<HTMLDivElement>(null);
 
+  // Subscribe to logger events & hotkey Alt+D
   useEffect(() => {
-    // Subscribe to logger events
     const unsubscribe = logger.subscribe(() => {
       setLogs(logger.getLogs());
     });
-    return () => unsubscribe();
-  }, []);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.altKey || (e.ctrlKey && e.shiftKey)) && (e.key === 'd' || e.key === 'D' || e.key === 'в' || e.key === 'В')) {
+        e.preventDefault();
+        onToggle();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onToggle]);
 
   useEffect(() => {
-    if (autoScroll && isOpen && logsEndRef.current) {
+    if (autoScroll && isOpen && activeTab === 'logs' && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [logs.length, autoScroll, isOpen]);
+  }, [logs.length, autoScroll, isOpen, activeTab]);
 
   const handleClear = () => {
     logger.clear();
@@ -56,6 +86,92 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
 
   const handleExport = () => {
     logger.exportLogs();
+  };
+
+  // Test Firestore Read latency
+  const handleTestFirestore = async () => {
+    setTestingDb(true);
+    const start = performance.now();
+    try {
+      await getDoc(doc(db, 'chats', 'group_ahi_radio_room'));
+      const end = performance.now();
+      const duration = Math.round(end - start);
+      setDbLatency(duration);
+      logger.perf(`Firestore Ping successful`, { durationMs: duration }, 'DevConsole');
+    } catch (err: any) {
+      setDbLatency(-1);
+      logger.error(`Firestore Ping failed`, { error: err?.message }, 'DevConsole');
+    } finally {
+      setTestingDb(false);
+    }
+  };
+
+  // Copy JWT Token
+  const handleCopyToken = async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      await navigator.clipboard.writeText(token);
+      setTokenCopied(true);
+      setTimeout(() => setTokenCopied(false), 2000);
+    } catch (err) {
+      console.warn(err);
+    }
+  };
+
+  // Copy User UID
+  const handleCopyUid = async () => {
+    if (!user) return;
+    try {
+      await navigator.clipboard.writeText(user.uid);
+      setUidCopied(true);
+      setTimeout(() => setUidCopied(false), 2000);
+    } catch (err) {
+      console.warn(err);
+    }
+  };
+
+  // Copy Markdown Diagnostics Bundle
+  const handleCopyDiagnosticsReport = async () => {
+    try {
+      const report = [
+        `# 🛠️ AHI CYBER SITE DIAGNOSTICS REPORT`,
+        `**Generated At:** ${new Date().toISOString()}`,
+        `**URL:** ${window.location.href}`,
+        ``,
+        `## 💻 System & Environment`,
+        `- **User-Agent:** \`${navigator.userAgent}\``,
+        `- **Screen:** \`${window.innerWidth}x${window.innerHeight} (DevicePixelRatio: ${window.devicePixelRatio})\``,
+        `- **Online Status:** \`${navigator.onLine ? 'ONLINE' : 'OFFLINE'}\``,
+        `- **CPU Threads:** \`${navigator.hardwareConcurrency || 'N/A'}\``,
+        `- **Memory (RAM):** \`${(navigator as any).deviceMemory || 'N/A'} GB\``,
+        `- **Device ID:** \`${getDeviceId()}\``,
+        ``,
+        `## 🔐 Authentication & Session`,
+        `- **User Auth Status:** \`${user ? 'AUTHENTICATED' : 'ANONYMOUS/GUEST'}\``,
+        `- **UID:** \`${user?.uid || 'N/A'}\``,
+        `- **Email:** \`${user?.email || 'N/A'}\``,
+        `- **DisplayName:** \`${user?.displayName || 'N/A'}\``,
+        `- **Email Verified:** \`${user?.emailVerified ? 'Yes' : 'No'}\``,
+        ``,
+        `## 📊 Log Statistics`,
+        `- **Total Logs Recorded:** \`${logs.length}\``,
+        `- **Errors:** \`${logs.filter(l => l.level === 'error').length}\``,
+        `- **Warnings:** \`${logs.filter(l => l.level === 'warn').length}\``,
+        ``,
+        `## 📜 Recent Log Entries (Last 10)`,
+        '```json',
+        JSON.stringify(logs.slice(-10), null, 2),
+        '```'
+      ].join('\n');
+
+      await navigator.clipboard.writeText(report);
+      setReportCopied(true);
+      setTimeout(() => setReportCopied(false), 2000);
+      logger.info('Copied full markdown diagnostic report to clipboard', null, 'DevConsole');
+    } catch (e) {
+      console.warn(e);
+    }
   };
 
   // Filtered logs
@@ -113,7 +229,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
             ? 'bg-[#ff4d4d] text-white border-white/30 shadow-[0_0_20px_rgba(255,77,77,0.6)] scale-105'
             : 'bg-[#150e24]/90 backdrop-blur-md text-gray-200 border-[#3d2b4f] hover:border-[#ff4d4d] hover:shadow-[0_0_15px_rgba(255,77,77,0.4)]'
         }`}
-        title="Переключить виджет Консоли Сайта"
+        title="Переключить Консоль (Alt+D / Ctrl+Shift+D)"
       >
         <Terminal size={16} className={isOpen ? 'animate-pulse' : 'text-[#ff4d4d]'} />
         <span className="hidden sm:inline font-sans">Консоль</span>
@@ -146,8 +262,8 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
             }`}
           >
             {/* Header Control Bar */}
-            <div className="bg-[#120a21] px-4 py-2.5 border-b border-[#291740] flex flex-wrap items-center justify-between gap-2 shrink-0">
-              {/* Title & Stats */}
+            <div className="bg-[#120a21] px-4 py-2 border-b border-[#291740] flex flex-wrap items-center justify-between gap-2 shrink-0">
+              {/* Title & Tab Bar */}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-[#ff4d4d] font-bold">
                   <Terminal size={16} />
@@ -155,105 +271,79 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                     КОНСОЛЬ САЙТА
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
-                  <span className="px-2 py-0.5 rounded bg-[#1e1035] border border-[#3d2b4f]">
-                    Записи: <strong className="text-white">{logs.length}</strong>
-                  </span>
-                  {errorCount > 0 && (
-                    <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-bold">
-                      ERR: {errorCount}
-                    </span>
-                  )}
-                  {warnCount > 0 && (
-                    <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold">
-                      WARN: {warnCount}
-                    </span>
-                  )}
+
+                {/* Tabs */}
+                <div className="flex items-center gap-1 bg-[#1a0e30] p-1 rounded-xl border border-[#3d2b4f]">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('logs')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'logs'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Terminal size={12} />
+                    <span>Логи ({logs.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('auth_db')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'auth_db'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Key size={12} />
+                    <span>Auth & DB</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('env_state')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'env_state'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Cpu size={12} />
+                    <span>Система & Env</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('tests')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'tests'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Bug size={12} />
+                    <span>Тесты</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Filters & Actions */}
-              <div className="flex items-center gap-2 overflow-x-auto py-1">
-                {/* Search Box */}
-                <div className="relative flex items-center">
-                  <Search size={12} className="absolute left-2.5 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Поиск логов..."
-                    className="pl-7 pr-2 py-1 bg-[#1a0e30] border border-[#3d2b4f] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] w-28 sm:w-40 text-xs"
-                  />
-                </div>
-
-                {/* Level Filter Dropdown */}
-                <select
-                  value={filterLevel}
-                  onChange={(e) => setFilterLevel(e.target.value)}
-                  className="bg-[#1a0e30] border border-[#3d2b4f] text-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#ff4d4d] text-xs"
-                >
-                  <option value="ALL">Все уровни</option>
-                  <option value="INFO">Info</option>
-                  <option value="WARN">Warn</option>
-                  <option value="ERROR">Error</option>
-                  <option value="PERF">Perf</option>
-                  <option value="SYSTEM">System</option>
-                  <option value="ACTION">Action</option>
-                </select>
-
-                {/* Auto Scroll Toggle */}
-                <button
-                  onClick={() => setAutoScroll(!autoScroll)}
-                  className={`p-1.5 rounded-lg border flex items-center gap-1 transition-all ${
-                    autoScroll
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                      : 'bg-[#1a0e30] text-gray-400 border-[#3d2b4f]'
-                  }`}
-                  title={autoScroll ? 'Автопрокрутка включена' : 'Автопрокрутка выключена'}
-                >
-                  {autoScroll ? <Play size={12} /> : <Pause size={12} />}
-                </button>
-
-                {/* Copy Logs */}
-                <button
-                  onClick={handleCopyLogs}
-                  className="p-1.5 rounded-lg bg-[#1a0e30] border border-[#3d2b4f] text-gray-300 hover:text-white hover:border-[#ff4d4d] transition-all"
-                  title="Скопировать логи"
-                >
-                  {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                </button>
-
-                {/* Export JSON */}
-                <button
-                  onClick={handleExport}
-                  className="p-1.5 rounded-lg bg-[#1a0e30] border border-[#3d2b4f] text-gray-300 hover:text-white hover:border-[#ff4d4d] transition-all"
-                  title="Экспорт логов в JSON"
-                >
-                  <Download size={12} />
-                </button>
-
-                {/* Clear */}
-                <button
-                  onClick={handleClear}
-                  className="p-1.5 rounded-lg bg-[#1a0e30] border border-[#3d2b4f] text-gray-300 hover:text-red-400 hover:border-red-500/40 transition-all"
-                  title="Очистить консоль"
-                >
-                  <Trash2 size={12} />
-                </button>
-
-                {/* Maximize Toggle */}
+              {/* Top Window Actions (Max/Close) */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-gray-500 hidden sm:inline mr-2">
+                  Alt+D для быстрого входа
+                </span>
                 <button
                   onClick={() => setIsMaximized(!isMaximized)}
-                  className="p-1.5 rounded-lg bg-[#1a0e30] border border-[#3d2b4f] text-gray-300 hover:text-white transition-all hidden sm:block"
+                  className="p-1.5 rounded-lg bg-[#1a0e30] border border-[#3d2b4f] text-gray-300 hover:text-white transition-all hidden sm:block cursor-pointer"
                   title={isMaximized ? 'Свернуть' : 'Развернуть на весь экран'}
                 >
                   {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                 </button>
 
-                {/* Close */}
                 <button
                   onClick={onClose}
-                  className="p-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500 hover:text-white transition-all"
+                  className="p-1.5 rounded-lg bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500 hover:text-white transition-all cursor-pointer"
                   title="Закрыть консоль"
                 >
                   <X size={12} />
@@ -261,68 +351,466 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
               </div>
             </div>
 
-            {/* Logs Output List */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 selection:bg-[#ff4d4d]/30">
-              {filteredLogs.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-gray-500 space-y-1 py-8">
-                  <Terminal size={24} className="opacity-40" />
-                  <p className="text-xs">Логи отсутствуют или отфильтрованы</p>
-                </div>
-              ) : (
-                filteredLogs.map((log, index) => {
-                  const isExpanded = expandedLogIndex === index;
-                  const timeStr = new Date(log.timestamp).toLocaleTimeString();
+            {/* TAB CONTENT: 1. LOGS */}
+            {activeTab === 'logs' && (
+              <>
+                {/* Filters & Actions Bar for Logs */}
+                <div className="bg-[#150d26] px-4 py-1.5 border-b border-[#291740] flex flex-wrap items-center justify-between gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                    {errorCount > 0 && (
+                      <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-bold">
+                        ERR: {errorCount}
+                      </span>
+                    )}
+                    {warnCount > 0 && (
+                      <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold">
+                        WARN: {warnCount}
+                      </span>
+                    )}
+                  </div>
 
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => setExpandedLogIndex(isExpanded ? null : index)}
-                      className="p-2 rounded-lg bg-[#130b24] hover:bg-[#1c1035] border border-[#2a1845] transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-start gap-2 leading-relaxed">
-                        {getLevelIcon(log.level)}
-                        <span className="text-[10px] text-gray-500 shrink-0 pt-0.5">{timeStr}</span>
-
-                        <span
-                          className={`px-1.5 py-0.2 rounded border text-[9px] font-bold uppercase shrink-0 ${getLevelBadgeClass(
-                            log.level
-                          )}`}
-                        >
-                          {log.level}
-                        </span>
-
-                        {log.component && (
-                          <span className="text-cyan-400 font-bold shrink-0 text-[10px]">
-                            [{log.component}]
-                          </span>
-                        )}
-
-                        <span className="text-gray-200 break-all flex-1">{log.message}</span>
-
-                        {log.data && (
-                          <span className="text-[10px] text-purple-400 font-bold group-hover:underline shrink-0">
-                            {isExpanded ? 'Свернуть' : 'Payload'}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Expandable Payload Viewer */}
-                      {isExpanded && log.data && (
-                        <div className="mt-2 p-2 bg.black/40 rounded border border-[#3d2b4f] text-[11px] text-emerald-300 overflow-x-auto">
-                          <pre className="whitespace-pre-wrap break-words">
-                            {JSON.stringify(log.data, null, 2)}
-                          </pre>
-                        </div>
-                      )}
+                  <div className="flex items-center gap-2 overflow-x-auto py-0.5">
+                    {/* Search Box */}
+                    <div className="relative flex items-center">
+                      <Search size={12} className="absolute left-2.5 text-gray-400" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Поиск логов..."
+                        className="pl-7 pr-2 py-1 bg-[#1a0e30] border border-[#3d2b4f] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] w-28 sm:w-40 text-xs"
+                      />
                     </div>
-                  );
-                })
-              )}
-              <div ref={logsEndRef} />
-            </div>
+
+                    {/* Level Filter Dropdown */}
+                    <select
+                      value={filterLevel}
+                      onChange={(e) => setFilterLevel(e.target.value)}
+                      className="bg-[#1a0e30] border border-[#3d2b4f] text-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#ff4d4d] text-xs"
+                    >
+                      <option value="ALL">Все уровни</option>
+                      <option value="INFO">Info</option>
+                      <option value="WARN">Warn</option>
+                      <option value="ERROR">Error</option>
+                      <option value="PERF">Perf</option>
+                      <option value="SYSTEM">System</option>
+                      <option value="ACTION">Action</option>
+                    </select>
+
+                    {/* Auto Scroll Toggle */}
+                    <button
+                      onClick={() => setAutoScroll(!autoScroll)}
+                      className={`p-1.5 rounded-lg border flex items-center gap-1 transition-all ${
+                        autoScroll
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                          : 'bg-[#1a0e30] text-gray-400 border-[#3d2b4f]'
+                      }`}
+                      title={autoScroll ? 'Автопрокрутка включена' : 'Автопрокрутка выключена'}
+                    >
+                      {autoScroll ? <Play size={12} /> : <Pause size={12} />}
+                    </button>
+
+                    {/* Copy Logs */}
+                    <button
+                      onClick={handleCopyLogs}
+                      className="p-1.5 rounded-lg bg-[#1a0e30] border border-[#3d2b4f] text-gray-300 hover:text-white hover:border-[#ff4d4d] transition-all"
+                      title="Скопировать логи"
+                    >
+                      {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    </button>
+
+                    {/* Export JSON */}
+                    <button
+                      onClick={handleExport}
+                      className="p-1.5 rounded-lg bg-[#1a0e30] border border-[#3d2b4f] text-gray-300 hover:text-white hover:border-[#ff4d4d] transition-all"
+                      title="Экспорт логов в JSON"
+                    >
+                      <Download size={12} />
+                    </button>
+
+                    {/* Clear */}
+                    <button
+                      onClick={handleClear}
+                      className="p-1.5 rounded-lg bg-[#1a0e30] border border-[#3d2b4f] text-gray-300 hover:text-red-400 hover:border-red-500/40 transition-all"
+                      title="Очистить консоль"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Logs Output List */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-1.5 selection:bg-[#ff4d4d]/30">
+                  {filteredLogs.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-gray-500 space-y-1 py-8">
+                      <Terminal size={24} className="opacity-40" />
+                      <p className="text-xs">Логи отсутствуют или отфильтрованы</p>
+                    </div>
+                  ) : (
+                    filteredLogs.map((log, index) => {
+                      const isExpanded = expandedLogIndex === index;
+                      const timeStr = new Date(log.timestamp).toLocaleTimeString();
+
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => setExpandedLogIndex(isExpanded ? null : index)}
+                          className="p-2 rounded-lg bg-[#130b24] hover:bg-[#1c1035] border border-[#2a1845] transition-all cursor-pointer group"
+                        >
+                          <div className="flex items-start gap-2 leading-relaxed">
+                            {getLevelIcon(log.level)}
+                            <span className="text-[10px] text-gray-500 shrink-0 pt-0.5">{timeStr}</span>
+
+                            <span
+                              className={`px-1.5 py-0.2 rounded border text-[9px] font-bold uppercase shrink-0 ${getLevelBadgeClass(
+                                log.level
+                              )}`}
+                            >
+                              {log.level}
+                            </span>
+
+                            {log.component && (
+                              <span className="text-cyan-400 font-bold shrink-0 text-[10px]">
+                                [{log.component}]
+                              </span>
+                            )}
+
+                            <span className="text-gray-200 break-all flex-1">{log.message}</span>
+
+                            {log.data && (
+                              <span className="text-[10px] text-purple-400 font-bold group-hover:underline shrink-0">
+                                {isExpanded ? 'Свернуть' : 'Payload'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Expandable Payload Viewer */}
+                          {isExpanded && log.data && (
+                            <div className="mt-2 p-2 bg-black/40 rounded border border-[#3d2b4f] text-[11px] text-emerald-300 overflow-x-auto">
+                              <pre className="whitespace-pre-wrap break-words">
+                                {JSON.stringify(log.data, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={logsEndRef} />
+                </div>
+              </>
+            )}
+
+            {/* TAB CONTENT: 2. AUTH & DB DEBUG */}
+            {activeTab === 'auth_db' && (
+              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Auth Inspector Box */}
+                <div className="bg-[#150d26] border border-[#3d2b4f] rounded-2xl p-4">
+                  <div className="flex items-center justify-between border-b border-[#3d2b4f] pb-3 mb-3">
+                    <div className="flex items-center gap-2 text-white font-bold text-xs">
+                      <Key size={16} className="text-[#ff4d4d]" />
+                      <span>АВТОРИЗАЦИЯ И СЕССИЯ</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      user ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-400'
+                    }`}>
+                      {user ? 'AUTHENTICATED' : 'ANONYMOUS / GUEST'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">UID:</span>
+                      <span className="text-cyan-300 font-mono font-bold truncate max-w-[200px]">
+                        {user?.uid || 'Не авторизован'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">Email:</span>
+                      <span className="text-white truncate max-w-[200px]">
+                        {user?.email || '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">Имя:</span>
+                      <span className="text-white truncate max-w-[200px]">
+                        {user?.displayName || '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">Email подтвержден:</span>
+                      <span className={user?.emailVerified ? 'text-emerald-400' : 'text-amber-400'}>
+                        {user ? (user.emailVerified ? 'Да (Verified)' : 'Нет') : '—'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-3">
+                      <button
+                        type="button"
+                        onClick={handleCopyUid}
+                        disabled={!user}
+                        className="flex-1 py-1.5 px-3 bg-[#251c35] hover:bg-[#3d2b4f] disabled:opacity-40 text-white rounded-lg text-[11px] font-bold border border-[#3d2b4f] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        {uidCopied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                        <span>{uidCopied ? 'UID скопирован' : 'Скопировать UID'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyToken}
+                        disabled={!user}
+                        className="flex-1 py-1.5 px-3 bg-[#251c35] hover:bg-[#3d2b4f] disabled:opacity-40 text-white rounded-lg text-[11px] font-bold border border-[#3d2b4f] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                      >
+                        {tokenCopied ? <Check size={14} className="text-emerald-400" /> : <Key size={14} />}
+                        <span>{tokenCopied ? 'JWT скопирован' : 'Скопировать JWT'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Firestore & DB Inspector Box */}
+                <div className="bg-[#150d26] border border-[#3d2b4f] rounded-2xl p-4">
+                  <div className="flex items-center justify-between border-b border-[#3d2b4f] pb-3 mb-3">
+                    <div className="flex items-center gap-2 text-white font-bold text-xs">
+                      <Database size={16} className="text-[#a855f7]" />
+                      <span>FIRESTORE & CONNECTIVITY</span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      dbLatency !== null && dbLatency >= 0
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        : dbLatency === -1
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'bg-gray-700 text-gray-300'
+                    }`}>
+                      {dbLatency !== null && dbLatency >= 0
+                        ? `${dbLatency}ms latency`
+                        : dbLatency === -1
+                        ? 'ERR'
+                        : 'IDLE'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">Пинг до базы данных:</span>
+                      <span className="text-white font-mono">
+                        {dbLatency !== null && dbLatency >= 0 ? `${dbLatency} ms` : 'Не проверялось'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">Сетевой статус:</span>
+                      <span className={navigator.onLine ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                        {navigator.onLine ? '🟢 ОНЛАЙН' : '🔴 ОФФЛАЙН'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">ID Устройства (AHI):</span>
+                      <span className="text-cyan-300 font-mono truncate max-w-[180px]">
+                        {getDeviceId()}
+                      </span>
+                    </div>
+
+                    <div className="pt-3">
+                      <button
+                        type="button"
+                        onClick={handleTestFirestore}
+                        disabled={testingDb}
+                        className="w-full py-2 bg-gradient-to-r from-[#ff4d4d]/20 to-[#a855f7]/20 hover:from-[#ff4d4d] hover:to-[#a855f7] hover:text-[#15101e] text-white font-bold rounded-xl border border-[#ff4d4d]/40 transition-all flex items-center justify-center gap-2 cursor-pointer shadow"
+                      >
+                        <RefreshCw size={14} className={testingDb ? 'animate-spin' : ''} />
+                        <span>{testingDb ? 'Тестируем Firestore...' : 'Пинг Firestore (Test DB Read)'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 3. ENV & STATE */}
+            {activeTab === 'env_state' && (
+              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* System Hardware & Screen Box */}
+                <div className="bg-[#150d26] border border-[#3d2b4f] rounded-2xl p-4">
+                  <div className="flex items-center gap-2 text-white font-bold text-xs border-b border-[#3d2b4f] pb-3 mb-3">
+                    <Cpu size={16} className="text-cyan-400" />
+                    <span>АППАРАТНАЯ СРЕДА И БРАУЗЕР</span>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">Экран:</span>
+                      <span className="text-white font-mono">
+                        {window.innerWidth}x{window.innerHeight} (DPR: {window.devicePixelRatio})
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">Процессорные потоки:</span>
+                      <span className="text-white font-mono">
+                        {navigator.hardwareConcurrency || 'N/A'} cores
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">ОЗУ (RAM):</span>
+                      <span className="text-white font-mono">
+                        {(navigator as any).deviceMemory ? `${(navigator as any).deviceMemory} GB` : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1 py-1">
+                      <span className="text-gray-400">User-Agent:</span>
+                      <span className="text-[10px] text-gray-400 bg-[#1c1130] p-2 rounded-lg font-mono break-all border border-[#3d2b4f]">
+                        {navigator.userAgent}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* LocalStorage & Session Cache Inspector */}
+                <div className="bg-[#150d26] border border-[#3d2b4f] rounded-2xl p-4">
+                  <div className="flex items-center justify-between border-b border-[#3d2b4f] pb-3 mb-3">
+                    <div className="flex items-center gap-2 text-white font-bold text-xs">
+                      <HardDrive size={16} className="text-emerald-400" />
+                      <span>LOCALSTORAGE КЛЮЧИ</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.clear();
+                        logger.info('localStorage cleared by DevConsole', null, 'DevConsole');
+                        window.location.reload();
+                      }}
+                      className="text-red-400 hover:text-red-300 text-[10px] font-bold uppercase transition-colors cursor-pointer"
+                    >
+                      Сбросить все хранилище
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {Object.keys(localStorage).length === 0 ? (
+                      <p className="text-gray-500 text-xs py-4 text-center">LocalStorage пуст</p>
+                    ) : (
+                      Object.keys(localStorage).map((key) => {
+                        const val = localStorage.getItem(key) || '';
+                        return (
+                          <div key={key} className="p-2 bg-[#1c1130] rounded-lg border border-[#3d2b4f]/60 flex items-center justify-between gap-2 text-xs">
+                            <div className="min-w-0">
+                              <span className="text-cyan-300 font-bold block truncate">{key}</span>
+                              <span className="text-gray-400 text-[10px] truncate block">{val}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                localStorage.removeItem(key);
+                                logger.info(`Removed key ${key} from localStorage`, null, 'DevConsole');
+                              }}
+                              className="text-gray-400 hover:text-red-400 p-1 rounded transition-colors"
+                              title="Удалить ключ"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 4. TESTS & REPORTS */}
+            {activeTab === 'tests' && (
+              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Trigger Logging Test Entries */}
+                <div className="bg-[#150d26] border border-[#3d2b4f] rounded-2xl p-4">
+                  <div className="flex items-center gap-2 text-white font-bold text-xs border-b border-[#3d2b4f] pb-3 mb-3">
+                    <Bug size={16} className="text-[#ff4d4d]" />
+                    <span>ГЕНЕРАТОР ТЕСТОВЫХ ЛОГОВ (QA)</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => logger.error('Test Error event from DevConsole QA', { code: 'TEST_ERR_500', time: Date.now() }, 'QA_Test')}
+                      className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-left transition-all cursor-pointer font-bold"
+                    >
+                      <AlertCircle size={16} className="mb-1" />
+                      <span>Error Лог</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => logger.warn('Test Warning event from DevConsole QA', { memoryUsage: 'high', cpu: 85 }, 'QA_Test')}
+                      className="p-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl text-left transition-all cursor-pointer font-bold"
+                    >
+                      <AlertTriangle size={16} className="mb-1" />
+                      <span>Warn Лог</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => logger.perf('UI Render Benchmark Test', { durationMs: 12.4, fps: 60 }, 'QA_Test')}
+                      className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-left transition-all cursor-pointer font-bold"
+                    >
+                      <Zap size={16} className="mb-1" />
+                      <span>Perf Лог</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => logger.system('Cyber UI engine initialized correctly', { version: '2.5.0-ahi' })}
+                      className="p-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-xl text-left transition-all cursor-pointer font-bold"
+                    >
+                      <Shield size={16} className="mb-1" />
+                      <span>System Лог</span>
+                    </button>
+                  </div>
+
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logger.info('Stress Test Entry #1: Init', null, 'QA_Stress');
+                        logger.perf('Stress Test Entry #2: Render', { durationMs: 4.8 }, 'QA_Stress');
+                        logger.warn('Stress Test Entry #3: High Cache Size', { cacheMB: 120 }, 'QA_Stress');
+                        logger.action('Stress Test Entry #4: User Clicked Button', { btnId: 'dev_stress' }, 'QA_Stress');
+                        logger.error('Stress Test Entry #5: Simulated API Timeout', { status: 408 }, 'QA_Stress');
+                      }}
+                      className="w-full py-2 bg-[#251c35] hover:bg-[#ff4d4d] hover:text-[#15101e] text-white font-bold rounded-xl border border-[#3d2b4f] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Flame size={14} className="text-[#ff4d4d] group-hover:text-[#15101e]" />
+                      <span>Сгенерировать 5 тестовых записей разом</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Markdown Diagnostics Bundle Export */}
+                <div className="bg-[#150d26] border border-[#3d2b4f] rounded-2xl p-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-white font-bold text-xs border-b border-[#3d2b4f] pb-3 mb-3">
+                      <ClipboardCheck size={16} className="text-purple-400" />
+                      <span>ОТЧЕТ ДЛЯ БАГТРЕКЕРА И РАЗРАБОТЧИКОВ</span>
+                    </div>
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      Генерирует полный Markdown отчёт со всеми характеристиками системы, данными пользователя, ошибками и последними логами для быстрой вставки в GitHub Issues или чат поддержки.
+                    </p>
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      type="button"
+                      onClick={handleCopyDiagnosticsReport}
+                      className="w-full py-3 bg-gradient-to-r from-purple-600 to-[#ff4d4d] hover:opacity-90 text-white font-black uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      {reportCopied ? <Check size={18} className="text-emerald-300" /> : <Copy size={18} />}
+                      <span>{reportCopied ? 'ОТЧЕТ СКОПИРОВАН В БУФЕР!' : 'СКОПИРОВАТЬ MARKDOWN ОТЧЕТ'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </>
   );
 };
+

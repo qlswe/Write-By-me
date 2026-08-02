@@ -36,6 +36,9 @@ interface TelemetryLog {
   userId: string;
   userEmail: string;
   displayName: string;
+  deviceId?: string;
+  fingerprint?: string;
+  adblockDetected?: boolean;
   userAgent: string;
   platform: string;
   screen: string;
@@ -893,6 +896,11 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
                         <div className="text-[10px] text-gray-400 max-w-[150px] truncate" title={log.userEmail}>
                           {log.userEmail || 'anonymous'}
                         </div>
+                        {log.deviceId && (
+                          <div className="text-[9px] text-purple-400 max-w-[150px] truncate font-mono mt-0.5" title={log.deviceId}>
+                            DEV: {log.deviceId}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 font-mono font-bold">
                         <span className="px-2 py-1 bg-[#15101e] text-[#ff4d4d] rounded-md uppercase tracking-wider text-[10px] border border-[#ff4d4d]/20">
@@ -1000,6 +1008,17 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
                   <div className="text-white font-bold">{selectedLog.displayName || 'Guest'}</div>
                   <div className="text-gray-400">{selectedLog.userEmail || 'N/A'}</div>
                   <div className="text-[#ff4d4d] text-[10px]">UID: {selectedLog.userId || 'anonymous'}</div>
+                  {selectedLog.deviceId && (
+                    <div className="text-purple-400 text-[10px] break-all">Device ID: {selectedLog.deviceId}</div>
+                  )}
+                  {selectedLog.fingerprint && (
+                    <div className="text-cyan-400 text-[10px]">Fingerprint: {selectedLog.fingerprint}</div>
+                  )}
+                  {selectedLog.adblockDetected !== undefined && (
+                    <div className={`text-[10px] font-bold ${selectedLog.adblockDetected ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      AdBlock: {selectedLog.adblockDetected ? (lang === 'ru' ? 'Обнаружен / Активен' : 'Detected / Active') : (lang === 'ru' ? 'Отсутствует' : 'Not Detected')}
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl space-y-1">

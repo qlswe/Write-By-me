@@ -6,6 +6,7 @@ import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 import { useTranslation } from 'react-i18next';
 import { sdk } from '../sdk';
 import { toast } from 'sonner';
+import { cachedJsonParse } from '../utils/performanceOptimizer';
 
 interface UserData {
   favorites: string[];
@@ -44,7 +45,7 @@ export function useUserData(initialLang: string) {
   // Load from local storage initially for fast render
   useEffect(() => {
     try {
-      const localFavs = JSON.parse(localStorage.getItem('hsr_favorites') || '[]');
+      const localFavs = cachedJsonParse<string[]>('hsr_favorites', localStorage.getItem('hsr_favorites'), []);
       if (localFavs.length > 0 && !isDataLoaded) {
         setFavorites(localFavs);
       }

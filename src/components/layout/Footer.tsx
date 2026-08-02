@@ -69,8 +69,18 @@ export const Footer: React.FC<FooterProps> = ({ lang, setFeedbackOpen }) => {
           
           <div className="mt-12 pt-8 border-t border-[#3d2b4f] flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400">
             <p>&copy; 2026 クルシーP. {t.rights}</p>
-            <div className="flex items-center gap-6">
-              <button onClick={() => logger.exportLogs()} className="hover:text-[#ff4d4d] transition-colors text-xs opacity-50">
+            <div className="flex items-center gap-4 flex-wrap justify-center">
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', altKey: true }));
+                }}
+                className="hover:text-[#ff4d4d] transition-colors text-xs opacity-80 font-mono border border-[#3d2b4f] hover:border-[#ff4d4d] px-2.5 py-1 rounded-lg bg-[#150e24] cursor-pointer flex items-center gap-1.5"
+                title="Открыть консоль дебага (Alt+D)"
+              >
+                <span>🛠️</span>
+                <span>{lang === 'ru' ? 'Дебаг [Alt+D]' : 'Debug [Alt+D]'}</span>
+              </button>
+              <button onClick={() => logger.exportLogs()} className="hover:text-[#ff4d4d] transition-colors text-xs opacity-50 cursor-pointer">
                 Export Logs
               </button>
               <a href="https://t.me/ministry_aha" target="_blank" rel="noreferrer" className="hover:text-[#ff4d4d] transition-colors">

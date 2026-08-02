@@ -17,6 +17,8 @@ import { sdk } from './sdk';
 import { decrypt } from './utils/encryption';
 import { dbQueryCore } from './utils/dbQueryCore';
 import { usePWA } from './hooks/usePWA';
+import { applyPrimaryAccentColor } from './utils/theme';
+import { initPageVisibilityOptimizer } from './utils/performanceOptimizer';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -58,6 +60,7 @@ const ChronicleSection = lazy(() => import('./components/sections/ChronicleSecti
 const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
 const UsersList = lazy(() => import('./components/admin/UsersList').then(m => ({ default: m.UsersList })));
 const ChatsList = lazy(() => import('./components/chat/ChatsList').then(m => ({ default: m.ChatsList })));
+const CyberChatWorkspace = lazy(() => import('./components/chat/CyberChatWorkspace').then(m => ({ default: m.CyberChatWorkspace })));
 const ForumSection = lazy(() => import('./components/sections/ForumSection').then(m => ({ default: m.ForumSection })));
 const AhiAiSection = lazy(() => import('./components/sections/AhiAiSection').then(m => ({ default: m.AhiAiSection })));
 const SdkSettingsSection = lazy(() => import('./components/sections/SdkSettingsSection').then(m => ({ default: m.SdkSettingsSection })));
@@ -70,6 +73,7 @@ let hasPrintedStopWarning = false;
 
 import { Changelog } from './components/ui/Changelog';
 import { logUserTelemetry } from './utils/telemetry';
+import { AntiAdblockBanner } from './components/ui/AntiAdblockBanner';
 
 export default function App() {
   const { trackRender } = usePerfLogger('App');
@@ -175,10 +179,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    initPageVisibilityOptimizer();
+
+    // Apply cached accent color immediately before Firestore responds
+    try {
+      const cachedAccent = localStorage.getItem('aha_primary_accent');
+      if (cachedAccent) applyPrimaryAccentColor(cachedAccent);
+    } catch (e) {}
+
     const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setMaintenanceMode(data.maintenanceMode || false);
+
+        // Apply primary accent color from Firestore
+        if (data.primaryAccentColor) {
+          applyPrimaryAccentColor(data.primaryAccentColor);
+        } else {
+          applyPrimaryAccentColor('#ff4d4d');
+        }
         
         // Listen for global fallback flag from admin
         if (data.forceKVFallback) {
@@ -1028,15 +1047,12 @@ export default function App() {
                 </div>
               )}
               {section === 'chats' && (
-                <div className="max-w-2xl mx-auto">
-                  <h2 className="text-3xl font-black text-[#ff4d4d] uppercase tracking-widest mb-8 flex items-center gap-3">
-                    <MessageSquare size={32} />
-                    {t.navChats}
-                  </h2>
-                  <div className="bg-[#251c35] rounded-3xl p-6 border border-[#3d2b4f] shadow-2xl">
-                    <ChatsList lang={lang as Language} onSelectChat={(id, name) => setActiveChat({ uid: id, displayName: name })} />
-                  </div>
-                </div>
+                <CyberChatWorkspace
+                  lang={lang as Language}
+                  onOpenProfileModal={() => setProfileOpen(true)}
+                  activeChatFromApp={activeChat}
+                  setActiveChatFromApp={(chat) => setActiveChat(chat)}
+                />
               )}
               {section === 'telemetry' && role === 'admin' && (
                 <TelemetrySection lang={lang as Language} />
@@ -1074,9 +1090,9 @@ export default function App() {
         viewUser={viewingUser}
       />
       
-      {/* Active Chat Window */}
+      {/* Active Chat Window (only when not in full-screen 'chats' section) */}
       <AnimatePresence>
-        {activeChat && (
+        {activeChat && section !== 'chats' && (
           <ChatWindow
             key={activeChat.uid}
             recipientId={activeChat.uid}
@@ -1163,6 +1179,9 @@ export default function App() {
         onClose={() => setHomePwaModalOpen(false)} 
         lang={lang as Language} 
       />
+
+      {/* Resilient AdBlock detection and bypass notification */}
+      <AntiAdblockBanner lang={lang} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw, Terminal, Smartphone } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw, Terminal, Smartphone, UserPlus } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
@@ -294,11 +294,11 @@ export const Header: React.FC<HeaderProps> = ({
                   <GoogleLoginButton lang={lang} size="sm" onClick={() => setMobileMenuOpen(false)} />
                   <button
                     onClick={() => setEmailLoginModalOpen(true)}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#3d2b4f]/40 border border-[#3d2b4f] text-white rounded-xl font-black uppercase tracking-widest text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 cursor-pointer shadow-md h-[40px]"
+                    className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-[#3d2b4f]/50 border border-[#3d2b4f] text-white rounded-xl font-black uppercase tracking-widest text-[11px] hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 cursor-pointer shadow-md h-[40px]"
                     title={t.headerLoginEmail}
                   >
-                    <Mail size={14} />
-                    <span className="hidden sm:inline">{lang === 'ru' ? 'Почта' : 'Email'}</span>
+                    <UserPlus size={14} className="text-[#ff4d4d] group-hover:text-[#15101e]" />
+                    <span>{lang === 'ru' ? 'Вход / Регистрация' : 'Sign In / Register'}</span>
                   </button>
                 </div>
               )}
@@ -403,10 +403,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <>
                   <button 
                     onClick={() => { setEmailLoginModalOpen(true); setMobileMenuOpen(false); }}
-                    className="w-full flex items-center justify-center gap-3 bg-[#15101e] border border-[#3d2b4f] text-white px-4 py-4 rounded-xl font-black transition-all active:scale-95 mb-4 hover:border-[#ff4d4d]"
+                    className="w-full flex items-center justify-center gap-3 bg-[#15101e] border border-[#3d2b4f] text-white px-4 py-4 rounded-xl font-black transition-all active:scale-95 mb-4 hover:border-[#ff4d4d] cursor-pointer"
                   >
-                    <Mail size={24} className="text-[#ff4d4d]" />
-                    {t.headerLoginEmail}
+                    <UserPlus size={22} className="text-[#ff4d4d]" />
+                    <span>{lang === 'ru' ? 'Регистрация и Вход по Почте' : 'Sign Up / Sign In (Email)'}</span>
                   </button>
                   <GoogleLoginButton lang={lang} className="w-full" onClick={() => setMobileMenuOpen(false)} />
                 </>

@@ -1290,6 +1290,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                   <span className="text-[8px] sm:text-[9px] text-[#00f0ff] font-bold uppercase tracking-widest flex items-center gap-1">
                     🤖 {t.botJukyBadge || 'БОТ'}
                   </span>
+                ) : recipientId === 'group_ahi_radio_room' ? (
+                  <span className="text-[8px] sm:text-[9px] text-[#ff4d4d] font-black uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                    📻 {lang === 'ru' ? 'ОБЩИЙ РАДИО-ЧАТ • LIVE' : 'GLOBAL RADIO ROOM • LIVE'}
+                  </span>
                 ) : recipientId.startsWith('group_') ? (
                   <span className="text-[8px] sm:text-[9px] text-purple-400 font-bold uppercase tracking-widest truncate">
                     👥 {lang === 'ru' ? 'ГРУППОВОЙ ЧАТ' : 'GROUP CHAT'}
@@ -1657,12 +1661,35 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ recipientId, recipientNa
                           }}
                           className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} relative group ${msg.reactions && Object.keys(msg.reactions).some(k => msg.reactions![k].length > 0) ? 'mb-6' : ''}`}
                         >
-                          {/* Sender Display Name for Group Chats */}
-                          {!isMe && recipientId.startsWith('group_') && !msg.isDeleted && (
-                            <span className="text-[10px] font-black uppercase text-[#00f0ff] tracking-widest mb-1.5 ml-2.5">
-                              {users.find(u => u.uid === msg.senderId)?.displayName || 'User'}
-                            </span>
-                          )}
+                          {/* Sender Cyber Card Header for Group / Radio Chats */}
+                          {!isMe && recipientId.startsWith('group_') && !msg.isDeleted && (() => {
+                            const senderObj = users.find(u => u.uid === msg.senderId);
+                            const tagCol = (senderObj as any)?.tagColor || '#00f0ff';
+                            const statusMsg = (senderObj as any)?.statusMessage;
+                            return (
+                              <div className="flex items-center gap-2 mb-1.5 ml-1">
+                                <CachedAvatar
+                                  src={senderObj?.photoURL}
+                                  alt={senderObj?.displayName || 'User'}
+                                  customSizeClass="w-5 h-5"
+                                  className="rounded-full border"
+                                  style={{ borderColor: tagCol }}
+                                  fallbackText={senderObj?.displayName || 'User'}
+                                />
+                                <span
+                                  className="text-[11px] font-black uppercase tracking-wider"
+                                  style={{ color: tagCol }}
+                                >
+                                  {senderObj?.displayName || 'User'}
+                                </span>
+                                {statusMsg && (
+                                  <span className="text-[9px] text-gray-400 font-medium truncate max-w-[150px] bg-[#1a1326] px-1.5 py-0.5 rounded-full border border-[#3d2b4f]">
+                                    {statusMsg}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
 
                           {/* Global Portal-based message overlay menu renders at bottom of body instead of absolute inside list */}
 
