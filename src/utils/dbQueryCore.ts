@@ -21,10 +21,12 @@ interface SlowQuery {
  * Includes precise query latency monitoring, cache statistics, and query bottleneck analysis.
  */
 class DbQueryCore {
-  private cache = new Map<string, { data: any; expiry: number }>();
+  private cache = new Map<string, { data: any; expiry: number; lastAccessed: number }>();
+  private readonly MAX_CACHE_SIZE = 150;
   private pendingRequests = new Map<string, Promise<any>>();
   private profileBatchQueue = new Map<string, ((data: any) => void)[]>();
   private batchTimeout: NodeJS.Timeout | null = null;
+  private gcInterval: NodeJS.Timeout | null = null;
   
   // Performance & bottleneck statistics
   private stats = {
@@ -58,6 +60,11 @@ class DbQueryCore {
       // Load fallback status
       this.factors.quotaExceeded = localStorage.getItem('aha_quota_fallback') === 'true';
 
+      // Start periodic background memory pruning every 60 seconds
+      this.gcInterval = setInterval(() => {
+        this.pruneExpiredCache();
+      }, 60000);
+
       // Expose diagnostic tools on the window object for easy optimization review
       (window as any).getDbQueryStats = () => {
         return {
@@ -72,6 +79,7 @@ class DbQueryCore {
             offlineMode: this.factors.isOffline,
             quotaExceeded: this.factors.quotaExceeded,
             consecutiveFailures: this.factors.consecutiveFailures,
+            cacheSize: this.cache.size,
           },
           collectionBreakdown: Object.fromEntries(
             Array.from(this.stats.collectionStats.entries()).map(([col, data]) => [
@@ -89,6 +97,52 @@ class DbQueryCore {
         };
       };
     }
+  }
+
+  /**
+   * Memory usage cleanup: prune expired cache entries and enforce MAX_CACHE_SIZE
+   */
+  public pruneExpiredCache(): number {
+    const now = Date.now();
+    let prunedCount = 0;
+    
+    // 1. Remove expired entries
+    for (const [key, item] of this.cache.entries()) {
+      if (item.expiry <= now) {
+        this.cache.delete(key);
+        prunedCount++;
+      }
+    }
+
+    // 2. If still exceeding MAX_CACHE_SIZE, evict LRU (least recently accessed) entries
+    if (this.cache.size > this.MAX_CACHE_SIZE) {
+      const sortedEntries = Array.from(this.cache.entries()).sort(
+        (a, b) => a[1].lastAccessed - b[1].lastAccessed
+      );
+      const toEvict = this.cache.size - this.MAX_CACHE_SIZE;
+      for (let i = 0; i < toEvict; i++) {
+        if (sortedEntries[i]) {
+          this.cache.delete(sortedEntries[i][0]);
+          prunedCount++;
+        }
+      }
+    }
+
+    if (prunedCount > 0) {
+      console.log(
+        `%c[DbQueryCore 🧹 GC] Pruned ${prunedCount} cache items. Current cache size: ${this.cache.size}/${this.MAX_CACHE_SIZE}`,
+        'color: #8be9fd; font-family: monospace; font-size: 11px;'
+      );
+    }
+    return prunedCount;
+  }
+
+  /**
+   * Clear all memory caches
+   */
+  public clearCache(): void {
+    this.cache.clear();
+    console.log('%c[DbQueryCore] All memory caches cleared.', 'color: #8be9fd;');
   }
 
   /**
@@ -161,6 +215,7 @@ class DbQueryCore {
     // 1. Check local cache first to save read operations
     const cached = this.cache.get(cacheKey);
     if (cached && cached.expiry > Date.now()) {
+      cached.lastAccessed = Date.now();
       this.stats.cacheHits += 1;
       // Beautiful fast performance log
       console.log(
@@ -212,7 +267,7 @@ class DbQueryCore {
         const dataStr = await vercelFallback.get(`cache:${collectionName}:${docId}`);
         if (dataStr) {
           const parsed = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr;
-          this.cache.set(cacheKey, { data: parsed, expiry: Date.now() + cacheTtlMs });
+          this.cache.set(cacheKey, { data: parsed, expiry: Date.now() + cacheTtlMs, lastAccessed: Date.now() });
           this.stats.rtdbBypasses += 1;
           
           const latency = performance.now() - startTime;
@@ -246,7 +301,7 @@ class DbQueryCore {
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        this.cache.set(cacheKey, { data, expiry: Date.now() + cacheTtlMs });
+        this.cache.set(cacheKey, { data, expiry: Date.now() + cacheTtlMs, lastAccessed: Date.now() });
         
         // Sync back to Vercel RTDB silently to keep cache warm
         if (vercelFallback.isAvailable()) {
@@ -276,6 +331,7 @@ class DbQueryCore {
       // Final fallback to stale cache if database is down entirely
       const cached = this.cache.get(cacheKey);
       if (cached) {
+        cached.lastAccessed = Date.now();
         console.log(`%c[DbQueryCore 🩹 STALE CACHE] Database unavailable. Returning stale cache for ${cacheKey}`, 'color: #ff5555;');
         return cached.data;
       }
@@ -307,7 +363,7 @@ class DbQueryCore {
     // Update local cache instantly for optimistic UI response
     const currentCached = this.cache.get(cacheKey)?.data || {};
     const mergedData = merge ? { ...currentCached, ...data } : data;
-    this.cache.set(cacheKey, { data: mergedData, expiry: Date.now() + 60000 }); // 1 min optimistic hold
+    this.cache.set(cacheKey, { data: mergedData, expiry: Date.now() + 60000, lastAccessed: Date.now() }); // 1 min optimistic hold
 
     // background sync to RTDB if available
     if (vercelFallback.isAvailable()) {
@@ -351,6 +407,7 @@ class DbQueryCore {
       const cacheKey = `public_profiles/${uid}`;
       const cached = this.cache.get(cacheKey);
       if (cached && cached.expiry > Date.now()) {
+        cached.lastAccessed = Date.now();
         this.stats.cacheHits += 1;
         this.stats.totalRequests += 1;
         resolve(cached.data);
