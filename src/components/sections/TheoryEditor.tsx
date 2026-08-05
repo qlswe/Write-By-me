@@ -8,6 +8,7 @@ import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { generatePrefixedId } from '../../utils/idGenerator';
+import { sanitizePayloadForFirestore } from '../../utils/mediaUploader';
 
 interface TheoryEditorProps {
   theory?: any;
@@ -45,7 +46,7 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
 
     setIsSaving(true);
     try {
-      const theoryData = {
+      const rawTheoryData = {
         category,
         title,
         summary,
@@ -53,6 +54,8 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
         authorUid: user?.uid,
         updatedAt: new Date().toISOString()
       };
+
+      const theoryData = await sanitizePayloadForFirestore(rawTheoryData);
 
       let createdDocId = '';
       if (theory?.id) {

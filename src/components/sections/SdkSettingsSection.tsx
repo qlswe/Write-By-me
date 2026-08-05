@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings, ShieldCheck, Cpu, RotateCw, Palette, Check, Save, RefreshCw } from 'lucide-react';
+import { Settings, ShieldCheck, Cpu, RotateCw, Palette, Check, Save, RefreshCw, Type, Minus, Plus, RotateCcw } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { db } from '../../firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { sdk } from '../../sdk';
 import { AhaSecurityConsole } from '../security/AhaSecurity';
 import { ACCENT_COLOR_PRESETS, applyPrimaryAccentColor } from '../../utils/theme';
+import { useFontSize } from '../../hooks/useFontSize';
 
 interface SdkSettingsSectionProps {
   lang: Language;
@@ -32,6 +33,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
   const [ahaSecurityHidden, setAhaSecurityHidden] = useState(localStorage.getItem('aha_security_hidden') === 'true');
   const [localTime, setLocalTime] = useState(new Date().toLocaleTimeString());
   const t = translations[lang] as any;
+  const { fontSizePercent, setFontSize, increaseFontSize, decreaseFontSize, resetFontSize, presets } = useFontSize();
 
   const [globalFallbackState, setGlobalFallbackState] = useState(false);
   const [adSettings, setAdSettings] = useState<any>({
@@ -232,6 +234,106 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                 <div className={`absolute top-[4px] left-[4px] w-6 h-6 rounded-full bg-white transition-transform ${!ahaSecurityHidden ? 'translate-x-6' : 'translate-x-0'}`} />
               </div>
             </button>
+
+            {/* ACCESSIBILITY & FONT SIZE SECTION */}
+            <div className="space-y-4 pt-6 border-t border-[#3d2b4f]/50">
+              <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-2">
+                <Type size={16} />
+                {t.accessibilitySettings || (lang === 'ru' ? "Доступность и Текст" : "Accessibility & Text")}
+              </h3>
+
+              <div id="font-size-toggle-card" className="p-5 bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d]/50 rounded-2xl space-y-4 transition-all">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-bold text-white text-base">
+                      {t.fontSizeTitle || (lang === 'ru' ? "Размер шрифта для чтения" : "Reading Font Size")}
+                    </h4>
+                    <span className="px-2.5 py-0.5 bg-[#251c35] border border-[#ff4d4d]/30 text-[#ff4d4d] font-mono text-xs font-bold rounded-lg">
+                      {fontSizePercent}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {t.fontSizeDesc || (lang === 'ru' ? "Увеличьте или уменьшите размер текста на всем сайте для более удобного чтения." : "Increase or decrease text size across the application for better reading accessibility.")}
+                  </p>
+                </div>
+
+                {/* Step controls + reset */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={decreaseFontSize}
+                    disabled={fontSizePercent <= 80}
+                    className="p-2.5 bg-[#251c35] hover:bg-[#3d2b4f] disabled:opacity-40 text-white rounded-xl border border-[#3d2b4f] transition-all cursor-pointer flex items-center justify-center shrink-0"
+                    title={lang === 'ru' ? "Уменьшить шрифт" : "Decrease Font Size"}
+                  >
+                    <Minus size={16} />
+                  </button>
+
+                  <div className="flex-1 bg-[#1a1326] border border-[#3d2b4f] rounded-xl px-4 py-2 flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                      {lang === 'ru' ? "Масштаб чтения:" : "Reading Scale:"}
+                    </span>
+                    <span className="text-sm font-black text-white font-mono">
+                      {fontSizePercent}%
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={increaseFontSize}
+                    disabled={fontSizePercent >= 150}
+                    className="p-2.5 bg-[#251c35] hover:bg-[#3d2b4f] disabled:opacity-40 text-white rounded-xl border border-[#3d2b4f] transition-all cursor-pointer flex items-center justify-center shrink-0"
+                    title={lang === 'ru' ? "Увеличить шрифт" : "Increase Font Size"}
+                  >
+                    <Plus size={16} />
+                  </button>
+
+                  {fontSizePercent !== 100 && (
+                    <button
+                      type="button"
+                      onClick={resetFontSize}
+                      className="p-2.5 bg-[#251c35] hover:bg-red-500/20 text-red-400 rounded-xl border border-[#3d2b4f] transition-all cursor-pointer flex items-center justify-center shrink-0"
+                      title={t.fontSizeReset || (lang === 'ru' ? "Сбросить размер" : "Reset Size")}
+                    >
+                      <RotateCcw size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Presets Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  {presets.map((preset) => {
+                    const isActive = fontSizePercent === preset.percentage;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setFontSize(preset.percentage)}
+                        className={`py-2 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                          isActive
+                            ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#15101e] shadow-[0_0_12px_rgba(255,77,77,0.4)]'
+                            : 'bg-[#251c35] border-[#3d2b4f] text-gray-300 hover:text-white hover:border-[#ff4d4d]/40'
+                        }`}
+                      >
+                        {lang === 'ru' ? preset.labelRu : preset.labelEn}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Live Preview Sample */}
+                <div className="p-3.5 bg-[#1a1326]/80 border border-[#3d2b4f]/60 rounded-xl">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-1">
+                    {lang === 'ru' ? "Предпросмотр текста:" : "Text Preview:"}
+                  </span>
+                  <p className="text-gray-200 leading-relaxed italic" style={{ fontSize: `${fontSizePercent}%` }}>
+                    {t.fontSizePreview || (lang === 'ru'
+                      ? "Пример текста: Все путешественники равны перед Ахой. Настройте размер шрифта для удобства чтения."
+                      : "Sample text: All Trailblazers are equal before Aha. Adjust the font size for optimal reading comfort.")}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {(role === 'admin' || role === 'moderator') && (

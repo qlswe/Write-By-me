@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar, Shield, Target, BarChart2, Smartphone } from 'lucide-react';
-import { collection, addDoc, doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, onSnapshot, setDoc, getDoc, enableNetwork } from 'firebase/firestore';
 import { db } from './firebase';
 import { logger, usePerfLogger } from './utils/logger';
 import { handleFirestoreError, OperationType } from './utils/errorHandlers';
@@ -19,6 +19,7 @@ import { dbQueryCore } from './utils/dbQueryCore';
 import { usePWA } from './hooks/usePWA';
 import { applyPrimaryAccentColor } from './utils/theme';
 import { initPageVisibilityOptimizer } from './utils/performanceOptimizer';
+import { applyFontSizeToDocument } from './hooks/useFontSize';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -37,6 +38,8 @@ import { PromoEditor } from './components/sections/PromoEditor';
 import { ChatWindow } from './components/chat/ChatWindow';
 import { UserData } from './hooks/useUsers';
 
+import { HomeStatsWidget } from './components/ui/HomeStatsWidget';
+import { QuickActionsMenu } from './components/ui/QuickActionsMenu';
 import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
 import { AhaSecurityBadge, SafeHtml } from './components/security/AhaSecurity';
 import { DisguisePage } from './components/security/DisguisePage';
@@ -119,6 +122,17 @@ export default function App() {
     }
   }, [lang, i18n]);
 
+  // Restore accessible reading font size on mount
+  useEffect(() => {
+    const savedFont = localStorage.getItem('aha_reading_font_size');
+    if (savedFont) {
+      const parsed = parseInt(savedFont, 10);
+      if (!isNaN(parsed) && parsed >= 80 && parsed <= 150) {
+        applyFontSizeToDocument(parsed);
+      }
+    }
+  }, []);
+
   // Production Mode (High Fidelity)
   const [productionMode, setProductionMode] = useState(() => localStorage.getItem('productionMode') === 'true');
 
@@ -164,6 +178,58 @@ export default function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Sync re-validation state
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncNow = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    
+    try {
+      // 1. Re-enable network connection in Firestore if disabled
+      try {
+        await enableNetwork(db);
+      } catch (e) {
+        console.warn('enableNetwork error:', e);
+      }
+
+      // 2. Perform test connection probe to Firestore
+      const testDocRef = doc(db, 'settings', 'general');
+      await getDoc(testDocRef);
+
+      // 3. Update network and offline fallback status
+      if (navigator.onLine) {
+        setIsOffline(false);
+        localStorage.removeItem('aha_quota_fallback');
+        setOfflineMode(false);
+        
+        window.dispatchEvent(new CustomEvent('aha_toast', {
+          detail: lang === 'ru' ? 'Подключение к Firestore успешно восстановлено!' : 'Firestore connection successfully restored!'
+        }));
+      } else {
+        window.dispatchEvent(new CustomEvent('aha_toast', {
+          detail: lang === 'ru' ? 'Сетевое подключение всё ещё отсутствует.' : 'Network connection is still offline.'
+        }));
+      }
+    } catch (error: any) {
+      console.warn('Sync re-validation attempt result:', error);
+      if (navigator.onLine) {
+        setIsOffline(false);
+        window.dispatchEvent(new CustomEvent('aha_toast', {
+          detail: lang === 'ru' ? 'Сеть доступна! Попытка повторной синхронизации...' : 'Network is online! Attempting re-sync...'
+        }));
+      } else {
+        window.dispatchEvent(new CustomEvent('aha_toast', {
+          detail: lang === 'ru' ? 'Не удалось подключиться к серверу. Проверьте сеть.' : 'Failed to connect to server. Check connection.'
+        }));
+      }
+    } finally {
+      setTimeout(() => {
+        setIsSyncing(false);
+      }, 600);
+    }
+  };
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackImage, setFeedbackImage] = useState<string | null>(null);
 
@@ -187,7 +253,11 @@ export default function App() {
       if (cachedAccent) applyPrimaryAccentColor(cachedAccent);
     } catch (e) {}
 
+    let isMounted = true;
+    let reloadTimer: NodeJS.Timeout | null = null;
+
     const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+      if (!isMounted) return;
       if (docSnap.exists()) {
         const data = docSnap.data();
         setMaintenanceMode(data.maintenanceMode || false);
@@ -205,14 +275,20 @@ export default function App() {
             localStorage.setItem('aha_quota_fallback', Date.now().toString());
             setOfflineMode(true);
             window.dispatchEvent(new Event('aha_quota_fallback_active'));
-            setTimeout(() => window.location.reload(), 500); // Reload to clean Firebase listeners
+            if (reloadTimer) clearTimeout(reloadTimer);
+            reloadTimer = setTimeout(() => {
+              if (isMounted) window.location.reload();
+            }, 500); // Reload to clean Firebase listeners
           }
         } else if (data.forceKVFallback === false) {
           const fallbackCreated = localStorage.getItem('aha_quota_fallback');
           if (fallbackCreated) {
              localStorage.removeItem('aha_quota_fallback');
              setOfflineMode(false);
-             setTimeout(() => window.location.reload(), 500);
+             if (reloadTimer) clearTimeout(reloadTimer);
+             reloadTimer = setTimeout(() => {
+               if (isMounted) window.location.reload();
+             }, 500);
           }
         }
 
@@ -220,12 +296,19 @@ export default function App() {
           const lastRestart = localStorage.getItem('aha_last_restart');
           if (!lastRestart || parseInt(lastRestart, 10) < data.massRestartTimestamp) {
             localStorage.setItem('aha_last_restart', Date.now().toString());
-            window.location.reload();
+            if (isMounted) window.location.reload();
           }
         }
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'settings/general');
     });
-    return () => unsub();
+
+    return () => {
+      isMounted = false;
+      unsub();
+      if (reloadTimer) clearTimeout(reloadTimer);
+    };
   }, []);
   const [theorySearch, setTheorySearch] = useState('');
   const [blogCategory, setBlogCategory] = useState('all');
@@ -259,7 +342,9 @@ export default function App() {
   const [editedChangelogContent, setEditedChangelogContent] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
     const unsub = onSnapshot(doc(db, 'system_content', 'home_page'), (docSnap) => {
+      if (!isMounted) return;
       if (docSnap.exists()) {
         const data = docSnap.data();
         setHomeContent(data.content || {});
@@ -274,7 +359,7 @@ export default function App() {
       if (vercelFallback.isAvailable()) {
         try {
           const fallbackData = await vercelFallback.lrange('system_content_home_page', 0, 1);
-          if (fallbackData && fallbackData.length > 0) {
+          if (fallbackData && fallbackData.length > 0 && isMounted) {
             const data = typeof fallbackData[0] === 'string' ? JSON.parse(fallbackData[0]) : fallbackData[0];
             if (data.content) setHomeContent(data.content);
             if (data.sdk_content) setSdkContent(data.sdk_content);
@@ -287,6 +372,7 @@ export default function App() {
     const fallbackInterval = setInterval(fetchFallback, 15000);
 
     return () => {
+      isMounted = false;
       unsub();
       clearInterval(fallbackInterval);
     };
@@ -321,15 +407,17 @@ export default function App() {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     if (!user) {
       setUnreadCount(0);
-      return;
+      return () => { isMounted = false; };
     }
 
     const isAuthorizedForMaintenance = role === 'admin' || role === 'moderator' || role === 'beta-tester';
     if (maintenanceMode && !isAuthorizedForMaintenance) {
       setUnreadCount(0);
-      return;
+      return () => { isMounted = false; };
     }
 
     let count = 0;
@@ -350,6 +438,7 @@ export default function App() {
       if (!profileNames[otherUserId] && !fetchingProfiles.current[otherUserId]) {
         fetchingProfiles.current[otherUserId] = true;
         dbQueryCore.getProfileBatched(otherUserId).then(data => {
+          if (!isMounted) return;
           if (data) {
             const name = data.displayName || 'User';
             setProfileNames(prev => {
@@ -358,7 +447,7 @@ export default function App() {
             });
           }
         }).catch(() => {
-          fetchingProfiles.current[otherUserId] = false;
+          if (isMounted) fetchingProfiles.current[otherUserId] = false;
         });
       }
 
@@ -391,7 +480,7 @@ export default function App() {
 
       // 1. New Message (In-app only, no system/push notifications or permission prompts)
       if (lastMessageAt > lastNotified && lastMessageAt > myReadAt) {
-        if (isNotActiveChat) {
+        if (isNotActiveChat && isMounted) {
           const decryptedBody = chat.lastMessage ? decrypt(chat.lastMessage, chat.id) : '';
           const bodyText = decryptedBody || (((translations as any)[lang] && (translations as any)[lang].newMessageBody) || (lang === 'ru' ? 'Новое сообщение' : "You have a new unread message."));
           setToast(getChatNotificationText('new_message', senderName, bodyText));
@@ -407,7 +496,7 @@ export default function App() {
       if (isTyping && !wasTyping && isNotActiveChat) {
         const lastTypingToast = notifiedTypingTime.current[chat.id] || 0;
         const now = Date.now();
-        if (now - lastTypingToast > 60000) { // Throttle status notifications to at most once per 60 seconds
+        if (now - lastTypingToast > 60000 && isMounted) { // Throttle status notifications to at most once per 60 seconds
           setToast(getChatNotificationText('typing', senderName));
           notifiedTypingTime.current[chat.id] = now;
         }
@@ -425,8 +514,12 @@ export default function App() {
       }
     });
 
-    setUnreadCount(count);
-  }, [chats, user, activeChat, lang]);
+    if (isMounted) setUnreadCount(count);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [chats, user, activeChat, lang, role, maintenanceMode]);
 
   const t = translations[lang as Language];
 
@@ -755,10 +848,23 @@ export default function App() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-yellow-500/20 border-b border-yellow-500/50 text-yellow-500 px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2 relative z-20"
+            className="bg-yellow-500/20 border-b border-yellow-500/50 text-yellow-500 px-4 py-2 text-center text-xs md:text-sm font-medium flex flex-wrap items-center justify-center gap-3 relative z-20"
           >
-            <RefreshCw className="w-4 h-4 animate-spin-slow" />
-            {lang === 'ru' ? 'Нет подключения к интернету. Приложение работает в автономном режиме.' : 'No internet connection. App is running in offline mode.'}
+            <div className="flex items-center gap-2">
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-yellow-400' : 'animate-spin-slow'}`} />
+              <span>
+                {lang === 'ru' ? 'Нет подключения к интернету. Приложение работает в автономном режиме.' : 'No internet connection. App is running in offline mode.'}
+              </span>
+            </div>
+
+            <button
+              onClick={handleSyncNow}
+              disabled={isSyncing}
+              className="px-3 py-1 bg-yellow-500 text-[#15101e] font-black text-[11px] uppercase tracking-wider rounded-lg hover:bg-yellow-400 transition-all flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span>{isSyncing ? (lang === 'ru' ? 'Проверка...' : 'Checking...') : (lang === 'ru' ? 'Синхронизировать сейчас' : 'Sync Now')}</span>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -770,7 +876,7 @@ export default function App() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className={`border-b px-4 py-2.5 text-center text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-2 relative z-20 backdrop-blur-md ${vercelFallback.isConfigured() ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}
+            className={`border-b px-4 py-2.5 text-center text-xs md:text-sm font-bold flex flex-col md:flex-row items-center justify-center gap-3 relative z-20 backdrop-blur-md ${vercelFallback.isConfigured() ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-400' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}
           >
             <div className="flex items-center gap-2">
               <ServerCrash className="w-4 h-4 animate-pulse" />
@@ -787,21 +893,32 @@ export default function App() {
                 </span>
             )}
             
-            <button 
-              onClick={() => {
-                localStorage.removeItem('aha_quota_fallback');
-                setOfflineMode(false);
-                window.location.reload();
-              }}
-              className={`ml-auto underline text-[10px] uppercase tracking-widest hover:opacity-100 ${vercelFallback.isConfigured() ? 'text-indigo-400/50 hover:text-indigo-400' : 'text-[#ff4d4d]/50 hover:text-[#ff4d4d]'}`}
-            >
-              Retry
-            </button>
+            <div className="flex items-center gap-2 md:ml-auto">
+              <button
+                onClick={handleSyncNow}
+                disabled={isSyncing}
+                className="px-2.5 py-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-[10px] uppercase tracking-wider rounded-md transition-all flex items-center gap-1 active:scale-95 disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? (lang === 'ru' ? 'Проверка...' : 'Checking...') : (lang === 'ru' ? 'Синхронизировать сейчас' : 'Sync Now')}</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('aha_quota_fallback');
+                  setOfflineMode(false);
+                  window.location.reload();
+                }}
+                className={`underline text-[10px] uppercase tracking-widest hover:opacity-100 ${vercelFallback.isConfigured() ? 'text-indigo-400/50 hover:text-indigo-400' : 'text-[#ff4d4d]/50 hover:text-[#ff4d4d]'}`}
+              >
+                Retry
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 relative z-10">
+      <main className={`flex-1 w-full mx-auto px-4 py-8 relative z-10 ${section === 'chats' ? 'max-w-7xl' : 'max-w-5xl'}`}>
         <PromoBanner showBanner={showBanner} lang={lang as Language} setModalContent={setModalContent} onClose={handleCloseBanner} />
 
         <AnimatePresence mode="wait">
@@ -827,6 +944,9 @@ export default function App() {
                       </button>
                     )}
                   </div>
+
+                  {/* Home Statistics Widget */}
+                  <HomeStatsWidget lang={lang as Language} onNavigate={(sec) => setSection(sec as any)} />
 
                   {/* Web-App Installation Card on Main Screen */}
                   <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-[#15101e] border border-[#ff4d4d]/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
@@ -1179,6 +1299,25 @@ export default function App() {
         onClose={() => setHomePwaModalOpen(false)} 
         lang={lang as Language} 
       />
+
+      {/* Floating Quick Actions Menu on Home Screen */}
+      {section === 'home' && (
+        <QuickActionsMenu
+          lang={lang as Language}
+          onCreateTheory={() => {
+            setSection('theories');
+            setIsCreatingTheory(true);
+          }}
+          onCreateBlog={() => {
+            setSection('blog');
+            setIsCreatingBlog(true);
+          }}
+          onCreateEvent={() => {
+            setSection('chronicle');
+            setIsCreatingEvent(true);
+          }}
+        />
+      )}
 
       {/* Resilient AdBlock detection and bypass notification */}
       <AntiAdblockBanner lang={lang} />

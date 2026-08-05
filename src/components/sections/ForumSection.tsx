@@ -19,7 +19,7 @@ import { ChronicleSection } from './ChronicleSection';
 import { decryptImage, encryptImage } from '../../utils/encryption';
 import { generatePrefixedId } from '../../utils/idGenerator';
 import { sdk } from '../../sdk';
-import { uploadMediaFile } from '../../utils/mediaUploader';
+import { uploadMediaFile, sanitizePayloadForFirestore } from '../../utils/mediaUploader';
 import { logAdminAction } from '../../utils/auditLogger';
 
 
@@ -618,7 +618,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
     setIsSubmitting(true);
     incrementUsage('threads_monthly');
     try {
-      const threadData = {
+      const rawThreadData = {
         title: newTitle.trim(),
         content: newContent.trim(),
         authorId: user.uid,
@@ -630,6 +630,8 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
         downvotes: [],
         imageUrl: attachedImage ? encryptImage(attachedImage) : ''
       };
+
+      const threadData = await sanitizePayloadForFirestore(rawThreadData);
 
       let threadId = generatePrefixedId('thread') + '_' + user.uid;
 
@@ -692,7 +694,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
     setIsSubmitting(true);
     incrementUsage('comments_daily');
     try {
-      const commentData = {
+      const rawCommentData = {
         threadId: selectedThread.id,
         content: contentToSubmit.trim(),
         authorId: user.uid,
@@ -703,6 +705,8 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
         downvotes: [],
         ...(replyToId ? { replyToId } : {})
       };
+
+      const commentData = await sanitizePayloadForFirestore(rawCommentData);
 
       const docRef = await addDoc(collection(db, 'forum_comments'), {
         ...commentData,

@@ -8,6 +8,7 @@ import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { generatePrefixedId } from '../../utils/idGenerator';
+import { sanitizePayloadForFirestore } from '../../utils/mediaUploader';
 
 interface EventEditorProps {
   event?: any;
@@ -73,10 +74,12 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
         }
       }
 
+      const sanitizedEventData = await sanitizePayloadForFirestore(eventData);
+
       if (vercelFallback.isAvailable()) {
         const uid = event?.id || generatePrefixedId('evt') + '_' + user?.uid;
         const payload = {
-            ...eventData,
+            ...sanitizedEventData,
             id: uid,
             createdAt: event?.createdAt || new Date().toISOString()
         };
@@ -84,12 +87,12 @@ export const EventEditor: React.FC<EventEditorProps> = ({ event, onClose, lang }
       } else {
         if (event?.id) {
           await setDoc(doc(db, 'events', event.id), {
-            ...eventData,
+            ...sanitizedEventData,
             createdAt: event.createdAt || new Date().toISOString()
           });
         } else {
           await addDoc(collection(db, 'events'), {
-            ...eventData,
+            ...sanitizedEventData,
             createdAt: new Date().toISOString()
           });
         }

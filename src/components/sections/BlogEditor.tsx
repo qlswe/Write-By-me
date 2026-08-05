@@ -9,7 +9,7 @@ import { translations, Language } from '../../data/translations';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { generatePrefixedId } from '../../utils/idGenerator';
 import { MediaViewer, isVideoMedia, getYouTubeEmbedUrl } from '../ui/MediaViewer';
-import { uploadMediaFile } from '../../utils/mediaUploader';
+import { uploadMediaFile, sanitizePayloadForFirestore } from '../../utils/mediaUploader';
 
 interface BlogEditorProps {
   post?: any;
@@ -95,7 +95,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
 
     setIsSaving(true);
     try {
-      const postData = {
+      const rawPostData = {
         category,
         title,
         summary,
@@ -104,6 +104,8 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
         authorUid: user?.uid,
         updatedAt: new Date().toISOString()
       };
+
+      const postData = await sanitizePayloadForFirestore(rawPostData);
 
       let createdDocId = '';
       if (post?.id) {

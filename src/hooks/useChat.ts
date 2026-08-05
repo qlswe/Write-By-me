@@ -1,10 +1,26 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, setDoc, getDoc, where, limit, updateDoc, deleteField, arrayUnion, arrayRemove } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  serverTimestamp,
+  doc,
+  setDoc,
+  getDoc,
+  where,
+  limit,
+  updateDoc,
+  deleteField,
+  arrayUnion,
+  arrayRemove
+} from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
-import { encrypt, decrypt } from '../utils/encryption';
 import { vercelFallback } from '../utils/vercelFallback';
 import { generatePrefixedId } from '../utils/idGenerator';
+import { uploadMediaFile } from '../utils/mediaUploader';
 
 export interface Message {
   id: string;
@@ -13,8 +29,13 @@ export interface Message {
   createdAt: any;
   type?: 'text' | 'sticker' | 'image' | 'voice' | 'file';
   images?: string[];
-  replyTo?: string; // ID of the message being replied to
-  reactions?: Record<string, string[]>; // emoji -> array of user IDs
+  replyTo?: {
+    id: string;
+    text: string;
+    senderId: string;
+    type?: string;
+  } | null;
+  reactions?: Record<string, string[]>; // emoji -> array of user UIDs
   isEdited?: boolean;
   isDeleted?: boolean;
   voiceDuration?: number;
@@ -39,11 +60,6 @@ export interface Chat {
   avatar?: string;
   admins?: string[];
   ownerId?: string;
-  theme?: {
-    wallpaper?: string;
-    glowColor?: string;
-    gradient?: string;
-  };
   pinnedMessage?: {
     id: string;
     text: string;
@@ -69,13 +85,13 @@ export function useChat(otherUserId?: string) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Helper to safely get the current chat ID
+  // Helper to determine deterministic 1-on-1 chat ID or group chat ID
   const getChatId = (otherId: string) => {
     if (!user) return '';
     return otherId.startsWith('group_') ? otherId : [user.uid, otherId].sort().join('_');
   };
 
-  // Get all chats for the current user
+  // Subscribe to all chats for current user
   useEffect(() => {
     if (!user) return;
 
@@ -84,93 +100,93 @@ export function useChat(otherUserId?: string) {
       where('participants', 'array-contains', user.uid)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatsData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          lastMessage: data.lastMessage ? decrypt(data.lastMessage, doc.id) : undefined
-        } as Chat;
-      });
-      
-      // Sort client-side to avoid composite index requirement
-      chatsData.sort((a, b) => {
-        const timeA = getMillis(a.lastMessageAt);
-        const timeB = getMillis(b.lastMessageAt);
-        return timeB - timeA;
-      });
-      
-      setChats(chatsData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error in chats snapshot listener:", error);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        let localDeleted: string[] = [];
+        try {
+          localDeleted = JSON.parse(localStorage.getItem(`deleted_chats_${user.uid}`) || '[]');
+        } catch {
+          localDeleted = [];
+        }
+
+        const chatsData = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data();
+            return {
+              ...data,
+              id: docSnap.id
+            } as Chat;
+          })
+          .filter((c) => !localDeleted.includes(c.id));
+
+        // Sort client-side by lastMessageAt timestamp descending
+        chatsData.sort((a, b) => getMillis(b.lastMessageAt) - getMillis(a.lastMessageAt));
+
+        setChats(chatsData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching chats snapshot:', error);
+        setLoading(false);
+      }
+    );
 
     return unsubscribe;
   }, [user]);
 
-  // Get messages for a specific chat
+  // Subscribe to messages in active selected chat
   useEffect(() => {
-    if (!user || !otherUserId) return;
+    if (!user || !otherUserId) {
+      setMessages([]);
+      return;
+    }
 
     const chatId = getChatId(otherUserId);
     const q = query(
       collection(db, 'chats', chatId, 'messages'),
       orderBy('createdAt', 'asc'),
-      limit(100)
+      limit(150)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messagesData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          ...data,
-          id: doc.id,
-          text: decrypt(data.text, chatId),
-          images: data.images ? data.images.map((img: string) => decrypt(img, chatId)) : undefined,
-          fileAttachment: data.fileAttachment ? {
-            ...data.fileAttachment,
-            url: decrypt(data.fileAttachment.url, chatId)
-          } : undefined
-        } as Message;
-      });
-      setMessages(messagesData);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const messagesData = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            ...data,
+            id: docSnap.id
+          } as Message;
+        });
+        setMessages(messagesData);
+      },
+      (error) => {
+        console.error('Error in messages snapshot listener:', error);
+      }
+    );
 
+    // Fallback polling for serverless environment if available
     let fallbackInterval: ReturnType<typeof setInterval>;
     const fetchFallbackMessages = async () => {
       if (vercelFallback.isAvailable()) {
-         try {
-           const fallbackData = await vercelFallback.lrange(`chat:${chatId}`, 0, 100);
-           if (fallbackData && fallbackData.length > 0) {
-             const parsed = fallbackData.map((str: any) => {
-               const data = typeof str === 'string' ? JSON.parse(str) : str;
-               return {
-                 ...data,
-                 text: decrypt(data.text, chatId),
-                 images: data.images ? data.images.map((img: string) => decrypt(img, chatId)) : undefined,
-                 fileAttachment: data.fileAttachment ? {
-                   ...data.fileAttachment,
-                   url: decrypt(data.fileAttachment.url, chatId)
-                 } : undefined
-               };
-             }).reverse() as Message[];
-             
-             setMessages(prev => {
-               const mapped = new Map([...prev, ...parsed].map(m => [m.id, m]));
-               const sorted = Array.from(mapped.values()).sort((a, b) => {
-                   const timeA = getMillis(a.createdAt);
-                   const timeB = getMillis(b.createdAt);
-                   return timeA - timeB;
-               });
-               return sorted;
-             });
-           }
-         } catch (e) {
-           console.error('Fallback read error', e);
-         }
+        try {
+          const fallbackData = await vercelFallback.lrange(`chat:${chatId}`, 0, 150);
+          if (fallbackData && fallbackData.length > 0) {
+            const parsed = fallbackData
+              .map((str: any) => (typeof str === 'string' ? JSON.parse(str) : str))
+              .reverse() as Message[];
+
+            setMessages((prev) => {
+              const mapped = new Map([...prev, ...parsed].map((m) => [m.id, m]));
+              return Array.from(mapped.values()).sort(
+                (a, b) => getMillis(a.createdAt) - getMillis(b.createdAt)
+              );
+            });
+          }
+        } catch (e) {
+          console.warn('Fallback read error:', e);
+        }
       }
     };
 
@@ -183,128 +199,167 @@ export function useChat(otherUserId?: string) {
     };
   }, [user, otherUserId]);
 
+  // Send Message
   const sendMessage = async (
-    text: string, 
-    recipientId: string, 
-    type: 'text' | 'sticker' | 'image' | 'voice' | 'file' = 'text', 
-    replyTo?: string, 
-    images?: string[], 
+    text: string,
+    recipientId: string,
+    type: 'text' | 'sticker' | 'image' | 'voice' | 'file' = 'text',
+    replyTo?: { id: string; text: string; senderId: string; type?: string } | null,
+    images?: string[],
     voiceDuration?: number,
     fileAttachment?: { url: string; name: string; size: number; fileType: string } | null,
     overrideSenderId?: string
   ) => {
     const senderId = overrideSenderId || user?.uid;
-    if (!senderId || (!recipientId.startsWith('group_') && user?.uid === recipientId && !overrideSenderId) || (!text.trim() && type !== 'image' && type !== 'voice' && type !== 'file' && (!images || images.length === 0) && !fileAttachment)) return;
+    if (!senderId || !recipientId) return;
+
+    // Guard empty content
+    if (
+      !text.trim() &&
+      type !== 'image' &&
+      type !== 'voice' &&
+      type !== 'file' &&
+      (!images || images.length === 0) &&
+      !fileAttachment
+    ) {
+      return;
+    }
 
     const chatId = getChatId(recipientId);
     const chatRef = doc(db, 'chats', chatId);
     const messagesRef = collection(db, 'chats', chatId, 'messages');
 
-    const encryptedText = text ? encrypt(text.trim(), chatId) : '';
+    // Handle media uploading if base64 data URL
+    let processedImages = images;
+    if (images && images.length > 0) {
+      processedImages = await Promise.all(
+        images.map(async (img) => {
+          if (img && img.startsWith('data:image/')) {
+            try {
+              return await uploadMediaFile(img);
+            } catch (e) {
+              console.warn('Failed image upload, keeping local fallback:', e);
+              return img;
+            }
+          }
+          return img;
+        })
+      );
+    }
+
+    let processedFileAttachment = fileAttachment;
+    if (fileAttachment?.url && fileAttachment.url.startsWith('data:')) {
+      try {
+        const uploadedUrl = await uploadMediaFile(fileAttachment.url, fileAttachment.name);
+        processedFileAttachment = { ...fileAttachment, url: uploadedUrl };
+      } catch (e) {
+        console.warn('Failed file upload:', e);
+      }
+    }
+
+    const trimmedText = text.trim();
 
     try {
+      // Vercel Fallback mode
       if (vercelFallback.isAvailable()) {
-         const messageData = {
-           id: generatePrefixedId('msg'),
-           senderId,
-           text: encryptedText,
-           createdAt: new Date().toISOString(),
-           type,
-           replyTo,
-           images: images ? images.map(img => encrypt(img, chatId)) : undefined,
-           voiceDuration,
-           fileAttachment: fileAttachment ? {
-             ...fileAttachment,
-             url: encrypt(fileAttachment.url, chatId)
-           } : undefined
-         };
-         await vercelFallback.lpush(`chat:${chatId}`, JSON.stringify(messageData));
-         return;
+        const messageData: Message = {
+          id: generatePrefixedId('msg'),
+          senderId,
+          text: trimmedText,
+          createdAt: new Date().toISOString(),
+          type,
+          replyTo: replyTo || undefined,
+          images: processedImages,
+          voiceDuration,
+          fileAttachment: processedFileAttachment
+        };
+        await vercelFallback.lpush(`chat:${chatId}`, JSON.stringify(messageData));
+        return;
       }
 
-      // Ensure chat document exists
+      // Ensure target chat document exists in Firestore
       const chatDoc = await getDoc(chatRef);
       if (!chatDoc.exists()) {
         if (recipientId.startsWith('group_')) {
           await setDoc(chatRef, {
-            participants: [user?.uid || 'user', recipientId.startsWith('group_') ? '' : recipientId].filter(Boolean),
+            id: chatId,
+            participants: [user?.uid || 'user'],
             isGroup: true,
-            name: 'Group Chat',
+            name: 'Cyber Group',
             createdAt: serverTimestamp()
           });
         } else {
           await setDoc(chatRef, {
-            participants: [user?.uid || 'user', recipientId],
+            id: chatId,
+            participants: Array.from(new Set([user?.uid || 'user', recipientId])),
             createdAt: serverTimestamp()
           });
         }
       }
 
-      // Add message
+      // Construct new message object
       const messageData: any = {
         senderId,
-        text: encryptedText,
+        text: trimmedText,
         createdAt: serverTimestamp(),
         type
       };
-      if (replyTo) messageData.replyTo = replyTo;
-      if (images && images.length > 0) messageData.images = images.map(img => encrypt(img, chatId));
-      if (voiceDuration !== undefined) messageData.voiceDuration = voiceDuration;
-      if (fileAttachment) {
-        messageData.fileAttachment = {
-          ...fileAttachment,
-          url: encrypt(fileAttachment.url, chatId)
-        };
-      }
 
-      // Check payload size to prevent Firestore 1MB document limit error
-      const payloadString = JSON.stringify(messageData);
-      if (payloadString.length > 850000) {
-        console.warn('Message payload size exceeds safety limit:', payloadString.length);
-        window.dispatchEvent(new CustomEvent('aha_toast', {
-          detail: 'Вложение или файл слишком велики для отправки (макс. 800 КБ).'
-        }));
+      if (replyTo) messageData.replyTo = replyTo;
+      if (processedImages && processedImages.length > 0) messageData.images = processedImages;
+      if (voiceDuration !== undefined) messageData.voiceDuration = voiceDuration;
+      if (processedFileAttachment) messageData.fileAttachment = processedFileAttachment;
+
+      // Check size before write
+      const sizeStr = JSON.stringify(messageData);
+      if (sizeStr.length > 850000) {
+        window.dispatchEvent(
+          new CustomEvent('aha_toast', {
+            detail: 'Размер файла превышает лимит (макс. 800 КБ)'
+          })
+        );
         return;
       }
 
       await addDoc(messagesRef, messageData);
 
-      // Update chat metadata
+      // Determine last message summary text
+      let lastMsgPreview = trimmedText;
+      if (type === 'sticker') lastMsgPreview = '🎨 Стикер';
+      else if (type === 'image') lastMsgPreview = '📷 Фото';
+      else if (type === 'voice') lastMsgPreview = '🎤 Голосовое сообщение';
+      else if (type === 'file') lastMsgPreview = `📁 ${fileAttachment?.name || 'Файл'}`;
+
       const updateData: any = {
-        lastMessage: type === 'sticker' 
-          ? encrypt('Sticker', chatId) 
-          : type === 'image' 
-            ? encrypt('Фото', chatId) 
-            : type === 'voice' 
-              ? encrypt('🎤 Голосовое сообщение', chatId) 
-              : type === 'file'
-                ? encrypt(`📁 ${fileAttachment?.name || 'Файл'}`, chatId)
-                : encryptedText,
+        lastMessage: lastMsgPreview,
         lastMessageAt: serverTimestamp()
       };
-      if (!recipientId.startsWith('group_')) {
-        updateData.participants = [user.uid, recipientId];
+
+      if (!recipientId.startsWith('group_') && user) {
+        updateData.participants = Array.from(new Set([user.uid, recipientId]));
       }
+
       await setDoc(chatRef, updateData, { merge: true });
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
 
+  // Toggle Reaction on a message
   const toggleReaction = async (messageId: string, recipientId: string, emoji: string) => {
     if (!user) return;
     const chatId = getChatId(recipientId);
     const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
-    
+
     try {
       const msgDoc = await getDoc(messageRef);
       if (msgDoc.exists()) {
         const data = msgDoc.data();
         const reactions = data.reactions || {};
         const usersForEmoji = reactions[emoji] || [];
-        
+
         const updates: any = {};
-        
+
         if (usersForEmoji.includes(user.uid)) {
           const newUsers = usersForEmoji.filter((id: string) => id !== user.uid);
           if (newUsers.length === 0) {
@@ -313,20 +368,20 @@ export function useChat(otherUserId?: string) {
             updates[`reactions.${emoji}`] = newUsers;
           }
         } else {
-          // Remove user from all other reactions
-          Object.keys(reactions).forEach(existingKey => {
-            if (existingKey !== emoji && reactions[existingKey].includes(user.uid)) {
-              const remainingUsers = reactions[existingKey].filter((id: string) => id !== user.uid);
-              if (remainingUsers.length === 0) {
-                updates[`reactions.${existingKey}`] = deleteField();
+          // Remove user from existing reactions and add to new emoji
+          Object.keys(reactions).forEach((existingEmoji) => {
+            if (existingEmoji !== emoji && reactions[existingEmoji].includes(user.uid)) {
+              const remaining = reactions[existingEmoji].filter((id: string) => id !== user.uid);
+              if (remaining.length === 0) {
+                updates[`reactions.${existingEmoji}`] = deleteField();
               } else {
-                updates[`reactions.${existingKey}`] = remainingUsers;
+                updates[`reactions.${existingEmoji}`] = remaining;
               }
             }
           });
           updates[`reactions.${emoji}`] = [...usersForEmoji, user.uid];
         }
-        
+
         await updateDoc(messageRef, updates);
       }
     } catch (error) {
@@ -334,28 +389,35 @@ export function useChat(otherUserId?: string) {
     }
   };
 
+  // Delete single message
   const deleteMessage = async (messageId: string, recipientId: string) => {
     if (!user) return;
     const chatId = getChatId(recipientId);
     const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
     try {
-      await setDoc(messageRef, { isDeleted: true, text: encrypt('Сообщение удалено', chatId) }, { merge: true });
+      await setDoc(
+        messageRef,
+        { isDeleted: true, text: 'Сообщение удалено', images: [], fileAttachment: null },
+        { merge: true }
+      );
     } catch (error) {
       console.error('Error deleting message:', error);
     }
   };
 
+  // Edit single message
   const editMessage = async (messageId: string, recipientId: string, newText: string) => {
     if (!user || !newText.trim()) return;
     const chatId = getChatId(recipientId);
     const messageRef = doc(db, 'chats', chatId, 'messages', messageId);
     try {
-      await setDoc(messageRef, { text: encrypt(newText.trim(), chatId), isEdited: true }, { merge: true });
+      await setDoc(messageRef, { text: newText.trim(), isEdited: true }, { merge: true });
     } catch (error) {
       console.error('Error editing message:', error);
     }
   };
 
+  // Set typing indicator
   const setTyping = async (recipientId: string, isTyping: boolean) => {
     if (!user) return;
     const chatId = getChatId(recipientId);
@@ -367,67 +429,134 @@ export function useChat(otherUserId?: string) {
     }
   };
 
+  // Mark chat read timestamp
   const markChatAsRead = async (recipientId: string) => {
     if (!user) return;
     const chatId = getChatId(recipientId);
     const chatRef = doc(db, 'chats', chatId);
     try {
-      const chatDoc = await getDoc(chatRef);
-      if (chatDoc.exists()) {
-        await updateDoc(chatRef, { [`lastReadAt.${user.uid}`]: serverTimestamp() });
-      }
+      await updateDoc(chatRef, { [`lastReadAt.${user.uid}`]: serverTimestamp() });
     } catch (error) {
       console.error('Error marking chat as read:', error);
     }
   };
 
+  // Pin Message
   const pinMessage = async (recipientId: string, message: Message) => {
     if (!user) return;
     const chatId = getChatId(recipientId);
     const chatRef = doc(db, 'chats', chatId);
     try {
-      await setDoc(chatRef, {
-        pinnedMessage: {
-          id: message.id,
-          text: message.text,
-          senderId: message.senderId,
-          type: message.type || 'text'
-        }
-      }, { merge: true });
+      await setDoc(
+        chatRef,
+        {
+          pinnedMessage: {
+            id: message.id,
+            text: message.text || (message.type === 'image' ? 'Фото' : message.type === 'file' ? 'Файл' : 'Сообщение'),
+            senderId: message.senderId,
+            type: message.type || 'text'
+          }
+        },
+        { merge: true }
+      );
     } catch (error) {
       console.error('Error pinning message:', error);
     }
   };
 
+  // Unpin Message
   const unpinMessage = async (recipientId: string) => {
     if (!user) return;
     const chatId = getChatId(recipientId);
     const chatRef = doc(db, 'chats', chatId);
     try {
-      await updateDoc(chatRef, {
-        pinnedMessage: deleteField()
-      });
+      await updateDoc(chatRef, { pinnedMessage: deleteField() });
     } catch (error) {
       console.error('Error unpinning message:', error);
     }
   };
 
+  // Delete single chat
   const deleteChat = async (recipientId: string) => {
     if (!user) return;
     const chatId = getChatId(recipientId);
     const chatRef = doc(db, 'chats', chatId);
     try {
+      const existing = JSON.parse(localStorage.getItem(`deleted_chats_${user.uid}`) || '[]');
+      localStorage.setItem(`deleted_chats_${user.uid}`, JSON.stringify(Array.from(new Set([...existing, chatId]))));
+
       if (vercelFallback.isAvailable()) {
         await vercelFallback.lpush(`deleted_chats:${user.uid}`, chatId);
       }
+
       await updateDoc(chatRef, {
         participants: arrayRemove(user.uid)
       });
+      setChats((prev) => prev.filter((c) => c.id !== chatId));
     } catch (error) {
       console.error('Error deleting chat:', error);
     }
   };
 
+  // Delete ALL chats
+  const deleteAllChats = async () => {
+    if (!user) return;
+    try {
+      const allChatIds = chats.map((c) => c.id);
+      const existing = JSON.parse(localStorage.getItem(`deleted_chats_${user.uid}`) || '[]');
+      const updated = Array.from(new Set([...existing, ...allChatIds]));
+      localStorage.setItem(`deleted_chats_${user.uid}`, JSON.stringify(updated));
+
+      for (const c of chats) {
+        const chatId = c.id;
+        const chatRef = doc(db, 'chats', chatId);
+        if (vercelFallback.isAvailable()) {
+          await vercelFallback.lpush(`deleted_chats:${user.uid}`, chatId);
+        }
+        try {
+          await updateDoc(chatRef, {
+            participants: arrayRemove(user.uid)
+          });
+        } catch (e) {
+          console.warn('Error updating chat participant removal:', e);
+        }
+      }
+      setChats([]);
+      setMessages([]);
+    } catch (error) {
+      console.error('Error deleting all chats:', error);
+    }
+  };
+
+  // Create Group Chat
+  const createGroupChat = async (groupName: string, participantUids: string[], avatarUrl?: string) => {
+    if (!user || !groupName.trim()) return null;
+    const groupId = `group_${generatePrefixedId('chat')}`;
+    const groupRef = doc(db, 'chats', groupId);
+    const allParticipants = Array.from(new Set([user.uid, ...participantUids]));
+
+    try {
+      const groupData = {
+        id: groupId,
+        name: groupName.trim(),
+        avatar: avatarUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${groupId}`,
+        isGroup: true,
+        participants: allParticipants,
+        admins: [user.uid],
+        ownerId: user.uid,
+        createdAt: serverTimestamp(),
+        lastMessage: 'Группа создана',
+        lastMessageAt: serverTimestamp()
+      };
+      await setDoc(groupRef, groupData);
+      return groupId;
+    } catch (error) {
+      console.error('Error creating group chat:', error);
+      return null;
+    }
+  };
+
+  // Block/Unblock user
   const blockUser = async (targetUid: string) => {
     if (!user) return;
     try {
@@ -450,5 +579,22 @@ export function useChat(otherUserId?: string) {
     }
   };
 
-  return { chats, messages, loading, sendMessage, toggleReaction, deleteMessage, editMessage, setTyping, markChatAsRead, pinMessage, unpinMessage, deleteChat, blockUser, unblockUser };
+  return {
+    chats,
+    messages,
+    loading,
+    sendMessage,
+    toggleReaction,
+    deleteMessage,
+    editMessage,
+    setTyping,
+    markChatAsRead,
+    pinMessage,
+    unpinMessage,
+    deleteChat,
+    deleteAllChats,
+    createGroupChat,
+    blockUser,
+    unblockUser
+  };
 }

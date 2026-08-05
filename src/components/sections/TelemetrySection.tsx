@@ -4,7 +4,8 @@ import {
   Activity, Search, ShieldCheck, Database, Trash2, 
   Monitor, Cpu, Globe, Key, Clock, LogIn, ExternalLink, Mail, Lock,
   TrendingUp, BarChart2, Layers, Users, Calendar, Download, RefreshCw,
-  PieChart as PieIcon, Smartphone, Laptop, Eye, X, Filter, ChevronLeft, ChevronRight
+  PieChart as PieIcon, Smartphone, Laptop, Eye, X, Filter, ChevronLeft, ChevronRight,
+  Printer, FileSpreadsheet, FileText, CheckCircle2
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -30,6 +31,7 @@ import { Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { AdminAuditLogs } from '../admin/AdminAuditLogs';
 import { logAdminAction } from '../../utils/auditLogger';
+import { printHtmlReport } from '../../utils/printReport';
 
 interface TelemetryLog {
   id: string;
@@ -98,6 +100,7 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [logsPerPage] = useState(15);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -321,29 +324,79 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   const exportToCSV = () => {
     if (filteredLogs.length === 0) return;
-    const headers = ['ID', 'User ID', 'Email', 'Name', 'Section', 'Platform', 'Screen', 'Viewport', 'Language', 'Timezone', 'Cores', 'Memory', 'Local Time'];
-    const csvRows = [headers.join(',')];
+
+    const headers = [
+      'ID записи',
+      'Дата и Время (UTC)',
+      'Локальное Время Устройства',
+      'ID Пользователя',
+      'Email Пользователя',
+      'Имя Пользователя',
+      'Код Раздела',
+      'Название Раздела',
+      'Платформа / ОС',
+      'Разрешение Экран',
+      'Размер Viewport',
+      'Язык Браузера',
+      'Часовой Пояс',
+      'Ядра CPU',
+      'ОЗУ Память (ГБ)',
+      'Тип Сети',
+      'AdBlock Активен',
+      'Device ID',
+      'Fingerprint',
+      'ID Сессии',
+      'User Agent'
+    ];
+
+    const escapeCsv = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const csvRows = [headers.map(escapeCsv).join(';')];
 
     filteredLogs.forEach(log => {
+      let utcFormatted = '';
+      if (log.timestamp) {
+        if (typeof log.timestamp.toDate === 'function') utcFormatted = log.timestamp.toDate().toISOString();
+        else if (log.timestamp.seconds) utcFormatted = new Date(log.timestamp.seconds * 1000).toISOString();
+        else if (typeof log.timestamp === 'number') utcFormatted = new Date(log.timestamp).toISOString();
+        else if (typeof log.timestamp === 'string') utcFormatted = log.timestamp;
+      }
+
+      const secLabel = getSectionLabel(log.currentSection || 'home', lang);
+
       const row = [
-        `"${log.id}"`,
-        `"${log.userId || ''}"`,
-        `"${log.userEmail || ''}"`,
-        `"${(log.displayName || '').replace(/"/g, '""')}"`,
-        `"${log.currentSection || ''}"`,
-        `"${log.platform || ''}"`,
-        `"${log.screen || ''}"`,
-        `"${log.viewport || ''}"`,
-        `"${log.language || ''}"`,
-        `"${log.timezone || ''}"`,
-        `"${log.cores || ''}"`,
-        `"${log.memory || ''}"`,
-        `"${log.localTime || ''}"`
-      ];
-      csvRows.push(row.join(','));
+        log.id,
+        utcFormatted,
+        log.localTime || '',
+        log.userId || '',
+        log.userEmail || '',
+        log.displayName || '',
+        log.currentSection || '',
+        secLabel,
+        log.platform || '',
+        log.screen || '',
+        log.viewport || '',
+        log.language || '',
+        log.timezone || '',
+        log.cores ?? '',
+        log.memory ?? '',
+        log.connectionType || '',
+        log.adblockDetected ? (lang === 'ru' ? 'Да' : 'Yes') : (lang === 'ru' ? 'Нет' : 'No'),
+        log.deviceId || '',
+        log.fingerprint || '',
+        log.sessionId || '',
+        log.userAgent || ''
+      ].map(escapeCsv);
+
+      csvRows.push(row.join(';'));
     });
 
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -351,6 +404,134 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const triggerPrintTelemetry = () => {
+    if (filteredLogs.length === 0) return;
+
+    const dateStr = new Date().toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US');
+    const adBlockPct = filteredLogs.length > 0
+      ? Math.round((filteredLogs.filter(l => l.adblockDetected).length / filteredLogs.length) * 100)
+      : 0;
+
+    const osRows = osDistribution.map(os => {
+      const pct = totalVisits > 0 ? Math.round((os.value / totalVisits) * 100) : 0;
+      return `<tr>
+        <td style="font-weight: 500;">${os.name}</td>
+        <td style="text-align: right; font-weight: bold;">${os.value}</td>
+        <td style="text-align: right; color: #4b5563;">${pct}%</td>
+      </tr>`;
+    }).join('');
+
+    const tableRows = filteredLogs.slice(0, 200).map((log, idx) => {
+      let formattedTime = log.localTime || '';
+      if (log.timestamp?.toDate) formattedTime = log.timestamp.toDate().toISOString().replace('T', ' ').slice(0, 19);
+      else if (log.timestamp?.seconds) formattedTime = new Date(log.timestamp.seconds * 1000).toISOString().replace('T', ' ').slice(0, 19);
+
+      const secName = getSectionLabel(log.currentSection || 'home', lang);
+      const userDisplay = log.displayName || log.userEmail ? `${log.displayName || 'Guest'} (${log.userEmail || ''})` : 'Guest';
+
+      return `<tr>
+        <td style="color: #6b7280;">${idx + 1}</td>
+        <td style="font-weight: bold; white-space: nowrap;">${formattedTime}</td>
+        <td><strong>${userDisplay}</strong></td>
+        <td style="font-weight: bold; color: #dc2626;">${secName}</td>
+        <td>${log.platform || '-'}</td>
+        <td>${log.screen || log.viewport || '-'}</td>
+        <td>${log.timezone || '-'}</td>
+        <td>${log.adblockDetected ? '<span class="badge" style="background: #fee2e2; color: #991b1b;">AdBlock</span>' : '<span class="badge" style="background: #dcfce7; color: #166534;">Clean</span>'}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `
+      <div class="header-box">
+        <div>
+          <div style="font-size: 10px; font-weight: 800; color: #dc2626; text-transform: uppercase; letter-spacing: 1px;">AHA RADIO STATION — CYBER TELEMETRY & ANALYTICS</div>
+          <h1>${lang === 'ru' ? 'Официальный Статистический Отчет' : 'Official Analytics & Telemetry Report'}</h1>
+          <div style="font-size: 10px; color: #4b5563; margin-top: 2px;">
+            ${lang === 'ru' ? 'Дата формирования:' : 'Generated:'} ${dateStr} | ${lang === 'ru' ? 'Оператор:' : 'Operator:'} ${user?.email || 'Admin'}
+          </div>
+        </div>
+        <div style="text-align: right; font-size: 10px; font-family: monospace;">
+          <div>${lang === 'ru' ? 'Период:' : 'Period:'} <strong>${timeRange.toUpperCase()}</strong></div>
+          <div>${lang === 'ru' ? 'Записей в отчете:' : 'Records count:'} <strong>${filteredLogs.length}</strong></div>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-title">${lang === 'ru' ? 'Всего визитов' : 'Total Visits'}</div>
+          <div class="kpi-val">${totalVisits}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">${lang === 'ru' ? 'Уникальные юзеры' : 'Unique Users'}</div>
+          <div class="kpi-val">${activeUsersCount}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">${lang === 'ru' ? 'Топ раздел' : 'Top Section'}</div>
+          <div class="kpi-val" style="font-size: 13px;">${topSection}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-title">${lang === 'ru' ? 'Доля AdBlock' : 'AdBlock Share'}</div>
+          <div class="kpi-val">${adBlockPct}%</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>${lang === 'ru' ? 'Распределение по ОС / Платформам' : 'OS & Platform Distribution'}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>${lang === 'ru' ? 'Операционная система' : 'OS'}</th>
+                <th style="text-align: right;">${lang === 'ru' ? 'Визиты' : 'Visits'}</th>
+                <th style="text-align: right;">${lang === 'ru' ? 'Доля' : 'Share'}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${osRows}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>${lang === 'ru' ? 'Параметры фильтрации' : 'Filtering Parameters'}</h2>
+          <div style="font-size: 10px; line-height: 1.8; color: #374151; font-family: monospace;">
+            <div>• <strong>Общее число логов:</strong> ${logs.length}</div>
+            <div>• <strong>Записей в текущей выборке:</strong> ${filteredLogs.length}</div>
+            <div>• <strong>Интервал времени:</strong> ${timeRange}</div>
+            <div>• <strong>Поисковый запрос:</strong> "${searchQuery || '—'}"</div>
+            <div>• <strong>Обнаружен AdBlock:</strong> ${filteredLogs.filter(l => l.adblockDetected).length} пользователей</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>${lang === 'ru' ? 'Детализированный Реестр Телеметрии' : 'Detailed Telemetry Log Registry'}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>${lang === 'ru' ? 'Дата / Время' : 'Date / Time'}</th>
+            <th>${lang === 'ru' ? 'Пользователь' : 'User'}</th>
+            <th>${lang === 'ru' ? 'Раздел' : 'Section'}</th>
+            <th>${lang === 'ru' ? 'ОС' : 'OS'}</th>
+            <th>${lang === 'ru' ? 'Экран' : 'Screen'}</th>
+            <th>${lang === 'ru' ? 'Часовой Пояс' : 'Timezone'}</th>
+            <th>${lang === 'ru' ? 'Статус' : 'Status'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <div>Aha Radio Station Cyber Telemetry System &copy; 2026</div>
+        <div>CONFIDENTIAL — FOR INTERNAL ADMINISTRATIVE USE ONLY</div>
+      </div>
+    `;
+
+    printHtmlReport(html, `Aha_Telemetry_Report_${new Date().toISOString().slice(0, 10)}`);
   };
 
   const filteredLogs = timeFilteredLogs.filter((log) => {
@@ -442,10 +623,20 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
             onClick={exportToCSV}
             disabled={filteredLogs.length === 0}
             className="px-4 py-2.5 bg-[#251c35] hover:bg-[#ff4d4d] text-gray-200 hover:text-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] rounded-2xl text-xs font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg"
-            title="Export CSV"
+            title={lang === 'ru' ? 'Скачать данные в формате CSV' : 'Export data in CSV format'}
           >
-            <Download size={14} />
+            <FileSpreadsheet size={15} />
             <span className="hidden sm:inline">CSV</span>
+          </button>
+
+          <button
+            onClick={triggerPrintTelemetry}
+            disabled={filteredLogs.length === 0}
+            className="px-4 py-2.5 bg-[#251c35] hover:bg-[#a855f7] text-gray-200 hover:text-white border border-[#3d2b4f] hover:border-[#a855f7] rounded-2xl text-xs font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-lg"
+            title={lang === 'ru' ? 'Распечатать отчет на принтере или сохранить в PDF' : 'Print report or save to PDF'}
+          >
+            <Printer size={15} />
+            <span className="hidden sm:inline">{lang === 'ru' ? 'Печать' : 'Print'}</span>
           </button>
 
           {role === 'admin' && (
@@ -1055,6 +1246,255 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
                 >
                   {lang === 'ru' ? 'Закрыть' : 'Close'}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Printable Analytics Report Modal */}
+      <AnimatePresence>
+        {showPrintModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+            {/* Embedded Print CSS Rules */}
+            <style>{`
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #printable-telemetry-report, #printable-telemetry-report * {
+                  visibility: visible !important;
+                }
+                #printable-telemetry-report {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  background: white !important;
+                  color: black !important;
+                  padding: 24px !important;
+                  margin: 0 !important;
+                  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                  box-sizing: border-box !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+                .print-border {
+                  border: 1px solid #d1d5db !important;
+                }
+                .print-[#ff4d4d] {
+                  color: #000000 !important;
+                }
+              }
+            `}</style>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              className="bg-[#1a1326] border border-[#3d2b4f] rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden my-auto text-gray-200"
+            >
+              {/* Modal Control Bar (Hidden on print) */}
+              <div className="flex items-center justify-between p-4 bg-[#15101e] border-b border-[#3d2b4f] shrink-0 no-print">
+                <div className="flex items-center gap-2.5">
+                  <Printer className="text-[#a855f7]" size={20} />
+                  <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                      {lang === 'ru' ? 'Печать аналитического отчета' : 'Printable Analytics Report'}
+                    </h3>
+                    <p className="text-[10px] text-gray-400">
+                      {lang === 'ru' ? 'Готовая версия для принтера или сохранения в PDF' : 'Ready for printing or PDF document export'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={triggerPrintTelemetry}
+                    className="px-4 py-2 bg-[#ff4d4d] hover:bg-white text-[#15101e] rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-lg active:scale-95"
+                  >
+                    <Printer size={16} />
+                    {lang === 'ru' ? 'Печать / PDF' : 'Print / PDF'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={exportToCSV}
+                    className="px-3.5 py-2 bg-[#251c35] hover:bg-[#a855f7] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <FileSpreadsheet size={15} />
+                    CSV
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPrintModal(false)}
+                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all cursor-pointer ml-1"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Document Body */}
+              <div className="p-6 sm:p-8 overflow-y-auto space-y-6" id="printable-telemetry-report">
+                {/* Document Header */}
+                <div className="border-b-2 border-gray-700 print:border-black pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <div className="text-[#ff4d4d] print:text-black font-black text-xs uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                      <Activity size={14} />
+                      Aha Radio Station — Cyber Telemetry & Analytics
+                    </div>
+                    <h1 className="text-2xl font-black text-white print:text-black uppercase tracking-wide">
+                      {lang === 'ru' ? 'ОФИЦИАЛЬНЫЙ СТАТИСТИЧЕСКИЙ ОТЧЕТ' : 'OFFICIAL STATISTICAL REPORT'}
+                    </h1>
+                    <p className="text-xs text-gray-400 print:text-gray-700 mt-0.5">
+                      {lang === 'ru' 
+                        ? `Дата формирования: ${new Date().toLocaleString('ru-RU')} | Составитель: ${user?.email || 'Администратор'}`
+                        : `Generated: ${new Date().toLocaleString()} | Operator: ${user?.email || 'Admin'}`}
+                    </p>
+                  </div>
+                  <div className="text-right text-xs text-gray-300 print:text-black font-mono bg-[#15101e] print:bg-gray-100 p-3 rounded-2xl border border-[#3d2b4f] print:border-gray-400">
+                    <div>Период фильтра: <span className="font-black text-white print:text-black">{timeRange.toUpperCase()}</span></div>
+                    <div>Записей в отчете: <span className="font-black text-white print:text-black">{filteredLogs.length}</span></div>
+                  </div>
+                </div>
+
+                {/* KPI Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:grid-cols-4">
+                  <div className="bg-[#15101e] print:bg-gray-50 border border-[#3d2b4f] print:border-gray-400 p-3.5 rounded-2xl">
+                    <div className="text-[10px] uppercase font-bold text-gray-400 print:text-gray-700">Всего визитов</div>
+                    <div className="text-xl font-black text-[#ff4d4d] print:text-black mt-1">{totalVisits}</div>
+                  </div>
+                  <div className="bg-[#15101e] print:bg-gray-50 border border-[#3d2b4f] print:border-gray-400 p-3.5 rounded-2xl">
+                    <div className="text-[10px] uppercase font-bold text-gray-400 print:text-gray-700">Уникальные пользователи</div>
+                    <div className="text-xl font-black text-[#00f0ff] print:text-black mt-1">{activeUsersCount}</div>
+                  </div>
+                  <div className="bg-[#15101e] print:bg-gray-50 border border-[#3d2b4f] print:border-gray-400 p-3.5 rounded-2xl">
+                    <div className="text-[10px] uppercase font-bold text-gray-400 print:text-gray-700">Топ раздел</div>
+                    <div className="text-base font-black text-[#a855f7] print:text-black mt-1 truncate">{topSection}</div>
+                  </div>
+                  <div className="bg-[#15101e] print:bg-gray-50 border border-[#3d2b4f] print:border-gray-400 p-3.5 rounded-2xl">
+                    <div className="text-[10px] uppercase font-bold text-gray-400 print:text-gray-700">Доля AdBlock</div>
+                    <div className="text-xl font-black text-amber-400 print:text-black mt-1">
+                      {filteredLogs.length > 0
+                        ? `${Math.round((filteredLogs.filter(l => l.adblockDetected).length / filteredLogs.length) * 100)}%`
+                        : '0%'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* OS Breakdown & Hourly Breakdown */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:grid-cols-2">
+                  {/* OS Distribution Table */}
+                  <div className="bg-[#15101e] print:bg-white border border-[#3d2b4f] print:border-gray-400 p-4 rounded-2xl">
+                    <h4 className="text-xs font-black uppercase text-gray-300 print:text-black mb-3">
+                      {lang === 'ru' ? 'Распределение по ОС и платформам' : 'OS & Platform Distribution'}
+                    </h4>
+                    <table className="w-full text-xs text-left print:text-black font-mono">
+                      <thead>
+                        <tr className="border-b border-[#3d2b4f] print:border-gray-400 text-[10px] text-gray-400 print:text-gray-700 uppercase">
+                          <th className="pb-2 font-bold">Операционная система</th>
+                          <th className="pb-2 text-right font-bold">Кол-во</th>
+                          <th className="pb-2 text-right font-bold">Доля</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#3d2b4f]/40 print:divide-gray-300">
+                        {osDistribution.map((os) => {
+                          const pct = totalVisits > 0 ? Math.round((os.value / totalVisits) * 100) : 0;
+                          return (
+                            <tr key={os.name}>
+                              <td className="py-1.5 font-medium">{os.name}</td>
+                              <td className="py-1.5 text-right font-bold text-cyan-400 print:text-black">{os.value}</td>
+                              <td className="py-1.5 text-right text-gray-400 print:text-gray-700">{pct}%</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Hourly peak activity */}
+                  <div className="bg-[#15101e] print:bg-white border border-[#3d2b4f] print:border-gray-400 p-4 rounded-2xl">
+                    <h4 className="text-xs font-black uppercase text-gray-300 print:text-black mb-3">
+                      {lang === 'ru' ? 'Почасовая активность (Пиковые часы)' : 'Hourly Peak Activity'}
+                    </h4>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 font-mono">
+                      {hourlyActivity.filter(h => h.visits > 0).map((h) => (
+                        <div key={h.hour} className="flex items-center justify-between text-xs py-0.5">
+                          <span className="text-gray-400 print:text-black">{h.hour}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-28 bg-[#251c35] print:bg-gray-200 h-2 rounded-full overflow-hidden">
+                              <div
+                                className="bg-[#ff4d4d] print:bg-black h-full"
+                                style={{ width: `${Math.min(100, (h.visits / (Math.max(...hourlyActivity.map(x => x.visits)) || 1)) * 100)}%` }}
+                              />
+                            </div>
+                            <span className="font-bold text-white print:text-black text-xs min-w-[24px] text-right">{h.visits}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {hourlyActivity.every(h => h.visits === 0) && (
+                        <p className="text-xs text-gray-500 py-4 text-center">Нет зафиксированной активности</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Session Logs Detailed Table */}
+                <div>
+                  <h4 className="text-xs font-black uppercase text-gray-300 print:text-black mb-2 flex items-center justify-between">
+                    <span>{lang === 'ru' ? 'Детализированный реестр сессий' : 'Detailed Session Registry'}</span>
+                    <span className="text-[10px] font-mono text-gray-400 print:text-gray-700">
+                      {lang === 'ru' ? `(Первые ${Math.min(filteredLogs.length, 100)} из ${filteredLogs.length})` : `(First ${Math.min(filteredLogs.length, 100)} of ${filteredLogs.length})`}
+                    </span>
+                  </h4>
+                  <div className="border border-[#3d2b4f] print:border-gray-400 rounded-2xl overflow-hidden">
+                    <table className="w-full text-left text-[11px] print:text-black font-mono">
+                      <thead className="bg-[#15101e] print:bg-gray-100 text-gray-400 print:text-black text-[10px] uppercase border-b border-[#3d2b4f] print:border-gray-400">
+                        <tr>
+                          <th className="p-2.5">#</th>
+                          <th className="p-2.5">Дата и время (UTC / Local)</th>
+                          <th className="p-2.5">Пользователь</th>
+                          <th className="p-2.5">Посещенный раздел</th>
+                          <th className="p-2.5">ОС / Платформа</th>
+                          <th className="p-2.5">Экран / Viewport</th>
+                          <th className="p-2.5">Часовой пояс</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#3d2b4f]/40 print:divide-gray-300">
+                        {filteredLogs.slice(0, 100).map((log, idx) => {
+                          let formattedTime = log.localTime || '';
+                          if (log.timestamp?.toDate) formattedTime = log.timestamp.toDate().toISOString().replace('T', ' ').slice(0, 19);
+                          else if (log.timestamp?.seconds) formattedTime = new Date(log.timestamp.seconds * 1000).toISOString().replace('T', ' ').slice(0, 19);
+
+                          return (
+                            <tr key={log.id} className="hover:bg-white/5 print:hover:bg-transparent">
+                              <td className="p-2.5 text-gray-500 print:text-gray-600">{idx + 1}</td>
+                              <td className="p-2.5 text-cyan-400 print:text-black font-bold whitespace-nowrap">{formattedTime}</td>
+                              <td className="p-2.5 text-white print:text-black font-bold">
+                                {log.displayName || 'Guest'}
+                                {log.userEmail && <div className="text-[9px] text-gray-400 print:text-gray-600 font-normal">{log.userEmail}</div>}
+                              </td>
+                              <td className="p-2.5 text-[#ff4d4d] print:text-black font-bold">{getSectionLabel(log.currentSection || 'home', lang)}</td>
+                              <td className="p-2.5 text-gray-300 print:text-black">{log.platform || 'Unknown'}</td>
+                              <td className="p-2.5 text-gray-400 print:text-black">{log.screen || log.viewport || '-'}</td>
+                              <td className="p-2.5 text-gray-400 print:text-black">{log.timezone || '-'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Print Document Sign-off Footer */}
+                <div className="pt-6 border-t-2 border-gray-700 print:border-black flex flex-col sm:flex-row justify-between items-start sm:items-center text-[10px] text-gray-500 print:text-black font-mono gap-2">
+                  <div>Aha Radio Station Cyber Telemetry System &copy; 2026. All rights reserved.</div>
+                  <div>Секретно / Автоматический отчет административной панели</div>
+                </div>
               </div>
             </motion.div>
           </div>

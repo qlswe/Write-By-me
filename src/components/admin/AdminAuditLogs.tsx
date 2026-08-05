@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShieldCheck, Search, Filter, ShieldAlert, UserX, UserCheck, 
   Trash2, FileText, Video, MessageSquare, Database, Ban, Shield, 
-  Clock, Download, RefreshCw, X, AlertCircle, ChevronLeft, ChevronRight, User
+  Clock, Download, RefreshCw, X, AlertCircle, ChevronLeft, ChevronRight, User, Printer, FileSpreadsheet
 } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, limit, deleteDoc, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { Language } from '../../data/translations';
 import { AuditLogItem } from '../../utils/auditLogger';
+import { printHtmlReport } from '../../utils/printReport';
 
 interface AdminAuditLogsProps {
   lang: Language;
@@ -117,29 +118,49 @@ export const AdminAuditLogs: React.FC<AdminAuditLogsProps> = ({ lang }) => {
 
   const exportToCSV = () => {
     if (filteredLogs.length === 0) return;
-    const headers = ['ID', 'Admin Name', 'Admin Email', 'Action', 'Category', 'Target Name', 'Target ID', 'Details', 'Timestamp'];
-    const rows = [headers.join(',')];
+    const headers = [
+      'ID записи', 
+      'Дата и Время UTC', 
+      'Имя Администратора', 
+      'Email Администратора', 
+      'Код Действия', 
+      'Категория', 
+      'Целевой объект', 
+      'ID объекта', 
+      'Детали / Подробности'
+    ];
+
+    const escapeCsv = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = [headers.map(escapeCsv).join(';')];
 
     filteredLogs.forEach(log => {
       let formattedTime = '';
       if (log.timestamp?.toDate) formattedTime = log.timestamp.toDate().toISOString();
       else if (log.timestamp?.seconds) formattedTime = new Date(log.timestamp.seconds * 1000).toISOString();
+      else if (typeof log.timestamp === 'number') formattedTime = new Date(log.timestamp).toISOString();
 
       const row = [
-        `"${log.id}"`,
-        `"${(log.adminName || '').replace(/"/g, '""')}"`,
-        `"${log.adminEmail || ''}"`,
-        `"${log.action || ''}"`,
-        `"${log.actionType || ''}"`,
-        `"${(log.targetName || '').replace(/"/g, '""')}"`,
-        `"${log.targetId || ''}"`,
-        `"${(log.details || '').replace(/"/g, '""')}"`,
-        `"${formattedTime}"`
-      ];
-      rows.push(row.join(','));
+        log.id,
+        formattedTime,
+        log.adminName || '',
+        log.adminEmail || '',
+        log.action || '',
+        log.actionType || '',
+        log.targetName || '',
+        log.targetId || '',
+        log.details || ''
+      ].map(escapeCsv);
+
+      rows.push(row.join(';'));
     });
 
-    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -147,6 +168,70 @@ export const AdminAuditLogs: React.FC<AdminAuditLogsProps> = ({ lang }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const triggerPrintAuditLogs = () => {
+    if (filteredLogs.length === 0) return;
+
+    const dateStr = new Date().toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US');
+
+    const rowsHtml = filteredLogs.map((log, idx) => {
+      let formattedTime = '';
+      if (log.timestamp?.toDate) formattedTime = log.timestamp.toDate().toISOString().replace('T', ' ').slice(0, 19);
+      else if (log.timestamp?.seconds) formattedTime = new Date(log.timestamp.seconds * 1000).toISOString().replace('T', ' ').slice(0, 19);
+      else if (typeof log.timestamp === 'number') formattedTime = new Date(log.timestamp).toISOString().replace('T', ' ').slice(0, 19);
+
+      return `<tr>
+        <td style="color: #6b7280;">${idx + 1}</td>
+        <td style="font-weight: bold; white-space: nowrap;">${formattedTime}</td>
+        <td><strong>${log.adminName || 'Admin'}</strong><br/><span style="color: #6b7280; font-size: 9px;">${log.adminEmail || ''}</span></td>
+        <td style="font-weight: bold; color: #7c3aed;">${log.action || '-'}</td>
+        <td><span class="badge">${log.actionType || '-'}</span></td>
+        <td>${log.targetName || log.targetId || '-'}</td>
+        <td>${log.details || '-'}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `
+      <div class="header-box">
+        <div>
+          <div style="font-size: 10px; font-weight: 800; color: #7c3aed; text-transform: uppercase; letter-spacing: 1px;">AHA RADIO STATION — ADMIN SECURITY AUDIT</div>
+          <h1>${lang === 'ru' ? 'Журнал Аудита Действий Администрации' : 'Administrative Audit Log Report'}</h1>
+          <div style="font-size: 10px; color: #4b5563; margin-top: 2px;">
+            ${lang === 'ru' ? 'Сформировано:' : 'Generated:'} ${dateStr} | ${lang === 'ru' ? 'Всего записей:' : 'Total entries:'} ${filteredLogs.length} | ${lang === 'ru' ? 'Оператор:' : 'Operator:'} ${user?.email || 'Admin'}
+          </div>
+        </div>
+        <div style="text-align: right; font-size: 10px; font-family: monospace;">
+          <div>${lang === 'ru' ? 'Фильтр категории:' : 'Category filter:'} <strong>${categoryFilter.toUpperCase()}</strong></div>
+          <div>${lang === 'ru' ? 'Временной интервал:' : 'Time filter:'} <strong>${timeRange.toUpperCase()}</strong></div>
+        </div>
+      </div>
+
+      <h2>${lang === 'ru' ? 'Реестр вызовов и действий' : 'Action Registry'}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>${lang === 'ru' ? 'Дата / Время' : 'Timestamp'}</th>
+            <th>${lang === 'ru' ? 'Администратор' : 'Admin'}</th>
+            <th>${lang === 'ru' ? 'Действие' : 'Action'}</th>
+            <th>${lang === 'ru' ? 'Категория' : 'Category'}</th>
+            <th>${lang === 'ru' ? 'Объект' : 'Target'}</th>
+            <th>${lang === 'ru' ? 'Подробности' : 'Details'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <div>Aha Radio Station Security Audit &copy; 2026</div>
+        <div>CONFIDENTIAL — FOR INTERNAL ADMINISTRATIVE USE ONLY</div>
+      </div>
+    `;
+
+    printHtmlReport(html, `Aha_Audit_Logs_${new Date().toISOString().slice(0, 10)}`);
   };
 
   const getActionBadge = (action: string) => {
@@ -350,8 +435,19 @@ export const AdminAuditLogs: React.FC<AdminAuditLogsProps> = ({ lang }) => {
             className="flex items-center gap-1.5 bg-[#251c35] hover:bg-[#3d2b4f] disabled:opacity-40 text-white text-xs font-bold px-3 py-2 rounded-xl border border-[#3d2b4f] transition-all cursor-pointer"
             title={lang === 'ru' ? 'Экспорт истории действий в CSV' : 'Export audit log to CSV'}
           >
-            <Download size={14} className="text-[#00f0ff]" />
-            <span className="hidden sm:inline">{lang === 'ru' ? 'Экспорт CSV' : 'Export'}</span>
+            <FileSpreadsheet size={14} className="text-[#00f0ff]" />
+            <span className="hidden sm:inline">{lang === 'ru' ? 'Экспорт CSV' : 'Export CSV'}</span>
+          </button>
+
+          {/* Print */}
+          <button
+            onClick={triggerPrintAuditLogs}
+            disabled={filteredLogs.length === 0}
+            className="flex items-center gap-1.5 bg-[#251c35] hover:bg-[#a855f7] disabled:opacity-40 text-white text-xs font-bold px-3 py-2 rounded-xl border border-[#3d2b4f] transition-all cursor-pointer"
+            title={lang === 'ru' ? 'Печать журнала' : 'Print audit logs'}
+          >
+            <Printer size={14} className="text-[#a855f7]" />
+            <span className="hidden sm:inline">{lang === 'ru' ? 'Печать' : 'Print'}</span>
           </button>
         </div>
       </div>

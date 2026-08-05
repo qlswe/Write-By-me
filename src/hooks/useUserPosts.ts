@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { useAuth } from './useAuth';
 import { vercelFallback } from '../utils/vercelFallback';
 import { generatePrefixedId } from '../utils/idGenerator';
+import { sanitizePayloadForFirestore } from '../utils/mediaUploader';
 
 export interface UserPost {
   id: string;
@@ -95,14 +96,16 @@ export function useUserPosts(userId?: string) {
     if (!user || (!text.trim() && !pixelsSnapshot)) return;
 
     try {
-      const postData: any = {
+      const rawPostData: any = {
         uid: user.uid,
         authorName: user.displayName,
         authorPhoto: user.photoURL,
         text: text.trim(),
         createdAt: new Date().toISOString()
       };
-      if (pixelsSnapshot) postData.pixelsSnapshot = pixelsSnapshot;
+      if (pixelsSnapshot) rawPostData.pixelsSnapshot = pixelsSnapshot;
+
+      const postData = await sanitizePayloadForFirestore(rawPostData);
 
       const docRef = await addDoc(collection(db, 'user_posts'), postData);
       const payload = { ...postData, id: docRef.id };

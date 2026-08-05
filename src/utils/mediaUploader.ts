@@ -1,7 +1,56 @@
+export async function compressImageBase64(
+  base64Str: string,
+  maxWidth = 1200,
+  maxHeight = 1200,
+  quality = 0.75
+): Promise<string> {
+  if (!base64Str || !base64Str.startsWith('data:image/')) return base64Str;
+
+  // Don't compress small images (<100KB) or animated GIFs
+  if (base64Str.length < 100000 || base64Str.startsWith('data:image/gif')) {
+    return base64Str;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth || height > maxHeight) {
+        if (width / height > maxWidth / maxHeight) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(base64Str);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressedDataUrl.length < base64Str.length ? compressedDataUrl : base64Str);
+    };
+
+    img.onerror = () => resolve(base64Str);
+    img.src = base64Str;
+  });
+}
+
 export async function uploadMediaFile(input: File | string, fileName?: string): Promise<string> {
   if (!input) return '';
 
-  // If input is already a web URL, returning as-is
+  // If input is already a web URL, return as-is
   if (typeof input === 'string') {
     if (!input.startsWith('data:')) {
       return input;
@@ -26,6 +75,11 @@ export async function uploadMediaFile(input: File | string, fileName?: string): 
       reader.onload = () => resolve(reader.result as string);
       reader.readAsDataURL(input);
     });
+  }
+
+  // Compress image data if it's an image base64
+  if (base64Data.startsWith('data:image/')) {
+    base64Data = await compressImageBase64(base64Data, 1200, 1200, 0.75);
   }
 
   // Attempt 1: Upload to local server /api/upload
@@ -77,7 +131,7 @@ export async function uploadMediaFile(input: File | string, fileName?: string): 
     console.warn('Litterbox direct upload failed:', litterErr);
   }
 
-  // Attempt 2: Fallback to tmpfiles.org
+  // Attempt 3: Fallback to tmpfiles.org
   try {
     const blob = await (await fetch(base64Data)).blob();
     const formData = new FormData();
@@ -91,8 +145,6 @@ export async function uploadMediaFile(input: File | string, fileName?: string): 
     if (tmpRes.ok) {
       const tmpData = await tmpRes.json();
       if (tmpData?.data?.url) {
-        // Convert tmpfiles view URL to direct download URL:
-        // https://tmpfiles.org/12345/file.mp4 -> https://tmpfiles.org/dl/12345/file.mp4
         const directUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
         return directUrl;
       }
@@ -101,10 +153,62 @@ export async function uploadMediaFile(input: File | string, fileName?: string): 
     console.warn('External upload fallback failed:', tmpErr);
   }
 
-  // Final fallback: if small enough (<700KB), return base64; otherwise throw/alert
+  // Final fallback: if small enough (<750KB), return base64
   if (base64Data.length < 750000) {
     return base64Data;
   }
 
-  throw new Error('File size exceeds Firestore document limit (1MB). Please use video links (YouTube) or smaller video files.');
+  // Try aggressive compression
+  if (base64Data.startsWith('data:image/')) {
+    const hyperCompressed = await compressImageBase64(base64Data, 800, 800, 0.5);
+    if (hyperCompressed.length < 750000) {
+      return hyperCompressed;
+    }
+  }
+
+  throw new Error('File size exceeds limit (1MB). Please use smaller images or external media links.');
 }
+
+export async function sanitizePayloadForFirestore<T>(payload: T): Promise<T> {
+  if (!payload) return payload;
+
+  if (typeof payload === 'string') {
+    const strPayload = payload as string;
+    if (strPayload.includes('data:image/')) {
+      const dataUrlRegex = /data:image\/[a-zA-Z+]+;base64,[a-zA-Z0-9+/=]+/g;
+      const matches = strPayload.match(dataUrlRegex);
+      if (matches) {
+        let updatedString = strPayload;
+        for (const dataUrl of matches) {
+          try {
+            const uploadedUrl = await uploadMediaFile(dataUrl);
+            updatedString = updatedString.replace(dataUrl, uploadedUrl);
+          } catch (e) {
+            const compressed = await compressImageBase64(dataUrl, 800, 800, 0.5);
+            updatedString = updatedString.replace(dataUrl, compressed);
+          }
+        }
+        return (updatedString as unknown) as T;
+      }
+    }
+    return payload;
+  }
+
+  if (Array.isArray(payload)) {
+    const processedArray = await Promise.all(
+      payload.map((item) => sanitizePayloadForFirestore(item))
+    );
+    return processedArray as unknown as T;
+  }
+
+  if (typeof payload === 'object' && payload !== null) {
+    const result: any = {};
+    for (const [key, value] of Object.entries(payload)) {
+      result[key] = await sanitizePayloadForFirestore(value);
+    }
+    return result as T;
+  }
+
+  return payload;
+}
+

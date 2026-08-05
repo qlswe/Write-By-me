@@ -1,627 +1,483 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useChat, Chat } from '../../hooks/useChat';
-import { useAuth } from '../../hooks/useAuth';
-import { translations, Language } from '../../data/translations';
-import { GoogleLoginButton } from '../ui/GoogleLoginButton';
-import { MessageSquare, Clock, User, Search, X, Circle, Bell, BellOff, Mail, UserPlus, Plus, Users, Check } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
-import { ru, enUS, be, de, fr, zhCN } from 'date-fns/locale';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase';
-import { dbQueryCore } from '../../utils/dbQueryCore';
+import {
+  MessageSquare, Users, User, Search, Plus, Trash2, ShieldAlert,
+  X, Check, Sparkles, UserPlus, Radio, Circle, Settings
+} from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { useChat, Chat } from '../../hooks/useChat';
 import { useUsers } from '../../hooks/useUsers';
-import { generatePrefixedId } from '../../utils/idGenerator';
+import { Language, translations } from '../../data/translations';
 import { CachedAvatar } from '../ui/CachedAvatar';
 
 interface ChatsListProps {
   lang: Language;
-  onSelectChat: (recipientId: string, name: string, photoURL?: string) => void;
+  onSelectChat: (id: string, name: string, photo?: string) => void;
   activeChatId?: string;
 }
 
-const locales = { ru, en: enUS, by: be, de, fr, zh: zhCN };
+const formatTimeAgo = (val: any, lang: Language) => {
+  if (!val) return '';
+  let date: Date;
+  if (typeof val?.toMillis === 'function') date = new Date(val.toMillis());
+  else if (typeof val?.toDate === 'function') date = val.toDate();
+  else if (val instanceof Date) date = val;
+  else if (typeof val === 'number') date = new Date(val);
+  else if (typeof val === 'string') date = new Date(val);
+  else if (typeof val?.seconds === 'number') date = new Date(val.seconds * 1000);
+  else return '';
 
-const getSafeDate = (val: any): Date => {
-  if (!val) return new Date();
-  if (typeof val.toDate === 'function') return val.toDate();
-  if (val instanceof Date) return val;
-  if (typeof val === 'number') return new Date(val);
-  if (typeof val === 'string') return new Date(val);
-  if (typeof val.seconds === 'number') return new Date(val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000));
-  return new Date();
-};
-
-const formatChatTime = (val: any, lang: Language): string => {
-  const date = getSafeDate(val);
-  const t = translations[lang] as any;
-  if (isToday(date)) {
-    return format(date, 'HH:mm');
-  }
-  if (isYesterday(date)) {
-    return t.chatYesterday || 'Yesterday';
-  }
   const now = new Date();
-  if (date.getFullYear() === now.getFullYear()) {
-    return format(date, 'd MMM', { locale: locales[lang] || locales.en });
-  } else {
-    return format(date, 'dd.MM.yyyy');
-  }
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return lang === 'ru' ? 'только что' : 'just now';
+  if (diffMins < 60) return `${diffMins} ${lang === 'ru' ? 'м' : 'm'}`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} ${lang === 'ru' ? 'ч' : 'h'}`;
+  return date.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' });
 };
-
-const getMillis = (val: any): number => {
-  if (!val) return 0;
-  if (typeof val.toMillis === 'function') return val.toMillis();
-  if (typeof val.toDate === 'function') return val.toDate().getTime();
-  if (val instanceof Date) return val.getTime();
-  if (typeof val === 'number') return val;
-  if (typeof val === 'string') return new Date(val).getTime();
-  if (typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000);
-  return 0;
-};
-
-const ChatItem = React.memo(({ 
-  chat, 
-  currentUserId, 
-  lang, 
-  profile, 
-  onSelect,
-  isActive
-}: { 
-  chat: Chat, 
-  currentUserId: string, 
-  lang: Language, 
-  profile: { name: string, photo?: string, lastSeen?: string } | null,
-  onSelect: (id: string, name: string, photo?: string) => void,
-  isActive?: boolean
-}) => {
-  const isGroup = chat.isGroup;
-  const recipientId = isGroup ? chat.id : chat.participants.find(p => p !== currentUserId);
-
-  let isTyping = false;
-  let typingText = '';
-  const t = translations[lang];
-
-  if (isGroup) {
-    const typingUids = Object.keys(chat.typing || {}).filter(uid => uid !== currentUserId && chat.typing?.[uid]);
-    if (typingUids.length > 0) {
-      isTyping = true;
-      typingText = lang === 'ru' ? 'Кто-то печатает...' : 'Someone is typing...';
-    }
-  } else {
-    isTyping = !!chat.typing?.[recipientId || ''];
-    typingText = (t as any).chatTyping || t.chatsTyping || 'Typing...';
-  }
-  
-  const lastRead = getMillis(chat.lastReadAt?.[currentUserId]);
-  const lastMsg = getMillis(chat.lastMessageAt);
-  const isUnread = lastMsg > lastRead && chat.lastMessage;
-
-  const isOnline = !isGroup && profile?.lastSeen 
-    ? (Date.now() - new Date(profile.lastSeen).getTime() < 3 * 60 * 1000) 
-    : false;
-
-  const isJukyBot = recipientId === 'bot_juky';
-  const chatName = isGroup ? chat.name : (isJukyBot ? 'Juky AI (Жуки 🤖)' : (profile?.name || 'User'));
-  const chatPhoto = isGroup ? chat.avatar : (isJukyBot ? 'https://api.dicebear.com/7.x/bottts/svg?seed=JukyBotAha' : profile?.photo);
-
-  return (
-    <motion.button
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={() => onSelect(recipientId || '', chatName || 'Group', chatPhoto)}
-      className={`w-full border rounded-2xl p-4 flex items-center gap-4 transition-all text-left group relative overflow-hidden ${
-        isActive 
-          ? 'bg-[#ff4d4d]/15 border-[#ff4d4d] hover:bg-[#ff4d4d]/20 shadow-[0_0_15px_rgba(255,77,77,0.15)]' 
-          : isUnread 
-            ? 'bg-[#251c35]/60 border-[#ff4d4d]/50 hover:bg-[#251c35]/80' 
-            : 'bg-[#15101e]/30 border-[#3d2b4f]/30 hover:bg-[#15101e]/60'
-      }`}
-    >
-      {isUnread && !isActive && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#ff4d4d] shadow-[0_0_10px_#ff4d4d]" />
-      )}
-      <div className="relative shrink-0">
-        <CachedAvatar
-          src={chatPhoto}
-          alt={chatName}
-          customSizeClass="w-12 h-12"
-          className="rounded-2xl border-2 border-[#3d2b4f]/50 group-hover:border-[#ff4d4d] transition-colors"
-          fallbackText={chatName}
-        />
-        {!isGroup && isJukyBot && (
-          <div className="absolute -bottom-1 -right-1 w-4 h-4 border-4 border-[#15101e] rounded-full shadow-lg bg-[#00f0ff]" />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-center mb-1">
-          <span className={`font-black text-sm truncate uppercase tracking-wider flex items-center gap-1.5 ${isActive ? 'text-[#ff4d4d]' : isUnread ? 'text-[#ff4d4d]' : 'text-white'}`}>
-            {chatName || '...'}
-            {isGroup && (
-              <span className="text-[9px] bg-[#ff4d4d]/20 text-[#ff4d4d] border border-[#ff4d4d]/30 px-1 rounded font-bold font-mono uppercase tracking-normal">
-                {lang === 'ru' ? 'ГРУППА' : 'GROUP'}
-              </span>
-            )}
-            {isJukyBot && (
-              <span className="text-[9px] bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/30 px-1.5 py-0.5 rounded font-black font-mono uppercase tracking-wider">
-                {(t as any).botJukyBadge || '🤖 BOT'}
-              </span>
-            )}
-          </span>
-          {chat.lastMessageAt && (
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-[#ff4d4d]' : isUnread ? 'text-[#ff4d4d]' : 'text-gray-500'}`}>
-              {formatChatTime(chat.lastMessageAt, lang)}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {isTyping ? (
-            <p className="text-xs text-[#ff4d4d] font-bold italic truncate">
-              {typingText}
-            </p>
-          ) : (
-            <p className={`text-xs truncate font-medium ${isActive ? 'text-gray-200' : isUnread ? 'text-white' : 'text-gray-400'}`}>
-              {chat.lastMessage || '...'}
-            </p>
-          )}
-          {isUnread && !isTyping && !isActive && (
-            <Circle className="w-2 h-2 fill-[#ff4d4d] text-[#ff4d4d] shrink-0 animate-pulse" />
-          )}
-        </div>
-      </div>
-    </motion.button>
-  );
-});
 
 export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, activeChatId }) => {
-  const { user, loginWithGoogle } = useAuth();
-  const { chats, loading } = useChat();
+  const { user } = useAuth();
+  const { chats, loading, deleteChat, deleteAllChats, createGroupChat } = useChat();
   const { users } = useUsers();
-  const t = translations[lang];
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [profiles, setProfiles] = useState<Record<string, { name: string, photo?: string, lastSeen?: string }>>({});
-  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
-  
-  const [showNewChat, setShowNewChat] = useState(false);
-  const [newChatSearch, setNewChatSearch] = useState('');
+  const t = translations[lang] as any;
 
-  const [showNewGroup, setShowNewGroup] = useState(false);
+  // Search & Tab state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'directs' | 'groups'>('all');
+
+  // Modal States
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
-  const [groupSearchQuery, setGroupSearchQuery] = useState('');
 
+  // Filtered Chats
+  const filteredChats = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return chats.filter((c) => {
+      if (activeTab === 'groups' && !c.isGroup) return false;
+      if (activeTab === 'directs' && c.isGroup) return false;
+      if (!q) return true;
+      const name = c.name || '';
+      return name.toLowerCase().includes(q);
+    });
+  }, [chats, activeTab, searchQuery]);
+
+  // Other platform users for new 1-on-1 chats or groups
   const otherUsers = useMemo(() => {
     if (!user) return [];
-    const searchLower = newChatSearch.toLowerCase().trim();
-    return users.filter(u => {
+    const q = searchQuery.toLowerCase().trim();
+    return users.filter((u) => {
       if (u.uid === user.uid) return false;
-      if (!searchLower) return true;
-      return (u.displayName || '').toLowerCase().includes(searchLower) || (u.email || '').toLowerCase().includes(searchLower);
+      if (!q) return true;
+      return (
+        (u.displayName || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q)
+      );
     });
-  }, [users, user, newChatSearch]);
+  }, [users, user, searchQuery]);
 
-  const groupUsersFiltered = useMemo(() => {
-    if (!user) return [];
-    const searchLower = groupSearchQuery.toLowerCase().trim();
-    return users.filter(u => {
-      if (u.uid === user.uid) return false;
-      if (!searchLower) return true;
-      return (u.displayName || '').toLowerCase().includes(searchLower) || (u.email || '').toLowerCase().includes(searchLower);
-    });
-  }, [users, user, groupSearchQuery]);
-
-  const requestNotifications = async () => {
-    if ('Notification' in window) {
-      const perm = await Notification.requestPermission();
-      if (perm !== 'default') {
-        setShowNotifPrompt(false);
+  // Handle single chat delete
+  const handleDeleteSingleChat = async (e: React.MouseEvent, recipientId: string, chatName: string) => {
+    e.stopPropagation();
+    if (confirm(lang === 'ru' ? `Удалить чат в целом "${chatName}"?` : `Delete entire chat "${chatName}"?`)) {
+      await deleteChat(recipientId);
+      if (activeChatId === recipientId) {
+        onSelectChat('', '');
       }
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', {
+          detail: lang === 'ru' ? 'Чат успешно удален' : 'Chat deleted successfully'
+        })
+      );
     }
   };
 
-  useEffect(() => {
-    if (!user || chats.length === 0) return;
-    
-    const fetchProfiles = async () => {
-      const newProfiles: Record<string, { name: string, photo?: string, lastSeen?: string }> = {};
-      let hasNew = false;
-      
-      for (const chat of chats) {
-        if (chat.isGroup) continue;
-        const recipientId = chat.participants.find(p => p !== user.uid);
-        if (recipientId && !profiles[recipientId]) {
-          hasNew = true;
-          const data = await dbQueryCore.getProfileBatched(recipientId);
-          if (data) {
-            newProfiles[recipientId] = {
-              name: data.displayName || 'User',
-              photo: data.photoURL,
-              lastSeen: data.lastSeen
-            };
-          } else {
-            newProfiles[recipientId] = { name: 'User' };
-          }
-        }
-      }
-      
-      if (hasNew) {
-        setProfiles(prev => ({ ...prev, ...newProfiles }));
-      }
-    };
-    
-    fetchProfiles();
-  }, [chats, user, profiles]);
+  // Handle delete all chats confirm
+  const handleDeleteAllConfirm = async () => {
+    await deleteAllChats();
+    setShowDeleteAllModal(false);
+    onSelectChat('', '');
+    window.dispatchEvent(
+      new CustomEvent('aha_toast', {
+        detail: lang === 'ru' ? 'Все чаты очищены' : 'All chats cleared'
+      })
+    );
+  };
 
-  const filteredChats = useMemo(() => {
-    if (!searchQuery.trim()) return chats;
-    
-    const query = searchQuery.toLowerCase();
-    return chats.filter(chat => {
-      if (chat.isGroup) {
-        return (chat.name || '').toLowerCase().includes(query);
-      }
-      const recipientId = chat.participants.find(p => p !== user?.uid);
-      if (!recipientId) return false;
-      if (recipientId === 'bot_juky') return 'juky ai (жуки 🤖) bot'.includes(query);
-      const profile = profiles[recipientId];
-      if (!profile) return true;
-      return profile.name.toLowerCase().includes(query);
-    });
-  }, [chats, searchQuery, profiles, user]);
+  // Handle Create Group
+  const handleCreateGroupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!groupName.trim() || selectedParticipants.length === 0) return;
 
-  const displayChats = useMemo(() => {
-    let list = [...filteredChats];
-    const hasJukyChat = list.some(c => !c.isGroup && c.participants.includes('bot_juky'));
-    if (!hasJukyChat && user) {
-      const virtualJukyChat = {
-        id: `juky_${user.uid}`,
-        participants: [user.uid, 'bot_juky'],
-        isGroup: false,
-        name: 'Juky AI (Жуки 🤖)',
-        lastMessage: (t as any).botJukyWelcome || 'Привет! Я Жуки (Juky AI) — твой умный помощник на Aha Station 🤖✨',
-        lastMessageAt: new Date().toISOString(),
-        unreadCount: 0
-      };
-      list.unshift(virtualJukyChat as any);
-    }
-    return list;
-  }, [filteredChats, user, t]);
-
-  const handleCreateGroup = async () => {
-    if (!groupName.trim() || selectedParticipants.length === 0 || !user) return;
-    const groupId = generatePrefixedId('group');
-    const chatRef = doc(db, 'chats', groupId);
-    try {
-      const gAvatar = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(groupName)}`;
-      await setDoc(chatRef, {
-        id: groupId,
-        isGroup: true,
-        name: groupName.trim(),
-        avatar: gAvatar,
-        participants: [user.uid, ...selectedParticipants],
-        admins: [user.uid],
-        createdAt: serverTimestamp(),
-        lastMessage: lang === 'ru' ? 'Группа создана' : 'Group created',
-        lastMessageAt: serverTimestamp()
-      });
+    const newGroupId = await createGroupChat(groupName, selectedParticipants);
+    if (newGroupId) {
+      setShowGroupModal(false);
       setGroupName('');
       setSelectedParticipants([]);
-      setShowNewGroup(false);
-      window.dispatchEvent(new CustomEvent('aha_toast', { 
-        detail: lang === 'ru' ? 'Группа успешно создана!' : 'Group successfully created!' 
-      }));
-      onSelectChat(groupId, groupName.trim(), gAvatar);
-    } catch (e) {
-      console.error('Error creating group:', e);
+      onSelectChat(newGroupId, groupName, undefined);
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', {
+          detail: lang === 'ru' ? 'Группа создана!' : 'Group created!'
+        })
+      );
     }
   };
 
-  const toggleGroupParticipant = (uid: string) => {
-    setSelectedParticipants(prev => 
-      prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]
-    );
-  };
+  return (
+    <div className="w-full flex flex-col h-full bg-[#15101e] text-white rounded-3xl overflow-hidden border border-[#3d2b4f]/60 shadow-xl">
+      {/* Header Bar */}
+      <div className="p-4 bg-[#251c35] border-b border-[#3d2b4f] flex items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-[#ff4d4d]/15 border border-[#ff4d4d]/40 flex items-center justify-center text-[#ff4d4d] shadow">
+            <MessageSquare size={18} />
+          </div>
+          <div>
+            <h2 className="text-xs font-black uppercase tracking-widest text-white">
+              {lang === 'ru' ? 'Кибер Чаты' : 'Cyber Chats'}
+            </h2>
+            <span className="text-[10px] font-mono text-gray-400 block">
+              {chats.length} {lang === 'ru' ? 'диалогов' : 'active chats'}
+            </span>
+          </div>
+        </div>
 
-  if (!user) {
-    return (
-      <div className="bg-[#15101e]/80 border border-[#3d2b4f]/60 rounded-3xl p-5 sm:p-8 text-center w-full max-w-md mx-auto my-4 backdrop-blur-md shadow-2xl">
-        <User className="mx-auto text-[#ff4d4d]/70 mb-3" size={38} />
-        <h4 className="text-lg font-black text-white uppercase tracking-wider mb-1.5">
-          {lang === 'ru' ? 'Авторизация' : 'Authorization'}
-        </h4>
-        <p className="text-gray-300 mb-6 font-bold uppercase tracking-wider text-[11px] max-w-xs mx-auto leading-relaxed">
-          {(t as any).chatLoginToView || t.chatsLoginToView || (lang === 'ru' ? 'Войдите, чтобы просмотреть чаты' : 'Log in to view chats')}
-        </p>
-        <div className="flex flex-col gap-3 items-stretch w-full max-w-xs mx-auto">
-          <GoogleLoginButton lang={lang} className="w-full" size="md" />
+        <div className="flex items-center gap-1.5">
+          {/* New Group Button */}
           <button
-            onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
-            className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-[#3d2b4f]/50 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-wider text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-lg cursor-pointer"
+            type="button"
+            onClick={() => setShowGroupModal(true)}
+            className="p-2 bg-[#ff4d4d]/10 hover:bg-[#ff4d4d] text-[#ff4d4d] hover:text-[#15101e] border border-[#ff4d4d]/30 rounded-xl transition-all cursor-pointer"
+            title={lang === 'ru' ? 'Создать группу' : 'Create Group'}
           >
-            <Mail size={15} />
-            {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
+            <Users size={16} />
           </button>
+
+          {/* Clear All Chats Button */}
+          {chats.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteAllModal(true)}
+              className="p-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-xl transition-all cursor-pointer"
+              title={lang === 'ru' ? 'Очистить все чаты' : 'Clear all chats'}
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
-    );
-  }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(255,77,77,0.3)]"></div>
+      {/* Tabs */}
+      <div className="px-3 py-2 border-b border-[#3d2b4f] flex items-center gap-1 bg-[#1a1428] shrink-0">
+        {[
+          { id: 'all', label: lang === 'ru' ? 'Все' : 'All', icon: MessageSquare },
+          { id: 'directs', label: lang === 'ru' ? 'Личные' : 'Directs', icon: User },
+          { id: 'groups', label: lang === 'ru' ? 'Группы' : 'Groups', icon: Users }
+        ].map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                activeTab === tab.id
+                  ? 'bg-[#ff4d4d] text-[#15101e] shadow-md'
+                  : 'bg-[#251c35] text-gray-400 hover:text-white'
+              }`}
+            >
+              <Icon size={13} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
-    );
-  }
 
-  return (
-    <div className="space-y-4">
-      {showNotifPrompt && user && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-[#3d2b4f]/20 border border-[#ff4d4d]/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg"
-        >
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-[#ff4d4d]/20 rounded-xl shrink-0">
-              <Bell className="w-5 h-5 text-[#ff4d4d]" />
-            </div>
-            <div>
-              <h4 className="text-white font-bold text-sm mb-1">
-                {(t as any).chatEnableNotifs || t.chatsEnableNotif}
-              </h4>
-              <p className="text-gray-300 text-xs leading-relaxed">
-                {(t as any).chatEnableNotifsDesc || "Enable notifications to not miss messages."}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-            <button 
-              onClick={() => setShowNotifPrompt(false)}
-              className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white hover:bg-[#3d2b4f]/30 transition-colors"
-            >
-              {(t as any).chatLater || t.chatsLater}
-            </button>
-            <button 
-              onClick={requestNotifications}
-              className="flex-1 sm:flex-none bg-[#ff4d4d] text-[#15101e] px-4 py-2 rounded-xl text-xs font-bold hover:bg-white transition-colors shadow-[0_0_15px_rgba(255,77,77,0.3)]"
-            >
-              {(t as any).chatEnable || t.chatsEnable}
-            </button>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Search Bar & Actions */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
-          </div>
+      {/* Search Bar */}
+      <div className="p-3 border-b border-[#3d2b4f] shrink-0">
+        <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={(t as any).chatSearchChats || t.chatsSearch}
-            className="w-full bg-[#15101e]/50 border border-[#3d2b4f]/50 rounded-2xl py-3 pl-10 pr-10 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#ff4d4d] focus:bg-[#15101e]/80 transition-all"
+            placeholder={lang === 'ru' ? 'Поиск...' : 'Search...'}
+            className="w-full bg-[#0d0b14] border border-[#3d2b4f] rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] transition-colors"
           />
-          <AnimatePresence>
-            {searchQuery && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </motion.button>
-            )}
-          </AnimatePresence>
         </div>
-
-        {/* Create Group Chat */}
-        <button
-          onClick={() => { setShowNewGroup(!showNewGroup); setShowNewChat(false); }}
-          className={`shrink-0 p-3 rounded-2xl border transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs ${
-            showNewGroup
-              ? 'bg-[#00f0ff] border-[#00f0ff] text-[#0d0714] shadow-[0_0_15px_rgba(0,240,255,0.3)]'
-              : 'bg-[#3d2b4f]/30 border-[#3d2b4f]/50 text-[#00f0ff] hover:bg-[#3d2b4f]/50'
-          }`}
-          title={lang === 'ru' ? 'Создать групповой чат' : 'Create Group Chat'}
-        >
-          <Users size={18} />
-        </button>
-
-        {/* Start New Direct Chat */}
-        <button
-          onClick={() => { setShowNewChat(!showNewChat); setShowNewGroup(false); }}
-          className={`shrink-0 p-3 rounded-2xl border transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-xs ${
-            showNewChat
-              ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#0d0714] shadow-[0_0_15px_rgba(255,77,77,0.3)]'
-              : 'bg-[#3d2b4f]/30 border-[#3d2b4f]/50 text-[#ff4d4d] hover:bg-[#3d2b4f]/50'
-          }`}
-          title={lang === 'ru' ? 'Начать новый чат' : 'Start new chat'}
-        >
-          <UserPlus size={18} />
-        </button>
       </div>
 
-      {/* New Group Chat Inline Panel */}
-      <AnimatePresence>
-        {showNewGroup && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-[#1b1229]/60 border border-[#00f0ff]/30 rounded-2xl p-4 overflow-hidden space-y-3 shadow-inner"
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-black uppercase tracking-widest text-[#00f0ff]">
-                {lang === 'ru' ? 'Создание группы:' : 'Create Group:'}
-              </span>
-              <button onClick={() => setShowNewGroup(false)} className="text-gray-400 hover:text-white transition-colors">
-                <X size={14} />
-              </button>
-            </div>
+      {/* List Content */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-3 custom-scrollbar">
+        {/* Active Conversations Section */}
+        {filteredChats.length > 0 && (
+          <div className="space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-2 block">
+              {lang === 'ru' ? 'Ваши диалоги' : 'Your Conversations'}
+            </span>
+            {filteredChats.map((chat) => {
+              const isActive = chat.id === activeChatId;
+              const chatName = chat.name || (lang === 'ru' ? 'Чат' : 'Chat');
+              const recipientId = chat.isGroup
+                ? chat.id
+                : chat.participants?.find((p) => p !== user?.uid) || '';
 
-            <input
-              type="text"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              placeholder={lang === 'ru' ? 'Название группы...' : 'Group name...'}
-              className="w-full bg-[#0d0714]/60 border border-[#3d2b4f]/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00f0ff] transition-all"
-            />
-
-            <input
-              type="text"
-              value={groupSearchQuery}
-              onChange={(e) => setGroupSearchQuery(e.target.value)}
-              placeholder={lang === 'ru' ? 'Поиск участников...' : 'Search participants...'}
-              className="w-full bg-[#0d0714]/60 border border-[#3d2b4f]/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00f0ff] transition-all"
-            />
-
-            <div className="max-h-40 overflow-y-auto space-y-1.5 custom-scrollbar">
-              {groupUsersFiltered.length === 0 ? (
-                <p className="text-xs text-gray-500 italic py-2 text-center">
-                  {lang === 'ru' ? 'Пользователи не найдены' : 'No users found'}
-                </p>
-              ) : (
-                groupUsersFiltered.map(u => {
-                  const isSelected = selectedParticipants.includes(u.uid);
-                  return (
-                    <button
-                      key={u.uid}
-                      onClick={() => toggleGroupParticipant(u.uid)}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl border text-left transition-all ${
-                        isSelected 
-                          ? 'bg-[#00f0ff]/10 border-[#00f0ff]/40' 
-                          : 'bg-[#0d0714]/40 border-[#3d2b4f]/20 hover:border-[#00f0ff]/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {u.photoURL ? (
-                          <img src={u.photoURL} alt="" className="w-7 h-7 rounded-lg object-cover border border-[#3d2b4f]/50" />
-                        ) : (
-                          <div className="w-7 h-7 rounded-lg bg-[#00f0ff]/10 flex items-center justify-center border border-[#3d2b4f]/50">
-                            <User className="w-3.5 h-3.5 text-[#00f0ff]" />
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-xs font-black text-white truncate uppercase tracking-wider">{u.displayName || 'User'}</p>
-                        </div>
-                      </div>
-                      <div className={`w-4 h-4 rounded flex items-center justify-center border ${
-                        isSelected ? 'bg-[#00f0ff] border-[#00f0ff]' : 'border-gray-500'
-                      }`}>
-                        {isSelected && <Check size={10} className="text-[#0d0714] stroke-[3]" />}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-
-            <button
-              onClick={handleCreateGroup}
-              disabled={!groupName.trim() || selectedParticipants.length === 0}
-              className="w-full py-2 bg-[#00f0ff] hover:bg-white text-[#0d0714] rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:hover:bg-[#00f0ff]"
-            >
-              {lang === 'ru' ? 'Создать группу' : 'Create Group'}
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* New Chat Inline Panel */}
-      <AnimatePresence>
-        {showNewChat && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-[#1b1229]/60 border border-[#ff4d4d]/30 rounded-2xl p-4 overflow-hidden space-y-3 shadow-inner"
-          >
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-black uppercase tracking-widest text-[#ff4d4d]">
-                {lang === 'ru' ? 'Выберите пользователя:' : 'Select a user:'}
-              </span>
-              <button onClick={() => { setShowNewChat(false); setNewChatSearch(''); }} className="text-gray-400 hover:text-white transition-colors">
-                <X size={14} />
-              </button>
-            </div>
-            
-            <input
-              type="text"
-              value={newChatSearch}
-              onChange={(e) => setNewChatSearch(e.target.value)}
-              placeholder={lang === 'ru' ? 'Поиск пользователей...' : 'Search users...'}
-              className="w-full bg-[#0d0714]/60 border border-[#3d2b4f]/40 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] transition-all"
-            />
-            
-            <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar">
-              {otherUsers.length === 0 ? (
-                <p className="text-xs text-gray-500 italic py-2 text-center">
-                  {lang === 'ru' ? 'Никого не найдено' : 'No users found'}
-                </p>
-              ) : (
-                otherUsers.map(u => (
-                  <button
-                    key={u.uid}
-                    onClick={() => {
-                      onSelectChat(u.uid, u.displayName, u.photoURL);
-                      setShowNewChat(false);
-                      setNewChatSearch('');
-                    }}
-                    className="w-full flex items-center gap-3 p-2 rounded-xl bg-[#0d0714]/40 hover:bg-[#ff4d4d]/10 border border-[#3d2b4f]/20 hover:border-[#ff4d4d]/30 text-left transition-all"
-                  >
-                    {u.photoURL ? (
-                      <img src={u.photoURL} alt="" className="w-8 h-8 rounded-lg object-cover border border-[#3d2b4f]/50" />
+              return (
+                <div
+                  key={chat.id}
+                  onClick={() => onSelectChat(recipientId || chat.id, chatName, chat.avatar)}
+                  className={`group relative p-2.5 rounded-2xl border transition-all flex items-center gap-3 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#2a1d3d] border-[#ff4d4d] shadow-lg'
+                      : 'bg-[#1a1329]/60 hover:bg-[#251b36] border-[#3d2b4f]/40 hover:border-[#ff4d4d]/40'
+                  }`}
+                >
+                  <div className="relative shrink-0">
+                    <CachedAvatar
+                      src={chat.avatar}
+                      alt={chatName}
+                      customSizeClass="w-10 h-10"
+                      className="rounded-full border border-[#3d2b4f]"
+                      fallbackText={chatName}
+                    />
+                    {chat.isGroup ? (
+                      <span className="absolute -bottom-1 -right-1 bg-purple-600 text-white p-0.5 rounded-full border border-[#15101e]">
+                        <Users size={10} />
+                      </span>
                     ) : (
-                      <div className="w-8 h-8 rounded-lg bg-[#ff4d4d]/10 flex items-center justify-center border border-[#3d2b4f]/50">
-                        <User className="w-4 h-4 text-[#ff4d4d]" />
-                      </div>
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#15101e]" />
                     )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-white truncate uppercase tracking-wider">{u.displayName || 'User'}</p>
-                      <p className="text-[10px] text-gray-500 truncate">{u.email}</p>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-black text-white truncate">{chatName}</span>
+                      {chat.lastMessageAt && (
+                        <span className="text-[9px] font-mono text-gray-400 shrink-0">
+                          {formatTimeAgo(chat.lastMessageAt, lang)}
+                        </span>
+                      )}
                     </div>
+                    <p className="text-[11px] text-gray-400 truncate mt-0.5 font-medium leading-tight">
+                      {chat.lastMessage
+                        ? (chat.lastMessage.length > 60 ? `${chat.lastMessage.slice(0, 60)}...` : chat.lastMessage)
+                        : (lang === 'ru' ? 'Сообщений пока нет' : 'No messages yet')}
+                    </p>
+                  </div>
+
+                  {/* Delete entire chat button */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteSingleChat(e, recipientId || chat.id, chatName)}
+                    className="opacity-70 group-hover:opacity-100 p-1.5 bg-red-500/10 hover:bg-red-500/30 text-red-400 hover:text-red-300 rounded-lg transition-all shrink-0 cursor-pointer ml-1"
+                    title={lang === 'ru' ? 'Удалить чат в целом' : 'Delete entire chat'}
+                  >
+                    <Trash2 size={14} />
                   </button>
-                ))
-              )}
-            </div>
-          </motion.div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Start New Chat with Members Section */}
+        <div className="space-y-1 pt-2">
+          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-2 block">
+            {lang === 'ru' ? 'Начать чат с пользователем' : 'Start Chat With Member'}
+          </span>
+          {otherUsers.map((u) => {
+            const displayName = u.displayName || u.email || 'Cyber User';
+            return (
+              <div
+                key={u.uid}
+                onClick={() => onSelectChat(u.uid, displayName, u.photoURL)}
+                className="p-2.5 rounded-2xl bg-[#1a1329]/40 hover:bg-[#251b36] border border-[#3d2b4f]/30 hover:border-[#ff4d4d]/40 transition-all flex items-center gap-3 cursor-pointer"
+              >
+                <div className="relative shrink-0">
+                  <CachedAvatar
+                    src={u.photoURL}
+                    alt={displayName}
+                    customSizeClass="w-10 h-10"
+                    className="rounded-full border border-[#3d2b4f]"
+                    fallbackText={displayName}
+                  />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#15101e]" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-white truncate block">
+                    {displayName}
+                  </span>
+                  <p className="text-[11px] text-gray-400 truncate mt-0.5">
+                    {lang === 'ru' ? 'Нажмите, чтобы открыть чат' : 'Click to start chat'}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Create Group Modal */}
+      <AnimatePresence>
+        {showGroupModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-[#15101e] border border-[#ff4d4d]/40 rounded-3xl p-6 shadow-2xl space-y-5"
+            >
+              <div className="flex items-center justify-between border-b border-[#3d2b4f] pb-3">
+                <div className="flex items-center gap-2 text-[#ff4d4d]">
+                  <Users size={20} />
+                  <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                    {lang === 'ru' ? 'Создать Групповой Чат' : 'Create Group Chat'}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGroupModal(false)}
+                  className="p-1 text-gray-400 hover:text-white rounded-lg"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateGroupSubmit} className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">
+                    {lang === 'ru' ? 'Название группы' : 'Group Name'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    placeholder={lang === 'ru' ? 'Например: Кибер Команда' : 'e.g. Cyber Squad'}
+                    className="w-full bg-[#0d0b14] border border-[#3d2b4f] rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">
+                    {lang === 'ru' ? 'Выберите участников' : 'Select Participants'}
+                  </label>
+                  <div className="max-h-48 overflow-y-auto space-y-1.5 p-2 bg-[#0d0b14] border border-[#3d2b4f] rounded-xl custom-scrollbar">
+                    {otherUsers.map((u) => {
+                      const isSelected = selectedParticipants.includes(u.uid);
+                      const name = u.displayName || u.email || 'User';
+                      return (
+                        <div
+                          key={u.uid}
+                          onClick={() => {
+                            setSelectedParticipants((prev) =>
+                              isSelected ? prev.filter((id) => id !== u.uid) : [...prev, u.uid]
+                            );
+                          }}
+                          className={`p-2 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
+                            isSelected ? 'bg-[#ff4d4d]/20 border border-[#ff4d4d]/50' : 'hover:bg-[#251c35]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <CachedAvatar
+                              src={u.photoURL}
+                              alt={name}
+                              customSizeClass="w-7 h-7"
+                              className="rounded-full"
+                              fallbackText={name}
+                            />
+                            <span className="text-xs text-white font-medium truncate">{name}</span>
+                          </div>
+                          <div
+                            className={`w-5 h-5 rounded-md border flex items-center justify-center ${
+                              isSelected ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#15101e]' : 'border-gray-500'
+                            }`}
+                          >
+                            {isSelected && <Check size={14} className="stroke-[3]" />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowGroupModal(false)}
+                    className="flex-1 py-3 bg-[#251c35] hover:bg-[#32204d] text-gray-300 font-bold rounded-xl text-xs uppercase transition-all"
+                  >
+                    {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!groupName.trim() || selectedParticipants.length === 0}
+                    className="flex-1 py-3 bg-[#ff4d4d] hover:bg-white text-[#15101e] disabled:opacity-50 font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(255,77,77,0.4)]"
+                  >
+                    {lang === 'ru' ? 'Создать' : 'Create'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
-      {/* Chat List */}
-      <div className="space-y-3">
-        {displayChats.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-12 text-gray-500 bg-[#15101e]/10 rounded-3xl border border-[#3d2b4f]/10"
-          >
-            <Search className="mx-auto mb-4 opacity-20" size={32} />
-            <p className="text-sm font-bold uppercase tracking-widest">
-              {(t as any).chatNoChatsFound || t.chatsNotFound}
-            </p>
-          </motion.div>
-        ) : (
-          displayChats.map((chat) => (
-            <ChatItem 
-              key={chat.id} 
-              chat={chat} 
-              currentUserId={user?.uid || ''} 
-              lang={lang} 
-              profile={chat.isGroup ? null : (profiles[chat.participants.find(p => p !== user?.uid) || ''] || null)}
-              onSelect={onSelectChat} 
-              isActive={chat.id === activeChatId || chat.participants.includes(activeChatId || '')}
-            />
-          ))
+      {/* Delete All Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteAllModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-[#15101e] border border-red-500/40 rounded-3xl p-6 shadow-2xl space-y-5"
+            >
+              <div className="flex items-center gap-3 text-red-400">
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-2xl">
+                  <ShieldAlert size={26} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                    {lang === 'ru' ? 'Очистить все чаты?' : 'Clear all chats?'}
+                  </h3>
+                  <p className="text-[10px] text-red-400/80 font-mono">
+                    {lang === 'ru' ? 'Действие нельзя отменить' : 'Cannot be undone'}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-300 leading-relaxed bg-[#0d0814] p-4 rounded-2xl border border-white/5">
+                {lang === 'ru'
+                  ? 'Все ваши активные диалоги и истории переписок будут удалены с вашего экрана.'
+                  : 'All your active conversations and chat histories will be cleared.'}
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteAllModal(false)}
+                  className="flex-1 py-3 bg-[#251c35] hover:bg-[#32204d] text-gray-300 font-bold rounded-xl text-xs uppercase"
+                >
+                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAllConfirm}
+                  className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(239,68,68,0.4)] flex items-center justify-center gap-2"
+                >
+                  <Trash2 size={15} />
+                  <span>{lang === 'ru' ? 'Да, очистить' : 'Yes, Clear All'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 };
