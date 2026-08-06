@@ -51,51 +51,183 @@ const getSessionId = (): string => {
 };
 
 /**
- * Checks whether an ad/content blocker is active in the browser
+ * Advanced multi-layer detection for AdGuard, uBlock Origin, Brave Shields,
+ * Ghostery, Privacy Badger, DuckDuckGo, and AdGuard DNS / host-level blockers
+ * without false positives during offline or slow network states.
  */
-export const checkAdBlockerActive = async (): Promise<boolean> => {
+let cachedResult: { value: boolean; timestamp: number } | null = null;
+
+export const checkAdBlockerActive = async (forceRefresh: boolean = false): Promise<boolean> => {
   if (typeof window === 'undefined') return false;
   
-  // Test 1: Check DOM honeypot trap
+  // Return cached result if checked within last 4 seconds unless forced
+  const now = Date.now();
+  if (!forceRefresh && cachedResult && (now - cachedResult.timestamp < 4000)) {
+    return cachedResult.value;
+  }
+
+  let adblockDetected = false;
+
+  // Method 1: Check AdGuard & Extension-injected Global Signatures
   try {
-    const bait = document.createElement('div');
-    bait.className = 'pub_300x250 pub_300x250m pub_728x90 text-ad textAd text_ad adBox ad-sponsor banner-ad ad-banner';
-    bait.style.position = 'absolute';
-    bait.style.left = '-10000px';
-    bait.style.top = '-10000px';
-    bait.style.width = '1px';
-    bait.style.height = '1px';
-    document.body.appendChild(bait);
-    
-    await new Promise(r => setTimeout(r, 60));
-    
-    const isBlockedDom = 
-      bait.offsetParent === null ||
-      bait.offsetHeight === 0 ||
-      bait.offsetLeft === 0 ||
-      bait.clientHeight === 0 ||
-      window.getComputedStyle(bait).display === 'none' ||
-      window.getComputedStyle(bait).visibility === 'hidden';
-      
-    document.body.removeChild(bait);
-    if (isBlockedDom) return true;
+    const win = window as any;
+    if (
+      win.adguard ||
+      win.AdGuard ||
+      win.__adguard_user_script ||
+      win.adguardUserScripts ||
+      win.__adg ||
+      win.__ghostery ||
+      win.uBlock ||
+      win.uBlockOrigin
+    ) {
+      adblockDetected = true;
+    }
   } catch (e) {
     // ignore
   }
 
-  // Test 2: Check standard analytics script URL interception
-  try {
-    const res = await fetch('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', {
-      method: 'HEAD',
-      mode: 'no-cors',
-      cache: 'no-store'
-    });
-    // if fetch fails entirely, it's blocked
-  } catch (e) {
-    return true;
+  // Method 2: Check Brave Shields API
+  if (!adblockDetected) {
+    try {
+      const nav = navigator as any;
+      if (nav.brave && typeof nav.brave.isBrave === 'function') {
+        const isBrave = await nav.brave.isBrave();
+        if (isBrave) {
+          adblockDetected = true;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
-  return false;
+  // Method 3: Multi-Element DOM Bait Test (AdGuard, uBlock, EasyList, AdGuard Russian List specific selectors)
+  if (!adblockDetected) {
+    try {
+      const baitContainer = document.createElement('div');
+      baitContainer.id = 'adguard-test-container';
+      baitContainer.className = 'pub_300x250 pub_300x250m pub_728x90 text-ad textAd text_ad adBox ad-sponsor banner-ad ad-banner adsbox ad-placement ad-unit adsbygoogle adguard-ad adguard-banner sponsor-post outbrain-widget';
+      baitContainer.style.cssText = 'position: absolute !important; top: -9999px !important; left: -9999px !important; width: 300px !important; height: 250px !important; opacity: 0.01 !important; pointer-events: none !important; z-index: -9999 !important;';
+
+      const ins = document.createElement('ins');
+      ins.className = 'adsbygoogle ad-slot ad-unit';
+      ins.style.cssText = 'display: inline-block !important; width: 300px !important; height: 250px !important;';
+      ins.setAttribute('data-ad-client', 'ca-pub-1234567890123456');
+
+      const adguardBait = document.createElement('div');
+      adguardBait.className = 'adguard-placeholder adguard-element-hiding';
+      adguardBait.style.cssText = 'width: 100px; height: 100px;';
+
+      baitContainer.appendChild(ins);
+      baitContainer.appendChild(adguardBait);
+      document.body.appendChild(baitContainer);
+
+      // Allow content scripts & element hiding CSS injections to execute
+      await new Promise((r) => setTimeout(r, 80));
+
+      const style = window.getComputedStyle(baitContainer);
+      const insStyle = window.getComputedStyle(ins);
+      const agStyle = window.getComputedStyle(adguardBait);
+
+      const isDomBlocked =
+        !baitContainer.parentNode ||
+        baitContainer.offsetHeight === 0 ||
+        baitContainer.offsetWidth === 0 ||
+        style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        insStyle.display === 'none' ||
+        insStyle.visibility === 'hidden' ||
+        agStyle.display === 'none' ||
+        agStyle.visibility === 'hidden';
+
+      if (baitContainer.parentNode) {
+        baitContainer.parentNode.removeChild(baitContainer);
+      }
+
+      if (isDomBlocked) {
+        adblockDetected = true;
+      }
+    } catch (e) {
+      // ignore DOM errors
+    }
+  }
+
+  // Method 4: Multi-Domain Network Endpoint Interception (Google Ads, Yandex Metrika, DoubleClick, Amazon Ads)
+  if (!adblockDetected && navigator.onLine) {
+    try {
+      const controlPromise = fetch(window.location.origin + '/favicon.ico?_t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+
+      const adEndpoints = [
+        'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',
+        'https://www.google-analytics.com/analytics.js',
+        'https://mc.yandex.ru/metrika/tag.js',
+        'https://securepubads.g.doubleclick.net/tag/js/gpt.js'
+      ];
+
+      const fetchPromises = adEndpoints.map((url) =>
+        fetch(url + '?_t=' + Date.now(), { method: 'HEAD', mode: 'no-cors', cache: 'no-store' })
+      );
+
+      const [controlRes, ...adResults] = await Promise.allSettled([
+        controlPromise,
+        ...fetchPromises
+      ]);
+
+      const controlOk = controlRes.status === 'fulfilled';
+
+      if (controlOk) {
+        const blockedCount = adResults.filter((r) => r.status === 'rejected').length;
+        if (blockedCount >= 1) {
+          adblockDetected = true;
+        }
+      }
+    } catch (e) {
+      // ignore network errors
+    }
+  }
+
+  // Method 5: Dynamic Script Injection Error Trap (AdGuard / uBlock script filter trap)
+  if (!adblockDetected && navigator.onLine) {
+    try {
+      const scriptUrls = [
+        'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',
+        'https://mc.yandex.ru/metrika/tag.js'
+      ];
+
+      for (const url of scriptUrls) {
+        if (adblockDetected) break;
+        const isBlocked = await new Promise<boolean>((resolve) => {
+          const script = document.createElement('script');
+          script.src = url + '?_ag=' + Date.now();
+          script.async = true;
+          let done = false;
+
+          const finish = (failed: boolean) => {
+            if (done) return;
+            done = true;
+            if (script.parentNode) script.parentNode.removeChild(script);
+            resolve(failed);
+          };
+
+          script.onload = () => finish(false);
+          script.onerror = () => finish(true);
+          document.head.appendChild(script);
+
+          setTimeout(() => finish(false), 600);
+        });
+
+        if (isBlocked) {
+          adblockDetected = true;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  cachedResult = { value: adblockDetected, timestamp: Date.now() };
+  return adblockDetected;
 };
 
 export const logUserTelemetry = async (

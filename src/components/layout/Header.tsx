@@ -100,20 +100,21 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-[#15101e] border-b border-[#251c35] shadow-2xl">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-50 bg-[#15101e] border-b border-[#251c35] shadow-2xl w-full max-w-full overflow-x-hidden">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2 overflow-hidden box-border">
           <h1 
             onClick={() => setSection('home')}
-            className="text-xl md:text-2xl font-black text-white tracking-tighter shrink-0 flex items-center gap-2 cursor-pointer select-none group"
+            className="text-base sm:text-xl md:text-2xl font-black text-white tracking-tighter shrink flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none group min-w-0"
           >
             <motion.div
               whileHover={{ rotate: 180, scale: 1.2 }}
               whileTap={{ scale: 0.9 }}
               transition={{ type: "spring", stiffness: 300, damping: 15 }}
+              className="shrink-0"
             >
-              <Zap className="text-[#ff4d4d] fill-[#ff4d4d] transition-all group-hover:drop-shadow-[0_0_12px_rgba(255,77,77,0.8)]" size={24} />
+              <Zap className="text-[#ff4d4d] fill-[#ff4d4d] transition-all group-hover:drop-shadow-[0_0_12px_rgba(255,77,77,0.8)]" size={22} />
             </motion.div>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400 truncate">
               {t.siteName}
             </span>
           </h1>
@@ -165,15 +166,15 @@ export const Header: React.FC<HeaderProps> = ({
             })}
           </nav>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto">
             {/* Custom Language Selector */}
             <div className="relative">
               <button 
                 onClick={() => setLangOpen(!langOpen)}
-                className="flex items-center gap-2 bg-[#251c35]/60 border border-[#3d2b4f]/50 hover:border-[#ff4d4d] text-gray-200 px-3 py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest group"
+                className="flex items-center gap-1 sm:gap-2 bg-[#251c35]/60 border border-[#3d2b4f]/50 hover:border-[#ff4d4d] text-gray-200 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest group cursor-pointer"
               >
-                <Globe size={14} className="text-[#ff4d4d] transition-transform" />
-                {lang}
+                <Globe size={13} className="text-[#ff4d4d] transition-transform shrink-0" />
+                <span>{lang}</span>
               </button>
               
               <AnimatePresence>
@@ -457,7 +458,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile Horizontal Sub-Navigation Bar */}
-        <div className="md:hidden flex items-center gap-1.5 px-3 py-2 bg-[#171024] border-t border-[#3d2b4f]/40 overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="md:hidden flex items-center gap-1.5 px-3 py-2 bg-[#171024] border-t border-[#3d2b4f]/40 overflow-x-auto no-scrollbar scroll-smooth w-full max-w-full box-border">
           {navItems.map(item => {
             const isActive = section === item.id;
             return (
@@ -485,14 +486,15 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </header>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div 
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="md:hidden fixed top-[60px] inset-x-0 bottom-0 z-50 bg-[#15101e] px-4 py-6 flex flex-col overflow-y-auto"
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden fixed top-[100px] inset-x-0 bottom-0 z-[100] bg-[#15101e]/98 backdrop-blur-xl px-4 py-5 flex flex-col overflow-y-auto overflow-x-hidden w-full max-w-full box-border border-t border-[#3d2b4f]/60 shadow-2xl"
           >
             <div className="flex flex-col gap-4 flex-1 shrink-0">
               {navItems.map(item => (
