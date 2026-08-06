@@ -1,28 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldAlert, X, CheckCircle2, RefreshCw } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, RefreshCw, Lock, AlertTriangle, ShieldX } from 'lucide-react';
 import { checkAdBlockerActive } from '../../utils/telemetry';
 
 export const AntiAdblockBanner: React.FC<{ lang?: string }> = ({ lang = 'ru' }) => {
   const [adblockDetected, setAdblockDetected] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
-  const [dismissed, setDismissed] = useState(() => {
-    return sessionStorage.getItem('aha_adblock_banner_dismissed') === 'true';
-  });
 
   useEffect(() => {
-    if (dismissed) return;
     let isMounted = true;
     checkAdBlockerActive().then((detected) => {
       if (isMounted) {
         setAdblockDetected(detected);
       }
     });
+
+    // Periodically re-verify every 10 seconds in background
+    const interval = setInterval(() => {
+      checkAdBlockerActive().then((detected) => {
+        if (isMounted) {
+          setAdblockDetected(detected);
+        }
+      });
+    }, 10000);
+
     return () => {
       isMounted = false;
+      clearInterval(interval);
     };
-  }, [dismissed]);
+  }, []);
 
   const handleRecheck = async () => {
     setIsChecking(true);
@@ -34,81 +41,98 @@ export const AntiAdblockBanner: React.FC<{ lang?: string }> = ({ lang = 'ru' }) 
       setTimeout(() => {
         setAdblockDetected(false);
         setSuccessMessage(false);
-      }, 2000);
+      }, 1500);
     } else {
       setAdblockDetected(true);
     }
   };
 
-  const handleDismiss = () => {
-    setDismissed(true);
-    try {
-      sessionStorage.setItem('aha_adblock_banner_dismissed', 'true');
-    } catch (e) {}
-  };
-
-  if (!adblockDetected || dismissed) return null;
+  if (!adblockDetected) return null;
 
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 50 }}
-        className={`fixed bottom-6 right-6 z-50 max-w-sm w-[90vw] ${
-          successMessage
-            ? 'bg-[#10281d]/95 border-emerald-500/50'
-            : 'bg-[#1a1428]/95 border-amber-500/40'
-        } border rounded-2xl p-4 shadow-2xl backdrop-blur-md transition-colors duration-300`}
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        className="fixed inset-0 z-[99999] bg-[#090510]/98 backdrop-blur-2xl flex items-center justify-center p-4 overflow-y-auto select-none"
       >
-        <div className="flex items-start gap-3">
-          <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${successMessage ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-            {successMessage ? <CheckCircle2 size={20} /> : <ShieldAlert size={20} />}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${successMessage ? 'text-emerald-300' : 'text-amber-300'}`}>
-              {successMessage
-                ? (lang === 'ru' ? 'Блокировщик отключён!' : 'AdBlocker Disabled!')
-                : (lang === 'ru' ? 'Обнаружен блокировщик рекламы' : 'AdBlocker / Shield Detected')}
-            </h4>
-            <p className="text-[11px] text-gray-300 leading-relaxed">
-              {successMessage
-                ? (lang === 'ru' ? 'Спасибо! Теперь телеметрия и обновления работы сервиса функционируют штатно.' : 'Thank you! Telemetry and real-time updates are running normally.')
-                : (lang === 'ru'
-                    ? 'Блокировщик может блокировать запросы к телеметрии и веб-сокетам. Если вы его отключили, нажмите «Проверить заново».'
-                    : 'An ad blocker may intercept real-time analytics. If you disabled it, click "Re-check".')}
-            </p>
-            {!successMessage && (
-              <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={handleRecheck}
-                  disabled={isChecking}
-                  className="px-2.5 py-1 bg-[#281e3d] hover:bg-[#382b54] text-gray-200 hover:text-white text-[10px] font-bold rounded-lg border border-[#3d2b4f] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw size={11} className={isChecking ? 'animate-spin text-amber-400' : 'text-amber-400'} />
-                  <span>{isChecking ? (lang === 'ru' ? 'Проверка...' : 'Checking...') : (lang === 'ru' ? 'Проверить снова' : 'Re-check')}</span>
-                </button>
+        <div className="max-w-md w-full bg-[#150f22] border-2 border-[#ff4d4d]/60 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgba(255,77,77,0.3)] text-center relative overflow-hidden">
+          {/* Ambient Glow Effects */}
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-[#ff4d4d]/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
 
-                <button
-                  type="button"
-                  onClick={handleDismiss}
-                  className="px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
-                >
-                  {lang === 'ru' ? 'Понятно' : 'Got it'}
-                </button>
-              </div>
-            )}
+          {/* Icon Header */}
+          <div className="relative z-10 flex justify-center mb-5">
+            <div className={`p-4 rounded-2xl border-2 ${
+              successMessage 
+                ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' 
+                : 'bg-[#ff4d4d]/10 border-[#ff4d4d] text-[#ff4d4d] shadow-[0_0_30px_rgba(255,77,77,0.4)] animate-pulse'
+            }`}>
+              {successMessage ? <CheckCircle2 size={48} /> : <ShieldX size={48} />}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={handleDismiss}
-            className="text-gray-400 hover:text-white p-1 transition-colors cursor-pointer"
-          >
-            <X size={16} />
-          </button>
+
+          {/* Title */}
+          <h2 className="relative z-10 text-xl sm:text-2xl font-black text-white uppercase tracking-tight mb-2">
+            {successMessage ? (
+              <span className="text-emerald-400">
+                {lang === 'ru' ? 'Доступ Разблокирован!' : 'Access Granted!'}
+              </span>
+            ) : (
+              <span className="text-white flex items-center justify-center gap-2">
+                <Lock size={20} className="text-[#ff4d4d]" />
+                {lang === 'ru' ? 'Доступ К Сайту Заблокирован' : 'Website Access Blocked'}
+              </span>
+            )}
+          </h2>
+
+          <p className="relative z-10 text-xs sm:text-sm text-gray-300 mb-6 leading-relaxed">
+            {successMessage ? (
+              lang === 'ru'
+                ? 'Защитник отключён. Приятного использования сервиса!'
+                : 'AdBlock disabled. Enjoy using the platform!'
+            ) : (
+              lang === 'ru'
+                ? 'Мы обнаружили включенный AdGuard, uBlock, Brave Shield или другой блокировщик. Для полноценной работы онлайн-чата и интерактивных сервисов необходимо отключить блокировщик для нашего сайта.'
+                : 'AdGuard, uBlock, Brave Shield or another active content blocker was detected. Please pause or disable your ad blocker for this site to continue.'
+            )}
+          </p>
+
+          {/* Instructions Box */}
+          {!successMessage && (
+            <div className="relative z-10 bg-[#0c0814] border border-[#3d2b4f] rounded-2xl p-4 text-left mb-6 space-y-2">
+              <div className="text-[10px] font-black uppercase text-[#ff4d4d] tracking-widest flex items-center gap-1.5 mb-2">
+                <AlertTriangle size={12} />
+                {lang === 'ru' ? 'Как разблокировать сайт:' : 'How to unblock:'}
+              </div>
+              <ol className="text-[11px] text-gray-300 space-y-1.5 list-decimal list-inside font-medium leading-tight">
+                <li>{lang === 'ru' ? 'Нажмите на иконку AdGuard / uBlock / Shield в браузере' : 'Click the AdGuard / uBlock / Shield icon in browser'}</li>
+                <li>{lang === 'ru' ? 'Выберите «Приостановить на этом сайте» или отключите защиту' : 'Select "Pause on this site" or turn off protection'}</li>
+                <li>{lang === 'ru' ? 'Нажмите кнопку «Проверить заново» ниже' : 'Click "Re-check Access" below'}</li>
+              </ol>
+            </div>
+          )}
+
+          {/* Action Button */}
+          {!successMessage && (
+            <button
+              type="button"
+              onClick={handleRecheck}
+              disabled={isChecking}
+              className="relative z-10 w-full py-3.5 bg-gradient-to-r from-[#ff4d4d] to-[#ff2b2b] hover:from-white hover:to-white text-[#150f22] font-black text-sm uppercase tracking-wider rounded-2xl shadow-[0_0_25px_rgba(255,77,77,0.5)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 active:scale-95"
+            >
+              <RefreshCw size={18} className={isChecking ? 'animate-spin' : ''} />
+              <span>
+                {isChecking
+                  ? (lang === 'ru' ? 'Проверка...' : 'Checking...')
+                  : (lang === 'ru' ? 'Проверить заново' : 'Re-check Access')}
+              </span>
+            </button>
+          )}
         </div>
       </motion.div>
     </AnimatePresence>
   );
 };
+
