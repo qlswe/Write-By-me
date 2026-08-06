@@ -858,13 +858,15 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
               const isActive = selectedStation === st.id;
               const IconComponent = st.icon;
               return (
-                <button
+                <motion.button
                   key={st.id}
+                  whileHover={{ scale: 1.04, y: -2 }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => handleStationChange(st.id)}
                   style={{ touchAction: 'manipulation' }}
-                  className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all cursor-pointer select-none active:scale-95 ${
+                  className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all cursor-pointer select-none ${
                     isActive
-                      ? 'bg-[#ff4d4d]/10 border-[#ff4d4d] text-white shadow-[0_0_15px_rgba(255,77,77,0.15)]'
+                      ? 'bg-[#ff4d4d]/10 border-[#ff4d4d] text-white shadow-[0_0_20px_rgba(255,77,77,0.25)]'
                       : 'bg-[#15101e]/60 border-[#3d2b4f]/30 text-white/50 hover:text-white hover:border-[#ff4d4d]/30'
                   }`}
                 >
@@ -880,7 +882,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                   <span className="text-[9px] text-white/40 mt-0.5 hidden sm:block text-center line-clamp-1">
                     {lang === 'ru' ? st.descRu : st.descEn}
                   </span>
-                </button>
+                </motion.button>
               );
             })}
           </div>

@@ -558,7 +558,13 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
         >
           {activeChat?.messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center space-y-6 p-4 max-w-xl mx-auto">
-              <Bot size={56} className="text-[#ff4d4d] animate-bounce" />
+              <motion.div
+                animate={{ y: [0, -8, 0], rotate: [0, -5, 5, 0] }}
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                className="p-4 rounded-3xl bg-[#ff4d4d]/10 border border-[#ff4d4d]/30 shadow-[0_0_30px_rgba(255,77,77,0.2)]"
+              >
+                <Bot size={52} className="text-[#ff4d4d]" />
+              </motion.div>
               <div>
                 <p className="font-black text-white text-lg mb-1 uppercase tracking-wider">
                   {lang === 'ru' ? 'Безумный ИИ Ахи к твоим услугам! 🎉' : "Aha's Chaotic AI at your service! 🎉"}
@@ -571,20 +577,28 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
               {/* Suggestions Grid */}
               <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                 {currentSuggestions.map((item, index) => (
-                  <button
+                  <motion.button
                     key={index}
+                    whileHover={{ scale: 1.03, y: -2 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => handleSuggestionClick(item.prompt)}
-                    className="p-4 bg-[#15101e]/80 border border-[#3d2b4f] hover:border-[#ff4d4d] rounded-2xl text-left text-xs sm:text-sm text-gray-300 hover:text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-[0_0_15px_rgba(255,77,77,0.1)]"
+                    className="p-4 bg-[#15101e]/80 border border-[#3d2b4f] hover:border-[#ff4d4d] rounded-2xl text-left text-xs sm:text-sm text-gray-300 hover:text-white transition-all shadow-md hover:shadow-[0_0_20px_rgba(255,77,77,0.2)] cursor-pointer"
                   >
                     <p className="font-bold mb-1 text-[#ff4d4d]">{item.label}</p>
                     <p className="text-gray-500 font-medium truncate">{item.prompt}</p>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </div>
           ) : (
             activeChat?.messages.map((item, i) => (
-              <div key={i} className={`flex w-full ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <motion.div 
+                key={i} 
+                initial={{ opacity: 0, y: 15, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                className={`flex w-full ${item.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
                 {item.role === 'user' && (
                   <div className="bg-[#ff4d4d] text-[#15101e] px-4 py-3 rounded-2xl rounded-tr-sm max-w-[90%] sm:max-w-[75%] shadow-lg">
                     <p className="text-sm md:text-base font-medium break-words whitespace-pre-wrap">{item.content}</p>
@@ -638,7 +652,7 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
                     {item.content}
                   </div>
                 )}
-              </div>
+              </motion.div>
             ))
           )}
           {isProcessing && (

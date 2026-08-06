@@ -12,6 +12,7 @@ import { useUsers } from '../../hooks/useUsers';
 import { Language, translations } from '../../data/translations';
 import { CachedAvatar } from '../ui/CachedAvatar';
 import { compressImageFile } from '../../utils/imageCompressor';
+import { decrypt } from '../../utils/encryption';
 
 interface ChatWindowProps {
   recipientId: string;
@@ -90,8 +91,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Scroll to bottom
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -483,7 +487,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       )}
 
       {/* Messages Scrollable Stream */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar relative">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar relative">
         {displayedMessages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-gray-500 space-y-2 p-6">
             <Sparkles size={32} className="text-[#ff4d4d]/50 animate-pulse" />
@@ -496,6 +500,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             const isMe = msg.senderId === user?.uid;
             const senderUser = users.find((u) => u.uid === msg.senderId);
             const senderName = senderUser?.displayName || (isMe ? 'Вы' : 'Cyber User');
+            const displayText = decrypt(msg.text || '', recipientId) || msg.text;
 
             return (
               <div
@@ -524,14 +529,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                       <span className="font-bold block text-[10px] uppercase opacity-75">
                         {lang === 'ru' ? 'Ответ на сообщение' : 'In reply to'}
                       </span>
-                      <p className="truncate">{msg.replyTo.text || 'Медиа'}</p>
+                      <p className="truncate">{decrypt(msg.replyTo.text || '', recipientId) || msg.replyTo.text || 'Медиа'}</p>
                     </div>
                   )}
 
                   {/* Message Text */}
-                  {msg.text && (
+                  {displayText && (
                     <p className="text-xs leading-relaxed break-words whitespace-pre-wrap">
-                      {msg.text}
+                      {displayText}
                     </p>
                   )}
 

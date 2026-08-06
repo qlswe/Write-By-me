@@ -102,9 +102,18 @@ export const Header: React.FC<HeaderProps> = ({
     <>
       <header className="sticky top-0 z-50 bg-[#15101e] border-b border-[#251c35] shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <h1 className="text-xl md:text-2xl font-black text-white tracking-tighter shrink-0 flex items-center gap-2">
-            <Zap className="text-[#ff4d4d] fill-[#ff4d4d]" size={24} />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+          <h1 
+            onClick={() => setSection('home')}
+            className="text-xl md:text-2xl font-black text-white tracking-tighter shrink-0 flex items-center gap-2 cursor-pointer select-none group"
+          >
+            <motion.div
+              whileHover={{ rotate: 180, scale: 1.2 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 300, damping: 15 }}
+            >
+              <Zap className="text-[#ff4d4d] fill-[#ff4d4d] transition-all group-hover:drop-shadow-[0_0_12px_rgba(255,77,77,0.8)]" size={24} />
+            </motion.div>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400">
               {t.siteName}
             </span>
           </h1>
@@ -114,32 +123,46 @@ export const Header: React.FC<HeaderProps> = ({
             ref={navRef}
             className="hidden lg:flex items-center gap-1 bg-[#251c35] p-1 rounded-2xl border border-[#3d2b4f]/30 overflow-x-auto no-scrollbar scroll-smooth"
           >
-            {navItems.map(item => (
-              <button
-                key={item.id}
-                data-active={section === item.id}
-                onClick={() => setSection(item.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black tracking-wide transition-all whitespace-nowrap ${
-                  section === item.id 
-                    ? 'text-[#15101e] bg-[#ff4d4d] shadow-[0_0_20px_rgba(255,77,77,0.3)]' 
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-[#251c35]/50'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <item.icon size={16} className="shrink-0" />
-                  <span className="hidden xl:inline">{item.label}</span>
-                  {item.id === 'chats' && unreadCount > 0 && (
-                    <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none transition-colors ${
-                      section === item.id 
-                        ? 'bg-[#15101e] text-[#ff4d4d]' 
-                        : 'bg-[#ff4d4d] text-white shadow-[0_0_8px_rgba(255,77,77,0.4)]'
-                    }`}>
-                      {unreadCount}
-                    </span>
+            {navItems.map(item => {
+              const isActive = section === item.id;
+              return (
+                <motion.button
+                  key={item.id}
+                  data-active={isActive}
+                  onClick={() => setSection(item.id)}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black tracking-wide transition-colors whitespace-nowrap cursor-pointer ${
+                    isActive ? 'text-[#15101e]' : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNavTab"
+                      className="absolute inset-0 bg-[#ff4d4d] rounded-xl shadow-[0_0_20px_rgba(255,77,77,0.4)]"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
                   )}
-                </div>
-              </button>
-            ))}
+                  <div className="relative z-10 flex items-center gap-2">
+                    <item.icon size={16} className="shrink-0" />
+                    <span className="hidden xl:inline">{item.label}</span>
+                    {item.id === 'chats' && unreadCount > 0 && (
+                      <motion.span 
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none transition-colors ${
+                          isActive 
+                            ? 'bg-[#15101e] text-[#ff4d4d]' 
+                            : 'bg-[#ff4d4d] text-white shadow-[0_0_8px_rgba(255,77,77,0.4)]'
+                        }`}
+                      >
+                        {unreadCount}
+                      </motion.span>
+                    )}
+                  </div>
+                </motion.button>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-3 shrink-0">

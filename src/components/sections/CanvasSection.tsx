@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useAnimation, useMotionValue, AnimatePresence } from 'framer-motion';
-import { Palette, LogIn, Maximize, RefreshCw, Users, Info, Eraser, Move, PenTool, Save, User as UserIcon, Undo2, Redo2, Mail, Lock, ShieldAlert, PaintBucket, Slash, Square, Grid, Download, LayoutGrid, FolderOpen, Trash2, Plus, Bookmark, X, FlipHorizontal, FlipVertical } from 'lucide-react';
+import { Palette, LogIn, Maximize, RefreshCw, Users, Info, Eraser, Move, PenTool, Save, User as UserIcon, Undo2, Redo2, Mail, Lock, ShieldAlert, PaintBucket, Slash, Square, Grid, Download, LayoutGrid, FolderOpen, Trash2, Plus, Bookmark, X, FlipHorizontal, FlipVertical, Pipette, Circle, CircleDot, BoxSelect, RotateCw, SunMedium } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCanvas } from '../../hooks/useCanvas';
 import { translations, Language } from '../../data/translations';
@@ -18,7 +18,7 @@ const COLORS = [
 ];
 
 type CanvasMode = 'global' | 'personal';
-type Tool = 'draw' | 'eraser' | 'bucket' | 'line' | 'rect' | 'move';
+type Tool = 'draw' | 'eraser' | 'bucket' | 'line' | 'rect' | 'rect_filled' | 'circle' | 'circle_filled' | 'picker' | 'move';
 
 type StrokeAction = {
   pixelId: string;
@@ -459,6 +459,150 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     return coords;
   };
 
+  const getRectFilledPixels = (x0: number, y0: number, x1: number, y1: number): [number, number][] => {
+    const coords: [number, number][] = [];
+    const minX = Math.min(x0, x1);
+    const maxX = Math.max(x0, x1);
+    const minY = Math.min(y0, y1);
+    const maxY = Math.max(y0, y1);
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
+        coords.push([x, y]);
+      }
+    }
+    return coords;
+  };
+
+  const getCirclePixels = (x0: number, y0: number, x1: number, y1: number, filled = false): [number, number][] => {
+    const coords: [number, number][] = [];
+    const r = Math.round(Math.hypot(x1 - x0, y1 - y0));
+    if (r === 0) return [[x0, y0]];
+    const r2 = r * r;
+    const inner2 = Math.max(0, (r - 0.7) * (r - 0.7));
+    const outer2 = (r + 0.7) * (r + 0.7);
+
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dy = -r; dy <= r; dy++) {
+        const d2 = dx * dx + dy * dy;
+        if (filled ? d2 <= outer2 : (d2 >= inner2 && d2 <= outer2)) {
+          coords.push([x0 + dx, y0 + dy]);
+        }
+      }
+    }
+    return coords;
+  };
+
+
+  const handleFlipHorizontal = async () => {
+    if (mode === "global") return;
+    const updates: Record<string, string | null> = {};
+    const strokeActions: StrokeAction[] = [];
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < Math.floor(size / 2); x++) {
+        const leftKey = `${x},${y}`;
+        const rightKey = `${size - 1 - x},${y}`;
+        const leftColor = pixels[leftKey]?.color || null;
+        const rightColor = pixels[rightKey]?.color || null;
+        if (leftColor !== rightColor) {
+          updates[leftKey] = rightColor;
+          updates[rightKey] = leftColor;
+          strokeActions.push({ pixelId: leftKey, oldColor: leftColor, newColor: rightColor });
+          strokeActions.push({ pixelId: rightKey, oldColor: rightColor, newColor: leftColor });
+        }
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      await drawPixelsBatch(updates);
+      setUndoStack(prev => [...prev, strokeActions]);
+      setRedoStack([]);
+      window.dispatchEvent(new CustomEvent("aha_toast", { detail: lang === "ru" ? "Отражено по горизонтали!" : "Flipped horizontally!" }));
+    }
+  };
+
+  const handleFlipVertical = async () => {
+    if (mode === "global") return;
+    const updates: Record<string, string | null> = {};
+    const strokeActions: StrokeAction[] = [];
+    for (let x = 0; x < size; x++) {
+      for (let y = 0; y < Math.floor(size / 2); y++) {
+        const topKey = `${x},${y}`;
+        const bottomKey = `${x},${size - 1 - y}`;
+        const topColor = pixels[topKey]?.color || null;
+        const bottomColor = pixels[bottomKey]?.color || null;
+        if (topColor !== bottomColor) {
+          updates[topKey] = bottomColor;
+          updates[bottomKey] = topColor;
+          strokeActions.push({ pixelId: topKey, oldColor: topColor, newColor: bottomColor });
+          strokeActions.push({ pixelId: bottomKey, oldColor: bottomColor, newColor: topColor });
+        }
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      await drawPixelsBatch(updates);
+      setUndoStack(prev => [...prev, strokeActions]);
+      setRedoStack([]);
+      window.dispatchEvent(new CustomEvent("aha_toast", { detail: lang === "ru" ? "Отражено по вертикали!" : "Flipped vertically!" }));
+    }
+  };
+
+  const handleRotate90 = async () => {
+    if (mode === "global") return;
+    const updates: Record<string, string | null> = {};
+    const strokeActions: StrokeAction[] = [];
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const oldKey = `${x},${y}`;
+        const oldColor = pixels[oldKey]?.color || null;
+        const srcX = y;
+        const srcY = size - 1 - x;
+        const newColor = pixels[`${srcX},${srcY}`]?.color || null;
+        if (oldColor !== newColor) {
+          updates[oldKey] = newColor;
+          strokeActions.push({ pixelId: oldKey, oldColor, newColor });
+        }
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      await drawPixelsBatch(updates);
+      setUndoStack(prev => [...prev, strokeActions]);
+      setRedoStack([]);
+      window.dispatchEvent(new CustomEvent("aha_toast", { detail: lang === "ru" ? "Повернуто на 90°!" : "Rotated 90°!" }));
+    }
+  };
+
+  const handleInvertColors = async () => {
+    if (mode === "global") return;
+    const updates: Record<string, string | null> = {};
+    const strokeActions: StrokeAction[] = [];
+    const invertHex = (hex: string | null) => {
+      if (!hex || hex === "eraser") return null;
+      let c = hex.replace("#", "");
+      if (c.length === 3) c = c.split("").map(x => x + x).join("");
+      const num = parseInt(c, 16);
+      if (isNaN(num)) return hex;
+      const inv = (0xFFFFFF ^ num).toString(16).padStart(6, "0");
+      return "#" + inv;
+    };
+
+    Object.keys(pixels).forEach(key => {
+      const oldColor = pixels[key]?.color;
+      if (oldColor) {
+        const inverted = invertHex(oldColor);
+        if (inverted) {
+          updates[key] = inverted;
+          strokeActions.push({ pixelId: key, oldColor, newColor: inverted });
+        }
+      }
+    });
+
+    if (Object.keys(updates).length > 0) {
+      await drawPixelsBatch(updates);
+      setUndoStack(prev => [...prev, strokeActions]);
+      setRedoStack([]);
+      window.dispatchEvent(new CustomEvent("aha_toast", { detail: lang === "ru" ? "Цвета инвертированы!" : "Colors inverted!" }));
+    }
+  };
+
   const floodFill = async (startX: number, startY: number, fillHexColor: string) => {
     if (!user) return;
     if (!isVerified) {
@@ -624,6 +768,19 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     if (!coords) return;
     const { x, y } = coords;
 
+    if (tool === 'picker') {
+      const clickedPixel = pixels[`${x},${y}`];
+      if (clickedPixel && clickedPixel.color) {
+        setSelectedColor(clickedPixel.color);
+        setTool('draw');
+        window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? `Пипетка: выбран цвет ${clickedPixel.color}` : `Eyedropper: selected ${clickedPixel.color}` }));
+      } else {
+        window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Пиксель пуст' : 'Pixel is empty' }));
+      }
+      setIsDrawing(false);
+      return;
+    }
+
     setIsDrawing(true);
     setLastDrawn(null);
     setLastMoveCoords({ x, y });
@@ -631,7 +788,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     if (tool === 'bucket') {
       floodFill(x, y, selectedColor);
       setIsDrawing(false);
-    } else if (tool === 'line' || tool === 'rect') {
+    } else if (['line', 'rect', 'rect_filled', 'circle', 'circle_filled'].includes(tool)) {
       setStartPoint({ x, y });
       setPreviewPixels({});
     } else {
@@ -641,18 +798,22 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const handlePointerMove = (clientX: number, clientY: number) => {
-    if (!isDrawing || tool === 'move' || !user) return;
+    if (!isDrawing || tool === 'move' || tool === 'picker' || !user) return;
     const coords = getGridCoords(clientX, clientY);
     if (!coords) return;
     const { x, y } = coords;
     setLastMoveCoords({ x, y });
 
-    if (tool === 'line' || tool === 'rect') {
+    if (['line', 'rect', 'rect_filled', 'circle', 'circle_filled'].includes(tool)) {
       if (startPoint) {
         const previewMap: Record<string, string> = {};
-        const pPixels = tool === 'line' 
-          ? getLinePixels(startPoint.x, startPoint.y, x, y)
-          : getRectPixels(startPoint.x, startPoint.y, x, y);
+        let pPixels: [number, number][] = [];
+        if (tool === 'line') pPixels = getLinePixels(startPoint.x, startPoint.y, x, y);
+        else if (tool === 'rect') pPixels = getRectPixels(startPoint.x, startPoint.y, x, y);
+        else if (tool === 'rect_filled') pPixels = getRectFilledPixels(startPoint.x, startPoint.y, x, y);
+        else if (tool === 'circle') pPixels = getCirclePixels(startPoint.x, startPoint.y, x, y, false);
+        else if (tool === 'circle_filled') pPixels = getCirclePixels(startPoint.x, startPoint.y, x, y, true);
+
         pPixels.forEach(([px, py]) => {
           if (isGlobal || (px >= 0 && px < size && py >= 0 && py < size)) {
             previewMap[`${px},${py}`] = selectedColor === 'eraser' ? '#15101e' : selectedColor;
@@ -673,10 +834,13 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     const targetX = lastMoveCoords?.x ?? startPoint?.x;
     const targetY = lastMoveCoords?.y ?? startPoint?.y;
 
-    if ((tool === 'line' || tool === 'rect') && startPoint && targetX !== undefined && targetY !== undefined) {
-      const pPixels = tool === 'line' 
-        ? getLinePixels(startPoint.x, startPoint.y, targetX, targetY)
-        : getRectPixels(startPoint.x, startPoint.y, targetX, targetY);
+    if (['line', 'rect', 'rect_filled', 'circle', 'circle_filled'].includes(tool) && startPoint && targetX !== undefined && targetY !== undefined) {
+      let pPixels: [number, number][] = [];
+      if (tool === 'line') pPixels = getLinePixels(startPoint.x, startPoint.y, targetX, targetY);
+      else if (tool === 'rect') pPixels = getRectPixels(startPoint.x, startPoint.y, targetX, targetY);
+      else if (tool === 'rect_filled') pPixels = getRectFilledPixels(startPoint.x, startPoint.y, targetX, targetY);
+      else if (tool === 'circle') pPixels = getCirclePixels(startPoint.x, startPoint.y, targetX, targetY, false);
+      else if (tool === 'circle_filled') pPixels = getCirclePixels(startPoint.x, startPoint.y, targetX, targetY, true);
 
       const strokeActions: StrokeAction[] = [];
       pPixels.forEach(([px, py]) => {
@@ -935,6 +1099,39 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     const canvas = document.createElement('canvas');
     canvas.width = exportSize;
     canvas.height = exportSize;
+                    {mode === 'personal' && (
+                      <>
+                        <div className="w-px h-5 bg-[#3d2b4f] mx-1" />
+                        <button
+                          onClick={handleFlipHorizontal}
+                          className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
+                          title={lang === 'ru' ? 'Отразить по горизонтали' : 'Flip Horizontally'}
+                        >
+                          <FlipHorizontal size={18} />
+                        </button>
+                        <button
+                          onClick={handleFlipVertical}
+                          className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
+                          title={lang === 'ru' ? 'Отразить по вертикали' : 'Flip Vertically'}
+                        >
+                          <FlipVertical size={18} />
+                        </button>
+                        <button
+                          onClick={handleRotate90}
+                          className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
+                          title={lang === 'ru' ? 'Повернуть на 90°' : 'Rotate 90°'}
+                        >
+                          <RotateCw size={18} />
+                        </button>
+                        <button
+                          onClick={handleInvertColors}
+                          className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
+                          title={lang === 'ru' ? 'Инвертировать цвета' : 'Invert Colors'}
+                        >
+                          <SunMedium size={18} />
+                        </button>
+                      </>
+                    )}
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -1091,13 +1288,41 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                    >
                      <Slash size={18} />
                    </button>
-                   <button
-                     onClick={() => setTool('rect')}
-                     className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'rect' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                     title={lang === 'ru' ? 'Прямоугольник' : 'Rectangle Tool'}
-                   >
-                     <Square size={18} />
-                   </button>
+                    <button
+                      onClick={() => setTool('rect')}
+                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'rect' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
+                      title={lang === 'ru' ? 'Прямоугольник (контур)' : 'Rectangle Contour'}
+                    >
+                      <Square size={18} />
+                    </button>
+                    <button
+                      onClick={() => setTool('rect_filled')}
+                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'rect_filled' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
+                      title={lang === 'ru' ? 'Заполненный прямоугольник' : 'Filled Rectangle'}
+                    >
+                      <BoxSelect size={18} />
+                    </button>
+                    <button
+                      onClick={() => setTool('circle')}
+                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'circle' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
+                      title={lang === 'ru' ? 'Окружность (контур)' : 'Circle Contour'}
+                    >
+                      <Circle size={18} />
+                    </button>
+                    <button
+                      onClick={() => setTool('circle_filled')}
+                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'circle_filled' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
+                      title={lang === 'ru' ? 'Заполненный круг' : 'Filled Circle'}
+                    >
+                      <CircleDot size={18} />
+                    </button>
+                    <button
+                      onClick={() => setTool('picker')}
+                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'picker' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
+                      title={lang === 'ru' ? 'Пипетка' : 'Eyedropper'}
+                    >
+                      <Pipette size={18} />
+                    </button>
                    <button
                      onClick={() => setTool('move')}
                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'move' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}

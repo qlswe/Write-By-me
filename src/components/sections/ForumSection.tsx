@@ -1530,13 +1530,16 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
               filteredThreads.map(thread => (
                 <motion.div
                   key={thread.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  whileHover={{ y: -4, scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
                   onClick={() => {
                     setSelectedThread(thread);
                     addSecurityLog('INFO', `Viewed thread: ${thread.title}`);
                   }}
-                  className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 sm:p-6 hover:border-[#ff4d4d]/50 hover:bg-[#251c35] transition-all cursor-pointer group"
+                  className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 sm:p-6 hover:border-[#ff4d4d]/50 hover:bg-[#251c35] hover:shadow-[0_10px_30px_rgba(255,77,77,0.12)] transition-all cursor-pointer group"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
                     <h3 className="text-xl font-black text-white group-hover:text-[#ff4d4d] transition-colors line-clamp-2">

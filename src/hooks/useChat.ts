@@ -21,6 +21,7 @@ import { useAuth } from './useAuth';
 import { vercelFallback } from '../utils/vercelFallback';
 import { generatePrefixedId } from '../utils/idGenerator';
 import { uploadMediaFile } from '../utils/mediaUploader';
+import { decrypt } from '../utils/encryption';
 
 export interface Message {
   id: string;
@@ -154,8 +155,10 @@ export function useChat(otherUserId?: string) {
       (snapshot) => {
         const messagesData = snapshot.docs.map((docSnap) => {
           const data = docSnap.data();
+          const rawText = data.text || '';
           return {
             ...data,
+            text: decrypt(rawText, chatId),
             id: docSnap.id
           } as Message;
         });

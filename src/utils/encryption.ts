@@ -76,26 +76,36 @@ export const decrypt = (cipherText: string, contextId?: string): string => {
     try {
       const payload = trimmed.substring(PREFIX.length);
       
-      // Try index-based slicing first as the seed is always a 10-char date (YYYY-MM-DD)
-      const seed = payload.substring(0, 10);
-      const actualCipherText = payload.substring(11);
-      const historicalDynamicKey = generateRollingKey(seed + (contextId || ''));
-      const bytes = CryptoJS.AES.decrypt(actualCipherText, historicalDynamicKey);
-      const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
-      if (decryptedText && isPrintable(decryptedText)) {
-        return decryptedText;
+      // Parse seed and ciphertext
+      let seed = payload.substring(0, 10);
+      let actualCipherText = payload.substring(11);
+
+      // Check if delimiter character exists (| or I or :)
+      const delimMatch = payload.match(/^(\d{4}-\d{2}-\d{2})[|I:](.*)$/);
+      if (delimMatch) {
+        seed = delimMatch[1];
+        actualCipherText = delimMatch[2];
       }
-      
-      // Fallback: search for delimiter
-      const delimiterIndex = payload.indexOf('|') !== -1 ? payload.indexOf('|') : payload.indexOf('I');
-      if (delimiterIndex !== -1) {
-        const altSeed = payload.substring(0, delimiterIndex);
-        const altCipherText = payload.substring(delimiterIndex + 1);
-        const altKey = generateRollingKey(altSeed + (contextId || ''));
-        const altBytes = CryptoJS.AES.decrypt(altCipherText, altKey);
-        const altDecryptedText = altBytes.toString(CryptoJS.enc.Utf8);
-        if (altDecryptedText && isPrintable(altDecryptedText)) {
-          return altDecryptedText;
+
+      // Candidate keys to try
+      const candidateKeys = [
+        generateRollingKey(seed + (contextId || '')),
+        generateRollingKey(seed),
+        generateRollingKey(getDailyKeySeed() + (contextId || '')),
+        generateRollingKey(getDailyKeySeed()),
+        BASE_SECRET,
+        LEGACY_KEY
+      ];
+
+      for (const key of candidateKeys) {
+        try {
+          const bytes = CryptoJS.AES.decrypt(actualCipherText, key);
+          const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+          if (decryptedText && isPrintable(decryptedText)) {
+            return decryptedText;
+          }
+        } catch (err) {
+          // continue
         }
       }
     } catch (e) {

@@ -58,12 +58,14 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
   return (
     <motion.div 
       layout
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, y: 30, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.4, delay: index * 0.05, type: "spring", damping: 20 }}
+      whileHover={{ y: -6, scale: 1.015 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.4, delay: index * 0.04, type: "spring", damping: 22, stiffness: 280 }}
       onClick={onClick}
-      className="group relative bg-[#15101e]/50 hover:bg-[#251c35] p-6 sm:p-8 rounded-3xl border border-[#3d2b4f]/30 hover:border-[#ff4d4d]/30 transition-all cursor-pointer hsr-card-hover overflow-hidden"
+      className="group relative bg-[#15101e]/60 hover:bg-[#251c35] p-6 sm:p-8 rounded-3xl border border-[#3d2b4f]/40 hover:border-[#ff4d4d]/50 hover:shadow-[0_12px_40px_rgba(255,77,77,0.15)] transition-all cursor-pointer overflow-hidden"
     >
       {/* Decorative background element */}
       <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[#ff4d4d]/5 rounded-full blur-2xl group-hover:bg-[#ff4d4d]/10 transition-all" />

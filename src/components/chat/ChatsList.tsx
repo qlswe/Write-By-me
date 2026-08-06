@@ -9,6 +9,7 @@ import { useChat, Chat } from '../../hooks/useChat';
 import { useUsers } from '../../hooks/useUsers';
 import { Language, translations } from '../../data/translations';
 import { CachedAvatar } from '../ui/CachedAvatar';
+import { decrypt } from '../../utils/encryption';
 
 interface ChatsListProps {
   lang: Language;
@@ -263,7 +264,10 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
                     </div>
                     <p className="text-[11px] text-gray-400 truncate mt-0.5 font-medium leading-tight">
                       {chat.lastMessage
-                        ? (chat.lastMessage.length > 60 ? `${chat.lastMessage.slice(0, 60)}...` : chat.lastMessage)
+                        ? (() => {
+                            const decryptedPreview = decrypt(chat.lastMessage, recipientId || chat.id) || chat.lastMessage;
+                            return decryptedPreview.length > 60 ? `${decryptedPreview.slice(0, 60)}...` : decryptedPreview;
+                          })()
                         : (lang === 'ru' ? 'Сообщений пока нет' : 'No messages yet')}
                     </p>
                   </div>
