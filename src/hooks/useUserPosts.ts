@@ -35,7 +35,12 @@ export function useUserPosts(userId?: string) {
       limit(20) // Critical: prevent Quota exhaustion via mass-reads
     );
 
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 800);
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      clearTimeout(safetyTimer);
       const postsData = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id

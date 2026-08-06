@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Star, Edit, Trash2, ArrowRight, Calendar, Share2 } from 'lucide-react';
+import { Star, Edit, Trash2, ArrowRight, Calendar, Share2, Clock } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { TimeAgo } from '../ui/TimeAgo';
 import { MediaViewer } from '../ui/MediaViewer';
+import { calculateReadTime } from '../../utils/time';
 
 interface BlogCardProps {
   post: any;
@@ -29,6 +30,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
 }) => {
   const t = translations[lang];
   const { user, isAdmin } = useAuth();
+  const readTime = calculateReadTime(post.content, post.summary, lang);
   
   return (
     <motion.div 
@@ -47,14 +49,21 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
       
       <div className="flex justify-between items-start mb-6">
         <div className="flex flex-col gap-2">
-          <div className="px-4 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20 self-start">
-            {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="px-4 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20 self-start">
+              {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
+            </div>
+            <div className="px-3 py-1.5 rounded-full bg-[#251c35] text-white/70 text-[10px] font-bold tracking-wider border border-[#3d2b4f]/60 flex items-center gap-1.5 shadow-sm">
+              <Clock size={11} className="text-[#ff4d4d]" />
+              <span>{readTime} {t.minRead || (lang === 'ru' ? 'мин чтения' : 'min read')}</span>
+            </div>
           </div>
           <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold uppercase tracking-widest">
             <Calendar size={10} />
             <TimeAgo date={post.createdAt} lang={lang} />
           </div>
         </div>
+
         <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0 justify-end">
           {isAdmin && (
             <>

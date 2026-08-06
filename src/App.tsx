@@ -56,19 +56,19 @@ const getMillis = (val: any): number => {
   return 0;
 };
 
-// Lazy load sections for better performance
-const TheoriesSection = lazy(() => import('./components/sections/TheoriesSection').then(m => ({ default: m.TheoriesSection })));
-const BlogSection = lazy(() => import('./components/sections/BlogSection').then(m => ({ default: m.BlogSection })));
-const ChronicleSection = lazy(() => import('./components/sections/ChronicleSection').then(m => ({ default: m.ChronicleSection })));
-const PromoSection = lazy(() => import('./components/sections/PromoSection').then(m => ({ default: m.PromoSection })));
-const UsersList = lazy(() => import('./components/admin/UsersList').then(m => ({ default: m.UsersList })));
-const ChatsList = lazy(() => import('./components/chat/ChatsList').then(m => ({ default: m.ChatsList })));
-const CyberChatWorkspace = lazy(() => import('./components/chat/CyberChatWorkspace').then(m => ({ default: m.CyberChatWorkspace })));
-const ForumSection = lazy(() => import('./components/sections/ForumSection').then(m => ({ default: m.ForumSection })));
-const AhiAiSection = lazy(() => import('./components/sections/AhiAiSection').then(m => ({ default: m.AhiAiSection })));
-const SdkSettingsSection = lazy(() => import('./components/sections/SdkSettingsSection').then(m => ({ default: m.SdkSettingsSection })));
-const CanvasSection = lazy(() => import('./components/sections/CanvasSection').then(m => ({ default: m.CanvasSection })));
-const TelemetrySection = lazy(() => import('./components/sections/TelemetrySection').then(m => ({ default: m.TelemetrySection })));
+// Direct imports for instant section switching without Suspense lag
+import { TheoriesSection } from './components/sections/TheoriesSection';
+import { BlogSection } from './components/sections/BlogSection';
+import { ChronicleSection } from './components/sections/ChronicleSection';
+import { PromoSection } from './components/sections/PromoSection';
+import { UsersList } from './components/admin/UsersList';
+import { ChatsList } from './components/chat/ChatsList';
+import { CyberChatWorkspace } from './components/chat/CyberChatWorkspace';
+import { ForumSection } from './components/sections/ForumSection';
+import { AhiAiSection } from './components/sections/AhiAiSection';
+import { SdkSettingsSection } from './components/sections/SdkSettingsSection';
+import { CanvasSection } from './components/sections/CanvasSection';
+import { TelemetrySection } from './components/sections/TelemetrySection';
 
 type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry';
 
@@ -111,7 +111,7 @@ export default function App() {
 
   // User Data (Syncs with Firebase)
   const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role } = useUserData('ru');
-  const { theories, blogPosts, events, promoCodes } = useContent();
+  const { theories, blogPosts, events, promoCodes, isLoadingTheories, isLoadingBlog, isLoadingEvents } = useContent();
   const { i18n } = useTranslation();
   const { canInstall, isInstalled, installPWA } = usePWA();
   const [homePwaModalOpen, setHomePwaModalOpen] = useState(false);
@@ -566,8 +566,8 @@ export default function App() {
       setShowBanner(true);
     }
 
-    // Hide loader after auth and data are loaded, or after a timeout
-    const loaderTimer = setTimeout(() => setIsLoading(false), 2500);
+    // Hide loader after auth and data are loaded, or after a quick timeout
+    const loaderTimer = setTimeout(() => setIsLoading(false), 800);
     if (!authLoading && isDataLoaded) {
       setIsLoading(false);
       clearTimeout(loaderTimer);
@@ -1107,6 +1107,7 @@ export default function App() {
                   favorites={favorites}
                   toggleFavorite={toggleFavorite}
                   lowPerfMode={lowPerfMode}
+                  loading={isLoadingTheories}
                   theories={theories}
                   onEdit={setEditingTheory}
                   onCreate={() => setIsCreatingTheory(true)}
@@ -1125,6 +1126,7 @@ export default function App() {
                   favorites={favorites}
                   toggleFavorite={toggleFavorite}
                   lowPerfMode={lowPerfMode}
+                  loading={isLoadingBlog}
                   blogPosts={blogPosts}
                   onEdit={setEditingBlog}
                   onCreate={() => setIsCreatingBlog(true)}
@@ -1137,6 +1139,7 @@ export default function App() {
                 <ChronicleSection 
                   lang={lang as Language} 
                   lowPerfMode={lowPerfMode} 
+                  loading={isLoadingEvents}
                   events={events}
                   onEdit={setEditingEvent}
                   onCreate={() => setIsCreatingEvent(true)}

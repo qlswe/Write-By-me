@@ -121,31 +121,45 @@ class Logger {
     }
   }
 
-  private async saveLogToIDB(entry: LogEntry) {
+  private idbBuffer: LogEntry[] = [];
+  private idbTimer: any = null;
+
+  private saveLogToIDB(entry: LogEntry) {
+    if (entry.level === 'perf') return; // Don't persist high-frequency perf logs to IDB
+    this.idbBuffer.push(entry);
+
+    if (!this.idbTimer) {
+      this.idbTimer = setTimeout(() => {
+        this.flushIDBBuffer();
+      }, 2000);
+    }
+  }
+
+  private async flushIDBBuffer() {
+    this.idbTimer = null;
+    if (this.idbBuffer.length === 0) return;
+
+    const entriesToSave = [...this.idbBuffer];
+    this.idbBuffer = [];
+
     try {
       const db = await this.getDB();
       if (!db) return;
 
-      const safeEntry: LogEntry = {
-        timestamp: entry.timestamp,
-        level: entry.level,
-        message: entry.message,
-        data: entry.data !== undefined ? safeClone(entry.data) : undefined,
-        component: entry.component,
-        meta: entry.meta !== undefined ? safeClone(entry.meta) : undefined
-      };
-
       const tx = db.transaction(DB_STORE_NAME, 'readwrite');
       const store = tx.objectStore(DB_STORE_NAME);
-      store.add(safeEntry);
 
-      // Periodic pruning if store grows beyond 1.5x maxLogs
-      const countReq = store.count();
-      countReq.onsuccess = () => {
-        if (countReq.result > this.maxLogs * 1.5) {
-          this.pruneOldIDBLogs(db);
-        }
-      };
+      entriesToSave.forEach(entry => {
+        const safeEntry: LogEntry = {
+          timestamp: entry.timestamp,
+          level: entry.level,
+          message: entry.message,
+          data: entry.data !== undefined ? safeClone(entry.data) : undefined,
+          component: entry.component,
+          meta: entry.meta !== undefined ? safeClone(entry.meta) : undefined
+        };
+        store.add(safeEntry);
+      });
     } catch {
       // ignore IndexedDB write errors
     }

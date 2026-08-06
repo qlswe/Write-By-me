@@ -118,10 +118,10 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </h1>
           
-          {/* Desktop Nav */}
+          {/* Desktop & Tablet Nav */}
           <nav 
             ref={navRef}
-            className="hidden lg:flex items-center gap-1 bg-[#251c35] p-1 rounded-2xl border border-[#3d2b4f]/30 overflow-x-auto no-scrollbar scroll-smooth"
+            className="hidden md:flex items-center gap-1 bg-[#251c35] p-1 rounded-2xl border border-[#3d2b4f]/30 overflow-x-auto no-scrollbar scroll-smooth"
           >
             {navItems.map(item => {
               const isActive = section === item.id;
@@ -132,7 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => setSection(item.id)}
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
-                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black tracking-wide transition-colors whitespace-nowrap cursor-pointer ${
+                  className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black tracking-wide transition-colors whitespace-nowrap cursor-pointer ${
                     isActive ? 'text-[#15101e]' : 'text-gray-400 hover:text-gray-200'
                   }`}
                 >
@@ -143,9 +143,9 @@ export const Header: React.FC<HeaderProps> = ({
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
                   )}
-                  <div className="relative z-10 flex items-center gap-2">
-                    <item.icon size={16} className="shrink-0" />
-                    <span className="hidden xl:inline">{item.label}</span>
+                  <div className="relative z-10 flex items-center gap-1.5">
+                    <item.icon size={15} className="shrink-0" />
+                    <span>{item.label}</span>
                     {item.id === 'chats' && unreadCount > 0 && (
                       <motion.span 
                         animate={{ scale: [1, 1.2, 1] }}
@@ -448,12 +448,40 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <button 
-              className="lg:hidden p-2 text-gray-300 hover:text-[#ff4d4d] shrink-0"
+              className="md:hidden p-2 text-gray-300 hover:text-[#ff4d4d] shrink-0"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+              {mobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
             </button>
           </div>
+        </div>
+
+        {/* Mobile Horizontal Sub-Navigation Bar */}
+        <div className="md:hidden flex items-center gap-1.5 px-3 py-2 bg-[#171024] border-t border-[#3d2b4f]/40 overflow-x-auto no-scrollbar scroll-smooth">
+          {navItems.map(item => {
+            const isActive = section === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setSection(item.id)}
+                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                  isActive 
+                    ? 'bg-[#ff4d4d] text-[#15101e] shadow-[0_0_12px_rgba(255,77,77,0.5)] font-black' 
+                    : 'bg-[#251c35] text-gray-300 hover:text-white'
+                }`}
+              >
+                <item.icon size={14} className="shrink-0" />
+                <span>{item.label}</span>
+                {item.id === 'chats' && unreadCount > 0 && (
+                  <span className={`inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                    isActive ? 'bg-[#15101e] text-[#ff4d4d]' : 'bg-[#ff4d4d] text-white'
+                  }`}>
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </header>
 
@@ -464,7 +492,7 @@ export const Header: React.FC<HeaderProps> = ({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="lg:hidden fixed inset-0 z-40 bg-[#15101e] pt-20 px-4 flex flex-col overflow-y-auto pb-6"
+            className="md:hidden fixed top-[60px] inset-x-0 bottom-0 z-50 bg-[#15101e] px-4 py-6 flex flex-col overflow-y-auto"
           >
             <div className="flex flex-col gap-4 flex-1 shrink-0">
               {navItems.map(item => (

@@ -10,6 +10,7 @@ import { useUsers } from '../../hooks/useUsers';
 import { Language, translations } from '../../data/translations';
 import { CachedAvatar } from '../ui/CachedAvatar';
 import { decrypt } from '../../utils/encryption';
+import { checkIsUserOnline, formatLastSeenStatus } from '../../utils/userStatus';
 
 interface ChatsListProps {
   lang: Language;
@@ -225,6 +226,8 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
               const recipientId = chat.isGroup
                 ? chat.id
                 : chat.participants?.find((p) => p !== user?.uid) || '';
+              const recipientUser = users.find((u) => u.uid === recipientId);
+              const isOnline = checkIsUserOnline(recipientUser);
 
               return (
                 <div
@@ -249,7 +252,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
                         <Users size={10} />
                       </span>
                     ) : (
-                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#15101e]" />
+                      <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#15101e] ${isOnline ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]' : 'bg-gray-500'}`} />
                     )}
                   </div>
 
@@ -294,6 +297,8 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
           </span>
           {otherUsers.map((u) => {
             const displayName = u.displayName || u.email || 'Cyber User';
+            const isOnline = checkIsUserOnline(u);
+            const statusInfo = formatLastSeenStatus(u, lang);
             return (
               <div
                 key={u.uid}
@@ -308,15 +313,15 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
                     className="rounded-full border border-[#3d2b4f]"
                     fallbackText={displayName}
                   />
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#15101e]" />
+                  <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#15101e] ${isOnline ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]' : 'bg-gray-500'}`} />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-bold text-white truncate block">
                     {displayName}
                   </span>
-                  <p className="text-[11px] text-gray-400 truncate mt-0.5">
-                    {lang === 'ru' ? 'Нажмите, чтобы открыть чат' : 'Click to start chat'}
+                  <p className="text-[11px] text-gray-400 truncate mt-0.5 font-mono">
+                    {statusInfo.statusText}
                   </p>
                 </div>
               </div>

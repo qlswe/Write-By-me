@@ -16,6 +16,7 @@ import { TimeAgo } from '../ui/TimeAgo';
 
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { SafeHtml } from '../security/AhaSecurity';
+import { TheorySkeletonGrid } from '../ui/SkeletonLoaders';
 
 interface TheoriesSectionProps {
   lang: Language;
@@ -26,6 +27,7 @@ interface TheoriesSectionProps {
   favorites: string[];
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
   lowPerfMode?: boolean;
+  loading?: boolean;
   theories?: any[];
   onEdit?: (theory: any) => void;
   onCreate?: () => void;
@@ -42,6 +44,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   favorites,
   toggleFavorite,
   lowPerfMode,
+  loading = false,
   theories = theoriesData,
   onEdit,
   onCreate,
@@ -281,7 +284,9 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               </div>
             </div>
 
-            {filteredTheories.length === 0 ? (
+            {loading ? (
+              <TheorySkeletonGrid count={6} />
+            ) : filteredTheories.length === 0 ? (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}

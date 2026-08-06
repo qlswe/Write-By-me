@@ -13,6 +13,7 @@ import { Language, translations } from '../../data/translations';
 import { CachedAvatar } from '../ui/CachedAvatar';
 import { compressImageFile } from '../../utils/imageCompressor';
 import { decrypt } from '../../utils/encryption';
+import { checkIsUserOnline, formatLastSeenStatus } from '../../utils/userStatus';
 
 interface ChatWindowProps {
   recipientId: string;
@@ -26,12 +27,44 @@ interface ChatWindowProps {
 
 // Quick Emojis & Stickers presets
 const EMOJI_PRESETS = ['❤️', '🔥', '👍', '😂', '😮', '🚀', '💯', '⚡', '🎉', '🤖', '💀', '✨'];
-const STICKER_PRESETS = [
-  'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_cybergod',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_neonfire',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_matrixcat',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_ahi_hero',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_synthwave'
+const STICKER_PACKS = [
+  {
+    id: 'cyber',
+    name: 'Cyberpunk',
+    stickers: [
+      'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_cybergod',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_neonfire',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_matrixcat',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_ahi_hero',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_synthwave',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_quantum',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_hyperion',
+      'https://api.dicebear.com/7.x/bottts/svg?seed=sticker_cyberpunk'
+    ]
+  },
+  {
+    id: 'anime',
+    name: 'Anime',
+    stickers: [
+      'https://api.dicebear.com/7.x/adventurer/svg?seed=anime_cool',
+      'https://api.dicebear.com/7.x/adventurer/svg?seed=anime_cute',
+      'https://api.dicebear.com/7.x/adventurer/svg?seed=anime_rage',
+      'https://api.dicebear.com/7.x/adventurer/svg?seed=anime_star',
+      'https://api.dicebear.com/7.x/adventurer/svg?seed=anime_ninja',
+      'https://api.dicebear.com/7.x/adventurer/svg?seed=anime_demon'
+    ]
+  },
+  {
+    id: 'cats',
+    name: 'Cats',
+    stickers: [
+      'https://api.dicebear.com/7.x/cattts/svg?seed=cat_happy',
+      'https://api.dicebear.com/7.x/cattts/svg?seed=cat_cool',
+      'https://api.dicebear.com/7.x/cattts/svg?seed=cat_angry',
+      'https://api.dicebear.com/7.x/cattts/svg?seed=cat_love',
+      'https://api.dicebear.com/7.x/cattts/svg?seed=cat_shocked'
+    ]
+  }
 ];
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -74,6 +107,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
+  // Sticker Picker states
+  const [activeStickerPack, setActiveStickerPack] = useState<string>('cyber');
+  const [customStickerUrl, setCustomStickerUrl] = useState<string>('');
+
+  // Recipient status computation
+  const recipientUser = useMemo(() => {
+    return users.find((u) => u.uid === recipientId);
+  }, [users, recipientId]);
+
+  const statusInfo = useMemo(() => {
+    if (isGroup) {
+      return {
+        statusText: `${currentChat?.participants?.length || 1} ${lang === 'ru' ? 'участников' : 'members'}`,
+        isOnline: true
+      };
+    }
+    return formatLastSeenStatus(recipientUser, lang);
+  }, [isGroup, currentChat, recipientUser, lang]);
+
   // File & Media Attachment state
   const [stagedImages, setStagedImages] = useState<string[]>([]);
   const [stagedFile, setStagedFile] = useState<{ url: string; name: string; size: number; fileType: string } | null>(null);
@@ -114,6 +166,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     typingTimeoutRef.current = setTimeout(() => {
       setTyping(recipientId, false);
     }, 2000);
+  };
+
+  // Handle custom sticker upload from device
+  const handleStickerFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file, 400, 400, 0.85);
+      await sendMessage('', recipientId, 'sticker', undefined, [compressed]);
+      setShowEmojiPicker(false);
+    } catch (err) {
+      console.warn('Sticker file upload error:', err);
+    }
   };
 
   // Safe file downloader helper
@@ -373,7 +438,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               className="rounded-full border border-[#ff4d4d]/50"
               fallbackText={recipientName}
             />
-            <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#150f22]" />
+            <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#150f22] ${statusInfo.isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-gray-500'}`} />
           </div>
 
           <div className="min-w-0">
@@ -381,9 +446,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               {recipientName}
             </h3>
             <span className="text-[10px] text-gray-400 font-mono block truncate">
-              {isGroup
-                ? `${currentChat?.participants?.length || 1} ${lang === 'ru' ? 'участников' : 'members'}`
-                : lang === 'ru' ? '🟢 В сети' : '🟢 Online'}
+              {statusInfo.statusText}
             </span>
           </div>
         </div>
@@ -514,13 +577,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   </span>
                 )}
 
-                <div
-                  className={`relative max-w-[85%] rounded-2xl p-3 shadow-md ${
-                    isMe
-                      ? 'bg-gradient-to-br from-[#ff4d4d] to-[#d93838] text-[#15101e] rounded-tr-none font-medium'
-                      : 'bg-[#1f1730] border border-[#3d2b4f] text-white rounded-tl-none'
-                  }`}
-                >
+                {/* Sticker or Message Bubble */}
+                {msg.type === 'sticker' ? (
+                  <div className="relative group/sticker my-1 hover:scale-105 transition-transform duration-200">
+                    <img
+                      src={msg.images?.[0] || displayText || msg.text}
+                      alt="Sticker"
+                      onClick={() => setLightboxImage(msg.images?.[0] || displayText || msg.text)}
+                      className="w-32 h-32 md:w-36 md:h-36 object-contain cursor-pointer drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] hover:drop-shadow-[0_12px_24px_rgba(255,77,77,0.5)] transition-all"
+                    />
+                    <div className="flex items-center justify-end gap-1 text-[9px] text-gray-400 font-mono mt-0.5">
+                      <CheckCheck size={12} />
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className={`relative max-w-[85%] rounded-2xl p-3 shadow-md ${
+                      isMe
+                        ? 'bg-gradient-to-br from-[#ff4d4d] to-[#d93838] text-[#15101e] rounded-tr-none font-medium'
+                        : 'bg-[#1f1730] border border-[#3d2b4f] text-white rounded-tl-none'
+                    }`}
+                  >
                   {/* Reply Snippet */}
                   {msg.replyTo && (
                     <div className={`mb-2 p-2 rounded-xl text-xs border-l-2 ${
@@ -668,6 +745,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     )}
                   </div>
                 </div>
+                )}
 
                 {/* Reactions list */}
                 {msg.reactions && Object.keys(msg.reactions).length > 0 && (
@@ -823,23 +901,91 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                   </div>
                 </div>
 
+                {/* Stickers Section */}
                 <div>
-                  <span className="text-[9px] text-gray-500 uppercase block mb-1">Стикеры</span>
-                  <div className="flex gap-2 overflow-x-auto p-1 custom-scrollbar">
-                    {STICKER_PRESETS.map((s, idx) => (
+                  <div className="flex items-center justify-between gap-1 mb-1.5 border-b border-[#3d2b4f]/40 pb-1">
+                    <span className="text-[9px] text-gray-500 uppercase font-black">Стикеры</span>
+                    <div className="flex gap-1">
+                      {STICKER_PACKS.map((pack) => (
+                        <button
+                          key={pack.id}
+                          type="button"
+                          onClick={() => setActiveStickerPack(pack.id)}
+                          className={`text-[9px] px-1.5 py-0.5 rounded-lg transition-all font-bold ${
+                            activeStickerPack === pack.id
+                              ? 'bg-[#ff4d4d] text-[#15101e]'
+                              : 'bg-[#2e2347] text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {pack.name}
+                        </button>
+                      ))}
                       <button
-                        key={idx}
                         type="button"
-                        onClick={() => {
-                          sendMessage('', recipientId, 'sticker', undefined, [s]);
-                          setShowEmojiPicker(false);
-                        }}
-                        className="w-12 h-12 shrink-0 bg-[#150f22] hover:bg-[#ff4d4d]/20 border border-[#3d2b4f] hover:border-[#ff4d4d] rounded-xl p-1 transition-all"
+                        onClick={() => setActiveStickerPack('custom')}
+                        className={`text-[9px] px-1.5 py-0.5 rounded-lg transition-all font-bold ${
+                          activeStickerPack === 'custom'
+                            ? 'bg-[#ff4d4d] text-[#15101e]'
+                            : 'bg-[#2e2347] text-gray-400 hover:text-white'
+                        }`}
                       >
-                        <img src={s} alt="Sticker" className="w-full h-full object-contain" />
+                        Свой
                       </button>
-                    ))}
+                    </div>
                   </div>
+
+                  {activeStickerPack === 'custom' ? (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          value={customStickerUrl}
+                          onChange={(e) => setCustomStickerUrl(e.target.value)}
+                          placeholder="URL стикера (png, gif, webp)..."
+                          className="flex-1 bg-[#0d0714] border border-[#ff4d4d]/40 rounded-xl px-2 py-1 text-[10px] text-white outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (customStickerUrl.trim()) {
+                              sendMessage('', recipientId, 'sticker', undefined, [customStickerUrl.trim()]);
+                              setCustomStickerUrl('');
+                              setShowEmojiPicker(false);
+                            }
+                          }}
+                          className="px-2 py-1 bg-[#ff4d4d] text-[#15101e] text-[10px] font-black rounded-xl hover:bg-white transition-all"
+                        >
+                          OK
+                        </button>
+                      </div>
+                      <label className="w-full py-1.5 bg-[#251c35] hover:bg-[#322448] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-300 hover:text-white rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                        <ImageIcon size={12} />
+                        <span>Загрузить стикер с устройства</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleStickerFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-1.5 p-1 max-h-32 overflow-y-auto custom-scrollbar">
+                      {(STICKER_PACKS.find((p) => p.id === activeStickerPack)?.stickers || STICKER_PACKS[0].stickers).map((s, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            sendMessage('', recipientId, 'sticker', undefined, [s]);
+                            setShowEmojiPicker(false);
+                          }}
+                          className="w-10 h-10 bg-[#150f22] hover:bg-[#ff4d4d]/20 border border-[#3d2b4f] hover:border-[#ff4d4d] rounded-xl p-1 transition-all flex items-center justify-center cursor-pointer"
+                        >
+                          <img src={s} alt="Sticker" className="w-full h-full object-contain" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

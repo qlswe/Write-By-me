@@ -12,13 +12,55 @@ interface ContentStoreState {
   blogPosts: any[];
   events: any[];
   promoCodes: any[];
+  isLoadingTheories: boolean;
+  isLoadingBlog: boolean;
+  isLoadingEvents: boolean;
+  isLoading: boolean;
 }
 
-let sharedState: ContentStoreState = {
-  theories: localTheories,
-  blogPosts: localBlogPosts,
-  events: localEvents,
-  promoCodes: localPromoCodes,
+// Load initial cached state from localStorage for zero-latency instant rendering
+const getInitialCachedState = (): ContentStoreState => {
+  let cachedTheories = localTheories;
+  let cachedBlog = localBlogPosts;
+  let cachedEvents = localEvents;
+  let cachedPromos = localPromoCodes;
+
+  try {
+    const raw = localStorage.getItem('hsr_content_cache_v2');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed.theories) && parsed.theories.length > 0) cachedTheories = parsed.theories;
+      if (Array.isArray(parsed.blog) && parsed.blog.length > 0) cachedBlog = parsed.blog;
+      if (Array.isArray(parsed.events) && parsed.events.length > 0) cachedEvents = parsed.events;
+      if (Array.isArray(parsed.promos) && parsed.promos.length > 0) cachedPromos = parsed.promos;
+    }
+  } catch (e) {
+    console.warn('Failed to parse cached content:', e);
+  }
+
+  return {
+    theories: cachedTheories,
+    blogPosts: cachedBlog,
+    events: cachedEvents,
+    promoCodes: cachedPromos,
+    isLoadingTheories: false,
+    isLoadingBlog: false,
+    isLoadingEvents: false,
+    isLoading: false,
+  };
+};
+
+let sharedState: ContentStoreState = getInitialCachedState();
+
+const saveCacheToLocalStorage = () => {
+  try {
+    localStorage.setItem('hsr_content_cache_v2', JSON.stringify({
+      theories: sharedState.theories.slice(0, 50),
+      blog: sharedState.blogPosts.slice(0, 50),
+      events: sharedState.events.slice(0, 20),
+      promos: sharedState.promoCodes.slice(0, 20)
+    }));
+  } catch (e) {}
 };
 
 type Listener = (state: ContentStoreState) => void;
@@ -32,6 +74,20 @@ function notifyListeners() {
 function initSingletonSubscription() {
   if (isSubscribed) return;
   isSubscribed = true;
+
+  // Safety timer: If Firestore takes >600ms, unlock loading state so available cached/local content renders instantly
+  setTimeout(() => {
+    if (sharedState.isLoadingTheories || sharedState.isLoadingBlog || sharedState.isLoadingEvents || sharedState.isLoading) {
+      sharedState = {
+        ...sharedState,
+        isLoadingTheories: false,
+        isLoadingBlog: false,
+        isLoadingEvents: false,
+        isLoading: false
+      };
+      notifyListeners();
+    }
+  }, 600);
 
   // 1. Subscribe to theories (limited to 50 items)
   const qTheories = query(collection(db, 'theories'), orderBy('createdAt', 'desc'), limit(50));
@@ -53,12 +109,18 @@ function initSingletonSubscription() {
     });
     const firestoreIds = new Set(mappedFirestoreTheories.map(t => t.id));
     const filteredLocalTheories = localTheories.filter(t => !firestoreIds.has(t.id));
+    const newTheories = [...mappedFirestoreTheories, ...filteredLocalTheories];
     sharedState = {
       ...sharedState,
-      theories: [...mappedFirestoreTheories, ...filteredLocalTheories]
+      theories: newTheories,
+      isLoadingTheories: false,
+      isLoading: false
     };
+    saveCacheToLocalStorage();
     notifyListeners();
   }, (error) => {
+    sharedState = { ...sharedState, isLoadingTheories: false, isLoading: false };
+    notifyListeners();
     handleFirestoreError(error, OperationType.GET, 'theories');
   });
 
@@ -84,10 +146,15 @@ function initSingletonSubscription() {
     const filteredLocalBlogPosts = localBlogPosts.filter(p => !firestorePostIds.has(p.id));
     sharedState = {
       ...sharedState,
-      blogPosts: [...mappedFirestoreBlogPosts, ...filteredLocalBlogPosts]
+      blogPosts: [...mappedFirestoreBlogPosts, ...filteredLocalBlogPosts],
+      isLoadingBlog: false,
+      isLoading: false
     };
+    saveCacheToLocalStorage();
     notifyListeners();
   }, (error) => {
+    sharedState = { ...sharedState, isLoadingBlog: false, isLoading: false };
+    notifyListeners();
     handleFirestoreError(error, OperationType.GET, 'blogPosts');
   });
 
@@ -111,10 +178,15 @@ function initSingletonSubscription() {
     const filteredLocalEvents = localEvents.filter(e => !firestoreEventIds.has(e.id));
     sharedState = {
       ...sharedState,
-      events: [...mappedFirestoreEvents, ...filteredLocalEvents]
+      events: [...mappedFirestoreEvents, ...filteredLocalEvents],
+      isLoadingEvents: false,
+      isLoading: false
     };
+    saveCacheToLocalStorage();
     notifyListeners();
   }, (error) => {
+    sharedState = { ...sharedState, isLoadingEvents: false, isLoading: false };
+    notifyListeners();
     handleFirestoreError(error, OperationType.GET, 'events');
   });
 

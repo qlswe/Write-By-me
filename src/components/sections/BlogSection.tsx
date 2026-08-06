@@ -17,6 +17,7 @@ import { TimeAgo } from '../ui/TimeAgo';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { SafeHtml } from '../security/AhaSecurity';
 import { MediaViewer } from '../ui/MediaViewer';
+import { BlogSkeletonGrid } from '../ui/SkeletonLoaders';
 
 interface BlogSectionProps {
   lang: Language;
@@ -27,6 +28,7 @@ interface BlogSectionProps {
   favorites: string[];
   toggleFavorite: (id: string, e: React.MouseEvent) => void;
   lowPerfMode?: boolean;
+  loading?: boolean;
   blogPosts?: any[];
   onEdit?: (post: any) => void;
   onCreate?: () => void;
@@ -43,6 +45,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   favorites,
   toggleFavorite,
   lowPerfMode,
+  loading = false,
   blogPosts = blogPostsData,
   onEdit,
   onCreate,
@@ -249,7 +252,9 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               </div>
             </div>
 
-            {filteredBlog.length === 0 ? (
+            {loading ? (
+              <BlogSkeletonGrid count={6} />
+            ) : filteredBlog.length === 0 ? (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}

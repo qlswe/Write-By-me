@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Star, Share2, Check, Edit, Trash2, ArrowRight } from 'lucide-react';
+import { Star, Share2, Check, Edit, Trash2, ArrowRight, Clock } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
+import { calculateReadTime } from '../../utils/time';
 
 
 interface TheoryCardProps {
@@ -29,6 +30,7 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
   const t = translations[lang];
   const [copied, setCopied] = React.useState(false);
   const { user, isAdmin } = useAuth();
+  const readTime = calculateReadTime(theory.content, theory.summary, lang);
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -71,8 +73,14 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
       <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[#ff4d4d]/5 rounded-full blur-2xl group-hover:bg-[#ff4d4d]/10 transition-all" />
       
       <div className="flex justify-between items-start mb-6">
-        <div className="px-4 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20">
-          {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="px-4 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20">
+            {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
+          </div>
+          <div className="px-3 py-1.5 rounded-full bg-[#251c35] text-white/70 text-[10px] font-bold tracking-wider border border-[#3d2b4f]/60 flex items-center gap-1.5 shadow-sm">
+            <Clock size={11} className="text-[#ff4d4d]" />
+            <span>{readTime} {t.minRead || (lang === 'ru' ? 'мин чтения' : 'min read')}</span>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0 justify-end">
           {isAdmin && (

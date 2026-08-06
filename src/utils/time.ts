@@ -126,3 +126,42 @@ export function formatCountdown(targetDate: Date | null, t: any, lang: string, n
   
   return `${parts.join(' ')} ${t.remaining}`;
 }
+
+/**
+ * Calculates estimated read time in minutes based on word count (~200 words per minute)
+ */
+export function calculateReadTime(
+  content: string | Record<string, string> | undefined | null,
+  summary: string | Record<string, string> | undefined | null,
+  lang: string = 'ru'
+): number {
+  const extractText = (field: string | Record<string, string> | undefined | null) => {
+    if (!field) return '';
+    if (typeof field === 'string') return field;
+    if (typeof field === 'object') {
+      return field[lang] || field['en'] || field['ru'] || Object.values(field).find(v => typeof v === 'string') || '';
+    }
+    return '';
+  };
+
+  const contentText = extractText(content);
+  const summaryText = extractText(summary);
+  const combined = `${contentText} ${summaryText}`.trim();
+
+  // Remove HTML tags and markdown formatting
+  const cleanText = combined
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/#+ /g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleanText) return 1;
+
+  // Split on whitespace to get word count
+  const words = cleanText.split(/\s+/).filter(Boolean).length;
+  
+  // ~200 WPM reading rate
+  const minutes = Math.ceil(words / 200);
+  return Math.max(1, minutes);
+}
+

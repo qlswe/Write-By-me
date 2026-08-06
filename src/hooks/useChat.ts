@@ -222,6 +222,7 @@ export function useChat(otherUserId?: string) {
       type !== 'image' &&
       type !== 'voice' &&
       type !== 'file' &&
+      type !== 'sticker' &&
       (!images || images.length === 0) &&
       !fileAttachment
     ) {

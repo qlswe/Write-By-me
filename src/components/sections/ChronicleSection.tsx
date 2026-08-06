@@ -9,10 +9,12 @@ import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { ChronicleSkeletonList } from '../ui/SkeletonLoaders';
 
 interface ChronicleSectionProps {
   lang: Language;
   lowPerfMode?: boolean;
+  loading?: boolean;
   events: any[];
   onEdit?: (event: any) => void;
   onCreate?: () => void;
@@ -135,7 +137,7 @@ const EventCard = React.memo(({
   );
 });
 
-export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPerfMode, events, onEdit, onCreate, role }) => {
+export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPerfMode, loading = false, events, onEdit, onCreate, role }) => {
   const t = translations[lang];
   const { trackRender } = usePerfLogger('ChronicleSection');
   trackRender();
@@ -186,26 +188,35 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
         )}
       </div>
 
-      <div className="relative space-y-12">
-        {/* Timeline Line */}
-        <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-[#ff4d4d]/50 via-[#3d2b4f]/30 to-transparent hidden md:block" />
+      {loading ? (
+        <ChronicleSkeletonList count={4} />
+      ) : events.length === 0 ? (
+        <div className="text-center py-20 text-white/40 bg-[#15101e]/30 rounded-3xl border-2 border-dashed border-[#3d2b4f]/50">
+          <Calendar size={48} className="mx-auto mb-4 text-[#3d2b4f]" />
+          <p className="text-xl font-bold uppercase tracking-widest">{t.noResults}</p>
+        </div>
+      ) : (
+        <div className="relative space-y-12">
+          {/* Timeline Line */}
+          <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-[#ff4d4d]/50 via-[#3d2b4f]/30 to-transparent hidden md:block" />
 
-        {events.map((event, index) => (
-          <EventCard 
-            key={event.id}
-            event={event}
-            index={index}
-            now={now}
-            t={t}
-            lang={lang}
-            lowPerfMode={lowPerfMode}
-            isModerator={isModerator}
-            isAdmin={isAdmin}
-            onEdit={onEdit}
-            onDelete={setEventToDelete}
-          />
-        ))}
-      </div>
+          {events.map((event, index) => (
+            <EventCard 
+              key={event.id}
+              event={event}
+              index={index}
+              now={now}
+              t={t}
+              lang={lang}
+              lowPerfMode={lowPerfMode}
+              isModerator={isModerator}
+              isAdmin={isAdmin}
+              onEdit={onEdit}
+              onDelete={setEventToDelete}
+            />
+          ))}
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={!!eventToDelete}
