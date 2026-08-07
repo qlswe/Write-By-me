@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings, ShieldCheck, Cpu, RotateCw, Palette, Check, Save, RefreshCw, Type, Minus, Plus, RotateCcw } from 'lucide-react';
+import { Settings, ShieldCheck, Cpu, RotateCw, Palette, Check, Save, RefreshCw, Type, Minus, Plus, RotateCcw, Volume2, Activity, Terminal, Download, Shield, Globe, Sparkles } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { db } from '../../firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
@@ -8,6 +8,7 @@ import { sdk } from '../../sdk';
 import { AhaSecurityConsole } from '../security/AhaSecurity';
 import { ACCENT_COLOR_PRESETS, applyPrimaryAccentColor } from '../../utils/theme';
 import { useFontSize } from '../../hooks/useFontSize';
+import { AntiAdblockBanner } from '../ui/AntiAdblockBanner';
 
 interface SdkSettingsSectionProps {
   lang: Language;
@@ -48,6 +49,46 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
   const [currentAccentColor, setCurrentAccentColor] = useState<string>('#ff4d4d');
   const [customHexInput, setCustomHexInput] = useState<string>('#ff4d4d');
   const [isSavingColor, setIsSavingColor] = useState<boolean>(false);
+
+  // New SDK v3.0.0 Pro features state
+  const [diagResults, setDiagResults] = useState<{ test: string; status: 'ok' | 'warn' | 'error'; value: string }[] | null>(null);
+  const [isRunningDiag, setIsRunningDiag] = useState(false);
+  const [sdkLogs, setSdkLogs] = useState<{ level: string; message: string; data?: any; time: string }[]>([]);
+  const [logFilter, setLogFilter] = useState<string>('all');
+
+  useEffect(() => {
+    const unsub = sdk.subscribeToLogs((level, message, data) => {
+      setSdkLogs(prev => [
+        { level, message, data, time: new Date().toLocaleTimeString() },
+        ...prev.slice(0, 49)
+      ]);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleRunDiagnostics = async () => {
+    setIsRunningDiag(true);
+    const results = await sdk.diagnostics.runSuite();
+    setDiagResults(results);
+    setIsRunningDiag(false);
+  };
+
+  const handleExportConfig = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+      version: sdk.getVersion(),
+      devicePerformanceScore: sdk.hardware.getDevicePerformanceScore(),
+      fontSizePercent,
+      adSettings,
+      primaryAccentColor: currentAccentColor,
+      timestamp: new Date().toISOString()
+    }, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `aha_sdk_config_v${sdk.getVersion()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -610,11 +651,328 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                   {isSavingAds ? '...' : (t.adSettingsSave || (lang === 'ru' ? "Сохранить настройки рекламы" : "Save ad settings"))}
                 </button>
               </div>
+
+              {/* AntiAdblockBanner strictly contained inside SDK Settings */}
+              <div className="mt-4">
+                <AntiAdblockBanner lang={lang} />
+              </div>
             </div>
           )}
 
           <div className="space-y-6">
             <AhaSecurityConsole lang={lang} />
+
+            {/* SDK DIAGNOSTICS & HARDWARE TOOLKIT */}
+            <div className="p-6 bg-[#15101e] rounded-2xl border border-[#3d2b4f] hover:border-[#ff4d4d]/50 transition-all space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-2">
+                  <Activity size={16} />
+                  {lang === 'ru' ? "Диагностика и Оборудование SDK" : "SDK Diagnostics & Hardware"}
+                </h3>
+                <span className="text-[10px] font-mono uppercase bg-[#ff4d4d]/10 text-[#ff4d4d] px-2 py-0.5 rounded font-bold border border-[#ff4d4d]/20">
+                  v{sdk.getVersion()}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRunDiagnostics}
+                  disabled={isRunningDiag}
+                  className="flex-1 py-2 px-3 bg-[#ff4d4d] hover:bg-[#ff3333] text-[#15101e] font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw size={14} className={isRunningDiag ? 'animate-spin' : ''} />
+                  <span>{isRunningDiag ? (lang === 'ru' ? 'Тестирование...' : 'Testing...') : (lang === 'ru' ? 'Запустить Диагностику' : 'Run Suite')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => sdk.audio.playJingle()}
+                  className="py-2 px-3 bg-[#251c35] hover:bg-[#3d2b4f] text-gray-200 hover:text-white font-bold text-xs rounded-xl border border-[#3d2b4f] transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  title={lang === 'ru' ? 'Проверить звук SDK' : 'Test SDK Audio Jingle'}
+                >
+                  <Volume2 size={14} className="text-[#ff4d4d]" />
+                  <span>{lang === 'ru' ? 'Звук SDK' : 'Test Sound'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportConfig}
+                  className="py-2 px-3 bg-[#251c35] hover:bg-[#3d2b4f] text-gray-200 hover:text-white font-bold text-xs rounded-xl border border-[#3d2b4f] transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  title={lang === 'ru' ? 'Экспортировать конфиг SDK' : 'Export SDK Config'}
+                >
+                  <Download size={14} className="text-[#ff4d4d]" />
+                  <span>JSON</span>
+                </button>
+              </div>
+
+              {diagResults && (
+                <div className="p-3 bg-[#1a1326] rounded-xl border border-[#3d2b4f] space-y-1.5 font-mono text-xs">
+                  {diagResults.map((r, i) => (
+                    <div key={i} className="flex items-center justify-between py-1 border-b border-[#3d2b4f]/30 last:border-0">
+                      <span className="text-gray-400">{r.test}</span>
+                      <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${
+                        r.status === 'ok' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                        r.status === 'warn' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                        'bg-red-500/20 text-red-400 border border-red-500/30'
+                      }`}>
+                        {r.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* STANDALONE SDK SITE & DEVELOPER PORTAL GUIDE */}
+            <div className="p-6 bg-[#15101e] rounded-2xl border border-[#ff4d4d]/40 shadow-[0_0_20px_rgba(255,77,77,0.1)] space-y-5">
+              <div className="flex items-center justify-between border-b border-[#3d2b4f] pb-3">
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
+                    <Globe size={18} className="text-[#ff4d4d]" />
+                    {lang === 'ru' ? "Портал Разработчика и Отдельный Сайт SDK" : "SDK Standalone Site & Developer Portal"}
+                  </h3>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    {lang === 'ru' 
+                      ? "Руководство по созданию отдельного домена/сайта, CDN встраиванию и экспорту библиотеки"
+                      : "Guide for creating a standalone domain/site, CDN embedding, and publishing as an NPM library"}
+                  </p>
+                </div>
+                <span className="bg-[#ff4d4d] text-[#15101e] px-2.5 py-1 rounded-lg text-[10px] font-black uppercase">
+                  SDK v3.0 PRO
+                </span>
+              </div>
+
+              {/* Step by Step Standalone Guide */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-3.5 bg-[#1f172e] rounded-xl border border-[#3d2b4f] space-y-2">
+                  <div className="flex items-center gap-2 font-black text-xs text-[#ff4d4d]">
+                    <span className="w-5 h-5 rounded-full bg-[#ff4d4d] text-[#15101e] text-[10px] flex items-center justify-center font-black">1</span>
+                    {lang === 'ru' ? "Создание репозитория" : "Repository Setup"}
+                  </div>
+                  <p className="text-[11px] text-gray-300 leading-snug">
+                    {lang === 'ru' 
+                      ? "Выделите папку src/sdk/ в отдельный GitHub репозиторий (например aha-sdk-js)."
+                      : "Separate src/sdk/ into its own GitHub repo (e.g. aha-sdk-js)."}
+                  </p>
+                  <div className="p-2 bg-[#120d1c] rounded font-mono text-[10px] text-emerald-400">
+                    git subtree push --prefix src/sdk origin main
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-[#1f172e] rounded-xl border border-[#3d2b4f] space-y-2">
+                  <div className="flex items-center gap-2 font-black text-xs text-[#ff4d4d]">
+                    <span className="w-5 h-5 rounded-full bg-[#ff4d4d] text-[#15101e] text-[10px] flex items-center justify-center font-black">2</span>
+                    {lang === 'ru' ? "Публикация в NPM & CDN" : "NPM & CDN Publishing"}
+                  </div>
+                  <p className="text-[11px] text-gray-300 leading-snug">
+                    {lang === 'ru' 
+                      ? "Соберите бандл через Vite/esbuild в формате UMD/ESM и опубликуйте в npm."
+                      : "Bundle via Vite/esbuild to UMD/ESM format and publish to npm."}
+                  </p>
+                  <div className="p-2 bg-[#120d1c] rounded font-mono text-[10px] text-amber-300">
+                    npm publish --access public
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-[#1f172e] rounded-xl border border-[#3d2b4f] space-y-2">
+                  <div className="flex items-center gap-2 font-black text-xs text-[#ff4d4d]">
+                    <span className="w-5 h-5 rounded-full bg-[#ff4d4d] text-[#15101e] text-[10px] flex items-center justify-center font-black">3</span>
+                    {lang === 'ru' ? "Хостинг Документации" : "Documentation Hosting"}
+                  </div>
+                  <p className="text-[11px] text-gray-300 leading-snug">
+                    {lang === 'ru' 
+                      ? "Разверните отдельный сайт на Vercel, Netlify, Cloudflare Pages или GitHub Pages."
+                      : "Deploy a separate portal site on Vercel, Netlify, Cloudflare Pages, or GitHub Pages."}
+                  </p>
+                  <div className="p-2 bg-[#120d1c] rounded font-mono text-[10px] text-blue-300">
+                    https://sdk.aha-radio.app
+                  </div>
+                </div>
+              </div>
+
+              {/* Ready Code Snippets Generator */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase text-gray-200 tracking-wider flex items-center gap-1.5">
+                    <Terminal size={14} className="text-[#ff4d4d]" />
+                    {lang === 'ru' ? "Готовые фрагменты кода интеграции" : "Integration Code Snippets"}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sdk.hardware.copyToClipboard(sdk.snippets.cdnScriptTag());
+                      alert(lang === 'ru' ? "Тег CDN скопирован!" : "CDN script tag copied!");
+                    }}
+                    className="px-2.5 py-1 bg-[#251c35] hover:bg-[#3d2b4f] text-xs text-[#ff4d4d] font-bold rounded-lg border border-[#3d2b4f] transition-all cursor-pointer"
+                  >
+                    {lang === 'ru' ? "Скопировать HTML тег" : "Copy HTML Tag"}
+                  </button>
+                </div>
+
+                <div className="p-3 bg-[#100b17] rounded-xl border border-[#3d2b4f] font-mono text-[11px] text-gray-300 space-y-2 overflow-x-auto">
+                  <div className="text-[10px] text-[#ff4d4d] font-bold uppercase tracking-wider">// HTML5 CDN Script Tag</div>
+                  <pre className="text-emerald-400 whitespace-pre-wrap">{sdk.snippets.cdnScriptTag()}</pre>
+                </div>
+              </div>
+
+              {/* Interactive API Playground */}
+              <div className="pt-2 border-t border-[#3d2b4f] space-y-3">
+                <h4 className="text-xs font-black uppercase text-gray-200 tracking-wider flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-[#ff4d4d]" />
+                  {lang === 'ru' ? "Интерактивная песочница функций SDK" : "Interactive SDK API Playground"}
+                </h4>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const snap = sdk.store.getState();
+                      sdk.store.setState({ testCounter: (snap.testCounter || 0) + 1 });
+                      alert(JSON.stringify(sdk.store.getState(), null, 2));
+                    }}
+                    className="p-2.5 bg-[#251c35] hover:bg-[#3d2b4f] text-white text-[11px] font-bold rounded-xl border border-[#3d2b4f] transition-all text-center cursor-pointer"
+                  >
+                    ⚡ Store State
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const uuid = sdk.crypto.generateUUID();
+                      const signed = sdk.crypto.signPayload({ user: 'demo', event: 'click' });
+                      alert(`UUID: ${uuid}\n\nSigned Payload: ${JSON.stringify(signed)}`);
+                    }}
+                    className="p-2.5 bg-[#251c35] hover:bg-[#3d2b4f] text-white text-[11px] font-bold rounded-xl border border-[#3d2b4f] transition-all text-center cursor-pointer"
+                  >
+                    🔐 Crypto & Hash
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const bench = await sdk.benchmark.runBenchmark();
+                      alert(`CPU & DOM Benchmark:\nMath Ops: ${bench.mathOpsDurationMs}ms\nDOM Ops: ${bench.domOpsDurationMs}ms\nRating: ${bench.overallRating}`);
+                    }}
+                    className="p-2.5 bg-[#251c35] hover:bg-[#3d2b4f] text-white text-[11px] font-bold rounded-xl border border-[#3d2b4f] transition-all text-center cursor-pointer"
+                  >
+                    🚀 Run Benchmark
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sdk.hardware.vibrate([100, 50, 100]);
+                      sdk.notify(
+                        lang === 'ru' ? 'Тест уведомления' : 'Test Notification',
+                        lang === 'ru' ? 'Интерактивное событие сработало!' : 'Interactive event triggered!',
+                        'success'
+                      );
+                    }}
+                    className="p-2.5 bg-[#251c35] hover:bg-[#3d2b4f] text-white text-[11px] font-bold rounded-xl border border-[#3d2b4f] transition-all text-center cursor-pointer"
+                  >
+                    🔔 Notify & Vibrate
+                  </button>
+                </div>
+              </div>
+
+              {/* Platform Core Dependencies & Feature Flags */}
+              <div className="pt-3 border-t border-[#3d2b4f] space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase text-gray-200 tracking-wider flex items-center gap-1.5">
+                    <Shield size={14} className="text-[#ff4d4d]" />
+                    {lang === 'ru' ? "Флаги фичей платформы & Плагины SDK" : "Platform Feature Flags & SDK Plugins"}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const platformInfo = sdk.platform.getPlatformInfo();
+                      alert(`Platform Status:\nRuntime: ${platformInfo.runtime}\nOnline: ${platformInfo.online}\nVersion: ${platformInfo.version}`);
+                    }}
+                    className="px-2 py-1 bg-[#251c35] hover:bg-[#3d2b4f] text-[10px] font-extrabold text-[#ff4d4d] rounded-lg border border-[#3d2b4f] cursor-pointer"
+                  >
+                    {lang === 'ru' ? "Статус Платформы" : "Platform Status"}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  {Object.entries(sdk.features.getAll()).map(([feature, enabled]) => (
+                    <button
+                      key={feature}
+                      type="button"
+                      onClick={() => {
+                        sdk.features.set(feature, !enabled);
+                        // Force re-render
+                        setLocalTime(new Date().toLocaleTimeString());
+                      }}
+                      className={`p-2 rounded-xl text-[10px] font-bold text-left border transition-all cursor-pointer ${
+                        enabled 
+                          ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' 
+                          : 'bg-red-500/10 border-red-500/30 text-red-400'
+                      }`}
+                    >
+                      <div className="font-mono truncate">{feature}</div>
+                      <div className="text-[9px] opacity-75 uppercase mt-0.5">{enabled ? 'ENABLED' : 'DISABLED'}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* REAL-TIME SDK TELEMETRY LOG INSPECTOR */}
+            <div className="p-6 bg-[#15101e] rounded-2xl border border-[#3d2b4f] hover:border-[#ff4d4d]/50 transition-all space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-2">
+                  <Terminal size={16} />
+                  {lang === 'ru' ? "Логи SDK в реальном времени" : "Real-time SDK Telemetry"}
+                </h3>
+                <span className="text-[10px] font-mono text-gray-500">
+                  {sdkLogs.length} {lang === 'ru' ? 'записей' : 'logs'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                {['all', 'info', 'warn', 'error', 'system', 'perf', 'action'].map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setLogFilter(f)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border cursor-pointer shrink-0 ${
+                      logFilter === f
+                        ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#15101e]'
+                        : 'bg-[#251c35] border-[#3d2b4f] text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+
+              <div className="h-44 overflow-y-auto bg-[#100b17] border border-[#3d2b4f]/70 rounded-xl p-3 font-mono text-[11px] space-y-1.5 no-scrollbar">
+                {sdkLogs.filter(l => logFilter === 'all' || l.level === logFilter).length === 0 ? (
+                  <div className="text-gray-600 italic text-center py-8">
+                    {lang === 'ru' ? 'Ожидание событий SDK...' : 'Waiting for SDK events...'}
+                  </div>
+                ) : (
+                  sdkLogs
+                    .filter(l => logFilter === 'all' || l.level === logFilter)
+                    .map((log, idx) => (
+                      <div key={idx} className="flex items-start gap-2 leading-tight">
+                        <span className="text-gray-600 shrink-0">{log.time}</span>
+                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase shrink-0 ${
+                          log.level === 'error' ? 'bg-red-500/20 text-red-400' :
+                          log.level === 'warn' ? 'bg-amber-500/20 text-amber-400' :
+                          log.level === 'system' ? 'bg-blue-500/20 text-blue-400' :
+                          log.level === 'perf' ? 'bg-purple-500/20 text-purple-400' :
+                          'bg-emerald-500/20 text-emerald-400'
+                        }`}>
+                          {log.level}
+                        </span>
+                        <span className="text-gray-300 break-all">{log.message}</span>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
 
             <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d]">
               {t.sdkSystem}

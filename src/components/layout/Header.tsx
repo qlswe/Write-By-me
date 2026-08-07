@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw, Terminal, Smartphone, UserPlus, Type, Minus, Plus } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw, Terminal, Smartphone, UserPlus } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
@@ -11,7 +11,6 @@ import { EmailLoginModal } from '../ui/EmailLoginModal';
 import { PwaInstallModal } from '../ui/PwaInstallModal';
 import { usePWA } from '../../hooks/usePWA';
 import { sdk } from '../../sdk';
-import { useFontSize } from '../../hooks/useFontSize';
 
 interface HeaderProps {
   lang: Language;
@@ -53,8 +52,6 @@ export const Header: React.FC<HeaderProps> = ({
   const { canInstall, isInstalled, installPWA } = usePWA();
   const [profileOpen, setProfileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const [fontSizeOpen, setFontSizeOpen] = useState(false);
-  const { fontSizePercent, setFontSize, increaseFontSize, decreaseFontSize } = useFontSize();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [emailLoginModalOpen, setEmailLoginModalOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -168,12 +165,13 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 ml-auto">
             {/* Custom Language Selector */}
-            <div className="relative">
+            <div className="relative shrink-0">
               <button 
+                type="button"
                 onClick={() => setLangOpen(!langOpen)}
-                className="flex items-center gap-1 sm:gap-2 bg-[#251c35]/60 border border-[#3d2b4f]/50 hover:border-[#ff4d4d] text-gray-200 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest group cursor-pointer"
+                className="flex items-center gap-1.5 bg-[#251c35]/60 border border-[#3d2b4f]/50 hover:border-[#ff4d4d] text-gray-200 px-2.5 py-1.5 rounded-xl text-xs font-extrabold transition-all uppercase tracking-wider group cursor-pointer shrink-0"
               >
-                <Globe size={13} className="text-[#ff4d4d] transition-transform shrink-0" />
+                <Globe size={14} className="text-[#ff4d4d] transition-transform shrink-0" />
                 <span>{lang}</span>
               </button>
               
@@ -197,8 +195,9 @@ export const Header: React.FC<HeaderProps> = ({
                       return (
                       <button
                         key={l}
+                        type="button"
                         onClick={() => { setLang(l); setLangOpen(false); }}
-                        className={`w-full text-left px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        className={`w-full text-left px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
                           lang === l 
                             ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
                             : 'text-gray-400 hover:bg-[#251c35] hover:text-white'
@@ -207,123 +206,6 @@ export const Header: React.FC<HeaderProps> = ({
                         {langNames[l]}
                       </button>
                     )})}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Quick Font Size Toggle Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setFontSizeOpen(!fontSizeOpen)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all duration-300 active:scale-95 shadow-md text-xs font-bold cursor-pointer ${
-                  fontSizeOpen || fontSizePercent !== 100
-                    ? 'bg-[#ff4d4d]/20 border-[#ff4d4d] text-white shadow-[0_0_12px_rgba(255,77,77,0.3)]'
-                    : 'bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d]'
-                }`}
-                title={(t as any).fontSizeTitle || (lang === 'ru' ? "Размер шрифта для чтения" : "Reading Font Size")}
-              >
-                <Type size={14} className="text-[#ff4d4d]" />
-                <span className="hidden sm:inline font-mono text-[11px]">{fontSizePercent}%</span>
-              </button>
-
-              <AnimatePresence>
-                {fontSizeOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-2 w-64 bg-[#251c35] border border-[#3d2b4f] rounded-2xl shadow-2xl p-4 z-50 space-y-3"
-                  >
-                    <div className="flex items-center justify-between border-b border-[#3d2b4f] pb-2">
-                      <span className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5">
-                        <Type size={14} className="text-[#ff4d4d]" />
-                        {(t as any).fontSizeTitle || (lang === 'ru' ? "Размер шрифта" : "Reading Font Size")}
-                      </span>
-                      <span className="text-xs font-mono font-bold text-[#ff4d4d] bg-[#15101e] px-2 py-0.5 rounded border border-[#ff4d4d]/30">
-                        {fontSizePercent}%
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-gray-400 leading-tight">
-                      {(t as any).fontSizeDesc || (lang === 'ru' ? "Увеличьте или уменьшите размер текста для комфортного чтения" : "Adjust text size for better reading accessibility")}
-                    </p>
-
-                    <div className="flex items-center gap-1.5 bg-[#15101e] p-1.5 rounded-xl border border-[#3d2b4f]">
-                      <button
-                        type="button"
-                        onClick={decreaseFontSize}
-                        disabled={fontSizePercent <= 80}
-                        className="p-1.5 bg-[#251c35] hover:bg-[#3d2b4f] disabled:opacity-30 text-white rounded-lg border border-[#3d2b4f] transition-all cursor-pointer"
-                        title={lang === 'ru' ? "Уменьшить шрифт" : "Decrease Font Size"}
-                      >
-                        <Minus size={14} />
-                      </button>
-
-                      <div className="flex-1 text-center font-mono text-xs font-bold text-white">
-                        {fontSizePercent}%
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={increaseFontSize}
-                        disabled={fontSizePercent >= 150}
-                        className="p-1.5 bg-[#251c35] hover:bg-[#3d2b4f] disabled:opacity-30 text-white rounded-lg border border-[#3d2b4f] transition-all cursor-pointer"
-                        title={lang === 'ru' ? "Увеличить шрифт" : "Increase Font Size"}
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setFontSize(90)}
-                        className={`py-1 px-2 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
-                          fontSizePercent === 90 ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#15101e]' : 'bg-[#15101e] border-[#3d2b4f] text-gray-300 hover:text-white'
-                        }`}
-                      >
-                        90% (A-)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFontSize(100)}
-                        className={`py-1 px-2 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
-                          fontSizePercent === 100 ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#15101e]' : 'bg-[#15101e] border-[#3d2b4f] text-gray-300 hover:text-white'
-                        }`}
-                      >
-                        100% ({lang === 'ru' ? 'Обычный' : 'Norm'})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFontSize(112)}
-                        className={`py-1 px-2 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
-                          fontSizePercent === 112 ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#15101e]' : 'bg-[#15101e] border-[#3d2b4f] text-gray-300 hover:text-white'
-                        }`}
-                      >
-                        112% (A+)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFontSize(125)}
-                        className={`py-1 px-2 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
-                          fontSizePercent === 125 ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#15101e]' : 'bg-[#15101e] border-[#3d2b4f] text-gray-300 hover:text-white'
-                        }`}
-                      >
-                        125% (A++)
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSection('sdk');
-                        setFontSizeOpen(false);
-                      }}
-                      className="w-full py-1.5 text-center text-[10px] font-bold uppercase tracking-wider text-[#ff4d4d] hover:underline cursor-pointer"
-                    >
-                      {lang === 'ru' ? 'Все настройки доступности →' : 'All accessibility settings →'}
-                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>

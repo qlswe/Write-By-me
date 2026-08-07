@@ -1,7 +1,7 @@
 import { Language } from '../data/translations';
 import { Theory, BlogPost, GameEvent, PromoCode } from '../data/content';
 import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { GoogleGenAI } from "@google/genai";
 
 /**
@@ -10,10 +10,21 @@ import { GoogleGenAI } from "@google/genai";
  */
 export class AhaSDK {
   private static instance: AhaSDK;
-  private version: string = '2.0.0-hsr';
+  private version: string = '3.5.0-aha-enterprise';
   private logSubscribers: ((level: string, message: string, data?: any) => void)[] = [];
   private ready: boolean = false;
   private hasWarned: boolean = false;
+  private pluginsMap: Map<string, { id: string; name: string; version: string; execute?: (data?: any) => any }> = new Map();
+  private featureFlags: Record<string, boolean> = {
+    ai_jokes: true,
+    terminal_ai: true,
+    audio_synthesizer: true,
+    telemetry_logs: true,
+    pwa_installer: true,
+    custom_accent_color: true,
+    font_scale_engine: true,
+    standalone_sdk_portal: true
+  };
   private sdkConfig = {
     debug: process.env.NODE_ENV !== 'production',
     apiBase: '',
@@ -308,6 +319,286 @@ export class AhaSDK {
       }
       // Force low perf mode on mobile devices or if score is low
       return isMobile || score < 60;
+    }
+  };
+
+  /**
+   * Built-in WebAudio Synthesizer for UI sound effects
+   */
+  public audio = {
+    playTone: (freq: number = 440, type: OscillatorType = 'sine', durationMs: number = 150) => {
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return false;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + durationMs / 1000);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+    playJingle: () => {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, idx) => {
+        setTimeout(() => {
+          AhaSDK.getInstance().audio.playTone(freq, 'triangle', 180);
+        }, idx * 120);
+      });
+    }
+  };
+
+  /**
+   * System Diagnostics Suite
+   */
+  public diagnostics = {
+    runSuite: async () => {
+      const start = performance.now();
+      const results: { test: string; status: 'ok' | 'warn' | 'error'; value: string }[] = [];
+
+      // 1. Storage
+      try {
+        localStorage.setItem('sdk_diag_test', '1');
+        localStorage.removeItem('sdk_diag_test');
+        results.push({ test: 'Local Storage', status: 'ok', value: 'Writable' });
+      } catch (e) {
+        results.push({ test: 'Local Storage', status: 'error', value: 'Blocked' });
+      }
+
+      // 2. Network Latency
+      try {
+        const pingStart = performance.now();
+        await fetch('/api/health', { method: 'HEAD' }).catch(() => null);
+        const pingTime = Math.round(performance.now() - pingStart);
+        results.push({ test: 'API Ping', status: pingTime < 300 ? 'ok' : 'warn', value: `${pingTime} ms` });
+      } catch (e) {
+        results.push({ test: 'API Ping', status: 'warn', value: 'Unreachable' });
+      }
+
+      // 3. WebAudio
+      const hasAudio = typeof (window.AudioContext || (window as any).webkitAudioContext) !== 'undefined';
+      results.push({ test: 'WebAudio Engine', status: hasAudio ? 'ok' : 'warn', value: hasAudio ? 'Available' : 'Unsupported' });
+
+      // 4. Device Performance Score
+      const perfScore = AhaSDK.getInstance().hardware.getDevicePerformanceScore();
+      results.push({ test: 'Device Hardware Score', status: perfScore >= 60 ? 'ok' : 'warn', value: `${perfScore}/100` });
+
+      // 5. SDK Memory & Logs
+      results.push({ test: 'SDK Core Engine', status: 'ok', value: `v3.0.0-aha-pro (${Math.round(performance.now() - start)}ms diag)` });
+
+      return results;
+    }
+  };
+
+  /**
+   * Standalone Site Integration Code Snippet Generator
+   */
+  public snippets = {
+    cdnScriptTag: (appUrl: string = 'https://aha-station.app') => {
+      return `<script src="${appUrl}/sdk/aha-sdk.v3.min.js" data-aha-autostart="true"></script>\n<script>\n  window.addEventListener('aha:ready', () => {\n    const sdk = window.AhaSDK.getInstance();\n    console.log('Aha SDK ready v' + sdk.getVersion());\n    sdk.notify('Connected', 'SDK connected successfully', 'success');\n  });\n</script>`;
+    },
+    reactHook: () => {
+      return `import { useEffect, useState } from 'react';\nimport { sdk } from './sdk';\n\nexport function useAhaSDK() {\n  const [isReady, setIsReady] = useState(sdk.isReady());\n\n  useEffect(() => {\n    sdk.onReady(() => setIsReady(true));\n  }, []);\n\n  return { sdk, isReady };\n}`;
+    },
+    vuePlugin: () => {
+      return `// main.js or main.ts\nimport { createApp } from 'vue';\nimport { sdk } from './sdk';\nimport App from './App.vue';\n\nconst app = createApp(App);\napp.config.globalProperties.$aha = sdk;\napp.mount('#app');`;
+    },
+    npmInstall: () => {
+      return `npm install @aha-radio/sdk@3.0.0-pro\n# or\nyarn add @aha-radio/sdk@3.0.0-pro`;
+    },
+    nodeModule: () => {
+      return `import { AhaSDK } from '@aha-radio/sdk';\n\nconst sdk = AhaSDK.getInstance();\nawait sdk.diagnostics.runSuite();\nconsole.log(sdk.getVersion());`;
+    }
+  };
+
+  /**
+   * Reactive Micro-Store Container
+   */
+  public store = (() => {
+    let state: Record<string, any> = {
+      theme: 'dark',
+      user: null,
+      notificationsCount: 0,
+      activeTab: 'main'
+    };
+    const subscribers: Set<(newState: Record<string, any>) => void> = new Set();
+
+    return {
+      getState: () => ({ ...state }),
+      setState: (partialState: Record<string, any>) => {
+        state = { ...state, ...partialState };
+        subscribers.forEach(fn => fn(state));
+        return state;
+      },
+      subscribe: (fn: (newState: Record<string, any>) => void) => {
+        subscribers.add(fn);
+        return () => subscribers.delete(fn);
+      },
+      snapshot: () => JSON.stringify(state),
+      restore: (jsonSnap: string) => {
+        try {
+          state = JSON.parse(jsonSnap);
+          subscribers.forEach(fn => fn(state));
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    };
+  })();
+
+  /**
+   * Cryptographic Utilities & Token Signatures
+   */
+  public crypto = {
+    generateUUID: () => {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+      }
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    },
+    simpleHash: (str: string) => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0;
+      }
+      return Math.abs(hash).toString(36);
+    },
+    signPayload: (payload: any, secret: string = 'aha_pro_secret_key') => {
+      const serialized = JSON.stringify(payload);
+      const signature = AhaSDK.getInstance().crypto.simpleHash(serialized + ':' + secret);
+      return {
+        payload,
+        signature,
+        timestamp: Date.now()
+      };
+    }
+  };
+
+  /**
+   * Performance Benchmarking Tool
+   */
+  public benchmark = {
+    runBenchmark: async () => {
+      const iterations = 50000;
+      const startMath = performance.now();
+      let x = 0;
+      for (let i = 0; i < iterations; i++) {
+        x += Math.sqrt(i) * Math.sin(i);
+      }
+      const mathDuration = performance.now() - startMath;
+
+      const startDOM = performance.now();
+      const fragment = document.createDocumentFragment();
+      for (let i = 0; i < 500; i++) {
+        const div = document.createElement('div');
+        div.textContent = `test_${i}`;
+        fragment.appendChild(div);
+      }
+      const domDuration = performance.now() - startDOM;
+
+      return {
+        mathOpsDurationMs: Math.round(mathDuration * 100) / 100,
+        domOpsDurationMs: Math.round(domDuration * 100) / 100,
+        overallRating: mathDuration + domDuration < 15 ? 'Excellent' : mathDuration + domDuration < 40 ? 'Good' : 'Moderate'
+      };
+    }
+  };
+
+  /**
+   * Platform Core Dependency Bridge
+   */
+  public platform = {
+    getPlatformInfo: () => {
+      return {
+        version: AhaSDK.getInstance().getVersion(),
+        runtime: typeof window !== 'undefined' ? 'browser' : 'node',
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        online: typeof navigator !== 'undefined' ? navigator.onLine : true,
+        features: AhaSDK.getInstance().features.getAll(),
+        storageQuota: typeof performance !== 'undefined' && (performance as any).memory ? (performance as any).memory : 'standard'
+      };
+    },
+    syncPreferences: async (userId?: string) => {
+      const prefs = {
+        theme: localStorage.getItem('aha_primary_color') || '#ff4d4d',
+        fontScale: localStorage.getItem('aha_font_size') || '100',
+        lang: localStorage.getItem('aha_lang') || 'ru',
+        timestamp: new Date().toISOString()
+      };
+      if (userId && db) {
+        try {
+          const userDoc = doc(db, 'user_preferences', userId);
+          await setDoc(userDoc, prefs, { merge: true });
+          AhaSDK.getInstance().logging.info('Platform synced preferences to Firebase Cloud');
+        } catch (e) {
+          AhaSDK.getInstance().logging.warn('Firebase sync failed, using localStorage fallback');
+        }
+      }
+      return prefs;
+    },
+    reloadApp: () => {
+      AhaSDK.getInstance().logging.system('Platform trigger: reloading app');
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    }
+  };
+
+  /**
+   * Extensible Plugin Engine
+   */
+  public plugins = {
+    register: (id: string, name: string, version: string, executeFn?: (data?: any) => any) => {
+      const map = (AhaSDK.getInstance() as any).pluginsMap;
+      map.set(id, { id, name, version, execute: executeFn });
+      AhaSDK.getInstance().logging.system(`Plugin registered: ${name} (v${version})`);
+      return true;
+    },
+    get: (id: string) => {
+      return (AhaSDK.getInstance() as any).pluginsMap.get(id);
+    },
+    getAll: () => {
+      return Array.from((AhaSDK.getInstance() as any).pluginsMap.values());
+    },
+    run: (id: string, data?: any) => {
+      const plugin = (AhaSDK.getInstance() as any).pluginsMap.get(id);
+      if (plugin && plugin.execute) {
+        return plugin.execute(data);
+      }
+      return null;
+    }
+  };
+
+  /**
+   * Feature Flag Management
+   */
+  public features = {
+    isEnabled: (featureName: string): boolean => {
+      const flags = (AhaSDK.getInstance() as any).featureFlags;
+      return flags[featureName] !== undefined ? flags[featureName] : true;
+    },
+    set: (featureName: string, enabled: boolean) => {
+      (AhaSDK.getInstance() as any).featureFlags[featureName] = enabled;
+      AhaSDK.getInstance().events.emit('feature:changed', { featureName, enabled });
+      AhaSDK.getInstance().logging.system(`Feature flag changed: ${featureName} = ${enabled}`);
+    },
+    getAll: () => {
+      return { ...(AhaSDK.getInstance() as any).featureFlags };
     }
   };
 

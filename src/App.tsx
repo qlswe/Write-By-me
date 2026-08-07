@@ -76,7 +76,6 @@ let hasPrintedStopWarning = false;
 
 import { Changelog } from './components/ui/Changelog';
 import { logUserTelemetry } from './utils/telemetry';
-import { AntiAdblockBanner } from './components/ui/AntiAdblockBanner';
 
 export default function App() {
   const { trackRender } = usePerfLogger('App');
@@ -1321,9 +1320,6 @@ export default function App() {
           }}
         />
       )}
-
-      {/* Resilient AdBlock detection and bypass notification */}
-      <AntiAdblockBanner lang={lang} />
     </div>
   );
 }
