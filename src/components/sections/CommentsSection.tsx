@@ -18,6 +18,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { useLimits } from '../../hooks/useLimits';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { generatePrefixedId } from '../../utils/idGenerator';
+import { dbQueryCore } from '../../utils/dbQueryCore';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Comment {
@@ -150,7 +151,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     };
   }, [targetId]);
 
-  // Dynamic profiles fetching
+  // Dynamic profiles fetching with dbQueryCore micro-batching & negative caching
   useEffect(() => {
     if (comments.length === 0) return;
     const uidsToFetch = Array.from(new Set(comments.map(c => c.authorUid))).filter(uid => uid && typeof uid === 'string' && uid.trim() !== '' && !authorProfiles[uid]);
@@ -160,12 +161,11 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
       const newProfiles: Record<string, any> = {};
       for (const uid of uidsToFetch) {
         try {
-          const snap = await getDoc(doc(db, 'public_profiles', uid));
-          if (snap.exists()) {
-            newProfiles[uid] = snap.data();
-          }
+          const profileData = await dbQueryCore.getProfileBatched(uid);
+          newProfiles[uid] = profileData || { displayName: 'Пользователь', photoURL: '' };
         } catch (e) {
           console.error("Error fetching author profile:", e);
+          newProfiles[uid] = { displayName: 'Пользователь', photoURL: '' };
         }
       }
       if (Object.keys(newProfiles).length > 0) {

@@ -1,17 +1,19 @@
 export interface AccentColorOption {
   name: string;
   nameRu: string;
+  shortRu: string;
+  shortEn: string;
   hex: string;
 }
 
 export const ACCENT_COLOR_PRESETS: AccentColorOption[] = [
-  { name: 'Cyber Red (Default)', nameRu: 'Кибер Красный (По умолчанию)', hex: '#ff4d4d' },
-  { name: 'Neon Cyan', nameRu: 'Неоновый Циан', hex: '#00f0ff' },
-  { name: 'Cyber Purple', nameRu: 'Кибер Фиолетовый', hex: '#a855f7' },
-  { name: 'Emerald Green', nameRu: 'Изумрудный Зеленый', hex: '#10b981' },
-  { name: 'Solar Amber', nameRu: 'Солнечный Янтарный', hex: '#f59e0b' },
-  { name: 'Electric Pink', nameRu: 'Электрический Розовый', hex: '#ec4899' },
-  { name: 'Royal Blue', nameRu: 'Королевский Синий', hex: '#3b82f6' },
+  { name: 'Cyber Red (Default)', nameRu: 'Кибер Красный (По умолчанию)', shortRu: 'Кибер', shortEn: 'Cyber', hex: '#ff4d4d' },
+  { name: 'Neon Cyan', nameRu: 'Неоновый Циан', shortRu: 'Неоновый', shortEn: 'Neon', hex: '#00f0ff' },
+  { name: 'Cyber Purple', nameRu: 'Кибер Фиолетовый', shortRu: 'Фиолетовый', shortEn: 'Purple', hex: '#a855f7' },
+  { name: 'Emerald Green', nameRu: 'Изумрудный Зеленый', shortRu: 'Изумрудный', shortEn: 'Emerald', hex: '#10b981' },
+  { name: 'Solar Amber', nameRu: 'Солнечный Янтарный', shortRu: 'Солнечный', shortEn: 'Solar', hex: '#f59e0b' },
+  { name: 'Electric Pink', nameRu: 'Электрический Розовый', shortRu: 'Электрик', shortEn: 'Electric', hex: '#ec4899' },
+  { name: 'Royal Blue', nameRu: 'Королевский Синий', shortRu: 'Королевский', shortEn: 'Royal', hex: '#3b82f6' },
 ];
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {

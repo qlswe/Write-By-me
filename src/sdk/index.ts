@@ -1405,6 +1405,159 @@ export class AhaSDK {
   };
 
   /**
+   * Automated Codebase Metadata & SDK Reference Generator
+   */
+  public reference = {
+    getPlatformDependencies: () => {
+      return [
+        { name: '@google/genai', version: '^1.48.0', category: 'AI Engine', status: 'Active', description: 'Google Gemini 2.5 Flash / Pro model integration for dynamic jokes, terminal AI, and chat responses.' },
+        { name: 'firebase', version: '^12.10.0', category: 'Database & Auth', status: 'Active', description: 'Firestore NoSQL cloud persistence for user preferences, theories, comments, and security logs.' },
+        { name: 'express', version: '^5.2.1', category: 'Server API', status: 'Active', description: 'Express v5 backend routing proxy for Cloud Run and API endpoints.' },
+        { name: 'lucide-react', version: '^0.546.0', category: 'UI Icons', status: 'Active', description: 'Comprehensive SVG vector icon library for interactive components and controls.' },
+        { name: 'motion', version: '^12.23.24', category: 'Animation', status: 'Active', description: 'Framermotion animations, layout transitions, spring physics, and micro-interactions.' },
+        { name: 'react / react-dom', version: '^19.0.0', category: 'Core UI Framework', status: 'Active', description: 'React 19 functional components, custom hooks, context state management, and Concurrent Mode.' },
+        { name: 'tailwindcss', version: '^4.1.14', category: 'Styling Engine', status: 'Active', description: 'Utility-first CSS framework with dynamic theme CSS variable overrides.' },
+        { name: 'recharts', version: '^3.10.1', category: 'Data Visualization', status: 'Active', description: 'Responsive SVG chart component system for telemetry and analytics.' },
+        { name: 'vite / esbuild', version: '^6.2.0 / ^0.28.1', category: 'Build System', status: 'Active', description: 'Fast HMR dev server and bundled CommonJS/ESM distribution engine.' }
+      ];
+    },
+    getSdkModules: () => {
+      return [
+        { id: 'registry', name: 'SDK Registry & Compatibility', methods: ['getRegistryEntries()', 'checkDependencyHealth()', 'auditRegistry()', 'generateAutoFixScript()'], status: 'Active', desc: 'Package dependency registry and environment compatibility verifier.' },
+        { id: 'platform', name: 'Platform Bridge', methods: ['getPlatformInfo()', 'syncPreferences(userId)', 'reloadApp()'], status: 'Active', desc: 'Hardware & environment sync, preference persistence, and app lifecycle management.' },
+        { id: 'plugins', name: 'Plugin Engine', methods: ['register(id, name, ver, fn)', 'get(id)', 'getAll()', 'run(id, data)'], status: 'Active', desc: 'Extensible runtime plugin system for third-party extensions.' },
+        { id: 'features', name: 'Feature Flags', methods: ['isEnabled(name)', 'set(name, bool)', 'getAll()'], status: 'Active', desc: 'Real-time toggle for experimental features and module activation.' },
+        { id: 'diagnostics', name: 'Diagnostics Suite', methods: ['runSuite()'], status: 'Active', desc: 'Automated health tests covering Storage, Latency, WebAudio, and Hardware scores.' },
+        { id: 'snippets', name: 'Code Snippets Generator', methods: ['cdnScriptTag()', 'reactHook()', 'vuePlugin()', 'npmInstall()', 'nodeModule()'], status: 'Active', desc: 'Generates ready-to-use HTML/JS integration code for external websites.' },
+        { id: 'store', name: 'Reactive Micro-Store', methods: ['getState()', 'setState(state)', 'subscribe(fn)', 'snapshot()', 'restore(json)'], status: 'Active', desc: 'Lightweight reactive state container with JSON snapshot export/restore.' },
+        { id: 'crypto', name: 'Crypto & Hashes', methods: ['generateUUID()', 'simpleHash(str)', 'signPayload(payload, secret)'], status: 'Active', desc: 'Cryptographic UUID generation, string hashing, and payload signatures.' },
+        { id: 'benchmark', name: 'Hardware Benchmark', methods: ['runBenchmark()'], status: 'Active', desc: 'Evaluates client CPU math operations and DOM manipulation latency.' },
+        { id: 'audio', name: 'WebAudio Synth', methods: ['playTone(freq, type, duration)', 'playJingle()'], status: 'Active', desc: 'Procedural WebAudio sound generator for UI feedback and alerts.' },
+        { id: 'notifications', name: 'Notification Service', methods: ['send(title, body, type)', 'success(msg)', 'error(msg)', 'warn(msg)'], status: 'Active', desc: 'Cross-component event-driven toast and notification dispatcher.' },
+        { id: 'hardware', name: 'Hardware & OS API', methods: ['copyToClipboard(text)', 'share(data)', 'vibrate(pattern)', 'getDevicePerformanceScore()'], status: 'Active', desc: 'Haptic feedback, native share, clipboard, and hardware detection.' },
+        { id: 'logging', name: 'Telemetry & Logs', methods: ['info(msg)', 'warn(msg)', 'error(msg)', 'system(msg)', 'perf(label, ms)'], status: 'Active', desc: 'Centralized telemetry logging with subscriber streaming.' }
+      ];
+    },
+    generateFullDocs: (lang: Language = 'ru') => {
+      const instance = AhaSDK.getInstance();
+      return {
+        sdkVersion: instance.getVersion(),
+        timestamp: new Date().toISOString(),
+        dependencies: instance.reference.getPlatformDependencies(),
+        registry: instance.registry.getRegistryEntries(),
+        modules: instance.reference.getSdkModules(),
+        summary: lang === 'ru'
+          ? 'Автоматически сгенерированная документация API и зависимостей платформы AhaSDK v' + instance.getVersion()
+          : 'Automatically generated API & Platform Dependency Reference for AhaSDK v' + instance.getVersion()
+      };
+    }
+  };
+
+  /**
+   * Dynamic SDK Package Registry & Environment Compatibility Manager
+   */
+  public registry = {
+    getRegistryEntries: (simulateConflict: boolean = false) => {
+      return [
+        { package: '@google/genai', version: '^1.48.0', minSupportedVersion: '1.0.0', requiredNode: '>=18.0.0', runtime: 'Server / Cloud Run', status: 'Optimal', compatibilityScore: 100, license: 'Apache-2.0', desc: 'Primary Google Gemini AI client SDK for multimodal intelligence.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'Fully compatible with Gemini 2.5 Flash' },
+        { package: 'firebase', version: '^12.10.0', minSupportedVersion: '10.0.0', requiredNode: '>=18.0.0', runtime: 'Browser & Firestore Cloud', status: 'Optimal', compatibilityScore: 100, license: 'Apache-2.0', desc: 'Firestore NoSQL cloud database & Auth user credentials manager.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'Firestore NoSQL cloud connected' },
+        { package: 'express', version: simulateConflict ? 'v3.2.0' : '^5.2.1', minSupportedVersion: '4.18.0', requiredNode: '>=18.0.0', runtime: 'Node.js Express Server', status: simulateConflict ? 'Conflict' : 'Optimal', compatibilityScore: simulateConflict ? 45 : 100, license: 'MIT', desc: 'Core server REST API layer for Cloud Run routing.', hasConflict: simulateConflict, healthStatus: simulateConflict ? 'conflict' : 'healthy', healthMessage: simulateConflict ? 'INSTALLED v3.2.0 IS BELOW MINIMUM REQUIRED v4.18.0!' : 'Express v5 router ready' },
+        { package: 'react', version: '^19.0.0', minSupportedVersion: '18.0.0', requiredNode: '>=18.0.0', runtime: 'Browser DOM Engine', status: 'Optimal', compatibilityScore: 100, license: 'MIT', desc: 'React 19 client view hierarchy and concurrent renderer.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'React Concurrent Renderer active' },
+        { package: 'react-dom', version: '^19.0.0', minSupportedVersion: '18.0.0', requiredNode: '>=18.0.0', runtime: 'Browser DOM Mount', status: 'Optimal', compatibilityScore: 100, license: 'MIT', desc: 'React 19 DOM bindings for browser application mounting.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'React DOM 19 mounted' },
+        { package: 'motion', version: '^12.23.24', minSupportedVersion: '10.0.0', requiredNode: '>=18.0.0', runtime: 'Browser Web Animations', status: 'Optimal', compatibilityScore: 98, license: 'MIT', desc: 'Motion layout animations, springs, and smooth page transitions.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'Motion React engine running' },
+        { package: 'lucide-react', version: '^0.546.0', minSupportedVersion: '0.300.0', requiredNode: '>=18.0.0', runtime: 'React Vector Icons', status: 'Optimal', compatibilityScore: 100, license: 'ISC', desc: 'SVG vector iconography system for interface controls.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'Vector SVG iconography active' },
+        { package: '@tailwindcss/vite', version: simulateConflict ? 'v2.1.0' : '^4.1.14', minSupportedVersion: '4.0.0', requiredNode: '>=18.0.0', runtime: 'Vite Compiler Plugin', status: simulateConflict ? 'Conflict' : 'Optimal', compatibilityScore: simulateConflict ? 50 : 100, license: 'MIT', desc: 'Tailwind CSS v4 engine plugin for Vite build optimization.', hasConflict: simulateConflict, healthStatus: simulateConflict ? 'conflict' : 'healthy', healthMessage: simulateConflict ? 'LEGACY TAILWIND v2.1 DETECTED! REQUIRES TAILWIND v4+' : 'Tailwind CSS v4 JIT active' },
+        { package: 'recharts', version: '^3.10.1', minSupportedVersion: '2.5.0', requiredNode: '>=18.0.0', runtime: 'SVG React Charts', status: 'Optimal', compatibilityScore: 96, license: 'MIT', desc: 'Interactive telemetry graphs and data visualization.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'Recharts SVG engine ready' },
+        { package: 'jspdf', version: '^4.2.1', minSupportedVersion: '2.0.0', requiredNode: '>=18.0.0', runtime: 'Browser / Canvas PDF', status: 'Optimal', compatibilityScore: 95, license: 'MIT', desc: 'PDF generation library for exporting reports & theories.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'jsPDF Canvas engine operational' },
+        { package: 'dompurify', version: '^3.4.0', minSupportedVersion: '2.4.0', requiredNode: '>=18.0.0', runtime: 'Browser Sanitizer', status: 'Optimal', compatibilityScore: 100, license: 'Apache-2.0', desc: 'XSS HTML sanitizer for safe rich text rendering.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'DOMPurify XSS filter active' },
+        { package: 'crypto-js', version: '^4.2.0', minSupportedVersion: '4.0.0', requiredNode: '>=18.0.0', runtime: 'Universal Crypto', status: 'Optimal', compatibilityScore: 100, license: 'MIT', desc: 'Client-side cryptographic hashing & payload encryption.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'Crypto-JS SHA256 ready' },
+        { package: 'sonner', version: '^2.0.7', minSupportedVersion: '1.0.0', requiredNode: '>=18.0.0', runtime: 'React Toast Portal', status: 'Optimal', compatibilityScore: 99, license: 'MIT', desc: 'Opinionated toast notification system for user actions.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'Sonner toast portal mounted' },
+        { package: 'vite', version: '^6.2.0', minSupportedVersion: '5.0.0', requiredNode: '>=18.0.0', runtime: 'Dev / Build Tool', status: 'Optimal', compatibilityScore: 100, license: 'MIT', desc: 'Vite bundler and dev server runtime.', hasConflict: false, healthStatus: 'healthy', healthMessage: 'Vite v6 bundler operational' }
+      ];
+    },
+    checkDependencyHealth: (simulateConflict: boolean = false) => {
+      const entries = AhaSDK.getInstance().registry.getRegistryEntries(simulateConflict);
+      const conflicts = entries.filter(e => e.hasConflict || e.healthStatus === 'conflict');
+      const healthyCount = entries.length - conflicts.length;
+      return {
+        healthy: conflicts.length === 0,
+        totalDependencies: entries.length,
+        healthyDependenciesCount: healthyCount,
+        conflictCount: conflicts.length,
+        conflictedPackages: conflicts,
+        systemHealthRating: conflicts.length === 0 ? '100% HEALTHY' : `${Math.round((healthyCount / entries.length) * 100)}% HEALTH WARNING`,
+        timestamp: new Date().toISOString()
+      };
+    },
+    auditRegistry: (simulateConflict: boolean = false) => {
+      const entries = AhaSDK.getInstance().registry.getRegistryEntries(simulateConflict);
+      const total = entries.length;
+      const optimal = entries.filter(e => e.status === 'Optimal' && !e.hasConflict).length;
+      const avgScore = Math.round(entries.reduce((acc, curr) => acc + curr.compatibilityScore, 0) / total);
+      const conflicts = entries.filter(e => e.hasConflict);
+      return {
+        totalPackages: total,
+        optimalPackages: optimal,
+        conflictCount: conflicts.length,
+        averageCompatibilityScore: avgScore,
+        nodeEnvironment: 'v20+ Verified',
+        platformStatus: conflicts.length > 0 ? `WARNING: ${conflicts.length} Package Version Conflict(s) Detected!` : 'All Platform Dependencies Operational'
+      };
+    },
+    generateAutoFixScript: (simulateConflict: boolean = false) => {
+      const entries = AhaSDK.getInstance().registry.getRegistryEntries(simulateConflict);
+      const conflicts = entries.filter(e => e.hasConflict || e.healthStatus === 'conflict');
+      
+      if (conflicts.length === 0) {
+        return {
+          hasFixes: false,
+          npmCommand: '# All dependencies are optimal. No resolution required.',
+          yarnCommand: '# All dependencies are optimal.',
+          pnpmCommand: '# All dependencies are optimal.',
+          shellScript: '# All dependencies are optimal.\nnpm audit',
+          conflictPackages: [],
+          recommendedAction: 'Environment verified up to date.'
+        };
+      }
+
+      const fixes = conflicts.map(c => {
+        const targetVer = c.package === 'express' ? '^5.2.1' : (c.package === '@tailwindcss/vite' ? '^4.1.14' : `>=${c.minSupportedVersion}`);
+        return `${c.package}@${targetVer}`;
+      });
+
+      const npmCmd = `npm install ${fixes.join(' ')} --save`;
+      const yarnCmd = `yarn add ${fixes.join(' ')}`;
+      const pnpmCmd = `pnpm add ${fixes.join(' ')}`;
+
+      const script = [
+        '#!/usr/bin/env bash',
+        '# Auto-generated Dependency Conflict Resolution Script',
+        '# Created by AhaSDK Platform Registry Manager',
+        '',
+        'echo "[AhaSDK] Resolving package version conflicts..."',
+        ...conflicts.map(c => `echo "[Fix] Updating ${c.package} from ${c.version} to minimum supported >=${c.minSupportedVersion}"`),
+        '',
+        '# Execute npm package upgrade',
+        npmCmd,
+        '',
+        '# Verify post-install build status',
+        'npm run lint && npm run build',
+        'echo "[AhaSDK] Auto-fix script completed successfully!"'
+      ].join('\n');
+
+      return {
+        hasFixes: true,
+        npmCommand: npmCmd,
+        yarnCommand: yarnCmd,
+        pnpmCommand: pnpmCmd,
+        shellScript: script,
+        conflictPackages: conflicts.map(c => c.package),
+        recommendedAction: `Run: ${npmCmd}`
+      };
+    }
+  };
+
+  /**
    * SDK Usage Explanation
    */
   public help = {

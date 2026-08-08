@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings, ShieldCheck, Cpu, RotateCw, Palette, Check, Save, RefreshCw, Type, Minus, Plus, RotateCcw, Volume2, Activity, Terminal, Download, Shield, Globe, Sparkles } from 'lucide-react';
+import { Settings, ShieldCheck, Cpu, RotateCw, Palette, Check, Save, RefreshCw, Type, Minus, Plus, RotateCcw, Volume2, Activity, Terminal, Download, Shield, Globe, Sparkles, BookOpen, Layers, Code2, PackageCheck, Search, CheckCircle2, AlertTriangle, AlertCircle, ShieldAlert, Wrench, Copy, Play, Trash2, Database, Flame } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { db } from '../../firebase';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { sdk } from '../../sdk';
+import { dbQueryCore } from '../../utils/dbQueryCore';
 import { AhaSecurityConsole } from '../security/AhaSecurity';
 import { ACCENT_COLOR_PRESETS, applyPrimaryAccentColor } from '../../utils/theme';
 import { useFontSize } from '../../hooks/useFontSize';
@@ -55,6 +56,77 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
   const [isRunningDiag, setIsRunningDiag] = useState(false);
   const [sdkLogs, setSdkLogs] = useState<{ level: string; message: string; data?: any; time: string }[]>([]);
   const [logFilter, setLogFilter] = useState<string>('all');
+
+  // Automated SDK Reference & Registry Explorer state
+  const [refTab, setRefTab] = useState<'registry' | 'deps' | 'modules' | 'json'>('registry');
+  const [selectedModuleId, setSelectedModuleId] = useState<string>('platform');
+  const [registrySearch, setRegistrySearch] = useState<string>('');
+  const [simulateConflict, setSimulateConflict] = useState<boolean>(false);
+  const [showAutoFixPanel, setShowAutoFixPanel] = useState<boolean>(false);
+  const [activeFixTool, setActiveFixTool] = useState<'npm' | 'yarn' | 'pnpm' | 'script'>('npm');
+  const [isPurgingCollection, setIsPurgingCollection] = useState<string | null>(null);
+
+  const handlePurgeCollection = async (collectionName: string) => {
+    if (!window.confirm(lang === 'ru' ? `Удалить ВСЕ записи в коллекции "${collectionName}"? Это действие необратимо!` : `Delete ALL records in collection "${collectionName}"? This action cannot be undone!`)) {
+      return;
+    }
+    setIsPurgingCollection(collectionName);
+    try {
+      const snap = await getDocs(collection(db, collectionName));
+      let count = 0;
+      const batch = writeBatch(db);
+      snap.docs.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+        count++;
+      });
+      if (count > 0) {
+        await batch.commit();
+      }
+      dbQueryCore.clearCache();
+      sdk.notify(
+        lang === 'ru' ? 'Коллекция очищена' : 'Collection Purged',
+        lang === 'ru' ? `Удалено ${count} документов из "${collectionName}"` : `Deleted ${count} documents from "${collectionName}"`,
+        'success'
+      );
+    } catch (err: any) {
+      alert((lang === 'ru' ? 'Ошибка очистки: ' : 'Purge Error: ') + err.message);
+    } finally {
+      setIsPurgingCollection(null);
+    }
+  };
+
+  const handlePurgeFullDatabase = async () => {
+    if (!window.confirm(lang === 'ru' ? 'ВНИМАНИЕ! Полная очистка Базы Данных (БД). Будут удалены все теории, блоги, сообщения форума, чаты и телеметрия. Продолжить?' : 'WARNING! Full Database Purge. This will delete all theories, blogs, forum topics, chats, and telemetry. Continue?')) {
+      return;
+    }
+    setIsPurgingCollection('ALL');
+    try {
+      const collectionsToPurge = ['telemetry', 'comments', 'forum_topics', 'chats', 'blog', 'theories', 'events'];
+      let totalDeleted = 0;
+      for (const colName of collectionsToPurge) {
+        const snap = await getDocs(collection(db, colName));
+        const batch = writeBatch(db);
+        snap.docs.forEach((docSnap) => {
+          batch.delete(docSnap.ref);
+          totalDeleted++;
+        });
+        if (snap.docs.length > 0) {
+          await batch.commit();
+        }
+      }
+      dbQueryCore.clearCache();
+      localStorage.clear();
+      sdk.notify(
+        lang === 'ru' ? 'БД Полностью Очищена' : 'Full Database Purged',
+        lang === 'ru' ? `Очищено ${totalDeleted} записей. Система переведена в автономный режим.` : `Cleared ${totalDeleted} records. Autonomous state re-initialized.`,
+        'success'
+      );
+    } catch (err: any) {
+      alert((lang === 'ru' ? 'Ошибка очистки БД: ' : 'Full Purge Error: ') + err.message);
+    } finally {
+      setIsPurgingCollection(null);
+    }
+  };
 
   useEffect(() => {
     const unsub = sdk.subscribeToLogs((level, message, data) => {
@@ -434,16 +506,16 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                           className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/30"
                           style={{ backgroundColor: preset.hex }}
                         />
-                        <span>{lang === 'ru' ? preset.nameRu.split(' ')[0] : preset.name.split(' ')[0]}</span>
-                        {isSelected && <Check size={12} className="text-white" />}
+                        <span>{lang === 'ru' ? (preset.shortRu || preset.nameRu) : (preset.shortEn || preset.name)}</span>
+                        {isSelected && <Check size={12} className="text-white shrink-0" />}
                       </button>
                     );
                   })}
                 </div>
 
                 {/* Custom HEX input + Color Picker + Save to Firestore */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2 border-t border-[#3d2b4f]/40">
-                  <div className="flex items-center gap-2 flex-1 bg-[#1a1326] border border-[#3d2b4f] rounded-xl px-3 py-1.5">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-[#3d2b4f]/40 flex-wrap">
+                  <div className="flex items-center gap-2 flex-1 min-w-[180px] bg-[#1a1326] border border-[#3d2b4f] rounded-xl px-3 py-1.5">
                     <input
                       type="color"
                       value={customHexInput.startsWith('#') && customHexInput.length === 7 ? customHexInput : '#ff4d4d'}
@@ -452,7 +524,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                         setCurrentAccentColor(e.target.value);
                         applyPrimaryAccentColor(e.target.value);
                       }}
-                      className="w-7 h-7 rounded cursor-pointer bg-transparent border-0"
+                      className="w-7 h-7 rounded cursor-pointer bg-transparent border-0 shrink-0"
                     />
                     <input
                       type="text"
@@ -465,17 +537,17 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                         }
                       }}
                       placeholder="#FF4D4D"
-                      className="flex-1 bg-transparent border-none text-xs font-mono text-white focus:outline-none uppercase"
+                      className="flex-1 bg-transparent border-none text-xs font-mono text-white focus:outline-none uppercase min-w-0"
                       maxLength={7}
                     />
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap shrink-0">
                     <button
                       type="button"
                       onClick={() => handleSaveAccentColor('#ff4d4d')}
                       disabled={isSavingColor}
-                      className="px-3 py-2 bg-[#251c35] hover:bg-[#3d2b4f] text-gray-300 hover:text-white text-xs font-bold rounded-xl border border-[#3d2b4f] transition-all cursor-pointer"
+                      className="px-3 py-2 bg-[#251c35] hover:bg-[#3d2b4f] text-gray-300 hover:text-white text-xs font-bold rounded-xl border border-[#3d2b4f] transition-all cursor-pointer whitespace-nowrap"
                     >
                       {lang === 'ru' ? 'Сброс (#ff4d4d)' : 'Reset (#ff4d4d)'}
                     </button>
@@ -485,12 +557,89 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                       type="button"
                       onClick={() => handleSaveAccentColor(currentAccentColor)}
                       disabled={isSavingColor}
-                      className="px-4 py-2 bg-[#ff4d4d] hover:bg-[#ff3333] text-[#15101e] text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(255,77,77,0.3)] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="px-3.5 py-2 bg-[#ff4d4d] hover:bg-[#ff3333] text-[#15101e] text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(255,77,77,0.3)] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
                       {isSavingColor ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
                       <span>{lang === 'ru' ? 'Сохранить в Firestore' : 'Save to Firestore'}</span>
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* AUTONOMOUS DATABASE MANAGEMENT & PURGE PANEL */}
+              <div className="p-5 bg-[#15101e] border border-amber-500/30 hover:border-amber-500/60 rounded-2xl mb-4 space-y-4 transition-all">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Database className="text-amber-400 w-5 h-5 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>{lang === 'ru' ? 'Автономный Контроль и Очистка БД' : 'Autonomous DB Control & Purge'}</span>
+                        <span className="text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded">
+                          {lang === 'ru' ? 'АВТОНОМНО' : 'AUTONOMOUS'}
+                        </span>
+                      </h4>
+                      <p className="text-xs text-gray-400">
+                        {lang === 'ru'
+                          ? 'Полное управление коллекциями Firestore: выборочное удаление данных или полный сброс БД'
+                          : 'Complete Firestore collection management: selective data purge or full DB reset'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Individual collection purge buttons */}
+                <div className="space-y-2">
+                  <span className="text-xs text-gray-400 font-bold uppercase tracking-wider block">
+                    {lang === 'ru' ? 'Выборочная очистка коллекций:' : 'Selective Collection Purge:'}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: 'telemetry', labelRu: 'Телеметрия', labelEn: 'Telemetry' },
+                      { id: 'comments', labelRu: 'Комментарии', labelEn: 'Comments' },
+                      { id: 'forum_topics', labelRu: 'Темы Форума', labelEn: 'Forum Topics' },
+                      { id: 'chats', labelRu: 'Чаты', labelEn: 'Live Chats' },
+                      { id: 'blog', labelRu: 'Статьи Блога', labelEn: 'Blog Posts' },
+                      { id: 'theories', labelRu: 'Теории', labelEn: 'Theories' },
+                      { id: 'events', labelRu: 'События', labelEn: 'Events' },
+                    ].map(col => (
+                      <button
+                        key={col.id}
+                        type="button"
+                        onClick={() => handlePurgeCollection(col.id)}
+                        disabled={isPurgingCollection !== null}
+                        className="px-3 py-1.5 bg-[#251c35] hover:bg-red-950/60 text-gray-300 hover:text-red-300 text-xs font-bold rounded-xl border border-[#3d2b4f] hover:border-red-500/40 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        {isPurgingCollection === col.id ? (
+                          <RefreshCw size={12} className="animate-spin text-amber-400" />
+                        ) : (
+                          <Trash2 size={12} className="text-red-400 shrink-0" />
+                        )}
+                        <span>{lang === 'ru' ? col.labelRu : col.labelEn}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Full DB Purge Master Action */}
+                <div className="pt-3 border-t border-[#3d2b4f]/60 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-amber-200/80 max-w-md">
+                    {lang === 'ru'
+                      ? 'Полный сброс удалит ВСЕ пользовательские записи во всех коллекциях и очистит локальный кэш'
+                      : 'Full reset deletes ALL user records across all collections and flushes local cache'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handlePurgeFullDatabase}
+                    disabled={isPurgingCollection !== null}
+                    className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-red-950/50 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    {isPurgingCollection === 'ALL' ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <Flame size={14} className="animate-pulse" />
+                    )}
+                    <span>{lang === 'ru' ? 'ПОЛНАЯ ОЧИСТКА И СБРОС БД' : 'PURGE ALL DB DATA'}</span>
+                  </button>
                 </div>
               </div>
 
@@ -916,6 +1065,542 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                     </button>
                   ))}
                 </div>
+              </div>
+              {/* AUTOMATED SDK REFERENCE & PLATFORM DEPENDENCY EXPLORER */}
+              <div className="pt-4 border-t border-[#3d2b4f] space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-[#120d1c] p-4 rounded-xl border border-[#3d2b4f]">
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <BookOpen size={18} className="text-[#ff4d4d] shrink-0" />
+                      <h4 className="text-xs font-black uppercase text-white tracking-widest">
+                        {lang === 'ru' ? "Автоматический Справочник SDK & Зависимостей" : "Automated SDK Reference & Dependencies"}
+                      </h4>
+                      <span className="text-[9px] font-bold uppercase bg-[#ff4d4d]/20 text-[#ff4d4d] px-2 py-0.5 rounded border border-[#ff4d4d]/30 shrink-0">
+                        Auto-Generated
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      {lang === 'ru' 
+                        ? "Динамический генератор метаданных кодовой базы и структуры платформных модулей" 
+                        : "Dynamic metadata generator for codebase architecture and SDK module specifications"}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const docs = sdk.reference.generateFullDocs(lang);
+                        sdk.hardware.copyToClipboard(JSON.stringify(docs, null, 2));
+                        sdk.notify(
+                          lang === 'ru' ? 'Документация скопирована' : 'Docs Copied',
+                          lang === 'ru' ? 'Полная схема SDK скопирована в буфер' : 'Full SDK schema copied to clipboard',
+                          'success'
+                        );
+                      }}
+                      className="px-2.5 py-1.5 bg-[#251c35] hover:bg-[#3d2b4f] text-xs font-bold text-gray-200 hover:text-white rounded-lg border border-[#3d2b4f] transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    >
+                      <Code2 size={13} className="text-[#ff4d4d] shrink-0" />
+                      <span>{lang === 'ru' ? "Скопировать JSON" : "Copy JSON"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Explorer Sub-Tabs */}
+                <div className="flex items-center gap-2 border-b border-[#3d2b4f] pb-2 overflow-x-auto no-scrollbar max-w-full">
+                  <button
+                    type="button"
+                    onClick={() => setRefTab('registry')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
+                      refTab === 'registry'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20 font-black'
+                        : 'bg-[#251c35] text-gray-400 hover:text-white border border-[#3d2b4f]'
+                    }`}
+                  >
+                    <PackageCheck size={14} className="shrink-0" />
+                    <span>{lang === 'ru' ? "Реестр Зависимостей SDK" : "SDK Package Registry"} ({sdk.registry.getRegistryEntries().length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRefTab('deps')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
+                      refTab === 'deps'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20 font-black'
+                        : 'bg-[#251c35] text-gray-400 hover:text-white border border-[#3d2b4f]'
+                    }`}
+                  >
+                    <Layers size={14} className="shrink-0" />
+                    <span>{lang === 'ru' ? "Обзор Зависимостей" : "Platform Overview"} ({sdk.reference.getPlatformDependencies().length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRefTab('modules')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
+                      refTab === 'modules'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20 font-black'
+                        : 'bg-[#251c35] text-gray-400 hover:text-white border border-[#3d2b4f]'
+                    }`}
+                  >
+                    <Cpu size={14} className="shrink-0" />
+                    <span>{lang === 'ru' ? "Модули & Методы SDK" : "SDK Modules & APIs"} ({sdk.reference.getSdkModules().length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRefTab('json')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
+                      refTab === 'json'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20 font-black'
+                        : 'bg-[#251c35] text-gray-400 hover:text-white border border-[#3d2b4f]'
+                    }`}
+                  >
+                    <Code2 size={14} className="shrink-0" />
+                    <span>{lang === 'ru' ? "Полный JSON Документ" : "Live JSON Schema"}</span>
+                  </button>
+                </div>
+
+                {/* Tab Content: SDK Package Registry */}
+                {refTab === 'registry' && (
+                  <div className="space-y-3">
+                    {/* Registry Audit & Health Check Header Bar */}
+                    {(() => {
+                      const health = sdk.registry.checkDependencyHealth(simulateConflict);
+                      const audit = sdk.registry.auditRegistry(simulateConflict);
+                      return (
+                        <div className={`p-3.5 rounded-xl border transition-all flex flex-wrap items-center justify-between gap-3 ${
+                          health.healthy 
+                            ? 'bg-[#161024] border-[#3d2b4f]' 
+                            : 'bg-red-950/30 border-red-500/60 shadow-lg shadow-red-950/50'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center border shrink-0 ${
+                              health.healthy
+                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                : 'bg-red-500/20 text-red-400 border-red-500/40 animate-pulse'
+                            }`}>
+                              {health.healthy ? <CheckCircle2 size={20} /> : <AlertTriangle size={20} />}
+                            </div>
+                            <div>
+                              <div className="text-xs font-black text-white flex items-center gap-2">
+                                <span>{audit.platformStatus}</span>
+                                <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                                  health.healthy
+                                    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                                    : 'text-red-400 bg-red-500/20 border-red-500/40 font-bold'
+                                }`}>
+                                  {health.systemHealthRating}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-gray-400 mt-0.5 font-mono">
+                                {health.healthyDependenciesCount}/{health.totalDependencies} {lang === 'ru' ? 'зависимостей исправны' : 'dependencies healthy'}
+                                {health.conflictCount > 0 && (
+                                  <span className="text-red-400 font-bold ml-1">
+                                    ({health.conflictCount} {lang === 'ru' ? 'конфликт(а) обнаружено' : 'conflict(s) detected'})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowAutoFixPanel(!showAutoFixPanel)}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                                health.conflictCount > 0
+                                  ? 'bg-amber-500 text-black border-amber-400 hover:bg-amber-400 shadow-md shadow-amber-500/30 animate-pulse'
+                                  : showAutoFixPanel
+                                  ? 'bg-[#3d2b4f] text-white border-[#ff4d4d]'
+                                  : 'bg-[#251c35] text-gray-200 border-[#3d2b4f] hover:bg-[#3d2b4f]'
+                              }`}
+                            >
+                              <Wrench size={13} />
+                              <span>
+                                {lang === 'ru' ? 'Консоль Auto-Fix' : 'Auto-Fix Console'}
+                                {health.conflictCount > 0 && (
+                                  <span className="ml-1.5 px-1.5 py-0.2 bg-black/40 text-amber-200 rounded text-[10px] font-mono">
+                                    {health.conflictCount}
+                                  </span>
+                                )}
+                              </span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextState = !simulateConflict;
+                                setSimulateConflict(nextState);
+                                if (nextState) {
+                                  setShowAutoFixPanel(true);
+                                }
+                                sdk.notify(
+                                  nextState 
+                                    ? (lang === 'ru' ? 'Конфликт сгенерирован' : 'Conflict Simulated')
+                                    : (lang === 'ru' ? 'Конфликт сброшен' : 'Conflict Resolved'),
+                                  nextState
+                                    ? (lang === 'ru' ? 'Обнаружено несоответствие минимальным версиям Express и Tailwind' : 'Express & Tailwind minimum version mismatch injected')
+                                    : (lang === 'ru' ? 'Все пакеты соответствуют требованиям среды' : 'All packages verified against minimum supported standards'),
+                                  nextState ? 'error' : 'success'
+                                );
+                              }}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                                simulateConflict
+                                  ? 'bg-red-500 text-white border-red-400 hover:bg-red-600 shadow-md shadow-red-500/30'
+                                  : 'bg-[#251c35] text-amber-300 border-amber-500/40 hover:bg-[#3d2b4f] hover:text-amber-200'
+                              }`}
+                            >
+                              <AlertCircle size={13} />
+                              <span>
+                                {simulateConflict 
+                                  ? (lang === 'ru' ? "Сбросить Симуляцию" : "Clear Conflict Simulation") 
+                                  : (lang === 'ru' ? "Симулировать Конфликт" : "Simulate Version Conflict")
+                                }
+                              </span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const res = sdk.registry.checkDependencyHealth(simulateConflict);
+                                sdk.notify(
+                                  lang === 'ru' ? 'Проверка здоровья выполнена' : 'Dependency Health Check Complete',
+                                  res.healthy 
+                                    ? (lang === 'ru' ? 'Все пакеты соответствуют минимальным версиям' : '100% dependencies meet minimum requirements')
+                                    : (lang === 'ru' ? `Найдено ${res.conflictCount} несоответствий версий` : `Found ${res.conflictCount} package version conflicts`),
+                                  res.healthy ? 'success' : 'error'
+                                );
+                              }}
+                              className="px-3 py-1.5 bg-[#251c35] hover:bg-[#3d2b4f] text-xs font-bold text-[#ff4d4d] rounded-lg border border-[#3d2b4f] transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                            >
+                              <RefreshCw size={12} />
+                              <span>{lang === 'ru' ? "Запустить Диагностику" : "Run Health Check"}</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Auto-Fix Shell Command Generator Console */}
+                    {showAutoFixPanel && (() => {
+                      const fixScript = sdk.registry.generateAutoFixScript(simulateConflict);
+                      const currentCommand = 
+                        activeFixTool === 'npm' ? fixScript.npmCommand :
+                        activeFixTool === 'yarn' ? fixScript.yarnCommand :
+                        activeFixTool === 'pnpm' ? fixScript.pnpmCommand :
+                        fixScript.shellScript;
+
+                      return (
+                        <div className="p-4 bg-[#100a1a] rounded-xl border border-[#ff4d4d]/40 space-y-3 shadow-xl">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#3d2b4f] pb-2.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-[#ff4d4d]/20 text-[#ff4d4d] flex items-center justify-center border border-[#ff4d4d]/30">
+                                <Terminal size={15} />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-black text-white flex items-center gap-2">
+                                  <span>{lang === 'ru' ? 'Генератор команд Auto-Fix Зависимостей' : 'Auto-Fix Shell Resolution Generator'}</span>
+                                  {fixScript.hasFixes ? (
+                                    <span className="text-[10px] font-mono bg-red-500/20 text-red-300 border border-red-500/40 px-2 py-0.5 rounded font-bold">
+                                      {fixScript.conflictPackages.length} {lang === 'ru' ? 'исправлений' : 'fix(es) required'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded">
+                                      {lang === 'ru' ? 'Исправен' : 'Healthy'}
+                                    </span>
+                                  )}
+                                </h4>
+                                <p className="text-[10px] text-gray-400 font-mono">
+                                  {lang === 'ru' 
+                                    ? 'Сгенерированные консольные команды для устранения конфликтов минимальных версий' 
+                                    : 'Auto-generated shell commands to resolve package version conflicts via package manager'
+                                  }
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* PackageManager Selector Tabs */}
+                            <div className="flex items-center gap-1 bg-[#181024] p-1 rounded-lg border border-[#3d2b4f]">
+                              {(['npm', 'yarn', 'pnpm', 'script'] as const).map(tool => (
+                                <button
+                                  key={tool}
+                                  type="button"
+                                  onClick={() => setActiveFixTool(tool)}
+                                  className={`px-2.5 py-1 rounded text-[10px] font-mono font-bold transition-all ${
+                                    activeFixTool === tool
+                                      ? 'bg-[#ff4d4d] text-white shadow-sm'
+                                      : 'text-gray-400 hover:text-white hover:bg-[#251c35]'
+                                  }`}
+                                >
+                                  {tool.toUpperCase()}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Command / Code Output Block */}
+                          <div className="relative bg-[#090510] rounded-lg border border-[#3d2b4f] p-3 font-mono text-xs text-amber-300 overflow-x-auto">
+                            <pre className="whitespace-pre-wrap break-all leading-relaxed">
+                              {currentCommand}
+                            </pre>
+
+                            {/* Actions overlay */}
+                            <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-[#251c35]">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  sdk.hardware.copyToClipboard(currentCommand);
+                                  sdk.notify(
+                                    lang === 'ru' ? 'Команда скопирована' : 'Command Copied to Clipboard',
+                                    lang === 'ru' ? 'Вставьте команду в ваш терминал для установки' : 'Paste command into your console terminal to update dependencies',
+                                    'info'
+                                  );
+                                }}
+                                className="px-3 py-1.5 bg-[#251c35] hover:bg-[#3d2b4f] text-white text-xs font-bold rounded-lg border border-[#3d2b4f] transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <Copy size={13} />
+                                <span>{lang === 'ru' ? 'Скопировать команду' : 'Copy Command'}</span>
+                              </button>
+
+                              {fixScript.hasFixes && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    sdk.logging.info('Auto-Fix Executed from SDK Settings UI', { command: currentCommand });
+                                    sdk.notify(
+                                      lang === 'ru' ? 'Auto-Fix выполнен' : 'Auto-Fix Executed',
+                                      lang === 'ru' ? 'Все конфликты зависимостей успешно устранены' : 'Package version conflicts successfully resolved in system state',
+                                      'success'
+                                    );
+                                    setSimulateConflict(false);
+                                  }}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg border border-emerald-400 shadow-md shadow-emerald-950/50 transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Play size={13} />
+                                  <span>{lang === 'ru' ? 'Применить исправление (Выполнить)' : 'Execute Resolution'}</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Filter / Search Bar */}
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={registrySearch}
+                        onChange={(e) => setRegistrySearch(e.target.value)}
+                        placeholder={lang === 'ru' ? "Поиск пакетов, версий, лицензий и систем..." : "Search packages, versions, licenses, runtimes..."}
+                        className="w-full pl-9 pr-3 py-2 bg-[#100b17] border border-[#3d2b4f] rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] transition-all"
+                      />
+                    </div>
+
+                    {/* Registry Cards Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {sdk.registry.getRegistryEntries(simulateConflict)
+                        .filter(item => 
+                          item.package.toLowerCase().includes(registrySearch.toLowerCase()) ||
+                          item.runtime.toLowerCase().includes(registrySearch.toLowerCase()) ||
+                          item.desc.toLowerCase().includes(registrySearch.toLowerCase())
+                        )
+                        .map((entry, idx) => (
+                          <div 
+                            key={idx} 
+                            className={`p-3.5 rounded-xl border transition-all space-y-2.5 flex flex-col justify-between ${
+                              entry.hasConflict || entry.healthStatus === 'conflict'
+                                ? 'bg-red-950/20 border-red-500/80 shadow-lg shadow-red-950/40 hover:border-red-400'
+                                : 'bg-[#120d1c] border-[#3d2b4f] hover:border-[#ff4d4d]/40'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between gap-1">
+                                <span className={`font-mono text-xs font-bold truncate flex items-center gap-1.5 ${
+                                  entry.hasConflict ? 'text-red-400' : 'text-white'
+                                }`}>
+                                  {entry.hasConflict ? (
+                                    <AlertTriangle size={15} className="text-red-500 shrink-0 animate-bounce" />
+                                  ) : (
+                                    <PackageCheck size={14} className="text-[#ff4d4d] shrink-0" />
+                                  )}
+                                  {entry.package}
+                                </span>
+
+                                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                                  entry.hasConflict
+                                    ? 'text-white bg-red-600'
+                                    : 'text-[#15101e] bg-[#ff4d4d]'
+                                }`}>
+                                  {entry.hasConflict ? 'CONFLICT' : entry.license}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                                  entry.hasConflict
+                                    ? 'text-red-300 bg-red-900/40 border-red-500/40 font-bold'
+                                    : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                                }`}>
+                                  ver: {entry.version}
+                                </span>
+
+                                <span className="text-[10px] font-mono text-gray-300 bg-gray-800/60 px-2 py-0.5 rounded border border-gray-700">
+                                  Min: &gt;={entry.minSupportedVersion}
+                                </span>
+                              </div>
+
+                              {entry.hasConflict ? (
+                                <div className="mt-2 p-2 bg-red-900/30 border border-red-500/40 rounded-lg text-[10px] text-red-200 font-mono font-semibold leading-tight flex items-start gap-1.5">
+                                  <ShieldAlert size={13} className="text-red-400 shrink-0 mt-0.5" />
+                                  <span>{entry.healthMessage}</span>
+                                </div>
+                              ) : (
+                                <p className="text-[11px] text-gray-300 leading-snug mt-2">
+                                  {entry.desc}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="pt-2 border-t border-[#3d2b4f]/60 space-y-1">
+                              <div className="flex items-center justify-between text-[10px] font-mono text-gray-400">
+                                <span className="truncate">{entry.runtime}</span>
+                                <span className={entry.hasConflict ? 'text-red-400 font-extrabold' : 'text-emerald-400 font-bold'}>
+                                  {entry.compatibilityScore}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-[#1e162d] h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full transition-all ${
+                                    entry.hasConflict ? 'bg-red-500' : 'bg-emerald-500'
+                                  }`}
+                                  style={{ width: `${entry.compatibilityScore}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab Content: Platform Dependencies */}
+                {refTab === 'deps' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {sdk.reference.getPlatformDependencies().map((dep, idx) => (
+                      <div key={idx} className="p-3.5 bg-[#120d1c] rounded-xl border border-[#3d2b4f] hover:border-[#ff4d4d]/40 transition-all space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs font-bold text-white flex items-center gap-1.5">
+                            <Layers size={13} className="text-[#ff4d4d]" />
+                            {dep.name}
+                          </span>
+                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            {dep.version}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black uppercase tracking-wider bg-[#ff4d4d]/10 text-[#ff4d4d] px-2 py-0.5 rounded border border-[#ff4d4d]/20">
+                            {dep.category}
+                          </span>
+                          <span className="text-[9px] font-bold uppercase text-gray-400">
+                            Status: {dep.status}
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-gray-300 leading-snug">
+                          {dep.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Tab Content: SDK Modules */}
+                {refTab === 'modules' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Module List Sidebar */}
+                    <div className="space-y-1.5 max-h-80 overflow-y-auto no-scrollbar pr-1">
+                      {sdk.reference.getSdkModules().map((mod) => (
+                        <button
+                          key={mod.id}
+                          type="button"
+                          onClick={() => setSelectedModuleId(mod.id)}
+                          className={`w-full p-2.5 rounded-xl text-left transition-all border cursor-pointer ${
+                            selectedModuleId === mod.id
+                              ? 'bg-[#ff4d4d] border-[#ff4d4d] text-[#15101e] shadow-md'
+                              : 'bg-[#120d1c] border-[#3d2b4f] text-gray-300 hover:text-white hover:border-[#ff4d4d]/50'
+                          }`}
+                        >
+                          <div className="font-extrabold text-xs flex items-center justify-between">
+                            <span>sdk.{mod.id}</span>
+                            <span className="text-[9px] font-mono opacity-80 uppercase">{mod.methods.length} methods</span>
+                          </div>
+                          <div className={`text-[10px] truncate mt-0.5 ${selectedModuleId === mod.id ? 'text-[#15101e]/80 font-bold' : 'text-gray-400'}`}>
+                            {mod.name}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Selected Module Detail Panel */}
+                    <div className="md:col-span-2 p-4 bg-[#120d1c] rounded-xl border border-[#3d2b4f] space-y-3">
+                      {(() => {
+                        const mod = sdk.reference.getSdkModules().find(m => m.id === selectedModuleId) || sdk.reference.getSdkModules()[0];
+                        return (
+                          <>
+                            <div className="flex items-center justify-between border-b border-[#3d2b4f] pb-2">
+                              <div>
+                                <h5 className="font-mono text-sm font-black text-[#ff4d4d]">sdk.{mod.id}</h5>
+                                <p className="text-xs text-gray-300 mt-0.5">{mod.desc}</p>
+                              </div>
+                              <span className="text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">
+                                {mod.status}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider">
+                                {lang === 'ru' ? "Доступные сигнатуры методов:" : "Available Method Signatures:"}
+                              </span>
+
+                              <div className="space-y-1.5 font-mono text-xs">
+                                {mod.methods.map((method, i) => (
+                                  <div key={i} className="p-2 bg-[#1a1326] rounded-lg border border-[#3d2b4f] flex items-center justify-between">
+                                    <span className="text-emerald-300 font-bold">sdk.{mod.id}.{method}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        sdk.hardware.copyToClipboard(`sdk.${mod.id}.${method}`);
+                                        sdk.notify(
+                                          lang === 'ru' ? 'Вызов скопирован' : 'Call Copied',
+                                          `sdk.${mod.id}.${method}`,
+                                          'info'
+                                        );
+                                      }}
+                                      className="px-2 py-0.5 bg-[#251c35] hover:bg-[#3d2b4f] text-[10px] text-gray-300 rounded border border-[#3d2b4f] transition-all cursor-pointer"
+                                    >
+                                      Copy
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab Content: Live JSON Schema */}
+                {refTab === 'json' && (
+                  <div className="p-3 bg-[#100b17] rounded-xl border border-[#3d2b4f] max-h-80 overflow-y-auto no-scrollbar font-mono text-[11px] text-emerald-400">
+                    <pre>{JSON.stringify(sdk.reference.generateFullDocs(lang), null, 2)}</pre>
+                  </div>
+                )}
               </div>
             </div>
 

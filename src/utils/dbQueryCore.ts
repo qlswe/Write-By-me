@@ -43,7 +43,7 @@ class DbQueryCore {
     isOffline: typeof navigator !== 'undefined' ? !navigator.onLine : false,
     quotaExceeded: false,
     consecutiveFailures: 0,
-    latencyThresholdMs: 300, // Reduced default slow threshold for modern reactive UI (300ms)
+    latencyThresholdMs: 1200, // Threshold for genuine slow query bottleneck warnings (1200ms)
   };
 
   constructor() {
@@ -209,6 +209,11 @@ class DbQueryCore {
       return null;
     }
 
+    // Auto-route public_profiles through getProfileBatched for debounced micro-batching and extended 10m TTL
+    if (collectionName === 'public_profiles') {
+      return this.getProfileBatched(docId);
+    }
+
     this.stats.totalRequests += 1;
     const cacheKey = `${collectionName}/${docId}`;
     
@@ -310,6 +315,10 @@ class DbQueryCore {
         
         return data;
       }
+
+      // Negative Caching: Cache null for non-existent documents so bots/missing UIDs don't trigger re-queries
+      const nullTtl = collectionName === 'public_profiles' ? 600000 : cacheTtlMs;
+      this.cache.set(cacheKey, { data: null, expiry: Date.now() + nullTtl, lastAccessed: Date.now() });
       return null;
     } catch (error: any) {
       this.factors.consecutiveFailures++;
@@ -440,7 +449,7 @@ class DbQueryCore {
 
     // Fetch batch
     for (const [uid, resolvers] of currentQueue.entries()) {
-      this.executeGet('public_profiles', uid, 60000, `public_profiles/${uid}`)
+      this.executeGet('public_profiles', uid, 300000, `public_profiles/${uid}`)
         .then((data) => {
           resolvers.forEach(resolve => resolve(data));
         })
