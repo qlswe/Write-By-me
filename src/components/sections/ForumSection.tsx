@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Plus, Search, User as UserIcon, Shield, Clock, ArrowLeft, Send, Trash2, ChevronUp, ChevronDown, Pencil, X, Check, Camera, Palette as PaletteIcon, Activity, Key, ShieldAlert, ShieldCheck, Cpu, RefreshCw, Ticket, Info, Sparkles, Video, Link as LinkIcon } from 'lucide-react';
+import { MessageSquare, Plus, Search, User as UserIcon, Shield, Clock, ArrowLeft, Send, Trash2, ChevronUp, ChevronDown, Pencil, X, Check, Camera, Palette as PaletteIcon, Activity, Key, ShieldAlert, ShieldCheck, Cpu, RefreshCw, Ticket, Info, Sparkles, Video, Link as LinkIcon, FileDown } from 'lucide-react';
+import { exportContentToPDF } from '../../utils/pdfExport';
 import { MediaViewer } from '../ui/MediaViewer';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
@@ -1119,28 +1120,46 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                 </div>
               </div>
             </div>
-            {(user?.uid === selectedThread.authorId || role === 'admin' || role === 'moderator') && (
-              <div className="flex items-center gap-2">
-                {user?.uid === selectedThread.authorId && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => exportContentToPDF({
+                  title: selectedThread.title,
+                  author: selectedThread.authorName,
+                  createdAt: selectedThread.createdAt,
+                  contentHtml: `<p style="white-space: pre-wrap;">${selectedThread.content}</p>`,
+                  mediaUrl: selectedThread.imageUrl,
+                  sectionName: lang === 'ru' ? 'Тема Форума' : 'Forum Thread',
+                  lang
+                })}
+                className="p-2 text-white/40 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all rounded-lg cursor-pointer"
+                title={lang === 'ru' ? 'Экспорт темы в PDF' : 'Export thread to PDF'}
+              >
+                <FileDown size={18} />
+              </button>
+
+              {(user?.uid === selectedThread.authorId || role === 'admin' || role === 'moderator') && (
+                <>
+                  {user?.uid === selectedThread.authorId && (
+                    <button 
+                      onClick={() => {
+                        setEditingThreadId(selectedThread.id);
+                        setEditThreadTitle(selectedThread.title);
+                        setEditThreadContent(selectedThread.content);
+                      }}
+                      className="p-2 text-white/40 hover:text-blue-400 transition-all rounded-lg hover:bg-blue-400/10"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                  )}
                   <button 
-                    onClick={() => {
-                      setEditingThreadId(selectedThread.id);
-                      setEditThreadTitle(selectedThread.title);
-                      setEditThreadContent(selectedThread.content);
-                    }}
-                    className="p-2 text-white/40 hover:text-blue-400 transition-all rounded-lg hover:bg-blue-400/10"
+                    onClick={() => setThreadToDelete(selectedThread.id)}
+                    className="p-2 text-white/40 hover:text-red-400 transition-all rounded-lg hover:bg-red-400/10"
                   >
-                    <Pencil size={18} />
+                    <Trash2 size={18} />
                   </button>
-                )}
-                <button 
-                  onClick={() => setThreadToDelete(selectedThread.id)}
-                  className="p-2 text-white/40 hover:text-red-400 transition-all rounded-lg hover:bg-red-400/10"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
           
           {editingThreadId === selectedThread.id ? (

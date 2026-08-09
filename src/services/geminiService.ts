@@ -12,8 +12,32 @@ For 'zh', use Simplified Chinese.
 If the original text is already in one of these languages, just copy it to the corresponding key.
 IMPORTANT: Return ONLY valid JSON. No markdown formatting, no backticks, no explanations. Just the JSON object.`;
 
+  const systemContent = "You are a precise translation AI. You output only valid JSON without any markdown formatting.";
+
+  // 1. Try server proxy endpoint first (/api/generate)
   try {
-    const systemContent = "You are a precise translation AI. You output only valid JSON without any markdown formatting.";
+    const proxyRes = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        systemInstruction: systemContent
+      })
+    });
+
+    if (proxyRes.ok) {
+      const data = await proxyRes.json();
+      if (data && data.text) {
+        const jsonStr = data.text.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+        return JSON.parse(jsonStr);
+      }
+    }
+  } catch (proxyErr) {
+    console.warn("Backend translation proxy failed, falling back to Pollinations...", proxyErr);
+  }
+
+  // 2. Fallback to Pollinations AI
+  try {
     const seed = Math.floor(Math.random() * 1000000);
 
     const url = new URL(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
@@ -29,8 +53,7 @@ IMPORTANT: Return ONLY valid JSON. No markdown formatting, no backticks, no expl
     }
 
     const textResponse = await response.text();
-    // Try to parse the response, handling potential markdown formatting if the model ignored instructions
-    const jsonStr = textResponse.replace(/^```json\n/, '').replace(/\n```$/, '').trim();
+    const jsonStr = textResponse.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Translation error:", error);

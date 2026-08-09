@@ -505,9 +505,15 @@ ${Object.entries(sectionInfoMap).map(([id, info]) => `- ${id}: "${info.title}" (
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[#3d2b4f]/50 bg-[#15101e]/50 shrink-0 min-w-0">
           <div className="flex items-center gap-3 min-w-0 mr-4">
             <Sparkles className="text-[#ff4d4d] shrink-0" />
-            <h2 className="text-lg sm:text-xl font-bold text-white truncate">
-              {activeChat ? activeChat.title : ((t as any).sdkAhaRadio || t.siteName) + ' AI'}
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold text-white truncate">
+                {activeChat ? activeChat.title : ((t as any).sdkAhaRadio || t.siteName) + ' AI'}
+              </h2>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 w-fit" title="Все запросы к ИИ маршрутизируются через Cloud Run сервер в Европе, гарантируя стабильную работу в РФ без ВПН">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {lang === 'ru' ? 'Работает в РФ без ВПН' : 'RF Cloud Proxy Active'}
+              </span>
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {activeChat && activeChat.messages.length > 0 && (

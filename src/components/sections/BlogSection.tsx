@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, Search, ArrowLeft, Plus, Edit, Newspaper, Sparkles, Clock, User } from 'lucide-react';
+import { Star, Search, ArrowLeft, Plus, Edit, Newspaper, Sparkles, Clock, User, FileDown } from 'lucide-react';
 import { blogPostsData } from '../../data/content';
+import { exportContentToPDF } from '../../utils/pdfExport';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { useDebounce } from '../../utils/performanceOptimizer';
@@ -165,6 +166,22 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                     <Edit size={18} />
                   </button>
                 )}
+                <button 
+                  onClick={() => exportContentToPDF({
+                    title: selectedPost.title[lang] || selectedPost.title['en'],
+                    category: selectedPost.category,
+                    createdAt: selectedPost.createdAt,
+                    summary: selectedPost.summary?.[lang] || selectedPost.summary?.['en'],
+                    contentHtml: selectedPost.content[lang] || selectedPost.content['en'],
+                    mediaUrl: selectedPost.mediaUrl,
+                    sectionName: lang === 'ru' ? 'Блог' : 'Blog',
+                    lang
+                  })}
+                  className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400/30 transition-all border border-transparent cursor-pointer flex items-center justify-center"
+                  title={lang === 'ru' ? 'Экспорт в PDF' : 'Export to PDF'}
+                >
+                  <FileDown size={18} />
+                </button>
                 <button 
                   onClick={(e) => toggleFavorite(selectedPost.id, e)}
                   className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent ${favorites.includes(selectedPost.id) ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}

@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, Search, ArrowLeft, Share2, Check, Plus, Edit, BookOpen, Sparkles, User, Clock } from 'lucide-react';
+import { Star, Search, ArrowLeft, Share2, Check, Plus, Edit, BookOpen, Sparkles, User, Clock, FileDown } from 'lucide-react';
 import { theoriesData } from '../../data/content';
+import { exportContentToPDF } from '../../utils/pdfExport';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
 import { useDebounce } from '../../utils/performanceOptimizer';
@@ -189,6 +190,21 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                     <Edit size={18} />
                   </button>
                 )}
+                <button 
+                  onClick={() => exportContentToPDF({
+                    title: selectedTheory.title[lang] || selectedTheory.title['en'],
+                    category: selectedTheory.category,
+                    createdAt: selectedTheory.createdAt,
+                    summary: selectedTheory.summary?.[lang] || selectedTheory.summary?.['en'],
+                    contentHtml: selectedTheory.content[lang] || selectedTheory.content['en'],
+                    sectionName: lang === 'ru' ? 'Теория' : 'Theory',
+                    lang
+                  })}
+                  className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400/30 transition-all border border-transparent cursor-pointer flex items-center justify-center"
+                  title={lang === 'ru' ? 'Экспорт в PDF' : 'Export to PDF'}
+                >
+                  <FileDown size={18} />
+                </button>
                 <button 
                   onClick={() => handleShare(
                     selectedTheory.id, 
