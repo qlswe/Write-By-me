@@ -130,7 +130,7 @@ export async function ahaFetch(url: string, init?: RequestInit): Promise<Respons
   headers.set('X-AHA-IPv6-Flow-Label', activeFlow);
   headers.set('X-AHA-Direct-Route', 'IPv6-Native-Hyper');
   headers.set('X-AHA-NAT-Bypass', 'Active-Direct-P2P');
-  headers.set('X-[#AHA-v6-Frame-Compressed]', 'true');
+  headers.set('X-AHA-v6-Frame-Compressed', 'true');
 
   return fetch(url, {
     ...init,

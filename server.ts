@@ -17,7 +17,7 @@ async function startServer() {
     res.setHeader('X-AHA-IPv6-Flow-Label', '0x6AHA' + Math.floor(Math.random() * 0xFFFF).toString(16).toUpperCase());
     res.setHeader('X-AHA-Direct-Route', 'IPv6-Native-Hyper');
     res.setHeader('X-AHA-NAT-Bypass', 'Active-Direct-P2P');
-    res.setHeader('X-[#AHA-v6-Latency-Boost]', 'Enabled-0.8ms');
+    res.setHeader('X-AHA-v6-Latency-Boost', 'Enabled-0.8ms');
     next();
   });
 
