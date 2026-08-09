@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { secureFetch } from './network';
 
 export interface AhaHandshakeResult {
   status: string;
@@ -124,17 +125,15 @@ export async function getAhaTelemetry(): Promise<AhaTelemetryData> {
  */
 export async function ahaFetch(url: string, init?: RequestInit): Promise<Response> {
   const activeFlow = localStorage.getItem(STORAGE_KEY_AHA_FLOW) || '0x6AHA9F';
-  const headers = new Headers(init?.headers || {});
 
-  headers.set('X-AHA-Protocol-Version', '6.0-HYPER-IPv6');
-  headers.set('X-AHA-IPv6-Flow-Label', activeFlow);
-  headers.set('X-AHA-Direct-Route', 'IPv6-Native-Hyper');
-  headers.set('X-AHA-NAT-Bypass', 'Active-Direct-P2P');
-  headers.set('X-AHA-v6-Frame-Compressed', 'true');
-
-  return fetch(url, {
+  return secureFetch(url, {
     ...init,
-    headers
+    headers: {
+      ...(init?.headers as Record<string, string>),
+      'X-AHA-IPv6-Flow-Label': activeFlow,
+      'X-AHA-NAT-Bypass': 'Active-Direct-P2P',
+      'X-AHA-v6-Frame-Compressed': 'true'
+    }
   });
 }
 

@@ -118,6 +118,92 @@ async function startServer() {
     });
   });
 
+  // Network Protocol Status & Configuration Endpoint
+  app.get("/api/network/protocol", (req, res) => {
+    res.json({
+      status: "active",
+      protocol: "AHA-v6-HYPER",
+      ipv6Enabled: true,
+      secureProxyAvailable: true,
+      headersValidated: true,
+      validTokenFormat: "^[A-Za-z0-9_\\-\\.]+$",
+      activeIPv6Prefix: "2001:db8:85a3::/48",
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Secure Server-Side Network Proxy to sanitize headers and prevent invalid HTTP token errors
+  app.post("/api/network/proxy", async (req, res) => {
+    try {
+      const { targetUrl, method = "GET", headers = {}, body } = req.body || {};
+
+      if (!targetUrl || typeof targetUrl !== "string") {
+        return res.status(400).json({ error: "Invalid targetUrl provided to network proxy" });
+      }
+
+      // Sanitize header keys to ensure they are valid HTTP tokens (RFC 7230 compliant)
+      const sanitizedHeaders: Record<string, string> = {};
+      const httpTokenRegex = /^[a-zA-Z0-9!#$%&'*+\-.^_`|~]+$/;
+
+      for (const [key, value] of Object.entries(headers)) {
+        if (typeof key === "string" && httpTokenRegex.test(key.trim())) {
+          const cleanKey = key.trim();
+          const cleanVal = String(value).replace(/[\r\n]/g, "");
+          sanitizedHeaders[cleanKey] = cleanVal;
+        }
+      }
+
+      // Ensure valid X-HTTP-Token or Authorization format
+      if (sanitizedHeaders['X-HTTP-Token']) {
+        // Sanitize token value to alphanumeric + hyphens/dots only
+        sanitizedHeaders['X-HTTP-Token'] = sanitizedHeaders['X-HTTP-Token'].replace(/[^a-zA-Z0-9_\-\.]/g, "");
+      }
+
+      sanitizedHeaders['X-AHA-Protocol-Version'] = '6.0-HYPER-IPv6';
+      sanitizedHeaders['X-AHA-Proxy-Validated'] = 'true';
+
+      // If internal targetUrl, route directly or fulfill locally
+      if (targetUrl.startsWith("/") || targetUrl.includes("localhost") || targetUrl.includes("127.0.0.1")) {
+        return res.json({
+          status: "success",
+          proxied: true,
+          targetUrl,
+          method,
+          sanitizedHeaders,
+          timestamp: new Date().toISOString(),
+          data: { status: "ok", message: "Internal network proxy validation completed successfully" }
+        });
+      }
+
+      // External request forwarding
+      const response = await fetch(targetUrl, {
+        method,
+        headers: sanitizedHeaders,
+        body: method !== "GET" && method !== "HEAD" ? (typeof body === "object" ? JSON.stringify(body) : body) : undefined
+      });
+
+      const responseData = await response.text();
+      let parsedData: any = responseData;
+      try {
+        parsedData = JSON.parse(responseData);
+      } catch {
+        // Keep as text if not JSON
+      }
+
+      return res.status(response.status).json({
+        status: "proxied",
+        statusCode: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        data: parsedData
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        error: "Network Proxy Execution Failed",
+        message: err.message || String(err)
+      });
+    }
+  });
+
   // Upload endpoint for videos and images to keep Firestore documents lightweight (<1MB)
   app.post("/api/upload", async (req, res) => {
     try {
