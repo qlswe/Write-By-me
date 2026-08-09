@@ -883,6 +883,13 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
 
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">Сетевой протокол:</span>
+                      <span className="text-emerald-400 font-bold font-mono flex items-center gap-1">
+                        <Globe size={12} />
+                        IPv6 Dual-Stack Primary
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
                       <span className="text-gray-400">Экран:</span>
                       <span className="text-white font-mono">
                         {window.innerWidth}x{window.innerHeight} (DPR: {window.devicePixelRatio})

@@ -9,6 +9,8 @@ import { ProfileModal } from '../ui/ProfileModal';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { EmailLoginModal } from '../ui/EmailLoginModal';
 import { PwaInstallModal } from '../ui/PwaInstallModal';
+import { IPv6Modal } from '../ui/IPv6Modal';
+import { AhaProtocolModal } from '../ui/AhaProtocolModal';
 import { usePWA } from '../../hooks/usePWA';
 import { sdk } from '../../sdk';
 
@@ -56,6 +58,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [emailLoginModalOpen, setEmailLoginModalOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
+  const [ipv6ModalOpen, setIpv6ModalOpen] = useState(false);
+  const [ahaProtocolModalOpen, setAhaProtocolModalOpen] = useState(false);
   const { trackRender } = usePerfLogger('Header');
   trackRender();
 
@@ -210,6 +214,26 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </AnimatePresence>
             </div>
+
+            {/* IPv6 Popularization & Protocol Badge */}
+            <button
+              onClick={() => setIpv6ModalOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all duration-300 active:scale-95 shadow-md shadow-emerald-500/10 cursor-pointer"
+              title={lang === 'ru' ? "IPv6 Центр Популяризации (Dual-Stack ::)" : "IPv6 Protocol Promotion Center"}
+            >
+              <Globe size={14} className="text-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-black tracking-wide">IPv6</span>
+            </button>
+
+            {/* AHA Protocol v6 Hyper-Acceleration Badge */}
+            <button
+              onClick={() => setAhaProtocolModalOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-[#ff4d4d]/10 border-[#ff4d4d]/30 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
+              title={lang === 'ru' ? "AHA Protocol v6 (Adaptive IPv6 Hyper-Acceleration)" : "AHA Protocol v6 Hyper-Acceleration"}
+            >
+              <Zap size={14} className="text-[#ff4d4d] animate-pulse" />
+              <span className="text-[11px] font-black tracking-wide">AHA-v6</span>
+            </button>
 
             <button 
               onClick={() => sdk.reloadApp()}
@@ -466,6 +490,16 @@ export const Header: React.FC<HeaderProps> = ({
       <PwaInstallModal
         isOpen={pwaModalOpen}
         onClose={() => setPwaModalOpen(false)}
+        lang={lang}
+      />
+      <IPv6Modal
+        isOpen={ipv6ModalOpen}
+        onClose={() => setIpv6ModalOpen(false)}
+        lang={lang}
+      />
+      <AhaProtocolModal
+        isOpen={ahaProtocolModalOpen}
+        onClose={() => setAhaProtocolModalOpen(false)}
         lang={lang}
       />
     </>
