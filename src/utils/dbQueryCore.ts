@@ -9,9 +9,18 @@ interface CollectionStat {
   maxTimeMs: number;
 }
 
-interface SlowQuery {
+export interface SlowQuery {
   path: string;
   latencyMs: number;
+  timestamp: string;
+}
+
+export interface DbQueryEvent {
+  collection: string;
+  docId: string;
+  action: string;
+  latencyMs: number;
+  cached: boolean;
   timestamp: string;
 }
 
@@ -27,6 +36,7 @@ class DbQueryCore {
   private profileBatchQueue = new Map<string, ((data: any) => void)[]>();
   private batchTimeout: NodeJS.Timeout | null = null;
   private gcInterval: NodeJS.Timeout | null = null;
+  private listeners: ((event: DbQueryEvent) => void)[] = [];
   
   // Performance & bottleneck statistics
   private stats = {
@@ -97,6 +107,39 @@ class DbQueryCore {
         };
       };
     }
+  }
+
+  public setSlowQueryThreshold(ms: number) {
+    this.factors.latencyThresholdMs = ms;
+  }
+
+  public getSlowQueryThreshold(): number {
+    return this.factors.latencyThresholdMs;
+  }
+
+  public subscribe(listener: (event: DbQueryEvent) => void): () => void {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
+
+  private notifyQueryEvent(collection: string, docId: string, action: string, latencyMs: number, cached: boolean) {
+    const event: DbQueryEvent = {
+      collection,
+      docId,
+      action,
+      latencyMs,
+      cached,
+      timestamp: new Date().toISOString()
+    };
+    this.listeners.forEach(fn => {
+      try {
+        fn(event);
+      } catch (e) {
+        console.error('[DbQueryCore] Subscriber error:', e);
+      }
+    });
   }
 
   /**
@@ -222,6 +265,7 @@ class DbQueryCore {
     if (cached && cached.expiry > Date.now()) {
       cached.lastAccessed = Date.now();
       this.stats.cacheHits += 1;
+      this.notifyQueryEvent(collectionName, docId, 'CACHE_HIT', 0, true);
       // Beautiful fast performance log
       console.log(
         `%c[DbQueryCore ⚡ CACHE HIT] ${cacheKey} [0.0ms]`,
@@ -296,6 +340,7 @@ class DbQueryCore {
       const latency = performance.now() - startTime;
       
       this.recordLatency(collectionName, docId, latency);
+      this.notifyQueryEvent(collectionName, docId, 'FIRESTORE_FETCH', latency, false);
       
       console.log(
         `%c[DbQueryCore 🔥 FIRESTORE MISS] Fetch completed for ${cacheKey} in ${latency.toFixed(1)}ms`,
@@ -419,6 +464,7 @@ class DbQueryCore {
         cached.lastAccessed = Date.now();
         this.stats.cacheHits += 1;
         this.stats.totalRequests += 1;
+        this.notifyQueryEvent('public_profiles', uid, 'CACHE_HIT', 0, true);
         resolve(cached.data);
         return;
       }

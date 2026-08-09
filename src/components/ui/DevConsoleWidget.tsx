@@ -4,13 +4,15 @@ import {
   Terminal, X, Trash2, Download, Search, Copy, Check, Filter,
   AlertTriangle, AlertCircle, Info, Zap, Shield, Play, Pause,
   Maximize2, Minimize2, Database, Key, Cpu, Activity, RefreshCw,
-  Layers, HardDrive, Smartphone, Globe, Bug, Flame, ClipboardCheck
+  Layers, HardDrive, Smartphone, Globe, Bug, Flame, ClipboardCheck,
+  Wifi, WifiOff, Timer, Clock
 } from 'lucide-react';
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../hooks/useAuth';
 import { auth, db } from '../../firebase';
 import { getDeviceId } from '../../utils/deviceId';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, disableNetwork, enableNetwork } from 'firebase/firestore';
+import { AhaQueryMonitor } from '../monitoring/AhaQueryMonitor';
 
 interface DevConsoleWidgetProps {
   isOpen: boolean;
@@ -25,7 +27,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
 }) => {
   const { user } = useAuth();
   const [logs, setLogs] = useState(() => logger.getLogs());
-  const [activeTab, setActiveTab] = useState<'logs' | 'auth_db' | 'env_state' | 'tests'>('logs');
+  const [activeTab, setActiveTab] = useState<'logs' | 'auth_db' | 'env_state' | 'tests' | 'queries'>('logs');
   const [filterLevel, setFilterLevel] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedLogIndex, setExpandedLogIndex] = useState<number | null>(null);
@@ -39,6 +41,84 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
   const [tokenCopied, setTokenCopied] = useState<boolean>(false);
   const [uidCopied, setUidCopied] = useState<boolean>(false);
   const [reportCopied, setReportCopied] = useState<boolean>(false);
+
+  // Firestore Network Controller State
+  const [isFirestoreNetworkOnline, setIsFirestoreNetworkOnline] = useState<boolean>(true);
+  const [isTogglingNetwork, setIsTogglingNetwork] = useState<boolean>(false);
+  const [isSimulatingTimeout, setIsSimulatingTimeout] = useState<boolean>(false);
+  const [timeoutCountdown, setTimeoutCountdown] = useState<number>(0);
+
+  // Toggle Firestore Network (disableNetwork / enableNetwork)
+  const handleToggleFirestoreNetwork = async () => {
+    setIsTogglingNetwork(true);
+    try {
+      if (isFirestoreNetworkOnline) {
+        await disableNetwork(db);
+        setIsFirestoreNetworkOnline(false);
+        logger.warn('Firestore network connection DISABLED via DevConsole Network Controller (disableNetwork executed)', {
+          timestamp: new Date().toISOString()
+        }, 'DevConsole');
+      } else {
+        await enableNetwork(db);
+        setIsFirestoreNetworkOnline(true);
+        logger.info('Firestore network connection ENABLED via DevConsole Network Controller (enableNetwork executed)', {
+          timestamp: new Date().toISOString()
+        }, 'DevConsole');
+      }
+    } catch (err: any) {
+      logger.error(`Firestore network toggle error: ${err?.message}`, { error: err?.message }, 'DevConsole');
+    } finally {
+      setIsTogglingNetwork(false);
+    }
+  };
+
+  // Simulate a 5-second network connection timeout
+  const handleSimulateTimeout = async () => {
+    if (isSimulatingTimeout || isTogglingNetwork) return;
+    setIsSimulatingTimeout(true);
+    setIsTogglingNetwork(true);
+    setTimeoutCountdown(5);
+
+    try {
+      if (isFirestoreNetworkOnline) {
+        await disableNetwork(db);
+        setIsFirestoreNetworkOnline(false);
+      }
+      logger.warn('Simulating 5s connection timeout: Firestore network DISABLED for 5s', {
+        durationMs: 5000,
+        timestamp: new Date().toISOString()
+      }, 'DevConsole');
+
+      const interval = setInterval(() => {
+        setTimeoutCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      setTimeout(async () => {
+        try {
+          await enableNetwork(db);
+          setIsFirestoreNetworkOnline(true);
+          logger.info('5s connection timeout simulation completed: Firestore network restored (enableNetwork)', {
+            timestamp: new Date().toISOString()
+          }, 'DevConsole');
+        } catch (err: any) {
+          logger.error(`Failed to restore network after timeout simulation: ${err?.message}`, null, 'DevConsole');
+        } finally {
+          setIsSimulatingTimeout(false);
+          setIsTogglingNetwork(false);
+        }
+      }, 5000);
+    } catch (err: any) {
+      logger.error(`Failed to initiate timeout simulation: ${err?.message}`, null, 'DevConsole');
+      setIsSimulatingTimeout(false);
+      setIsTogglingNetwork(false);
+    }
+  };
 
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -325,6 +405,19 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                     <Bug size={12} />
                     <span>Тесты</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('queries')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'queries'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Activity size={12} />
+                    <span>Запросы (Aha)</span>
+                  </button>
                 </div>
               </div>
 
@@ -575,19 +668,28 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                       <Database size={16} className="text-[#a855f7]" />
                       <span>FIRESTORE & CONNECTIVITY</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      dbLatency !== null && dbLatency >= 0
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : dbLatency === -1
-                        ? 'bg-red-500/20 text-red-400'
-                        : 'bg-gray-700 text-gray-300'
-                    }`}>
-                      {dbLatency !== null && dbLatency >= 0
-                        ? `${dbLatency}ms latency`
-                        : dbLatency === -1
-                        ? 'ERR'
-                        : 'IDLE'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isFirestoreNetworkOnline
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      }`}>
+                        {isFirestoreNetworkOnline ? 'SDK ONLINE' : 'SDK OFFLINE'}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        dbLatency !== null && dbLatency >= 0
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : dbLatency === -1
+                          ? 'bg-red-500/20 text-red-400'
+                          : 'bg-gray-700 text-gray-300'
+                      }`}>
+                        {dbLatency !== null && dbLatency >= 0
+                          ? `${dbLatency}ms latency`
+                          : dbLatency === -1
+                          ? 'ERR'
+                          : 'IDLE'}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="space-y-2 text-xs">
@@ -598,9 +700,15 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
-                      <span className="text-gray-400">Сетевой статус:</span>
+                      <span className="text-gray-400">Сетевой статус браузера:</span>
                       <span className={navigator.onLine ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
-                        {navigator.onLine ? '🟢 ОНЛАЙН' : '🔴 ОФФЛАЙН'}
+                        {navigator.onLine ? '🟢 ОНЛАЙН (Browser)' : '🔴 ОФФЛАЙН (Browser)'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
+                      <span className="text-gray-400">Статус Firestore SDK:</span>
+                      <span className={isFirestoreNetworkOnline ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                        {isFirestoreNetworkOnline ? '🟢 ОНЛАЙН (enableNetwork)' : '🔴 ОФФЛАЙН (disableNetwork)'}
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
@@ -610,7 +718,71 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                       </span>
                     </div>
 
-                    <div className="pt-3">
+                    {/* Network Controller Toggle Box */}
+                    <div className="mt-3 p-3 bg-[#110820] border border-[#3d2b4f] rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                          {isFirestoreNetworkOnline ? <Wifi size={14} className="text-emerald-400" /> : <WifiOff size={14} className="text-red-400 animate-pulse" />}
+                          Контроллер Сети Firestore
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          {isFirestoreNetworkOnline ? 'Синхронизация активна' : 'Эмуляция сбоя сети'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleToggleFirestoreNetwork}
+                          disabled={isTogglingNetwork}
+                          className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs border transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                            isFirestoreNetworkOnline
+                              ? 'bg-amber-500/10 hover:bg-red-500/20 text-amber-300 hover:text-red-300 border-amber-500/30 hover:border-red-500/40'
+                              : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40 animate-pulse'
+                          }`}
+                        >
+                          {isTogglingNetwork && !isSimulatingTimeout ? (
+                            <RefreshCw size={14} className="animate-spin text-white" />
+                          ) : isFirestoreNetworkOnline ? (
+                            <WifiOff size={14} className="text-red-400" />
+                          ) : (
+                            <Wifi size={14} className="text-emerald-400" />
+                          )}
+                          <span>
+                            {isTogglingNetwork && !isSimulatingTimeout
+                              ? 'Переключение...'
+                              : isFirestoreNetworkOnline
+                              ? 'Отключить Сеть (disableNetwork)'
+                              : 'Включить Сеть (enableNetwork)'}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleSimulateTimeout}
+                          disabled={isTogglingNetwork || isSimulatingTimeout}
+                          className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+                            isSimulatingTimeout
+                              ? 'bg-amber-500/30 border-amber-500/60 text-amber-200 animate-pulse'
+                              : 'bg-purple-950/60 hover:bg-purple-900/80 border-purple-500/40 text-purple-200'
+                          }`}
+                          title="Симуляция временно отключит сеть на 5 секунд и автоматически возобновит работу"
+                        >
+                          <Timer size={14} className={isSimulatingTimeout ? 'animate-spin text-amber-400' : 'text-purple-400'} />
+                          <span>
+                            {isSimulatingTimeout ? `Таймаут 5с (${timeoutCountdown}с)` : 'Симулировать таймаут 5с'}
+                          </span>
+                        </button>
+                      </div>
+
+                      <p className="text-[10px] text-gray-400 leading-tight">
+                        {isFirestoreNetworkOnline
+                          ? 'disableNetwork() приостанавливает сетевой обмен. Firestore переходит в офлайн-режим и читает данные из кэша.'
+                          : 'enableNetwork() возобновляет онлайн-синхронизацию Firestore с сервером Google Cloud.'}
+                      </p>
+                    </div>
+
+                    <div className="pt-2">
                       <button
                         type="button"
                         onClick={handleTestFirestore}
@@ -805,6 +977,80 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: 5. QUERY MONITOR */}
+            {activeTab === 'queries' && (
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {/* Network Controller Header Bar inside Query Monitor */}
+                <div className="bg-[#150d26] border border-[#3d2b4f] rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    {isFirestoreNetworkOnline ? (
+                      <Wifi size={16} className="text-emerald-400 shrink-0" />
+                    ) : (
+                      <WifiOff size={16} className="text-red-400 animate-pulse shrink-0" />
+                    )}
+                    <div>
+                      <span className="text-xs font-bold text-white block">
+                        Контроллер Сети Firestore:{' '}
+                        <span className={isFirestoreNetworkOnline ? 'text-emerald-400' : 'text-red-400'}>
+                          {isFirestoreNetworkOnline ? 'ОНЛАЙН (enableNetwork)' : 'ОФФЛАЙН (disableNetwork)'}
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {isFirestoreNetworkOnline
+                          ? 'Запросы обращаются к сети и локальному кэшу'
+                          : 'Сеть отключена — все запросы обслуживаются исключительно из кэша DbQueryCore / Firestore'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleToggleFirestoreNetwork}
+                      disabled={isTogglingNetwork}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isFirestoreNetworkOnline
+                          ? 'bg-red-500/10 hover:bg-red-500/20 text-red-300 border-red-500/30'
+                          : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40 animate-pulse'
+                      }`}
+                    >
+                      {isTogglingNetwork && !isSimulatingTimeout ? (
+                        <RefreshCw size={12} className="animate-spin text-white" />
+                      ) : isFirestoreNetworkOnline ? (
+                        <WifiOff size={12} className="text-red-400" />
+                      ) : (
+                        <Wifi size={12} className="text-emerald-400" />
+                      )}
+                      <span>
+                        {isFirestoreNetworkOnline
+                          ? 'Симулировать обрыв'
+                          : 'Восстановить связь'}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSimulateTimeout}
+                      disabled={isTogglingNetwork || isSimulatingTimeout}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isSimulatingTimeout
+                          ? 'bg-amber-500/30 border-amber-500/60 text-amber-200 animate-pulse'
+                          : 'bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 border-purple-500/40'
+                      }`}
+                      title="Отключает Firestore на 5 секунд для проверки устойчивости к сбоям соединения"
+                    >
+                      <Timer size={12} className={isSimulatingTimeout ? 'animate-spin text-amber-400' : 'text-purple-400'} />
+                      <span>
+                        {isSimulatingTimeout ? `Таймаут (${timeoutCountdown}с)` : 'Таймаут 5с'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <AhaQueryMonitor />
               </div>
             )}
           </motion.div>

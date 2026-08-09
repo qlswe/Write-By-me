@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings, ShieldCheck, Cpu, RotateCw, Palette, Check, Save, RefreshCw, Type, Minus, Plus, RotateCcw, Volume2, Activity, Terminal, Download, Shield, Globe, Sparkles, BookOpen, Layers, Code2, PackageCheck, Search, CheckCircle2, AlertTriangle, AlertCircle, ShieldAlert, Wrench, Copy, Play, Trash2, Database, Flame } from 'lucide-react';
+import { Settings, ShieldCheck, Cpu, RotateCw, Palette, Check, Save, RefreshCw, Type, Minus, Plus, RotateCcw, Volume2, Activity, Terminal, Download, Shield, Globe, Sparkles, BookOpen, Layers, Code2, PackageCheck, Search, CheckCircle2, AlertTriangle, AlertCircle, ShieldAlert, Wrench, Copy, Play, Trash2, Database, Flame, Wifi, WifiOff, Radio, Zap } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { db } from '../../firebase';
-import { doc, getDoc, updateDoc, setDoc, collection, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, setDoc, collection, getDocs, deleteDoc, writeBatch, enableNetwork, disableNetwork } from 'firebase/firestore';
 import { sdk } from '../../sdk';
 import { dbQueryCore } from '../../utils/dbQueryCore';
 import { AhaSecurityConsole } from '../security/AhaSecurity';
@@ -65,6 +65,51 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
   const [showAutoFixPanel, setShowAutoFixPanel] = useState<boolean>(false);
   const [activeFixTool, setActiveFixTool] = useState<'npm' | 'yarn' | 'pnpm' | 'script'>('npm');
   const [isPurgingCollection, setIsPurgingCollection] = useState<string | null>(null);
+  const [isFirestoreOnline, setIsFirestoreOnline] = useState<boolean>(true);
+  const [slowThresholdMs, setSlowThresholdMs] = useState<number>(1200);
+
+  const handleToggleFirestoreNetwork = async () => {
+    try {
+      if (isFirestoreOnline) {
+        await disableNetwork(db);
+        setIsFirestoreOnline(false);
+        sdk.notify(
+          lang === 'ru' ? 'Firestore Офлайн' : 'Firestore Offline',
+          lang === 'ru' ? 'Сетевое подключение к Firestore приостановлено. Приложение работает из локального кэша.' : 'Firestore network suspended. Operating from local cache.',
+          'info'
+        );
+      } else {
+        await enableNetwork(db);
+        setIsFirestoreOnline(true);
+        sdk.notify(
+          lang === 'ru' ? 'Firestore Онлайн' : 'Firestore Online',
+          lang === 'ru' ? 'Сетевая синхронизация Firestore успешно возобновлена.' : 'Firestore network sync restored successfully.',
+          'success'
+        );
+      }
+    } catch (err: any) {
+      alert((lang === 'ru' ? 'Ошибка изменения сетевого состояния: ' : 'Network toggle error: ') + err.message);
+    }
+  };
+
+  const handleFlushCache = () => {
+    dbQueryCore.clearCache();
+    sdk.notify(
+      lang === 'ru' ? 'Кэш Очищен' : 'Cache Flushed',
+      lang === 'ru' ? 'Локальный кэш DbQueryCore успешно сброшен.' : 'DbQueryCore query cache successfully flushed.',
+      'success'
+    );
+  };
+
+  const handleSetSlowThreshold = (ms: number) => {
+    setSlowThresholdMs(ms);
+    dbQueryCore.setSlowQueryThreshold(ms);
+    sdk.notify(
+      lang === 'ru' ? 'Порог Запросов Изменен' : 'Query Threshold Updated',
+      lang === 'ru' ? `Порог медленного запроса установлен на ${ms}мс` : `Slow query warning threshold set to ${ms}ms`,
+      'info'
+    );
+  };
 
   const handlePurgeCollection = async (collectionName: string) => {
     if (!window.confirm(lang === 'ru' ? `Удалить ВСЕ записи в коллекции "${collectionName}"? Это действие необратимо!` : `Delete ALL records in collection "${collectionName}"? This action cannot be undone!`)) {
@@ -583,6 +628,65 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                           ? 'Полное управление коллекциями Firestore: выборочное удаление данных или полный сброс БД'
                           : 'Complete Firestore collection management: selective data purge or full DB reset'}
                       </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Network & Firestore Request Controls */}
+                <div className="pt-3 border-t border-[#3d2b4f]/60 space-y-3">
+                  <span className="text-xs text-gray-400 font-bold uppercase tracking-wider block">
+                    {lang === 'ru' ? 'Сетевое Подключение и Оптимизация Запросов:' : 'Network State & Query Optimization:'}
+                  </span>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Online / Offline Toggle */}
+                    <button
+                      type="button"
+                      onClick={handleToggleFirestoreNetwork}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                        isFirestoreOnline
+                          ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/80'
+                          : 'bg-red-950/60 border-red-500/40 text-red-300 hover:bg-red-900/80'
+                      }`}
+                    >
+                      {isFirestoreOnline ? <Wifi size={13} className="text-emerald-400" /> : <WifiOff size={13} className="text-red-400" />}
+                      <span>
+                        {isFirestoreOnline
+                          ? (lang === 'ru' ? 'Сеть Firestore: ОНЛАЙН' : 'Firestore: ONLINE')
+                          : (lang === 'ru' ? 'Сеть Firestore: ОФЛАЙН (Кэш)' : 'Firestore: OFFLINE (Cache)')}
+                      </span>
+                    </button>
+
+                    {/* Flush Query Cache */}
+                    <button
+                      type="button"
+                      onClick={handleFlushCache}
+                      className="px-3 py-1.5 bg-[#251c35] hover:bg-[#3d2b4f] text-gray-200 hover:text-white text-xs font-bold rounded-xl border border-[#3d2b4f] transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw size={12} className="text-cyan-400 shrink-0" />
+                      <span>{lang === 'ru' ? 'Очистить Кэш Запросов' : 'Flush Query Cache'}</span>
+                    </button>
+
+                    {/* Slow Query Warning Threshold Selector */}
+                    <div className="flex items-center gap-1 bg-[#251c35] border border-[#3d2b4f] rounded-xl px-2 py-1">
+                      <Zap size={12} className="text-amber-400 shrink-0" />
+                      <span className="text-[11px] text-gray-400 font-bold mr-1">
+                        {lang === 'ru' ? 'Порог Задержки:' : 'Slow Threshold:'}
+                      </span>
+                      {[500, 1200, 3000].map(ms => (
+                        <button
+                          key={ms}
+                          type="button"
+                          onClick={() => handleSetSlowThreshold(ms)}
+                          className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                            slowThresholdMs === ms
+                              ? 'bg-amber-500 text-black font-black'
+                              : 'bg-[#15101e] text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {ms}мс
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
