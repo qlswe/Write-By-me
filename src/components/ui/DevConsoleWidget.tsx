@@ -13,6 +13,7 @@ import { auth, db } from '../../firebase';
 import { getDeviceId } from '../../utils/deviceId';
 import { doc, getDoc, disableNetwork, enableNetwork } from 'firebase/firestore';
 import { AhaQueryMonitor } from '../monitoring/AhaQueryMonitor';
+import { purgeNonAdminDataAndResetPlatform, purgeTelemetryOnly } from '../../utils/platformReset';
 
 interface DevConsoleWidgetProps {
   isOpen: boolean;
@@ -196,6 +197,38 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
       setTimeout(() => setTokenCopied(false), 2000);
     } catch (err) {
       console.warn(err);
+    }
+  };
+
+  const [isResettingPlatform, setIsResettingPlatform] = useState(false);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
+
+  const handleBulkPlatformReset = async () => {
+    if (!window.confirm('ВНИМАНИЕ! Это действие выполнит массовую перезапись/обнуление данных платформы. Все комментарии, сообщения, посты и телеметрия будут удалены. РИСУНКИ И АДМИН-АККАУНТЫ СОХРАНЯТСЯ. Продолжить?')) {
+      return;
+    }
+
+    setIsResettingPlatform(true);
+    try {
+      const stats = await purgeNonAdminDataAndResetPlatform();
+      const msg = `Сброс выполнен: удалено ${stats.deletedDocsCount} документов, телеметрия очищена. Сохранено ${stats.preservedAdminCount} профилей админа.`;
+      setResetSuccessMessage(msg);
+      logger.info('Bulk platform reset executed from DevConsole', stats, 'DevConsole');
+      setTimeout(() => setResetSuccessMessage(null), 7000);
+    } catch (err: any) {
+      logger.error('Failed to execute bulk platform reset', { error: err?.message }, 'DevConsole');
+    } finally {
+      setIsResettingPlatform(false);
+    }
+  };
+
+  const handlePurgeTelemetry = async () => {
+    try {
+      await purgeTelemetryOnly();
+      setResetSuccessMessage('Телеметрия полностью очищена (локально и в Firestore)!');
+      setTimeout(() => setResetSuccessMessage(null), 5000);
+    } catch (err: any) {
+      logger.error('Failed to purge telemetry', { error: err?.message }, 'DevConsole');
     }
   };
 
@@ -782,7 +815,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                       </p>
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-2 space-y-2">
                       <button
                         type="button"
                         onClick={handleTestFirestore}
@@ -792,6 +825,46 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                         <RefreshCw size={14} className={testingDb ? 'animate-spin' : ''} />
                         <span>{testingDb ? 'Тестируем Firestore...' : 'Пинг Firestore (Test DB Read)'}</span>
                       </button>
+
+                      {/* Bulk Platform Reset & Telemetry Purge Panel */}
+                      <div className="p-3 bg-[#110820] border border-red-500/30 rounded-xl space-y-2.5">
+                        <div className="flex items-center justify-between border-b border-red-500/20 pb-1.5">
+                          <span className="text-[11px] font-bold text-red-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <Flame size={14} className="text-red-400" />
+                            Администрирование БД & Телеметрии
+                          </span>
+                          <span className="text-[10px] text-gray-400">Сохраняет рисунки и админов</span>
+                        </div>
+
+                        {resetSuccessMessage && (
+                          <div className="p-2 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-lg text-[11px] font-bold animate-pulse">
+                            {resetSuccessMessage}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={handleBulkPlatformReset}
+                            disabled={isResettingPlatform}
+                            className="py-2 px-3 bg-red-600/30 hover:bg-red-600/50 text-red-200 border border-red-500/50 hover:border-red-400 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                            title="Массовая перезапись БД: удаление комментариев, постов, телеметрии. Рисунки и админы остаются."
+                          >
+                            <Trash2 size={13} className={isResettingPlatform ? 'animate-spin' : ''} />
+                            <span>{isResettingPlatform ? 'Перезапись БД...' : '🔥 Сброс Платформы'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handlePurgeTelemetry}
+                            className="py-2 px-3 bg-amber-600/20 hover:bg-amber-600/40 text-amber-200 border border-amber-500/40 hover:border-amber-400 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow"
+                            title="Очистить только сохранённые логи телеметрии локально и в Firestore"
+                          >
+                            <Zap size={13} className="text-amber-400" />
+                            <span>🧹 Очистить Телеметрию</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

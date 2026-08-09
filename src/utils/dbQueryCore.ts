@@ -183,9 +183,11 @@ class DbQueryCore {
   /**
    * Clear all memory caches
    */
-  public clearCache(): void {
+  public clearCache(): number {
+    const clearedCount = this.cache.size;
     this.cache.clear();
-    console.log('%c[DbQueryCore] All memory caches cleared.', 'color: #8be9fd;');
+    console.log(`%c[DbQueryCore 🧹 CACHE CLEARED] Evicted ${clearedCount} cached entries`, 'color: #ffb86c; font-weight: bold;');
+    return clearedCount;
   }
 
   /**

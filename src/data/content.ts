@@ -303,7 +303,9 @@ export const theoriesData: Theory[] = [
 
 export interface BlogPost {
   id: string;
-  category: 'updates' | 'personal';
+  category: 'updates' | 'personal' | string;
+  createdAt?: string;
+  mediaUrl?: string;
   title: LocalizedString;
   summary: LocalizedString;
   content: LocalizedString;
@@ -313,6 +315,7 @@ export const blogPostsData: BlogPost[] = [
   {
     id: 'blog-3',
     category: 'updates',
+    createdAt: '2026-03-28T12:00:00.000Z',
     title: {
       ru: "Рераны в патче 4.0: Кого крутить?",
       en: "Reruns in Patch 4.0: Who to Pull?",
@@ -322,8 +325,8 @@ export const blogPostsData: BlogPost[] = [
       zh: "4.0版本复刻：抽谁？"
     },
     summary: {
-      ru: "Анализ предстоящих реранов персонажей в версии 4.0 и советы по выбору.",
-      en: "Analysis of upcoming character reruns in version 4.0 and pulling advice.",
+      ru: "Детальный анализ предстоящих баннеров 4.0: Цзинлю, Авантюрин, мета-команды и советы по экономии нефрита.",
+      en: "Detailed analysis of 4.0 banners: Jingliu, Aventurine, meta comps, and jade efficiency.",
       by: "Аналіз маючых адбыцца рэранаў персанажаў у версіі 4.0 і парады па выбары.",
       de: "Analyse der kommenden Charakter-Reruns in Version 4.0 und Zieh-Ratschläge.",
       fr: "Analyse des relances de personnages à venir dans la version 4.0 et conseils d'invocation.",

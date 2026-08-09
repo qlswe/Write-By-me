@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { dbQueryCore, DbQueryEvent } from '../../utils/dbQueryCore';
 import { logger } from '../../utils/logger';
-import { Zap, Activity, Clock, Database, RefreshCw, BarChart2, ShieldCheck, Play, Flame, Trash2 } from 'lucide-react';
+import { Zap, Activity, Clock, Database, RefreshCw, BarChart2, ShieldCheck, Play, Flame, Trash2, Eraser, Download } from 'lucide-react';
 
 interface ProfileQueryStats {
   totalRequests: number;
@@ -56,6 +56,31 @@ export const AhaQueryMonitor: React.FC<{ compact?: boolean }> = ({ compact = fal
     const uids = ['system_admin', 'demo_user_1', 'demo_user_2'];
     await Promise.all(uids.map(uid => dbQueryCore.getProfileBatched(uid)));
     logger.info('🔥 Cache warmup complete! Subsequent requests for these UIDs will hit 0ms cache.', null, 'AhaQueryMonitor');
+  };
+
+  const handleClearCache = () => {
+    const cleared = dbQueryCore.clearCache();
+    logger.warn(`🧹 Cache Evicted: Cleared ${cleared} items from DbQueryCore cache memory`, null, 'AhaQueryMonitor');
+  };
+
+  const handleExportTelemetry = () => {
+    const report = {
+      timestamp: new Date().toISOString(),
+      metrics: {
+        totalRequests: stats.totalRequests,
+        cacheHits: stats.cacheHits,
+        networkFetches: stats.networkFetches,
+        cacheRatioPercent: Number(cacheRatio),
+        avgLatencyMs: Number(stats.avgLatencyMs.toFixed(2)),
+        minLatencyMs: Number(stats.minLatencyMs.toFixed(2)),
+        maxLatencyMs: Number(stats.maxLatencyMs.toFixed(2)),
+        freqPerMinute: stats.freqPerMinute,
+      },
+      recentEvents: events.slice(0, 10),
+    };
+
+    navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+    logger.info('📋 Telemetry Diagnostic Report copied to clipboard!', report, 'AhaQueryMonitor');
   };
 
   const handleResetStats = () => {
@@ -186,8 +211,11 @@ export const AhaQueryMonitor: React.FC<{ compact?: boolean }> = ({ compact = fal
         </div>
 
         <div className="bg-[#1c1330] border border-[#3d2b4f] p-2.5 rounded-xl">
-          <span className="text-[10px] text-gray-400 uppercase font-bold block flex items-center gap-1">
-            <Zap size={11} className="text-amber-400" /> Сред. Задержка
+          <span className="text-[10px] text-gray-400 uppercase font-bold block flex items-center gap-1 justify-between">
+            <span className="flex items-center gap-1"><Zap size={11} className="text-amber-400" /> Ср. Задержка</span>
+            <span className="text-[9px] text-gray-500 font-mono">
+              {stats.minLatencyMs.toFixed(0)}-{stats.maxLatencyMs.toFixed(0)}ms
+            </span>
           </span>
           <div className="text-lg font-black font-mono text-amber-300 mt-0.5">
             {stats.avgLatencyMs.toFixed(1)} <span className="text-[10px] font-normal text-gray-400">мс</span>
@@ -196,7 +224,7 @@ export const AhaQueryMonitor: React.FC<{ compact?: boolean }> = ({ compact = fal
 
         <div className="bg-[#1c1330] border border-[#3d2b4f] p-2.5 rounded-xl">
           <span className="text-[10px] text-gray-400 uppercase font-bold block flex items-center gap-1">
-            <ShieldCheck size={11} className="text-emerald-400" /> Кэш
+            <ShieldCheck size={11} className="text-emerald-400" /> Эффективность Кэша
           </span>
           <div className="text-lg font-black font-mono text-emerald-300 mt-0.5">
             {cacheRatio}%
@@ -210,6 +238,34 @@ export const AhaQueryMonitor: React.FC<{ compact?: boolean }> = ({ compact = fal
           <div className="text-lg font-black font-mono text-purple-300 mt-0.5">
             {stats.totalRequests}
           </div>
+        </div>
+      </div>
+
+      {/* Visual Cache Hit vs Network Distribution Bar */}
+      <div className="bg-[#110820] border border-[#3d2b4f] p-2.5 rounded-xl space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] font-bold">
+          <span className="text-gray-300 flex items-center gap-1.5">
+            <BarChart2 size={13} className="text-emerald-400" />
+            Распределение: Кэш vs Сеть
+          </span>
+          <span className="font-mono text-[10px]">
+            <span className="text-emerald-400 font-bold">{stats.cacheHits} кэш</span>
+            <span className="text-gray-500 mx-1">/</span>
+            <span className="text-cyan-400 font-bold">{stats.networkFetches} сеть</span>
+          </span>
+        </div>
+
+        <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden flex">
+          <div
+            className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+            style={{ width: `${stats.totalRequests > 0 ? (stats.cacheHits / stats.totalRequests) * 100 : 100}%` }}
+            title={`Кэш: ${stats.cacheHits} запросов (${cacheRatio}%)`}
+          />
+          <div
+            className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-300"
+            style={{ width: `${stats.totalRequests > 0 ? (stats.networkFetches / stats.totalRequests) * 100 : 0}%` }}
+            title={`Сеть: ${stats.networkFetches} запросов`}
+          />
         </div>
       </div>
 
@@ -238,17 +294,39 @@ export const AhaQueryMonitor: React.FC<{ compact?: boolean }> = ({ compact = fal
             <Flame size={12} className="text-amber-400" />
             <span>🔥 Прогреть Кэш</span>
           </button>
+
+          <button
+            type="button"
+            onClick={handleClearCache}
+            className="px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 text-rose-200 text-[11px] font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Очистить память локального кэша для тестирования холодных сетевых запросов"
+          >
+            <Eraser size={12} className="text-rose-400" />
+            <span>🧹 Сбросить Кэш</span>
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={handleResetStats}
-          className="px-2 py-1 bg-[#1c1330] hover:bg-[#2e1d4d] border border-[#3d2b4f] text-gray-400 hover:text-white text-[11px] rounded-xl transition-all flex items-center gap-1 cursor-pointer"
-          title="Сбросить счетчики вызовов"
-        >
-          <Trash2 size={11} />
-          <span>Сброс</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleExportTelemetry}
+            className="px-2 py-1 bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/40 text-purple-200 text-[11px] font-bold rounded-xl transition-all flex items-center gap-1 cursor-pointer"
+            title="Скопировать JSON отчёт телеметрии в буфер обмена"
+          >
+            <Download size={11} className="text-purple-400" />
+            <span>Экспорт JSON</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResetStats}
+            className="px-2 py-1 bg-[#1c1330] hover:bg-[#2e1d4d] border border-[#3d2b4f] text-gray-400 hover:text-white text-[11px] rounded-xl transition-all flex items-center gap-1 cursor-pointer"
+            title="Сбросить счетчики вызовов"
+          >
+            <Trash2 size={11} />
+            <span>Сброс</span>
+          </button>
+        </div>
       </div>
 
       {/* Recent public_profiles Query Events Log */}
