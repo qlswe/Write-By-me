@@ -11,6 +11,7 @@ import { EmailLoginModal } from '../ui/EmailLoginModal';
 import { PwaInstallModal } from '../ui/PwaInstallModal';
 import { IPv6Modal } from '../ui/IPv6Modal';
 import { AhaProtocolModal } from '../ui/AhaProtocolModal';
+import { AhaEmbeddedBrowserModal } from '../ui/AhaEmbeddedBrowserModal';
 import { usePWA } from '../../hooks/usePWA';
 import { sdk } from '../../sdk';
 
@@ -60,6 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [pwaModalOpen, setPwaModalOpen] = useState(false);
   const [ipv6ModalOpen, setIpv6ModalOpen] = useState(false);
   const [ahaProtocolModalOpen, setAhaProtocolModalOpen] = useState(false);
+  const [embeddedBrowserOpen, setEmbeddedBrowserOpen] = useState(false);
   const { trackRender } = usePerfLogger('Header');
   trackRender();
 
@@ -233,6 +235,16 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Zap size={14} className="text-[#ff4d4d] animate-pulse" />
               <span className="text-[10px] sm:text-[11px] font-black tracking-wide">AHA-v6</span>
+            </button>
+
+            {/* AHA Built-in Web Browser Badge */}
+            <button
+              onClick={() => setEmbeddedBrowserOpen(true)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-400 transition-all duration-300 active:scale-95 shadow-md shadow-purple-500/10 cursor-pointer"
+              title={lang === 'ru' ? "Встроенный браузер и User-Agent инспектор" : "Embedded Browser & User-Agent Inspector"}
+            >
+              <Globe size={14} className="text-purple-400 animate-pulse" />
+              <span className="text-[10px] sm:text-[11px] font-black tracking-wide">{lang === 'ru' ? 'Браузер' : 'Browser'}</span>
             </button>
 
             <button 
@@ -421,6 +433,14 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>AHA-v6</span>
                 </button>
 
+                <button 
+                  onClick={() => { setEmbeddedBrowserOpen(true); setMobileMenuOpen(false); }}
+                  className="flex items-center justify-center gap-2 bg-[#15101e] border border-purple-500/40 text-purple-300 p-3 rounded-xl text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer col-span-2"
+                >
+                  <Globe size={16} className="text-purple-400 animate-pulse" />
+                  <span>{lang === 'ru' ? 'Встроенный браузер (AHA Browser & UA)' : 'AHA Browser & UA Inspector'}</span>
+                </button>
+
                 {onToggleConsole && (
                   <button 
                     onClick={() => { onToggleConsole(); setMobileMenuOpen(false); }}
@@ -526,6 +546,11 @@ export const Header: React.FC<HeaderProps> = ({
       <AhaProtocolModal
         isOpen={ahaProtocolModalOpen}
         onClose={() => setAhaProtocolModalOpen(false)}
+        lang={lang}
+      />
+      <AhaEmbeddedBrowserModal
+        isOpen={embeddedBrowserOpen}
+        onClose={() => setEmbeddedBrowserOpen(false)}
         lang={lang}
       />
     </>
