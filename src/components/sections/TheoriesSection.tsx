@@ -18,6 +18,7 @@ import { TimeAgo } from '../ui/TimeAgo';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { SafeHtml } from '../security/AhaSecurity';
 import { TheorySkeletonGrid } from '../ui/SkeletonLoaders';
+import { AhaProtocolDiagram } from '../ui/AhaProtocolDiagram';
 
 interface TheoriesSectionProps {
   lang: Language;
@@ -232,9 +233,11 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               <SafeHtml html={selectedTheory.content[lang] || selectedTheory.content['en']} />
             </div>
 
-            <div className="mb-12">
-
-            </div>
+            {selectedTheory.id === 'theory-aha-protocol' && (
+              <div className="mb-8">
+                <AhaProtocolDiagram lang={lang} />
+              </div>
+            )}
 
             <div className="pt-10 border-t border-[#3d2b4f]">
               <CommentsSection targetId={selectedTheory.id} lang={lang} lowPerfMode={lowPerfMode} role={role} onOpenChat={onOpenChat} />
@@ -271,7 +274,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             
             <div className="flex flex-col lg:flex-row gap-6 mb-10">
               <div className="flex gap-2 p-1.5 bg-[#15101e]/50 rounded-2xl border border-[#3d2b4f] overflow-x-auto no-scrollbar ml-6">
-                {['all', 'lore', 'characters', 'gameplay', 'favorites'].map((cat) => (
+                {['all', 'lore', 'characters', 'gameplay', 'infrastructure', 'favorites'].map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setTheoryCategory(cat)}
@@ -284,7 +287,8 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                     {cat === 'all' ? t.filterAll : 
                      cat === 'lore' ? t.filterLore : 
                      cat === 'characters' ? t.filterCharacters : 
-                     cat === 'gameplay' ? t.filterGameplay : t.filterFavorites}
+                     cat === 'gameplay' ? t.filterGameplay : 
+                     cat === 'infrastructure' ? (lang === 'ru' ? 'Инфраструктура' : 'Infrastructure') : t.filterFavorites}
                   </button>
                 ))}
               </div>

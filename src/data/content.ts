@@ -12,13 +12,117 @@ export interface LocalizedString {
 
 export interface Theory {
   id: string;
-  category: 'lore' | 'characters' | 'gameplay';
+  category: 'lore' | 'characters' | 'gameplay' | 'infrastructure';
   title: LocalizedString;
   summary: LocalizedString;
   content: LocalizedString;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const theoriesData: Theory[] = [
+  {
+    id: 'theory-aha-protocol',
+    category: 'infrastructure',
+    title: {
+      ru: "Протокол AHA v6: Архитектурные принципы IPv6-First инфраструктуры и обмена данными",
+      en: "AHA Protocol v6: Architectural Principles for IPv6-First Infrastructure and Data Exchange",
+      by: "Пратакол AHA v6: Архітэктурныя прынцыпы IPv6-First інфраструктуры і абмену данымі",
+      de: "AHA-Protokoll v6: Architekturprinzipien für IPv6-First-Infrastruktur und Datenaustausch",
+      fr: "Protocole AHA v6 : Principes architecturaux pour l'infrastructure IPv6-First et l'échange de données",
+      zh: "AHA 协议 v6：IPv6 优先基础设施与数据交换架构原理"
+    },
+    summary: {
+      ru: "Полный разбор концепции AHA Protocol v6: прямое P2P-соединение без CGNAT, 20-битная аппаратная маркровка пакетов IPv6 Flow Label, Jumbo MTU до 9000 байт и интерактивная D3-диаграмма сетевой топологии.",
+      en: "Complete architectural guide to AHA Protocol v6: Zero-NAT direct peer connections, 20-bit IPv6 Flow Label hardware routing, Jumbo MTU (9000B), and interactive D3 topology diagram.",
+      by: "Поўны разбор канцэпцыі AHA Protocol v6: прамое P2P-злучэнне без CGNAT, 20-бітная маркіроўка пакетаў IPv6 і D3-дыяграма сеткі.",
+      de: "Vollständiger Leitfaden zum AHA-Protokoll v6: Direct Zero-NAT P2P, 20-Bit IPv6 Flow Labeling und interaktives D3-Diagramm.",
+      fr: "Guide architectural du protocole AHA v6 : connexions P2P Zero-NAT, Flow Label IPv6 20 bits et schéma D3 interactif.",
+      zh: "AHA 协议 v6 完整架构指南：Zero-NAT 直连、20 位 IPv6 流标签与 D3 交互式拓扑图。"
+    },
+    content: {
+      ru: `<h3>1. Концептуальный обзор AHA Protocol v6</h3>
+<p><b>AHA Protocol v6 (Adaptive Hyper-Acceleration)</b> — это передовой адаптивный сетевой протокол прикладного уровня, спроектированный с нуля для использования всех преимуществ нативной инфраструктуры <b>IPv6 Dual-Stack Primary</b>.</p>
+<p>В отличие от устаревших IPv4-сетей, требующих регулярной трансляции сетевых адресов (CGNAT) и промежуточных прокси, AHA Protocol обеспечивает сквозное гигабитное P2P-взаимодействие клиентов и облачных серверов с задержками до <b>0.8 мс</b>.</p>
+
+<div id="aha-protocol-d3-diagram"></div>
+
+<h3>2. Четыре архитектурных столпа IPv6-First обмена данными</h3>
+<ul>
+  <li><b>1. Аппаратная маркировка потоков (20-bit IPv6 Flow Labeling):</b> Каждому активному соединению присваивается уникальный метка потока непосредственно в заголовке кадра IPv6. Маршрутизаторы Tier-1 коммутируют какадор с аппаратно сгенерированным Flow Label без глубокой инспекции пакетов (DPI), снижая нагрузки на CPU на 40%.</li>
+  <li><b>2. Zero-NAT Direct P2P Channel:</b> Поскольку IPv6 предоставляет каждому узлу уникальный глобальный адрес, AHA Protocol полностью обходит серверы трансляции адресов (NAT/CGNAT), обеспечивая прямое криптографически защищенное сокет-соединение.</li>
+  <li><b>3. Мультипотоковая компрессия заголовков (Multipath Stream Compression):</b> Данные расщепляются на 4 параллельных виртуальных IPv6-потока, заголовки которых сжимаются в соотношении 1:3.8, увеличивая пропускную способность для передачи больших объектов данных ИИ.</li>
+  <li><b>4. Адаптивный Jumbo MTU (до 9000 байт):</b> Динамическое согласование размера кадра позволяет передавать до 9000 байт за один сетевой такт без фрагментации пакетов на промежуточных узлах.</li>
+</ul>
+
+<h3>3. Стратегия устойчивости (Dual-Stack Fallback)</h3>
+<p>В случаях, когда провайдер пользователя или промежуточный сегмент магистрали не поддерживает нативный IPv6, AHA Protocol автоматически переключается на 6to4 туннелирование с сохранением целостности пакетов и обратной совместимостью с IPv4.</p>`,
+      en: `<h3>1. Conceptual Overview of AHA Protocol v6</h3>
+<p><b>AHA Protocol v6 (Adaptive Hyper-Acceleration)</b> is an advanced adaptive application-layer network protocol engineered from the ground up to exploit the full potential of native <b>IPv6 Dual-Stack Primary</b> infrastructure.</p>
+<p>Unlike legacy IPv4 networks bound by Carrier-Grade NAT (CGNAT) middleboxes, AHA Protocol establishes direct gigabit peer-to-peer data pipes with sub-millisecond latency (down to <b>0.8 ms</b>).</p>
+
+<div id="aha-protocol-d3-diagram"></div>
+
+<h3>2. The Four Pillars of IPv6-First Data Exchange</h3>
+<ul>
+  <li><b>1. Native 20-bit IPv6 Flow Labeling:</b> Every session stamps a unique 20-bit flow label directly into the IPv6 header. Tier-1 routers hardware-switch these frames at line rate without Deep Packet Inspection (DPI) overhead.</li>
+  <li><b>2. Zero-NAT Direct P2P Channel:</b> Global IPv6 addressing allows direct cryptographically verified socket pairing, eliminating port mapping state tables and traversal bottlenecks.</li>
+  <li><b>3. Multipath Stream Compression:</b> Payloads scatter across 4 parallel virtual IPv6 transport streams with 1:3.8 header compression ratios for high-throughput AI payload transfers.</li>
+  <li><b>4. Adaptive Jumbo MTU (Up to 9000 Bytes):</b> Dynamically negotiates Frame MTU size to transfer 9000-byte bursts per frame without fragmentation.</li>
+</ul>
+
+<h3>3. Resilience & Dual-Stack Fallback Strategy</h3>
+<p>Should the client ISP or transit network lack native IPv6 support, AHA Protocol automatically degrades to 6to4 tunneled routes, guaranteeing unbroken connectivity across legacy IPv4 infrastructures.</p>`,
+      by: `<h3>1. Канцэптуальны агляд AHA Protocol v6</h3>
+<p><b>AHA Protocol v6 (Adaptive Hyper-Acceleration)</b> — гэта перадавы адаптыўны сеткавы пратакол прыкладнога ўзроўню для натыўнай інфраструктуры <b>IPv6 Dual-Stack Primary</b>.</p>
+
+<div id="aha-protocol-d3-diagram"></div>
+
+<h3>2. Чатыры архітэктурныя слупы IPv6-First абмену данымі</h3>
+<ul>
+  <li><b>1. Маркіроўка патокаў (20-bit IPv6 Flow Labeling):</b> Кожнаму злучэнню прысвойваецца унікальная метка патоку ў загалоўку IPv6.</li>
+  <li><b>2. Zero-NAT Direct P2P Channel:</b> Прамое P2P злучэнне без CGNAT задержкаў.</li>
+  <li><b>3. Мультыпатокавая кампрэсія:</b> Сцісканне метаданых і размеркаванне даных па 4 паралельных IPv6 патоках.</li>
+  <li><b>4. Адаптыўны Jumbo MTU (да 9000 байт):</b> Перадача вялікіх аб'ёмаў даных без фрагментацыі пакетаў.</li>
+</ul>`,
+      de: `<h3>1. Konzeptueller Überblick über das AHA-Protokoll v6</h3>
+<p><b>AHA Protocol v6 (Adaptive Hyper-Acceleration)</b> ist ein fortschrittliches adaptives Netzwerkprotokoll für native <b>IPv6 Dual-Stack Primary</b> Infrastrukturen.</p>
+
+<div id="aha-protocol-d3-diagram"></div>
+
+<h3>2. Die vier Säulen des IPv6-First Datenaustauschs</h3>
+<ul>
+  <li><b>1. Native 20-Bit-IPv6-Flow-Kennzeichnung:</b> Bietet Hardware-Routing auf Tier-1-Routern ohne DPI-Overhead.</li>
+  <li><b>2. Zero-NAT Direktes P2P:</b> Direkte Peer-zu-Peer-Verbindungen ohne CGNAT-Verzögerungen.</li>
+  <li><b>3. Multipath-Stream-Kompression:</b> Verteilt Daten über 4 parallele virtuelle IPv6-Kanäle.</li>
+  <li><b>4. Adaptiver Jumbo MTU (bis zu 9000 Byte):</b> Maximiert den Durchsatz ohne Paketfragmentierung.</li>
+</ul>`,
+      fr: `<h3>1. Aperçu conceptuel du protocole AHA v6</h3>
+<p>Le <b>AHA Protocol v6 (Adaptive Hyper-Acceleration)</b> est un protocole réseau adaptatif conçu pour tirer le meilleur parti de l'infrastructure <b>IPv6 Dual-Stack Primary</b>.</p>
+
+<div id="aha-protocol-d3-diagram"></div>
+
+<h3>2. Les quatre piliers de l'échange de données IPv6-First</h3>
+<ul>
+  <li><b>1. Marquage de flux IPv6 20 bits :</b> Permet la commutation matérielle directe par les routeurs Tier-1.</li>
+  <li><b>2. Canal P2P direct Zero-NAT :</b> Connexion directe sans latence de traduction d'adresse.</li>
+  <li><b>3. Compression de flux multipath :</b> Répartit la charge sur 4 flux IPv6 virtuels parallèles.</li>
+  <li><b>4. MTU Jumbo adaptatif (jusqu'à 9000 octets) :</b> Maximise le débit sans fragmentation.</li>
+</ul>`,
+      zh: `<h3>1. AHA 协议 v6 概述</h3>
+<p><b>AHA Protocol v6（自适应超加速协议）</b> 是一种面向原生的 <b>IPv6 双栈（Dual-Stack Primary）</b> 基础设施设计的高性能应用层网络协议。</p>
+
+<div id="aha-protocol-d3-diagram"></div>
+
+<h3>2. IPv6 优先数据交换的四大架构支柱</h3>
+<ul>
+  <li><b>1. 原生 20 位 IPv6 流标签（Flow Labeling）：</b> 在包头注入 20 位流标签，Tier-1 路由器无需 DPI 深度报文检查即可实现硬件级高速转发。</li>
+  <li><b>2. 无 CGNAT 的点对点直连（Zero-NAT Direct P2P）：</b> 依靠全局 IPv6 地址构建端到端加密 Socket 直连，彻底消除地址转换延迟。</li>
+  <li><b>3. 多路径流报头压缩（Multipath Compression）：</b> 将数据拆分至 4 条并行虚拟 IPv6 传输流，报头压缩比达 1:3.8。</li>
+  <li><b>4. 自适应 Jumbo MTU（最高 9000 字节）：</b> 动态协商 9000 字节的大帧传输，避免中间节点分片开销。</li>
+</ul>`
+    }
+  },
   {
     id: 'theory-1',
     category: 'lore',
