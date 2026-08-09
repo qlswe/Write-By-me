@@ -122,8 +122,9 @@ export const AhaProtocolDiagram: React.FC<AhaProtocolDiagramProps> = ({ lang }) 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current) return;
 
-    const width = containerRef.current.clientWidth || 700;
-    const height = 400;
+    const width = containerRef.current.clientWidth || 360;
+    const isMobile = width < 500;
+    const height = isMobile ? 320 : 400;
 
     // Clear previous SVG contents
     d3.select(svgRef.current).selectAll('*').remove();
@@ -140,11 +141,15 @@ export const AhaProtocolDiagram: React.FC<AhaProtocolDiagramProps> = ({ lang }) 
     const nodesCopy = JSON.parse(JSON.stringify(NODES_DATA)) as AhaNode[];
     const linksCopy = JSON.parse(JSON.stringify(LINKS_DATA)) as AhaLink[];
 
+    const linkDistance = isMobile ? 70 : 120;
+    const chargeStrength = isMobile ? -200 : -400;
+    const collideRadius = isMobile ? 30 : 40;
+
     const simulation = d3.forceSimulation<AhaNode>(nodesCopy)
-      .force('link', d3.forceLink<AhaNode, AhaLink>(linksCopy).id(d => d.id).distance(120))
-      .force('charge', d3.forceManyBody().strength(-400))
+      .force('link', d3.forceLink<AhaNode, AhaLink>(linksCopy).id(d => d.id).distance(linkDistance))
+      .force('charge', d3.forceManyBody().strength(chargeStrength))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(40));
+      .force('collision', d3.forceCollide().radius(collideRadius));
 
     // Render Links
     const linkGroup = g.append('g').attr('class', 'links');
@@ -321,8 +326,8 @@ export const AhaProtocolDiagram: React.FC<AhaProtocolDiagramProps> = ({ lang }) 
       </div>
 
       {/* D3 Canvas Container */}
-      <div ref={containerRef} className="relative w-full bg-[#0a0710] border border-[#2d1b3d] rounded-2xl overflow-hidden min-h-[380px] flex items-center justify-center">
-        <svg ref={svgRef} className="w-full h-[400px] cursor-grab active:cursor-grabbing" />
+      <div ref={containerRef} className="relative w-full bg-[#0a0710] border border-[#2d1b3d] rounded-2xl overflow-hidden min-h-[320px] sm:min-h-[380px] flex items-center justify-center">
+        <svg ref={svgRef} className="w-full h-[320px] sm:h-[400px] cursor-grab active:cursor-grabbing" />
 
         {/* Floating Legend */}
         <div className="absolute top-3 left-3 p-2.5 bg-[#15101e]/80 backdrop-blur-md border border-[#3d2b4f] rounded-xl text-[10px] space-y-1.5 font-mono text-gray-300">

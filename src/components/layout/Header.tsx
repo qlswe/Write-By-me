@@ -218,21 +218,21 @@ export const Header: React.FC<HeaderProps> = ({
             {/* IPv6 Popularization & Protocol Badge */}
             <button
               onClick={() => setIpv6ModalOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all duration-300 active:scale-95 shadow-md shadow-emerald-500/10 cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all duration-300 active:scale-95 shadow-md shadow-emerald-500/10 cursor-pointer"
               title={lang === 'ru' ? "IPv6 Центр Популяризации (Dual-Stack ::)" : "IPv6 Protocol Promotion Center"}
             >
               <Globe size={14} className="text-emerald-400 animate-pulse" />
-              <span className="text-[11px] font-black tracking-wide">IPv6</span>
+              <span className="text-[10px] sm:text-[11px] font-black tracking-wide">IPv6</span>
             </button>
 
             {/* AHA Protocol v6 Hyper-Acceleration Badge */}
             <button
               onClick={() => setAhaProtocolModalOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border bg-[#ff4d4d]/10 border-[#ff4d4d]/30 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-[#ff4d4d]/10 border-[#ff4d4d]/30 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
               title={lang === 'ru' ? "AHA Protocol v6 (Adaptive IPv6 Hyper-Acceleration)" : "AHA Protocol v6 Hyper-Acceleration"}
             >
               <Zap size={14} className="text-[#ff4d4d] animate-pulse" />
-              <span className="text-[11px] font-black tracking-wide">AHA-v6</span>
+              <span className="text-[10px] sm:text-[11px] font-black tracking-wide">AHA-v6</span>
             </button>
 
             <button 
@@ -402,12 +402,38 @@ export const Header: React.FC<HeaderProps> = ({
               ))}
             </div>
             
-            <div className="p-6 border-t border-[#3d2b4f] mt-auto shrink-0 flex flex-col gap-4">
+            <div className="p-4 sm:p-6 border-t border-[#3d2b4f] mt-auto shrink-0 flex flex-col gap-4">
               {/* Quick Actions Grid for Mobile */}
-              <div className="sm:hidden">
+              <div className="sm:hidden grid grid-cols-2 gap-2">
+                <button 
+                  onClick={() => { setIpv6ModalOpen(true); setMobileMenuOpen(false); }}
+                  className="flex items-center justify-center gap-2 bg-[#15101e] border border-emerald-500/40 text-emerald-300 p-3 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-all cursor-pointer"
+                >
+                  <Globe size={16} className="text-emerald-400 animate-pulse" />
+                  <span>IPv6 Центр</span>
+                </button>
+
+                <button 
+                  onClick={() => { setAhaProtocolModalOpen(true); setMobileMenuOpen(false); }}
+                  className="flex items-center justify-center gap-2 bg-[#15101e] border border-[#ff4d4d]/40 text-[#ff4d4d] p-3 rounded-xl text-xs font-bold hover:bg-[#ff4d4d]/20 transition-all cursor-pointer"
+                >
+                  <Zap size={16} className="text-[#ff4d4d] animate-pulse" />
+                  <span>AHA-v6</span>
+                </button>
+
+                {onToggleConsole && (
+                  <button 
+                    onClick={() => { onToggleConsole(); setMobileMenuOpen(false); }}
+                    className="flex items-center justify-center gap-2 bg-[#15101e] border border-[#3d2b4f] text-gray-200 p-3 rounded-xl text-xs font-bold hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all cursor-pointer"
+                  >
+                    <Terminal size={16} className="text-[#ff4d4d]" />
+                    <span>{lang === 'ru' ? 'Консоль' : 'Console'}</span>
+                  </button>
+                )}
+
                 <button 
                   onClick={() => { sdk.reloadApp(); setMobileMenuOpen(false); }}
-                  className="w-full flex items-center justify-center gap-2 bg-[#15101e] border border-[#3d2b4f] text-gray-200 p-3 rounded-xl text-xs font-bold hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all"
+                  className="flex items-center justify-center gap-2 bg-[#15101e] border border-[#3d2b4f] text-gray-200 p-3 rounded-xl text-xs font-bold hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all cursor-pointer"
                 >
                   <RotateCw size={16} className="text-[#ff4d4d]" />
                   <span>{lang === 'ru' ? 'Обновить' : 'Reload'}</span>

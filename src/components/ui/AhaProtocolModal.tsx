@@ -122,7 +122,7 @@ export const AhaProtocolModal: React.FC<AhaProtocolModalProps> = ({ isOpen, onCl
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 mt-5 border-b border-white/10 pb-1">
+            <div className="flex items-center gap-2 mt-5 border-b border-white/10 pb-1 overflow-x-auto no-scrollbar whitespace-nowrap">
               <button
                 onClick={() => setActiveTab('monitor')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
