@@ -313,17 +313,8 @@ async function startServer() {
     });
   }
 
-  const server = app.listen(PORT, "::", () => {
-    console.log(`🚀 [IPv6 Enabled] Server running dual-stack on http://[::]:${PORT}`);
-  });
-
-  server.on('error', (err: any) => {
-    if (err.code === 'EADDRNOTAVAIL' || err.code === 'EINVAL') {
-      console.warn(`⚠️ IPv6 dual-stack binding unavailable, falling back to 0.0.0.0:${PORT}`);
-      app.listen(PORT, "0.0.0.0", () => {
-        console.log(`Server running on http://0.0.0.0:${PORT}`);
-      });
-    }
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 [IPv6 Dual-Stack Enabled] Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
