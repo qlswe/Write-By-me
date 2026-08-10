@@ -128,3 +128,197 @@
     }
   }
 }
+
+/* Printer-Friendly Layout for Theory Articles & Documents */
+@media print {
+  /* Hide non-essential layout and UI elements */
+  header,
+  footer,
+  nav,
+  aside,
+  .no-print,
+  .print\:hidden,
+  button,
+  input,
+  textarea,
+  select,
+  [role="banner"],
+  [role="navigation"],
+  .comments-section,
+  .fixed,
+  .sticky {
+    display: none !important;
+  }
+
+  /* Reset global page background and text colors for paper/PDF output */
+  html,
+  body,
+  #root {
+    background: #ffffff !important;
+    color: #111827 !important;
+    overflow: visible !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body::before {
+    display: none !important;
+  }
+
+  /* Force container visibility and clean styling */
+  .printable-theory-article {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    position: static !important;
+    overflow: visible !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Print Header Banner */
+  .print-header-banner {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px dashed #dc2626;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  .print-header-logo {
+    font-weight: 900;
+    font-size: 14pt;
+    color: #0f172a !important;
+    letter-spacing: -0.5px;
+  }
+
+  .print-header-meta {
+    font-size: 9pt;
+    color: #64748b !important;
+    text-align: right;
+    font-weight: 600;
+  }
+
+  /* Typography formatting for print */
+  .printable-theory-article h1,
+  .printable-theory-article h2,
+  .printable-theory-article h3,
+  .printable-theory-article h4 {
+    color: #0f172a !important;
+    font-weight: 800 !important;
+    page-break-after: avoid;
+  }
+
+  .printable-theory-article h2 {
+    font-size: 22pt !important;
+    line-height: 1.25 !important;
+    margin-bottom: 12px !important;
+  }
+
+  .printable-theory-article p,
+  .printable-theory-article li,
+  .printable-theory-article span {
+    color: #334155 !important;
+  }
+
+  .printable-theory-article .prose {
+    color: #334155 !important;
+    max-width: 100% !important;
+    font-size: 11pt !important;
+    line-height: 1.7 !important;
+  }
+
+  .printable-theory-article .prose h1,
+  .printable-theory-article .prose h2,
+  .printable-theory-article .prose h3 {
+    color: #0f172a !important;
+    margin-top: 18pt !important;
+    margin-bottom: 8pt !important;
+  }
+
+  .printable-theory-article .prose p {
+    color: #1e293b !important;
+    margin-bottom: 12pt !important;
+  }
+
+  .printable-theory-article .prose a {
+    color: #dc2626 !important;
+    text-decoration: underline !important;
+  }
+
+  .printable-theory-article .prose code {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    border: 1px solid #cbd5e1 !important;
+    font-family: monospace !important;
+    font-size: 9.5pt !important;
+  }
+
+  .printable-theory-article .prose pre {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    page-break-inside: avoid;
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+  }
+
+  .printable-theory-article blockquote {
+    border-left: 4px solid #ff4d4d !important;
+    background-color: #fff5f5 !important;
+    color: #475569 !important;
+    padding: 10px 16px !important;
+    margin: 16px 0 !important;
+    border-radius: 0 8px 8px 0 !important;
+  }
+
+  .printable-theory-article img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 8px !important;
+    page-break-inside: avoid;
+  }
+
+  /* Badge styling for print */
+  .printable-theory-article .category-badge-print {
+    border: 1px solid #dc2626 !important;
+    color: #dc2626 !important;
+    background-color: #fef2f2 !important;
+  }
+
+  /* Footer watermark on printed page */
+  .print-footer-watermark {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #cbd5e1;
+    margin-top: 32px;
+    padding-top: 12px;
+    font-size: 8.5pt;
+    color: #94a3b8 !important;
+    font-family: monospace;
+  }
+
+  /* Page margins and orientation setup */
+  @page {
+    size: portrait;
+    margin: 15mm 15mm 15mm 15mm;
+  }
+}
+

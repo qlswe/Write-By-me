@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, Search, ArrowLeft, Share2, Check, Plus, Edit, BookOpen, Sparkles, User, Clock, FileDown } from 'lucide-react';
+import { Star, Search, ArrowLeft, Share2, Check, Plus, Edit, BookOpen, Sparkles, User, Clock, FileDown, Printer } from 'lucide-react';
 import { theoriesData } from '../../data/content';
 import { exportContentToPDF } from '../../utils/pdfExport';
 import { Language, translations } from '../../data/translations';
@@ -150,14 +150,25 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="bg-[#251c35] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#3d2b4f] relative overflow-hidden"
+            className="bg-[#251c35] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#3d2b4f] relative overflow-hidden printable-theory-article"
           >
+            {/* Print-Only Header Banner */}
+            <div className="hidden print-header-banner">
+              <div className="print-header-logo">
+                AHA PLATFORM <span className="text-[#ff4d4d] font-normal">| {lang === 'ru' ? 'ТЕОРИЯ' : 'THEORY'}</span>
+              </div>
+              <div className="print-header-meta">
+                <div>{(selectedTheory.category || 'General').toUpperCase()}</div>
+                <div>{new Date(selectedTheory.createdAt || Date.now()).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}</div>
+              </div>
+            </div>
+
             {/* Background Decorative Element */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff4d4d]/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff4d4d]/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none print:hidden" />
             
             <button 
               onClick={() => setSelectedTheoryId(null)}
-              className="group flex items-center gap-3 text-[#ff4d4d] hover:text-white transition-all mb-8 font-black uppercase tracking-tighter"
+              className="group flex items-center gap-3 text-[#ff4d4d] hover:text-white transition-all mb-8 font-black uppercase tracking-tighter print:hidden cursor-pointer"
             >
               <div className="p-2 rounded-full bg-[#3d2b4f]/30 group-hover:bg-[#ff4d4d] group-hover:text-[#15101e] transition-all">
                 <ArrowLeft size={16} />
@@ -168,10 +179,10 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-10">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30">
+                  <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30 category-badge-print">
                     {selectedTheory.category}
                   </span>
-                  <div className="flex items-center gap-2 text-white/40 text-xs font-medium">
+                  <div className="flex items-center gap-2 text-white/40 text-xs font-medium print:hidden">
                     <Clock size={12} />
                     <TimeAgo date={selectedTheory.createdAt} lang={lang} />
                   </div>
@@ -181,11 +192,11 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                 </h2>
               </div>
               
-              <div className="flex flex-wrap gap-3 shrink-0 justify-end">
+              <div className="flex flex-wrap gap-3 shrink-0 justify-end print:hidden">
                 {isModerator && (
                   <button 
                     onClick={() => onEdit?.(selectedTheory)}
-                    className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
+                    className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30 cursor-pointer"
                     title={t.editBtn}
                   >
                     <Edit size={18} />
@@ -207,24 +218,37 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                   <FileDown size={18} />
                 </button>
                 <button 
+                  onClick={() => window.print()}
+                  className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-cyan-400 hover:bg-cyan-400/10 hover:border-cyan-400/30 transition-all border border-transparent cursor-pointer flex items-center justify-center"
+                  title={lang === 'ru' ? 'Печать статьи (Printer-friendly layout)' : 'Print Article (Printer-friendly layout)'}
+                >
+                  <Printer size={18} />
+                </button>
+                <button 
                   onClick={() => handleShare(
                     selectedTheory.id, 
                     selectedTheory.title[lang] || selectedTheory.title['en'], 
                     selectedTheory.summary[lang] || selectedTheory.summary['en']
                   )}
-                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent ${copied ? 'text-green-400 border-green-400/30 bg-green-400/10' : 'text-white/40 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10'}`}
+                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent cursor-pointer ${copied ? 'text-green-400 border-green-400/30 bg-green-400/10' : 'text-white/40 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10'}`}
                   title="Share"
                 >
                   {copied ? <Check size={18} /> : <Share2 size={18} />}
                 </button>
                 <button 
                   onClick={(e) => toggleFavorite(selectedTheory.id, e)}
-                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent ${favorites.includes(selectedTheory.id) ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent cursor-pointer ${favorites.includes(selectedTheory.id) ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
                 >
                   <Star size={18} fill={favorites.includes(selectedTheory.id) ? "currentColor" : "none"} />
                 </button>
               </div>
             </div>
+
+            {(selectedTheory.summary?.[lang] || selectedTheory.summary?.['en']) && (
+              <div className="mb-6 p-4 rounded-2xl bg-[#15101e]/40 border-l-4 border-[#ff4d4d] text-white/80 font-medium italic">
+                {selectedTheory.summary[lang] || selectedTheory.summary['en']}
+              </div>
+            )}
 
             <div 
               ref={contentRef}
@@ -239,7 +263,13 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               </div>
             )}
 
-            <div className="pt-10 border-t border-[#3d2b4f]">
+            {/* Print-Only Footer Watermark */}
+            <div className="hidden print-footer-watermark">
+              <span>AHA Platform Theory Archives — Printed Document</span>
+              <span>ID: {selectedTheory.id}</span>
+            </div>
+
+            <div className="pt-10 border-t border-[#3d2b4f] print:hidden">
               <CommentsSection targetId={selectedTheory.id} lang={lang} lowPerfMode={lowPerfMode} role={role} onOpenChat={onOpenChat} />
             </div>
           </motion.div>

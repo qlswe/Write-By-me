@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, Search, ArrowLeft, Plus, Edit, Newspaper, Sparkles, Clock, User, FileDown } from 'lucide-react';
+import { Star, Search, ArrowLeft, Plus, Edit, Newspaper, Sparkles, Clock, User, FileDown, Printer } from 'lucide-react';
 import { blogPostsData } from '../../data/content';
 import { exportContentToPDF } from '../../utils/pdfExport';
 import { Language, translations } from '../../data/translations';
@@ -125,14 +125,25 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -50 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="bg-[#251c35] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#3d2b4f] relative overflow-hidden"
+            className="bg-[#251c35] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#3d2b4f] relative overflow-hidden printable-theory-article"
           >
+            {/* Print-Only Header Banner */}
+            <div className="hidden print-header-banner">
+              <div className="print-header-logo">
+                AHA PLATFORM <span className="text-[#ff4d4d] font-normal">| {lang === 'ru' ? 'БЛОГ' : 'BLOG'}</span>
+              </div>
+              <div className="print-header-meta">
+                <div>{(selectedPost.category || 'General').toUpperCase()}</div>
+                <div>{new Date(selectedPost.createdAt || Date.now()).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}</div>
+              </div>
+            </div>
+
             {/* Background Decorative Element */}
-            <div className="absolute top-0 left-0 w-64 h-64 bg-[#ff4d4d]/5 rounded-full -translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none" />
+            <div className="absolute top-0 left-0 w-64 h-64 bg-[#ff4d4d]/5 rounded-full -translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none print:hidden" />
             
             <button 
               onClick={() => setSelectedPostId(null)}
-              className="group flex items-center gap-3 text-[#ff4d4d] hover:text-white transition-all mb-8 font-black uppercase tracking-tighter"
+              className="group flex items-center gap-3 text-[#ff4d4d] hover:text-white transition-all mb-8 font-black uppercase tracking-tighter print:hidden cursor-pointer"
             >
               <div className="p-2 rounded-full bg-[#3d2b4f]/30 group-hover:bg-[#ff4d4d] group-hover:text-[#15101e] transition-all">
                 <ArrowLeft size={16} />
@@ -143,10 +154,10 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-10">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30">
+                  <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30 category-badge-print">
                     {selectedPost.category}
                   </span>
-                  <div className="flex items-center gap-2 text-white/40 text-xs font-medium">
+                  <div className="flex items-center gap-2 text-white/40 text-xs font-medium print:hidden">
                     <Clock size={12} />
                     <TimeAgo date={selectedPost.createdAt} lang={lang} />
                   </div>
@@ -156,11 +167,11 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                 </h2>
               </div>
               
-              <div className="flex flex-wrap gap-3 shrink-0 justify-end">
+              <div className="flex flex-wrap gap-3 shrink-0 justify-end print:hidden">
                 {isModerator && (
                   <button 
                     onClick={() => onEdit?.(selectedPost)}
-                    className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
+                    className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30 cursor-pointer"
                     title={t.editBtn}
                   >
                     <Edit size={18} />
@@ -183,8 +194,15 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                   <FileDown size={18} />
                 </button>
                 <button 
+                  onClick={() => window.print()}
+                  className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-cyan-400 hover:bg-cyan-400/10 hover:border-cyan-400/30 transition-all border border-transparent cursor-pointer flex items-center justify-center"
+                  title={lang === 'ru' ? 'Печать статьи (Printer-friendly layout)' : 'Print Article (Printer-friendly layout)'}
+                >
+                  <Printer size={18} />
+                </button>
+                <button 
                   onClick={(e) => toggleFavorite(selectedPost.id, e)}
-                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent ${favorites.includes(selectedPost.id) ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
+                  className={`p-4 rounded-2xl bg-[#3d2b4f]/30 transition-all border border-transparent cursor-pointer ${favorites.includes(selectedPost.id) ? 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
                 >
                   <Star size={18} fill={favorites.includes(selectedPost.id) ? "currentColor" : "none"} />
                 </button>
@@ -202,11 +220,13 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               className="prose prose-invert prose-p:text-white/80 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none mb-8 text-base sm:text-lg leading-relaxed"
             />
 
-            <div className="mb-12">
-
+            {/* Print-Only Footer Watermark */}
+            <div className="hidden print-footer-watermark">
+              <span>AHA Platform Blog Archives — Printed Document</span>
+              <span>ID: {selectedPost.id}</span>
             </div>
 
-            <div className="pt-10 border-t border-[#3d2b4f]">
+            <div className="pt-10 border-t border-[#3d2b4f] print:hidden">
               <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} role={role} onOpenChat={onOpenChat} />
             </div>
           </motion.div>
