@@ -124,6 +124,17 @@ const TEMPLATES: Record<string, { name: string; nameRu: string; pixels: Record<s
 };
 
 export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
+  const loc = (ru: string, en: string, by: string, de: string, fr: string, zh: string) => {
+    switch (lang) {
+      case 'en': return en;
+      case 'by': return by;
+      case 'de': return de;
+      case 'fr': return fr;
+      case 'zh': return zh;
+      default: return ru;
+    }
+  };
+
   const { user, loginWithGoogle, isVerified } = useAuth();
   const innerRef = useRef<HTMLDivElement>(null);
   const zoomContainerRef = useRef<HTMLDivElement>(null);
@@ -266,12 +277,12 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const handleSaveDraft = async () => {
     if (!user) return;
     if (Object.keys(pixels).length === 0) {
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Нельзя сохранить пустой холст!" : "Cannot save empty canvas!" }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Нельзя сохранить пустой холст!', 'Cannot save empty canvas!', 'Нельга захаваць пусты палатно!', 'Kann keine leere Leinwand speichern!', 'Impossible de sauvegarder une toile vide !', '无法保存空白画布！') }));
       return;
     }
     
     setIsSavingDraft(true);
-    const nameToUse = draftName.trim() || `${lang === 'ru' ? 'Черновик' : 'Draft'} #${drafts.length + 1}`;
+    const nameToUse = draftName.trim() || `${loc('Черновик', 'Draft', 'Чарнавік', 'Entwurf', 'Brouillon', '草稿')} #${drafts.length + 1}`;
     
     const initialSave = {
       id: 'save_' + Date.now(),
@@ -290,10 +301,10 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         saves: [initialSave]
       });
       setDraftName('');
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Эскиз успешно сохранен в черновики!' : 'Sketch successfully saved to drafts!' }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Эскиз успешно сохранен в черновики!', 'Sketch saved to drafts!', 'Эскіз паспяхова захаваны ў чарнавікі!', 'Skizze in Entwürfen gespeichert!', 'Esquisse enregistrée dans les brouillons !', '草稿已成功保存！') }));
     } catch (e) {
       console.error("Error saving draft:", e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Ошибка сохранения черновика' : 'Error saving draft' }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Ошибка сохранения черновика', 'Error saving draft', 'Памылка захавання чарнавіка', 'Fehler beim Speichern des Entwurfs', 'Erreur lors de l\'enregistrement du brouillon', '保存草稿时出错') }));
     } finally {
       setIsSavingDraft(false);
     }
@@ -321,10 +332,10 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         pixels: draft.pixels || {}
       });
       
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Черновик успешно загружен!' : 'Draft loaded successfully!' }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Черновик успешно загружен!', 'Draft loaded successfully!', 'Чарнавік паспяхова загружаны!', 'Entwurf erfolgreich geladen!', 'Brouillon chargé avec succès !', '草稿已成功加载！') }));
     } catch (e) {
       console.error("Error loading draft:", e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Ошибка загрузки черновика' : 'Error loading draft' }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Ошибка загрузки черновика', 'Error loading draft', 'Памылка загрузкі чарнавіка', 'Fehler beim Laden des Entwurfs', 'Erreur lors du chargement du brouillon', '加载草稿失败') }));
     }
   };
 
@@ -338,10 +349,10 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     setDraftToDelete(null);
     try {
       await deleteDoc(doc(db, 'canvas_drafts', draftId));
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Черновик удален' : 'Draft deleted' }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Черновик удален', 'Draft deleted', 'Чарнавік выдалены', 'Entwurf gelöscht', 'Brouillon supprimé', '草稿已删除') }));
     } catch (e) {
       console.error("Error deleting draft:", e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Ошибка удаления' : 'Error deleting draft' }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Ошибка удаления', 'Error deleting', 'Памылка выдалення', 'Fehler beim Löschen', 'Erreur de suppression', '删除失败') }));
     }
   };
 
@@ -360,12 +371,12 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         pixels: save.pixels || {}
       });
       window.dispatchEvent(new CustomEvent('aha_toast', { 
-        detail: lang === 'ru' ? 'Версия успешно загружена!' : 'Version successfully loaded!' 
+        detail: loc('Версия успешно загружена!', 'Version loaded successfully!', 'Версія паспяхова загружана!', 'Version erfolgreich geladen!', 'Version chargée avec succès !', '版本加载成功！') 
       }));
     } catch (e) {
       console.error(e);
       window.dispatchEvent(new CustomEvent('aha_toast', { 
-        detail: lang === 'ru' ? 'Ошибка загрузки версии' : 'Error loading version' 
+        detail: loc('Ошибка загрузки версии', 'Error loading version', 'Памылка загрузкі версіі', 'Fehler beim Laden der Version', 'Erreur lors du chargement de la version', '加载版本失败') 
       }));
     }
   };
@@ -380,7 +391,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         saves: updatedSaves
       }, { merge: true });
       window.dispatchEvent(new CustomEvent('aha_toast', { 
-        detail: lang === 'ru' ? 'Сохранение удалено!' : 'Save deleted!' 
+        detail: loc('Сохранение удалено!', 'Save deleted!', 'Захаванне выдалена!', 'Speicherung gelöscht!', 'Sauvegarde supprimée !', '存档已删除！') 
       }));
     } catch (e) {
       console.error(e);
@@ -515,7 +526,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
       setRedoStack([]);
-      window.dispatchEvent(new CustomEvent("aha_toast", { detail: lang === "ru" ? "Отражено по горизонтали!" : "Flipped horizontally!" }));
+      window.dispatchEvent(new CustomEvent("aha_toast", { detail: loc("Отражено по горизонтали!", "Flipped horizontally!", "Адлюстравана па гарызанталі!", "Horizontal gespiegelt!", "Retourné horizontalement !", "水平翻转！") }));
     }
   };
 
@@ -541,7 +552,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
       setRedoStack([]);
-      window.dispatchEvent(new CustomEvent("aha_toast", { detail: lang === "ru" ? "Отражено по вертикали!" : "Flipped vertically!" }));
+      window.dispatchEvent(new CustomEvent("aha_toast", { detail: loc("Отражено по вертикали!", "Flipped vertically!", "Адлюстравана па вертыкалі!", "Vertikal gespiegelt!", "Retourné verticalement !", "垂直翻转！") }));
     }
   };
 
@@ -566,7 +577,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
       setRedoStack([]);
-      window.dispatchEvent(new CustomEvent("aha_toast", { detail: lang === "ru" ? "Повернуто на 90°!" : "Rotated 90°!" }));
+      window.dispatchEvent(new CustomEvent("aha_toast", { detail: loc("Повернуто на 90°!", "Rotated 90°!", "Павернута на 90°!", "Um 90° gedreht!", "Tourné de 90° !", "旋转 90°！") }));
     }
   };
 
@@ -599,14 +610,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
       setRedoStack([]);
-      window.dispatchEvent(new CustomEvent("aha_toast", { detail: lang === "ru" ? "Цвета инвертированы!" : "Colors inverted!" }));
+      window.dispatchEvent(new CustomEvent("aha_toast", { detail: loc("Цвета инвертированы!", "Colors inverted!", "Колеры інвертаваныя!", "Farben invertiert!", "Couleurs inversées !", "颜色已反转！") }));
     }
   };
 
   const floodFill = async (startX: number, startY: number, fillHexColor: string) => {
     if (!user) return;
     if (!isVerified) {
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Только верифицированные пользователи могут рисовать!" : "Only verified users can paint!" }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Только верифицированные пользователи могут рисовать!", "Only verified users can paint!", "Толькі верыфікаваныя карыстальнікі могуць маляваць!", "Nur verifizierte Benutzer können malen!", "Seuls les utilisateurs vérifiés peuvent peindre !", "只有通过验证的用户才能绘画！") }));
       return;
     }
     const currentSize = isGlobal ? 500 : size;
@@ -761,7 +772,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const handlePointerDown = (clientX: number, clientY: number) => {
     if (tool === 'move' || !user) return;
     if (!isVerified) {
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Только верифицированные пользователи могут рисовать!" : "Only verified users can paint!" }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Только верифицированные пользователи могут рисовать!", "Only verified users can paint!", "Толькі верыфікаваныя карыстальнікі могуць маляваць!", "Nur verifizierte Benutzer können malen!", "Seuls les utilisateurs vérifiés peuvent peindre !", "只有通过验证的用户才能绘画！") }));
       return;
     }
     const coords = getGridCoords(clientX, clientY);
@@ -773,9 +784,9 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       if (clickedPixel && clickedPixel.color) {
         setSelectedColor(clickedPixel.color);
         setTool('draw');
-        window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? `Пипетка: выбран цвет ${clickedPixel.color}` : `Eyedropper: selected ${clickedPixel.color}` }));
+        window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc(`Пипетка: выбран цвет ${clickedPixel.color}`, `Eyedropper: selected ${clickedPixel.color}`, `Піпетка: абраны колер ${clickedPixel.color}`, `Pipette: Farbe ${clickedPixel.color} ausgewählt`, `Pipette : couleur sélectionnée ${clickedPixel.color}`, `吸管：已选择颜色 ${clickedPixel.color}`) }));
       } else {
-        window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Пиксель пуст' : 'Pixel is empty' }));
+        window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Пиксель пуст', 'Pixel is empty', 'Піксель пусты', 'Pixel ist leer', 'Le pixel est vide', '像素为空') }));
       }
       setIsDrawing(false);
       return;
@@ -963,7 +974,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const handlePublish = () => {
     if (!user) return;
     if (Object.keys(pixels).length === 0) {
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Нельзя выкладывать пустой холст!" : "Cannot publish empty canvas!" }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Нельзя выкладывать пустой холст!", "Cannot publish empty canvas!", "Нельга выкладваць пусты палатно!", "Kann keine leere Leinwand veröffentlichen!", "Impossible de publier une toile vide !", "无法发布空白画布！") }));
       return;
     }
     // Open the publish modal to let user edit title and caption
@@ -989,7 +1000,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       // 3. Prepare thread data targeting forum_threads (Activities feed!)
       const threadData = {
         title: publishTitle.trim(),
-        content: publishCaption.trim() || (lang === 'ru' ? 'Рисунок с холста (пиксели)' : 'Canvas pixel art drawing'),
+        content: publishCaption.trim() || loc('Рисунок с холста (пиксели)', 'Canvas pixel art drawing', 'Малюнак з палатна (пікселі)', 'Pixel-Art-Zeichnung von der Leinwand', 'Dessin Pixel Art de la toile', '画布像素画'),
         authorId: user.uid,
         authorName: user.displayName || 'Anonymous',
         authorPhoto: user.photoURL || '',
@@ -1007,7 +1018,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       // Add default bot comment
       await addDoc(collection(db, 'forum_comments'), {
         threadId: threadRef.id,
-        content: lang === 'ru' ? 'Добро пожаловать в обсуждение этого рисунка!' : 'Welcome to the discussion of this pixel art artwork!',
+        content: loc('Добро пожаловать в обсуждение этого рисунка!', 'Welcome to the discussion of this pixel art artwork!', 'Сардэчна запрашаем у абмеркаванне гэтага малюнка!', 'Willkommen zur Diskussion dieses Pixel-Art-Kunstwerks!', 'Bienvenue dans la discussion de ce dessin pixel art !', '欢迎参与这幅像素画作品的讨论！'),
         authorId: 'system-bot',
         authorName: 'Aha Bot',
         authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
@@ -1025,14 +1036,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         } catch (e) {}
       }
 
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Рисунок успешно опубликован в Активность!' : 'Drawing successfully published to Activities!' }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Рисунок успешно опубликован в Активность!', 'Drawing successfully published to Activities!', 'Малюнак паспяхова апублікаваны ў Актыўнасць!', 'Zeichnung erfolgreich in Aktivitäten veröffentlicht!', 'Dessin publié avec succès dans Activités !', '画作已成功发布至动态！') }));
       setIsPublishModalOpen(false);
       
       // Auto-prompt to clear canvas
       setShowPublishClearConfirm(true);
     } catch (e) {
       console.error(e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? 'Ошибка публикации' : 'Error publishing artwork' }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Ошибка публикации', 'Error publishing artwork', 'Памылка публікацыі', 'Fehler beim Veröffentlichen', 'Erreur de publication', '发布失败') }));
     } finally {
       setIsPublishing(false);
     }
@@ -1043,10 +1054,10 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       <div className="bg-[#15101e]/80 border border-[#3d2b4f]/60 rounded-3xl p-6 sm:p-10 text-center max-w-xl mx-auto my-12 backdrop-blur-md shadow-2xl">
         <Lock className="mx-auto text-[#ff4d4d]/70 mb-4" size={40} />
         <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
-          {lang === 'ru' ? 'Авторизация' : 'Authorization'}
+          {loc('Авторизация', 'Authorization', 'Аўтарызацыя', 'Autorisierung', 'Autorisation', '身份验证')}
         </h4>
         <p className="text-gray-300 mb-6 font-bold uppercase tracking-wider text-xs max-w-sm mx-auto leading-relaxed">
-          {t.canvasLoginPrompt || (lang === 'ru' ? 'Для доступа к Canvas и совместному рисованию необходимо войти в аккаунт.' : 'Log in to draw on the shared canvas.')}
+          {t.canvasLoginPrompt || loc('Для доступа к Canvas и совместному рисованию необходимо войти в аккаунт.', 'Log in to draw on the shared canvas.', 'Для доступу да Canvas і сумеснага малявання неабходна ўвайсці ў уліковы запіс.', 'Melden Sie sich an, um auf der gemeinsamen Leinwand zu zeichnen.', 'Connectez-vous pour dessiner sur la toile partagée.', '登录即可在共享画布上进行创作。')}
         </p>
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-center w-full max-w-md mx-auto">
           <GoogleLoginButton lang={lang} className="w-full sm:w-auto" size="md" />
@@ -1055,7 +1066,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/50 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-wider text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl cursor-pointer"
           >
             <Mail size={16} />
-            {lang === 'ru' ? 'Зарегистрироваться через почту' : 'Register via email'}
+            {loc('Зарегистрироваться через почту', 'Register via email', 'Зарэгістравацца праз пошту', 'Per E-Mail registrieren', 'S\'inscrire par e-mail', '通过邮箱注册')}
           </button>
         </div>
       </div>
@@ -1087,10 +1098,10 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         };
       });
       await setDoc(docRef, { pixels: templatePixels });
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Шаблон успешно загружен!" : "Template successfully loaded!" }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Шаблон успешно загружен!", "Template successfully loaded!", "Шаблон паспяхова загружаны!", "Vorlage erfolgreich geladen!", "Modèle chargé avec succès !", "模板加载成功！") }));
     } catch (e) {
       console.error("Error loading template:", e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Ошибка загрузки шаблона" : "Error loading template" }));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Ошибка загрузки шаблона", "Error loading template", "Памылка загрузкі шаблону", "Fehler beim Laden der Vorlage", "Erreur lors du chargement du modèle", "加载模板出错") }));
     }
   };
 
@@ -1105,28 +1116,28 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                         <button
                           onClick={handleFlipHorizontal}
                           className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
-                          title={lang === 'ru' ? 'Отразить по горизонтали' : 'Flip Horizontally'}
+                          title={loc('Отразить по горизонтали', 'Flip Horizontally', 'Адлюстраваць па гарызанталі', 'Horizontal spiegeln', 'Retourner horizontalement', '水平翻转')}
                         >
                           <FlipHorizontal size={18} />
                         </button>
                         <button
                           onClick={handleFlipVertical}
                           className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
-                          title={lang === 'ru' ? 'Отразить по вертикали' : 'Flip Vertically'}
+                          title={loc('Отразить по вертикали', 'Flip Vertically', 'Адлюстраваць па вертыкалі', 'Vertikal spiegeln', 'Retourner verticalement', '垂直翻转')}
                         >
                           <FlipVertical size={18} />
                         </button>
                         <button
                           onClick={handleRotate90}
                           className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
-                          title={lang === 'ru' ? 'Повернуть на 90°' : 'Rotate 90°'}
+                          title={loc('Повернуть на 90°', 'Rotate 90°', 'Павярнуць на 90°', 'Um 90° drehen', 'Tourner de 90°', '旋转 90°')}
                         >
                           <RotateCw size={18} />
                         </button>
                         <button
                           onClick={handleInvertColors}
                           className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
-                          title={lang === 'ru' ? 'Инвертировать цвета' : 'Invert Colors'}
+                          title={loc('Инвертировать цвета', 'Invert Colors', 'Інвертаваць колеры', 'Farben invertieren', 'Inverser les couleurs', '反转颜色')}
                         >
                           <SunMedium size={18} />
                         </button>
@@ -1146,7 +1157,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       // Find bounding box of drawn pixels in global canvas to export neatly
       const keys = Object.keys(pixels);
       if (keys.length === 0) {
-        window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Холст пуст!" : "Canvas is empty!" }));
+        window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Холст пуст!", "Canvas is empty!", "Палатно пустое!", "Leinwand ist leer!", "La canvas est vide !", "画布为空！") }));
         return;
       }
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;

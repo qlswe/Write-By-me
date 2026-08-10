@@ -33,11 +33,23 @@ const formatTimeAgo = (val: any, lang: Language) => {
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
 
-  if (diffMins < 1) return lang === 'ru' ? 'только что' : 'just now';
-  if (diffMins < 60) return `${diffMins} ${lang === 'ru' ? 'м' : 'm'}`;
+  const loc = (ruStr: string, enStr: string, byStr: string, deStr: string, frStr: string, zhStr: string) => {
+    switch (lang) {
+      case 'ru': return ruStr;
+      case 'by': return byStr;
+      case 'de': return deStr;
+      case 'fr': return frStr;
+      case 'zh': return zhStr;
+      default: return enStr;
+    }
+  };
+
+  if (diffMins < 1) return loc('только что', 'just now', 'толькі што', 'gerade eben', 'à l\'instant', '刚刚');
+  if (diffMins < 60) return `${diffMins} ${loc('м', 'm', 'хв', 'm', 'm', '分钟')}`;
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours} ${lang === 'ru' ? 'ч' : 'h'}`;
-  return date.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' });
+  if (diffHours < 24) return `${diffHours} ${loc('ч', 'h', 'г', 'Std.', 'h', '小时')}`;
+  const dateLoc = lang === 'ru' ? 'ru-RU' : lang === 'by' ? 'be-BY' : lang === 'de' ? 'de-DE' : lang === 'fr' ? 'fr-FR' : lang === 'zh' ? 'zh-CN' : 'en-US';
+  return date.toLocaleDateString(dateLoc, { month: 'short', day: 'numeric' });
 };
 
 export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, activeChatId }) => {
@@ -139,10 +151,10 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
           </div>
           <div>
             <h2 className="text-xs font-black uppercase tracking-widest text-white">
-              {lang === 'ru' ? 'Кибер Чаты' : 'Cyber Chats'}
+              {(translations[lang] as any)?.cyberChatsTitle || 'Cyber Chats'}
             </h2>
             <span className="text-[10px] font-mono text-gray-400 block">
-              {chats.length} {lang === 'ru' ? 'диалогов' : 'active chats'}
+              {chats.length} {(translations[lang] as any)?.activeDialogs || 'active chats'}
             </span>
           </div>
         </div>
@@ -153,7 +165,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
             type="button"
             onClick={() => setShowGroupModal(true)}
             className="p-2 bg-[#ff4d4d]/10 hover:bg-[#ff4d4d] text-[#ff4d4d] hover:text-[#15101e] border border-[#ff4d4d]/30 rounded-xl transition-all cursor-pointer"
-            title={lang === 'ru' ? 'Создать группу' : 'Create Group'}
+            title={(translations[lang] as any)?.createGroup || 'Create Group'}
           >
             <Users size={16} />
           </button>
@@ -164,7 +176,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
               type="button"
               onClick={() => setShowDeleteAllModal(true)}
               className="p-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-xl transition-all cursor-pointer"
-              title={lang === 'ru' ? 'Очистить все чаты' : 'Clear all chats'}
+              title={(translations[lang] as any)?.clearAllChats || 'Clear all chats'}
             >
               <Trash2 size={16} />
             </button>
@@ -175,9 +187,9 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
       {/* Tabs */}
       <div className="px-3 py-2 border-b border-[#3d2b4f] flex items-center gap-1 bg-[#1a1428] shrink-0">
         {[
-          { id: 'all', label: lang === 'ru' ? 'Все' : 'All', icon: MessageSquare },
-          { id: 'directs', label: lang === 'ru' ? 'Личные' : 'Directs', icon: User },
-          { id: 'groups', label: lang === 'ru' ? 'Группы' : 'Groups', icon: Users }
+          { id: 'all', label: (translations[lang] as any)?.filterAll || 'All', icon: MessageSquare },
+          { id: 'directs', label: (translations[lang] as any)?.filterDirects || 'Directs', icon: User },
+          { id: 'groups', label: (translations[lang] as any)?.filterGroups || 'Groups', icon: Users }
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -206,7 +218,7 @@ export const ChatsList: React.FC<ChatsListProps> = ({ lang, onSelectChat, active
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={lang === 'ru' ? 'Поиск...' : 'Search...'}
+            placeholder={(translations[lang] as any)?.searchPlaceholder || 'Search...'}
             className="w-full bg-[#0d0b14] border border-[#3d2b4f] rounded-xl py-2 pl-9 pr-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] transition-colors"
           />
         </div>

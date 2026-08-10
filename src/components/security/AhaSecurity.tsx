@@ -433,6 +433,17 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
     }
   };
 
+  const loc = (ruStr: string, enStr: string, byStr: string, deStr: string, frStr: string, zhStr: string) => {
+    switch (lang) {
+      case 'ru': return ruStr;
+      case 'by': return byStr;
+      case 'de': return deStr;
+      case 'fr': return frStr;
+      case 'zh': return zhStr;
+      default: return enStr;
+    }
+  };
+
   return (
     <div className="bg-[#15101e] border border-[#ff4d4d]/30 rounded-3xl overflow-hidden flex flex-col shadow-xl">
       <div className="p-5 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-[#ff4d4d]/10 to-transparent">
@@ -442,10 +453,10 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
           </div>
           <div>
             <h3 className="text-white font-black text-sm uppercase tracking-wider">
-              {lang === 'ru' ? 'Панель безопасности AHA' : 'AHA Security Panel'}
+              {loc('Панель безопасности AHA', 'AHA Security Panel', 'Панель бяспекі AHA', 'AHA Sicherheitspanel', 'Panneau de sécurité AHA', 'AHA 安全面板')}
             </h3>
             <p className="text-[10px] text-green-400 font-mono tracking-widest uppercase">
-              {lang === 'ru' ? 'Активная защита от угроз' : 'Active Threat Protection'}
+              {loc('Активная защита от угроз', 'Active Threat Protection', 'Актыўная абарона ад пагроз', 'Aktiver Bedrohungsschutz', 'Protection active contre les menaces', '主动威胁防护')}
             </p>
           </div>
         </div>
@@ -454,13 +465,13 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
       {/* Tabs */}
       <div className="flex bg-[#0d0b14] border-b border-white/5 shrink-0">
           <button onClick={() => setActiveTab('status')} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-colors ${activeTab === 'status' ? 'text-[#ff4d4d] bg-[#ff4d4d]/10 border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-            {lang === 'ru' ? 'Статус' : 'Status'}
+            {loc('Статус', 'Status', 'Статус', 'Status', 'Statut', '状态')}
           </button>
           <button onClick={() => setActiveTab('tools')} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-colors ${activeTab === 'tools' ? 'text-[#ff4d4d] bg-[#ff4d4d]/10 border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-            {lang === 'ru' ? 'Защита' : 'Protection'}
+            {loc('Защита', 'Protection', 'Абарона', 'Schutz', 'Protection', '防护')}
           </button>
           <button onClick={() => setActiveTab('logs')} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest transition-colors ${activeTab === 'logs' ? 'text-[#ff4d4d] bg-[#ff4d4d]/10 border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-            {lang === 'ru' ? 'Логи' : 'Logs'}
+            {loc('Логи', 'Logs', 'Логі', 'Protokolle', 'Journaux', '日志')}
           </button>
       </div>
 
@@ -469,16 +480,16 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
           <div className="space-y-4">
               <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-xl border border-white/10">
                   <span className="text-white/60 text-xs font-medium">
-                    {lang === 'ru' ? 'Статус системы:' : 'System status:'}
+                    {loc('Статус системы:', 'System status:', 'Статус сістэмы:', 'Systemstatus:', 'Statut du système :', '系统状态：')}
                   </span>
                   <span className="text-green-400 font-mono text-xs font-bold flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 animate-pulse" /> {lang === 'ru' ? 'АКТИВЕН' : 'ACTIVE'}
+                  <Activity className="w-4 h-4 animate-pulse" /> {loc('АКТИВЕН', 'ACTIVE', 'АКТЫЎНЫ', 'AKTIV', 'ACTIF', '活跃')}
                   </span>
               </div>
           
               <div className="flex items-center justify-between p-3.5 bg-[#ff4d4d]/10 rounded-xl border border-[#ff4d4d]/20">
                   <span className="text-[#ff4d4d] text-xs font-medium">
-                    {lang === 'ru' ? 'Заблокировано угроз:' : 'Threats blocked:'}
+                    {loc('Заблокировано угроз:', 'Threats blocked:', 'Заблакавана пагроз:', 'Blockierte Bedrohungen:', 'Menaces bloquées :', '已拦截威胁：')}
                   </span>
                   <span className="text-[#ff4d4d] font-black text-xl">{threatsBlocked}</span>
               </div>
@@ -487,13 +498,13 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
                   <div className="bg-white/5 rounded-xl p-3 flex flex-col justify-center items-center gap-1.5 border border-white/5">
                       <Lock className={`w-4 h-4 ${isStrict ? 'text-green-400' : 'text-gray-500'}`} />
                       <span className={isStrict ? 'text-green-400 font-bold' : 'text-gray-500'}>
-                        {lang === 'ru' ? 'Строгий режим' : 'Strict Mode'}
+                        {loc('Строгий режим', 'Strict Mode', 'Строгі рэжым', 'Strikter Modus', 'Mode strict', '严格模式')}
                       </span>
                   </div>
                   <div className="bg-white/5 rounded-xl p-3 flex flex-col justify-center items-center gap-1.5 border border-white/5">
                       <Eye className={`w-4 h-4 ${isCensored ? 'text-blue-400' : 'text-gray-500'}`} />
                       <span className={isCensored ? 'text-blue-400 font-bold' : 'text-gray-500'}>
-                        {lang === 'ru' ? 'Антимат фильтр' : 'Profanity Filter'}
+                        {loc('Антимат фильтр', 'Profanity Filter', 'Антымат фільтр', 'Schimpfwortfilter', 'Filtre d\'insultes', '亵渎过滤')}
                       </span>
                   </div>
               </div>
@@ -506,10 +517,10 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
               <div className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer" onClick={() => toggleToggle('aha_strict_mode', setIsStrict, isStrict)}>
                   <div className="flex flex-col">
                   <span className="text-white/90 text-xs font-bold flex items-center gap-1.5">
-                      <ShieldAlert className={`w-4 h-4 ${isStrict ? 'text-green-500' : 'text-yellow-500'}`} /> {lang === 'ru' ? 'Строгий режим' : 'Strict Mode'}
+                      <ShieldAlert className={`w-4 h-4 ${isStrict ? 'text-green-500' : 'text-yellow-500'}`} /> {loc('Строгий режим', 'Strict Mode', 'Строгі рэжым', 'Strikter Modus', 'Mode strict', '严格模式')}
                   </span>
                   <span className="text-white/50 text-[10px] mt-0.5">
-                    {lang === 'ru' ? 'Блокирует картинки и скрипты' : 'Blocks external images and scripts'}
+                    {loc('Блокирует картинки и скрипты', 'Blocks external images and scripts', 'Блакуе малюнкі і скрыпты', 'Blockiert externe Bilder und Skripte', 'Bloque les images et scripts externes', '拦截外部图片与脚本')}
                   </span>
                   </div>
                   <button className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${isStrict ? 'bg-green-500' : 'bg-white/20'}`}>
@@ -521,10 +532,10 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
               <div className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer" onClick={() => toggleToggle('aha_censor_mode', setIsCensored, isCensored)}>
                   <div className="flex flex-col">
                   <span className="text-white/90 text-xs font-bold flex items-center gap-1.5">
-                      <Eye className={`w-4 h-4 ${isCensored ? 'text-blue-400' : 'text-gray-400'}`} /> {lang === 'ru' ? 'Антимат фильтр' : 'Profanity Filter'}
+                      <Eye className={`w-4 h-4 ${isCensored ? 'text-blue-400' : 'text-gray-400'}`} /> {loc('Антимат фильтр', 'Profanity Filter', 'Антымат фільтр', 'Schimpfwortfilter', 'Filtre d\'insultes', '亵渎过滤')}
                   </span>
                   <span className="text-white/50 text-[10px] mt-0.5">
-                    {lang === 'ru' ? 'Цензурирует ненормативную лексику' : 'Censors inappropriate language'}
+                    {loc('Цензурирует ненормативную лексику', 'Censors inappropriate language', 'Цэнзуруе ненарматыўную лексіку', 'Zensiert unangebrachte Sprache', 'Censure le langage inapproprié', '过滤不当言论')}
                   </span>
                   </div>
                   <button className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${isCensored ? 'bg-blue-500' : 'bg-white/20'}`}>
@@ -541,7 +552,7 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
                   className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all border border-red-500/30 hover:border-transparent group"
               >
                   <Siren className={`w-4 h-4 ${isPanicking ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
-                  {isPanicking ? (lang === 'ru' ? 'Маскировка...' : 'Masking...') : (lang === 'ru' ? 'Режим маскировки' : 'Panic Mode')}
+                  {isPanicking ? loc('Маскировка...', 'Masking...', 'Маскіроўка...', 'Maskierung...', 'Masquage...', '伪装中...') : loc('Режим маскировки', 'Panic Mode', 'Рэжым маскіроўкі', 'Panikmodus', 'Mode panique', '恐慌模式')}
               </button>
           </div>
         )}
@@ -551,7 +562,7 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
                 {logs.length === 0 ? (
                     <div className="text-center py-6 text-white/30 text-xs flex flex-col items-center gap-2 border border-dashed border-white/10 rounded-xl">
                         <ShieldCheck className="w-8 h-8 opacity-50" />
-                        {lang === 'ru' ? 'Угроз не обнаружено' : 'No threats detected'}
+                        {loc('Угроз не обнаружено', 'No threats detected', 'Пагроз не выяўлена', 'Keine Bedrohungen erkannt', 'Aucune menace détectée', '未发现威胁')}
                     </div>
                 ) : (
                     <div className="space-y-2 max-h-[180px] overflow-y-auto no-scrollbar">
@@ -574,7 +585,7 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white/5 hover:bg-[#ff4d4d]/20 text-white/60 hover:text-[#ff4d4d] rounded-xl text-xs font-black uppercase tracking-wider transition-colors border border-transparent hover:border-[#ff4d4d]/30"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            {lang === 'ru' ? 'Очистить логи' : 'Clear logs'}
+            {loc('Очистить логи', 'Clear logs', 'Ачысціць логі', 'Protokolle löschen', 'Effacer les journaux', '清除日志')}
           </button>
       </div>
     </div>

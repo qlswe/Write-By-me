@@ -187,7 +187,7 @@ export const Header: React.FC<HeaderProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute right-0 top-full mt-2 w-44 bg-[#15101e] border border-[#3d2b4f] rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] overflow-hidden z-[999] p-1.5"
+                    className="absolute right-0 top-full mt-2 w-44 max-w-[calc(100vw-1.5rem)] bg-[#15101e] border border-[#3d2b4f] rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] overflow-hidden z-[999] p-1.5"
                   >
                     {(['ru', 'en', 'by', 'de', 'fr', 'zh'] as Language[]).map(l => {
                       const langNames: Record<Language, string> = {
@@ -221,7 +221,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* IPv6 Popularization & Protocol Badge */}
             <button
               onClick={() => setIpv6ModalOpen(true)}
-              className="hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all duration-300 active:scale-95 shadow-md shadow-emerald-500/10 cursor-pointer"
+              className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all duration-300 active:scale-95 shadow-md shadow-emerald-500/10 cursor-pointer"
               title={lang === 'ru' ? "IPv6 Центр Популяризации (Dual-Stack ::)" : "IPv6 Protocol Promotion Center"}
             >
               <Globe size={14} className="text-emerald-400 animate-pulse" />
@@ -231,7 +231,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* AHA Protocol v6 Hyper-Acceleration Badge */}
             <button
               onClick={() => setAhaProtocolModalOpen(true)}
-              className="hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-[#ff4d4d]/10 border-[#ff4d4d]/30 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
+              className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-[#ff4d4d]/10 border-[#ff4d4d]/30 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
               title={lang === 'ru' ? "AHA Protocol v6 (Adaptive IPv6 Hyper-Acceleration)" : "AHA Protocol v6 Hyper-Acceleration"}
             >
               <Zap size={14} className="text-[#ff4d4d] animate-pulse" />
@@ -241,7 +241,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* AHA Built-in Web Browser Badge */}
             <button
               onClick={() => setEmbeddedBrowserOpen(true)}
-              className="hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-400 transition-all duration-300 active:scale-95 shadow-md shadow-purple-500/10 cursor-pointer"
+              className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-400 transition-all duration-300 active:scale-95 shadow-md shadow-purple-500/10 cursor-pointer"
               title={lang === 'ru' ? "Встроенный браузер и User-Agent инспектор" : "Embedded Browser & User-Agent Inspector"}
             >
               <Globe size={14} className="text-purple-400 animate-pulse" />
@@ -250,7 +250,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button 
               onClick={() => sdk.reloadApp()}
-              className="hidden sm:flex items-center justify-center p-2 rounded-xl border bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/5"
+              className="hidden md:flex items-center justify-center p-2 rounded-xl border bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/5"
               title={lang === 'ru' ? "Обновить сайт вручную (очистить кэш)" : "Force reload & clear cache"}
             >
               <RotateCw size={14} className="text-[#ff4d4d]" />
@@ -259,7 +259,7 @@ export const Header: React.FC<HeaderProps> = ({
             {onToggleConsole && (
               <button 
                 onClick={onToggleConsole}
-                className={`hidden sm:flex items-center justify-center p-2 rounded-xl border transition-all duration-300 active:scale-95 shadow-md ${
+                className={`hidden md:flex items-center justify-center p-2 rounded-xl border transition-all duration-300 active:scale-95 shadow-md ${
                   isConsoleOpen
                     ? 'bg-[#ff4d4d] border-white/30 text-white shadow-[0_0_12px_rgba(255,77,77,0.5)]'
                     : 'bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d]'
@@ -440,7 +440,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               {/* Quick Actions Grid for Mobile */}
-              <div className="sm:hidden grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button 
                   onClick={() => { setIpv6ModalOpen(true); setMobileMenuOpen(false); }}
                   className="flex items-center justify-center gap-2 bg-[#15101e] border border-emerald-500/40 text-emerald-300 p-3 rounded-xl text-xs font-bold hover:bg-emerald-500/20 transition-all cursor-pointer"

@@ -23,14 +23,48 @@ const getChangelogData = (lang: Language): ChangelogEntry[] => {
       version: "2.5.0",
       date: "2026-07-29",
       newFeatures: [
-        lang === 'ru' ? "Вкладка 'Стримы' (Live Streams) в панели навигации для просмотра и проведения трансляций" : "Added 'Streams' (Live Streams) tab to navigation bar",
-        lang === 'ru' ? "Возможность планировать трансляции с отсчетом времени и интерактивным чатом" : "Ability to schedule streams with countdown timer and live chat",
-        lang === 'ru' ? "Автоматическая замена всех <video> тегов в постах и форуме на кастомный Kuru Video Player" : "Automatic replacement of raw <video> tags in articles & forum threads with custom Kuru Video Player",
-        lang === 'ru' ? "Генерация и скачивание официального Patch Notes в формате PDF" : "PDF Patch Notes generator with line addition metrics"
+        lang === 'ru' ? "Вкладка 'Стримы' (Live Streams) в панели навигации для просмотра и проведения трансляций" :
+        lang === 'en' ? "Added 'Streams' (Live Streams) tab to navigation bar" :
+        lang === 'by' ? "Укладка 'Стрымы' (Live Streams) у панэлі навігацыі для прагляду і правядзення трансляцый" :
+        lang === 'de' ? "'Streams' (Live Streams) Tab zur Navigationsleiste hinzugefügt" :
+        lang === 'fr' ? "Onglet 'Streams' (Directs) ajouté à la barre de navigation" :
+        "导航栏添加了“直播”选项卡",
+
+        lang === 'ru' ? "Возможность планировать трансляции с отсчетом времени и интерактивным чатом" :
+        lang === 'en' ? "Ability to schedule streams with countdown timer and live chat" :
+        lang === 'by' ? "Мажлівасць планаваць трансляцыі з адлікам часу і інтэрактыўным чатам" :
+        lang === 'de' ? "Möglichkeit, Streams mit Countdown und Live-Chat zu planen" :
+        lang === 'fr' ? "Possibilité de planifier des streams avec compte à rebours et chat en direct" :
+        "可通过倒计时和实时聊天安排直播",
+
+        lang === 'ru' ? "Автоматическая замена всех <video> тегов в постах и форуме на кастомный Kuru Video Player" :
+        lang === 'en' ? "Automatic replacement of raw <video> tags in articles & forum threads with custom Kuru Video Player" :
+        lang === 'by' ? "Аўтаматычная замена ўсіх <video> тэгаў у пастах і форуме на кастамны Kuru Video Player" :
+        lang === 'de' ? "Automatisches Ersetzen aller <video>-Tags durch den benutzerdefinierten Kuru Video Player" :
+        lang === 'fr' ? "Remplacement automatique des balises <video> par le lecteur vidéo Kuru personnalisé" :
+        "将文章和论坛中的所有 <video> 标签自动替换为自定义 Kuru 视频播放器",
+
+        lang === 'ru' ? "Генерация и скачивание официального Patch Notes в формате PDF" :
+        lang === 'en' ? "PDF Patch Notes generator with line addition metrics" :
+        lang === 'by' ? "Генерацыя і спампоўванне афіцыйнага Patch Notes у фармаце PDF" :
+        lang === 'de' ? "PDF-Patch-Notes-Generator mit Zeilenzählmetriken" :
+        lang === 'fr' ? "Générateur de notes de patch PDF avec métriques de lignes" :
+        "带行数指标的 PDF 更新说明生成器"
       ],
       improvements: [
-        lang === 'ru' ? "Добавлено +1,680 строк кода TypeScript и компонентов" : "Added +1,680 lines of TypeScript code and components",
-        lang === 'ru' ? "Оптимизирована синхронизация видео и автоматический прокси-сервер CORS" : "Optimized video playback sync and CORS proxying fallback"
+        lang === 'ru' ? "Добавлено +1,680 строк кода TypeScript и компонентов" :
+        lang === 'en' ? "Added +1,680 lines of TypeScript code and components" :
+        lang === 'by' ? "Дададзена +1,680 радкоў кода TypeScript і кампанентаў" :
+        lang === 'de' ? "+1.680 Zeilen TypeScript-Code und Komponenten hinzugefügt" :
+        lang === 'fr' ? "Ajout de +1 680 lignes de code et composants TypeScript" :
+        "添加了 +1,680 行 TypeScript 代码和组件",
+
+        lang === 'ru' ? "Оптимизирована синхронизация видео и автоматический прокси-сервер CORS" :
+        lang === 'en' ? "Optimized video playback sync and CORS proxying fallback" :
+        lang === 'by' ? "Аптымізавана сінхранізацыя відэа і аўтаматычны проксі-сервер CORS" :
+        lang === 'de' ? "Optimierte Videowiedergabesynchronisation und CORS-Proxy-Fallback" :
+        lang === 'fr' ? "Optimisation de la synchro vidéo et du serveur proxy CORS" :
+        "优化了视频播放同步和 CORS 代理后备方案"
       ]
     },
     {

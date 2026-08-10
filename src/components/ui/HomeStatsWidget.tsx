@@ -16,51 +16,116 @@ export const HomeStatsWidget: React.FC<HomeStatsWidgetProps> = ({ lang, onNaviga
   const publishedBlogCount = (blogPosts || []).filter((item: any) => item.published !== false).length;
   const activeEventsCount = (events || []).filter((item: any) => item.active !== false).length;
 
+  const titles = {
+    ru: { header: 'Статистика Контента Сообщества', live: 'LIVE ДАННЫЕ' },
+    en: { header: 'Community Content Stats', live: 'LIVE DATA' },
+    by: { header: 'Статыстыка Кантэнту Супольнасці', live: 'LIVE ДАНЫЯ' },
+    de: { header: 'Community-Inhaltsstatistiken', live: 'LIVE-DATEN' },
+    fr: { header: 'Statistiques du contenu de la communauté', live: 'DONNÉES EN DIRECT' },
+    zh: { header: '社区内容统计', live: '实时数据' }
+  };
+
+  const uiText = titles[lang] || titles.en;
+
   const stats = [
     {
       id: 'theories',
       section: 'theories',
       count: publishedTheoriesCount,
-      titleRu: 'Опубликовано теорий',
-      titleEn: 'Published Theories',
-      descRu: 'Гипотезы и сюжетный лор',
-      descEn: 'Hypotheses & story lore',
+      title: {
+        ru: 'Опубликовано теорий',
+        en: 'Published Theories',
+        by: 'Апублікавана тэорый',
+        de: 'Veröffentlichte Theorien',
+        fr: 'Théories publiées',
+        zh: '已发布理论'
+      },
+      desc: {
+        ru: 'Гипотезы и сюжетный лор',
+        en: 'Hypotheses & story lore',
+        by: 'Гіпотэзы і сюжэтны лор',
+        de: 'Hypothesen & Story-Lore',
+        fr: 'Hypothèses et lore de l\'histoire',
+        zh: '假设与故事背景'
+      },
       icon: BookOpen,
       color: '#ff4d4d',
       bgGlow: 'from-[#ff4d4d]/20 to-transparent',
       borderColor: 'hover:border-[#ff4d4d]/60',
-      badgeRu: 'Теории',
-      badgeEn: 'Lore'
+      badge: {
+        ru: 'Теории',
+        en: 'Lore',
+        by: 'Тэорыі',
+        de: 'Theorien',
+        fr: 'Théories',
+        zh: '设定'
+      }
     },
     {
       id: 'blog',
       section: 'blog',
       count: publishedBlogCount,
-      titleRu: 'Статей и Блогов',
-      titleEn: 'Blog Posts & Articles',
-      descRu: 'Аналитика и патчноуты',
-      descEn: 'Analytics & patch notes',
+      title: {
+        ru: 'Статей и Блогов',
+        en: 'Blog Posts & Articles',
+        by: 'Артыкулаў і Блогаў',
+        de: 'Blogbeiträge & Artikel',
+        fr: 'Articles de blog',
+        zh: '博客文章'
+      },
+      desc: {
+        ru: 'Аналитика и патчноуты',
+        en: 'Analytics & patch notes',
+        by: 'Аналітыка і патчноўты',
+        de: 'Analysen & Patchnotizen',
+        fr: 'Analyses et notes de patch',
+        zh: '分析与更新说明'
+      },
       icon: FileText,
       color: '#00f0ff',
       bgGlow: 'from-[#00f0ff]/20 to-transparent',
       borderColor: 'hover:border-[#00f0ff]/60',
-      badgeRu: 'Блоги',
-      badgeEn: 'Articles'
+      badge: {
+        ru: 'Блоги',
+        en: 'Articles',
+        by: 'Блогі',
+        de: 'Blogs',
+        fr: 'Blogs',
+        zh: '文章'
+      }
     },
     {
       id: 'events',
       section: 'chronicle',
       count: activeEventsCount,
-      titleRu: 'Активных событий',
-      titleEn: 'Active Events',
-      descRu: 'Хроника и эвенты',
-      descEn: 'Chronicle & events',
+      title: {
+        ru: 'Активных событий',
+        en: 'Active Events',
+        by: 'Актыўных падзей',
+        de: 'Aktive Events',
+        fr: 'Événements actifs',
+        zh: '进行中活动'
+      },
+      desc: {
+        ru: 'Хроника и эвенты',
+        en: 'Chronicle & events',
+        by: 'Хроніка і эвенты',
+        de: 'Chronik & Events',
+        fr: 'Chronique et événements',
+        zh: '编年史与活动'
+      },
       icon: Calendar,
       color: '#a855f7',
       bgGlow: 'from-purple-500/20 to-transparent',
       borderColor: 'hover:border-purple-500/60',
-      badgeRu: 'Ивенты',
-      badgeEn: 'Events'
+      badge: {
+        ru: 'Ивенты',
+        en: 'Events',
+        by: 'Івенты',
+        de: 'Events',
+        fr: 'Événements',
+        zh: '活动'
+      }
     }
   ];
 
@@ -69,10 +134,10 @@ export const HomeStatsWidget: React.FC<HomeStatsWidgetProps> = ({ lang, onNaviga
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
           <Sparkles size={14} className="text-[#ff4d4d]" />
-          {lang === 'ru' ? 'Статистика Контента Сообщества' : 'Community Content Stats'}
+          {uiText.header}
         </h3>
         <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-          {lang === 'ru' ? 'LIVE ДАННЫЕ' : 'LIVE DATA'}
+          {uiText.live}
         </span>
       </div>
 
@@ -110,7 +175,7 @@ export const HomeStatsWidget: React.FC<HomeStatsWidgetProps> = ({ lang, onNaviga
                       color: stat.color
                     }}
                   >
-                    {lang === 'ru' ? stat.badgeRu : stat.badgeEn}
+                    {stat.badge[lang] || stat.badge.en}
                   </span>
                 </div>
 
@@ -121,12 +186,12 @@ export const HomeStatsWidget: React.FC<HomeStatsWidgetProps> = ({ lang, onNaviga
                 </div>
 
                 <h4 className="text-xs font-bold text-gray-200 mt-1">
-                  {lang === 'ru' ? stat.titleRu : stat.titleEn}
+                  {stat.title[lang] || stat.title.en}
                 </h4>
               </div>
 
               <div className="pt-2 flex items-center justify-between text-[11px] text-gray-400 group-hover:text-white transition-colors border-t border-[#3d2b4f]/40 mt-3">
-                <span className="truncate">{lang === 'ru' ? stat.descRu : stat.descEn}</span>
+                <span className="truncate">{stat.desc[lang] || stat.desc.en}</span>
                 <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform shrink-0" style={{ color: stat.color }} />
               </div>
             </motion.button>

@@ -889,14 +889,14 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
         </div>
 
         {/* Player Core */}
-        <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16 w-full">
+        <div className="flex flex-col md:flex-row items-center gap-6 md:gap-16 w-full">
           
           {/* Vinyl Record / Album Art Area */}
-          <div className="relative shrink-0 mb-8 md:mb-0">
+          <div className="relative shrink-0 flex flex-col items-center">
             <motion.div 
               animate={{ rotate: isPlaying ? 360 : 0 }}
               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-              className={`w-48 h-48 sm:w-56 sm:h-56 rounded-full flex items-center justify-center border-4 border-[#0d0b14] shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden ${isPlaying ? 'bg-[#15101e]' : 'bg-[#0d0b14]'}`}
+              className={`w-40 h-40 sm:w-56 sm:h-56 rounded-full flex items-center justify-center border-4 border-[#0d0b14] shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden ${isPlaying ? 'bg-[#15101e]' : 'bg-[#0d0b14]'}`}
             >
               {/* Vinyl grooves */}
               <div className="absolute inset-0 rounded-full border-[1px] border-white/5 m-2"></div>
@@ -905,31 +905,31 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
               <div className="absolute inset-0 rounded-full border-[1px] m-14 border-white/5"></div>
               
               {/* Center label */}
-              <div className="w-20 h-20 bg-gradient-to-br from-[#ff4d4d] to-[#3d2b4f] rounded-full flex items-center justify-center shadow-inner relative z-10">
-                <div className="w-4 h-4 bg-[#0d0b14] rounded-full shadow-inner"></div>
-                <Disc className="absolute w-10 h-10 text-white/20" />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#ff4d4d] to-[#3d2b4f] rounded-full flex items-center justify-center shadow-inner relative z-10">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#0d0b14] rounded-full shadow-inner"></div>
+                <Disc className="absolute w-8 h-8 sm:w-10 sm:h-10 text-white/20" />
               </div>
             </motion.div>
             
-            {/* Playback Controls Overlay */}
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-[#0d0b14] p-2 rounded-full border border-[#3d2b4f]/50 shadow-xl z-20">
+            {/* Playback Controls Row */}
+            <div className="mt-4 flex items-center gap-4 bg-[#0d0b14] px-4 py-2.5 rounded-full border border-[#3d2b4f]/60 shadow-xl z-20">
               <button
                 onClick={toggleRadio}
                 disabled={isLoading}
                 title={isPlaying ? t.radioOff : t.radioPressPlay}
                 style={{ touchAction: 'manipulation' }}
-                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all focus:outline-none ${
+                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all focus:outline-none cursor-pointer ${
                   isPlaying 
-                    ? 'bg-[#ff4d4d] text-[#15101e] shadow-[0_0_20px_rgba(255,77,77,0.4)] hover:scale-105' 
-                    : 'bg-[#ff4d4d] text-[#15101e] hover:scale-105 shadow-xl'
+                    ? 'bg-[#ff4d4d] text-[#15101e] shadow-[0_0_20px_rgba(255,77,77,0.4)] hover:scale-105 active:scale-95' 
+                    : 'bg-[#ff4d4d] text-[#15101e] hover:scale-105 active:scale-95 shadow-xl'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isLoading ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
                 ) : isPlaying ? (
-                  <Square className="w-5 h-5 fill-current" />
+                  <Square className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
                 ) : (
-                  <Play className="w-6 h-6 fill-current ml-1" />
+                  <Play className="w-5 h-5 sm:w-6 sm:h-6 fill-current ml-1" />
                 )}
               </button>
               
@@ -937,7 +937,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
                 <button
                   onClick={handleNextJoke}
                   disabled={isLoading || statusText.includes(t.radioThinking || 'Thinking')}
-                  className="w-10 h-10 rounded-full bg-[#15101e] text-white/40 hover:text-white hover:bg-[#251c35] flex items-center justify-center transition-all disabled:opacity-50"
+                  className="w-10 h-10 rounded-full bg-[#15101e] border border-[#3d2b4f] text-white/60 hover:text-white hover:bg-[#251c35] flex items-center justify-center transition-all disabled:opacity-50 cursor-pointer active:scale-95"
                   title={t.radioNextJoke}
                 >
                   <SkipForward className="w-4 h-4" />
@@ -947,7 +947,7 @@ export const AhiRadio: React.FC<AhiRadioProps> = ({ lang }) => {
           </div>
 
           {/* Text & Status Area */}
-          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full mt-8 md:mt-0">
+          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left w-full mt-2 md:mt-0">
             <div className="mb-4">
               <p className="text-xs font-bold text-[#ff4d4d] uppercase tracking-widest mb-1">
                 {t.radioNowPlaying}

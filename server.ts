@@ -45,8 +45,12 @@ async function startServer() {
 
   // Dedicated IPv6 Protocol Diagnostic & Popularization Endpoint
   app.get("/api/network/protocol", (req, res) => {
-    const rawIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || req.ip || '';
-    const isIPv6 = rawIp.includes(':') && !rawIp.startsWith('::ffff:127.0.0.1');
+    const rawIp = (req.headers['cf-connecting-ip'] as string) ||
+                  (req.headers['x-real-ip'] as string) ||
+                  (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+                  req.socket.remoteAddress || req.ip || '';
+
+    const isIPv6 = rawIp.includes(':') && !rawIp.startsWith('::ffff:');
     const isIPv4Mapped = rawIp.startsWith('::ffff:');
     const cleanIp = isIPv4Mapped ? rawIp.replace('::ffff:', '') : rawIp;
 
@@ -135,8 +139,8 @@ async function startServer() {
     return false;
   }
 
-  // Network Protocol Status & Configuration Endpoint
-  app.get("/api/network/protocol", (req, res) => {
+  // Network Protocol Configuration Info
+  app.get("/api/network/config", (req, res) => {
     res.json({
       status: "active",
       protocol: "AHA-v6-HYPER",

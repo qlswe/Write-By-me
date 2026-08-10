@@ -22,6 +22,30 @@ const quickSuggestions = {
     { label: 'HSR Conspiracy Theory 🔮', prompt: 'Invent the most absurd and hilarious fan conspiracy theory about Honkai: Star Rail!' },
     { label: 'Character Build HSR 🎮', prompt: 'Help me design a fun, crazy, or high-performance build for any character of your choice!' },
     { label: 'Ode to Aha the Elation 🎉', prompt: 'Write an inspiring, funny, and chaotic poem or ode to Aha, the Aeon of Elation!' }
+  ],
+  by: [
+    { label: 'Касмічны анекдот 🌌', prompt: 'Раскажы вар\'яцкі і вясёлы касмічны анекдот!' },
+    { label: 'Тэорыя змовы HSR 🔮', prompt: 'Прыдумай самую абсурдную і смешную фанацкую тэорыю змовы па гульні Honkai: Star Rail!' },
+    { label: 'Былд на персанажа HSR 🎮', prompt: 'Дапамажы скласці круты або эфектыўны былд для любога персанажа!' },
+    { label: 'Ода богу Радасці Ахе 🎉', prompt: 'Напішы натхняльную, вясёлую і хаатычную оду або верш Эону Радасці Ахе!' }
+  ],
+  de: [
+    { label: 'Kosmischer Witz 🌌', prompt: 'Erzähle mir einen verrückten und lustigen kosmischen Witz!' },
+    { label: 'HSR Verschwörungstheorie 🔮', prompt: 'Erfinde die absurdeste und lustigste Fan-Verschwörungstheorie zu Honkai: Star Rail!' },
+    { label: 'Charakter-Build HSR 🎮', prompt: 'Hilf mir, einen tollen oder verrückten Build für einen Charakter deiner Wahl zu erstellen!' },
+    { label: 'Ode an Aha die Elation 🎉', prompt: 'Schreibe ein inspirierendes, lustiges und chaotisches Gedicht an Aha, den Äon der Freude!' }
+  ],
+  fr: [
+    { label: 'Blague cosmique 🌌', prompt: 'Raconte-moi une blague cosmique folle et drôle !' },
+    { label: 'Théorie du complot HSR 🔮', prompt: 'Invente la théorie du complot la plus absurde et hilarante sur Honkai: Star Rail !' },
+    { label: 'Build de personnage HSR 🎮', prompt: 'Aide-moi à concevoir un build amusant ou efficace pour un personnage de ton choix !' },
+    { label: 'Ode à Aha le Ravissement 🎉', prompt: 'Écris un poème inspirant, drôle et chaotique à Aha, l\'Éon du Ravissement !' }
+  ],
+  zh: [
+    { label: '宇宙笑话 🌌', prompt: '给我讲一个疯狂又好笑的宇宙笑话！' },
+    { label: '崩铁阴谋论 🔮', prompt: '构思一个关于《崩坏：星穹铁道》最荒谬搞笑的粉丝阴谋论！' },
+    { label: '崩铁角色配装 🎮', prompt: '帮我为你选择的任意角色设计一套有趣又强力的配装！' },
+    { label: '欢愉阿哈赞歌 🎉', prompt: '写一首献给欢愉星神阿哈的具有启发性、搞笑又混乱的诗歌！' }
   ]
 };
 
@@ -41,6 +65,38 @@ const quickPrompts = {
     { label: 'Pom-Pom joke 🚂', prompt: 'Tell a hilarious and wholesome joke about Pom-Pom and the Trailblazer.' },
     { label: 'Who are Masked Fools? 🎭', prompt: 'Tell me who the Masked Fools are and why they follow Aha.' },
     { label: 'Cosmic advice of the day 💫', prompt: 'Give me a chaotic cosmic prediction or advice of the day from Aha!' }
+  ],
+  by: [
+    { label: 'Тлумач апошнюю падзею 🌌', prompt: 'Плумач, што адбылося ў апошнім буйным абнаўленні Honkai: Star Rail?' },
+    { label: 'Прапануй тэорыю 🔮', prompt: 'Прапануй фанацкую тэорыю пра сапраўдныя матывы Эона Радасці Ахі.' },
+    { label: 'Лепшы былд на Ахерон ⚡', prompt: 'Парадзь лепшы былд для Ахерон у HSR.' },
+    { label: 'Анекдот пра Пом-Пом 🚂', prompt: 'Раскажы вясёлы анекдот пра Пом-Пом і Першапраходца.' },
+    { label: 'Хто такія Недарэкі ў масках? 🎭', prompt: 'Раскажы, хто такія Недарэкі ў масках і чаму яны служаць Ахе?' },
+    { label: 'Касмічная парада дня 💫', prompt: 'Дай мне касмічнае прадказанне або параду дня ад імя Ахі!' }
+  ],
+  de: [
+    { label: 'Erkläre das letzte Event 🌌', prompt: 'Kannst du erklären, was im neuesten Update von Honkai: Star Rail passiert ist?' },
+    { label: 'Schlage eine Theorie vor 🔮', prompt: 'Schlage eine verrückte Theorie über die wahren Motive von Aha vor.' },
+    { label: 'Bester Acheron-Build ⚡', prompt: 'Empfehle den besten Build für Acheron in HSR.' },
+    { label: 'Pom-Pom Witz 🚂', prompt: 'Erzähle einen lustigen Witz über Pom-Pom und den Weltfahrer.' },
+    { label: 'Wer sind die Maskierten Narren? 🎭', prompt: 'Erzähle mir, wer die Maskierten Narren sind und warum sie Aha folgen.' },
+    { label: 'Kosmischer Rat des Tages 💫', prompt: 'Gib mir eine kosmische Vorhersage oder einen Rat des Tages im Namen von Aha!' }
+  ],
+  fr: [
+    { label: 'Expliquer le dernier événement 🌌', prompt: 'Peux-tu expliquer ce qui s\'est passé dans la dernière mise à jour de Honkai: Star Rail ?' },
+    { label: 'Suggérer une théorie 🔮', prompt: 'Propose une théorie folle sur les vrais motifs d\'Aha le Ravissement.' },
+    { label: 'Meilleur build Acheron ⚡', prompt: 'Recommande le meilleur build pour Acheron dans HSR.' },
+    { label: 'Blague de Pom-Pom 🚂', prompt: 'Raconte une blague hilarante sur Pom-Pom et le Pionnier.' },
+    { label: 'Qui sont les Fous Masqués ? 🎭', prompt: 'Dis-moi qui sont les Fous Masqués et pourquoi ils suivent Aha.' },
+    { label: 'Conseil cosmique du jour 💫', prompt: 'Donne-moi une prédiction cosmique ou un conseil du jour de la part d\'Aha !' }
+  ],
+  zh: [
+    { label: '解释最近的大事件 🌌', prompt: '能解释一下《崩坏：星穹铁道》最新版本更新中发生了什么吗？' },
+    { label: '提出一个猜想 🔮', prompt: '提出一个关于欢愉星神阿哈真正动机的疯狂猜想。' },
+    { label: '黄泉最佳配装 ⚡', prompt: '推荐崩铁中黄泉的最佳且最有意思的配装。' },
+    { label: '帕姆搞笑段子 🚂', prompt: '讲一个关于帕姆和开拓者的搞笑温馨段子。' },
+    { label: '假面愚者是谁？ 🎭', prompt: '告诉我假面愚者是什么人，他们为什么追随阿哈。' },
+    { label: '今日宇宙忠告 💫', prompt: '以阿哈的名义给我一个混乱的宇宙预言或今日忠告！' }
   ]
 };
 

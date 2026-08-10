@@ -33,7 +33,48 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading, lang, l
     'Readying interface...'
   ];
 
-  const steps = lang === 'ru' ? stepsRu : stepsEn;
+  const stepsBy = [
+    'Запуск ядра бяспекі...',
+    'Усталяванне зашыфраванага злучэння...',
+    'Праверка правоў доступу і верыфікацыі...',
+    'Сінхранізацыя абароненых баз даных...',
+    'Актывацыя інтэрфейсу...'
+  ];
+
+  const stepsDe = [
+    'Sicherheitskern wird gestartet...',
+    'Verschlüsselte Verbindung herstellen...',
+    'Anmeldeinformationen & Rollen überprüfen...',
+    'Sichere Datenbanken synchronisieren...',
+    'Schnittstelle wird vorbereitet...'
+  ];
+
+  const stepsFr = [
+    'Lancement du cœur de sécurité...',
+    'Établissement d\'une connexion cryptée...',
+    'Vérification des identifiants et rôles...',
+    'Synchronisation des bases de données sécurisées...',
+    'Préparation de l\'interface...'
+  ];
+
+  const stepsZh = [
+    '正在启动安全核心...',
+    '正在建立加密连接...',
+    '正在验证身份与角色...',
+    '正在同步加密数据库...',
+    '正在就绪界面...'
+  ];
+
+  const stepsByLang = {
+    ru: stepsRu,
+    en: stepsEn,
+    by: stepsBy,
+    de: stepsDe,
+    fr: stepsFr,
+    zh: stepsZh
+  };
+
+  const steps = stepsByLang[lang] || stepsEn;
 
   useEffect(() => {
     if (!isLoading) return;

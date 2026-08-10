@@ -71,7 +71,7 @@ export async function checkIPv6Status(): Promise<IPv6NetworkStatus> {
   let serverIp = '';
 
   // Run probes in parallel for max performance
-  const [localAdapterIPv6, serverRes, v6ProbeRes, dsProbeRes] = await Promise.all([
+  const [localAdapterIPv6, serverRes, v6ProbeRes, dsProbeRes, v6ImagePing] = await Promise.all([
     detectLocalIPv6Adapter(),
 
     // Server probe
@@ -82,23 +82,36 @@ export async function checkIPv6Status(): Promise<IPv6NetworkStatus> {
       }
     }).then(r => r.ok ? r.json() : null).catch(() => null),
 
-    // IPv6-only public endpoint test (fails if client has no IPv6 internet connection)
+    // IPv6-only public endpoints probe (tries multiple services)
     (async () => {
-      try {
-        const controller = new AbortController();
-        const tid = setTimeout(() => controller.abort(), 2000);
-        const res = await fetch('https://api6.ipify.org?format=json', {
-          signal: controller.signal,
-          cache: 'no-store'
-        });
-        clearTimeout(tid);
-        if (res.ok) {
-          const json = await res.json();
-          return json?.ip || null;
-        }
-      } catch {
-        return null;
+      const v6Endpoints = [
+        'https://api6.ipify.org?format=json',
+        'https://v6.ident.me',
+        'https://ipv6.icanhazip.com'
+      ];
+      for (const endpoint of v6Endpoints) {
+        try {
+          const controller = new AbortController();
+          const tid = setTimeout(() => controller.abort(), 2000);
+          const res = await fetch(endpoint, {
+            signal: controller.signal,
+            cache: 'no-store'
+          });
+          clearTimeout(tid);
+          if (res.ok) {
+            const text = (await res.text()).trim();
+            let ip = text;
+            try {
+              const json = JSON.parse(text);
+              if (json?.ip) ip = json.ip;
+            } catch {}
+            if (ip && ip.includes(':')) {
+              return ip;
+            }
+          }
+        } catch {}
       }
+      return null;
     })(),
 
     // Dual-stack public endpoint test
@@ -118,6 +131,23 @@ export async function checkIPv6Status(): Promise<IPv6NetworkStatus> {
       } catch {
         return null;
       }
+    })(),
+
+    // Pure IPv6 connection check via google ipv6 endpoint
+    (async () => {
+      try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 1800);
+        await fetch('https://ipv6.google.com/favicon.ico', {
+          mode: 'no-cors',
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        clearTimeout(tid);
+        return true;
+      } catch {
+        return false;
+      }
     })()
   ]);
 
@@ -135,6 +165,8 @@ export async function checkIPv6Status(): Promise<IPv6NetworkStatus> {
   if (v6ProbeRes && typeof v6ProbeRes === 'string' && v6ProbeRes.includes(':')) {
     globalIPv6Reachable = true;
     v6PublicIp = v6ProbeRes;
+  } else if (v6ImagePing) {
+    globalIPv6Reachable = true;
   }
 
   // Evaluate Dual-stack probe

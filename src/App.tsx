@@ -203,24 +203,56 @@ export default function App() {
         localStorage.removeItem('aha_quota_fallback');
         setOfflineMode(false);
         
+        const restoredMsg = {
+          ru: 'Подключение к Firestore успешно восстановлено!',
+          en: 'Firestore connection successfully restored!',
+          by: 'Падлучэнне да Firestore паспяхова адноўлена!',
+          de: 'Firestore-Verbindung erfolgreich wiederhergestellt!',
+          fr: 'Connexion à Firestore restaurée avec succès !',
+          zh: 'Firestore 连接已成功恢复！'
+        };
         window.dispatchEvent(new CustomEvent('aha_toast', {
-          detail: lang === 'ru' ? 'Подключение к Firestore успешно восстановлено!' : 'Firestore connection successfully restored!'
+          detail: restoredMsg[lang] || restoredMsg.en
         }));
       } else {
+        const offlineMsg = {
+          ru: 'Сетевое подключение всё ещё отсутствует.',
+          en: 'Network connection is still offline.',
+          by: 'Сеткавае падлучэнне ўсё яшчэ адсутнічае.',
+          de: 'Netzwerkverbindung ist weiterhin offline.',
+          fr: 'La connexion réseau est toujours hors ligne.',
+          zh: '网络连接仍处于离线状态。'
+        };
         window.dispatchEvent(new CustomEvent('aha_toast', {
-          detail: lang === 'ru' ? 'Сетевое подключение всё ещё отсутствует.' : 'Network connection is still offline.'
+          detail: offlineMsg[lang] || offlineMsg.en
         }));
       }
     } catch (error: any) {
       console.warn('Sync re-validation attempt result:', error);
       if (navigator.onLine) {
         setIsOffline(false);
+        const resyncMsg = {
+          ru: 'Сеть доступна! Попытка повторной синхронизации...',
+          en: 'Network is online! Attempting re-sync...',
+          by: 'Сетка даступная! Спроба паўторнай сінхранізацыі...',
+          de: 'Netzwerk online! Versuch der Neusynchronisierung...',
+          fr: 'Réseau en ligne ! Tentative de resynchronisation...',
+          zh: '网络已连接！正在尝试重新同步...'
+        };
         window.dispatchEvent(new CustomEvent('aha_toast', {
-          detail: lang === 'ru' ? 'Сеть доступна! Попытка повторной синхронизации...' : 'Network is online! Attempting re-sync...'
+          detail: resyncMsg[lang] || resyncMsg.en
         }));
       } else {
+        const errConnMsg = {
+          ru: 'Не удалось подключиться к серверу. Проверьте сеть.',
+          en: 'Failed to connect to server. Check connection.',
+          by: 'Не ўдалося падлучыцца да сервера. Праверце сетку.',
+          de: 'Verbindung zum Server fehlgeschlagen. Netzwerk prüfen.',
+          fr: 'Échec de la connexion au serveur. Vérifiez le réseau.',
+          zh: '无法连接到服务器。请检查网络。'
+        };
         window.dispatchEvent(new CustomEvent('aha_toast', {
-          detail: lang === 'ru' ? 'Не удалось подключиться к серверу. Проверьте сеть.' : 'Failed to connect to server. Check connection.'
+          detail: errConnMsg[lang] || errConnMsg.en
         }));
       }
     } finally {
@@ -611,7 +643,7 @@ export default function App() {
     { id: 'promo' as const, label: t.navPromo || 'Промокоды', icon: Ticket },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'users' as const, label: t.navUsers, icon: User },
-    ...(role === 'admin' ? [{ id: 'telemetry' as const, label: lang === 'ru' ? 'Статистика' : 'Telemetry', icon: BarChart2 }] : []),
+    ...(role === 'admin' ? [{ id: 'telemetry' as const, label: (t as any).telemetry || (lang === 'ru' ? 'Статистика' : lang === 'by' ? 'Статыстыка' : 'Telemetry'), icon: BarChart2 }] : []),
     { id: 'sdk', label: 'SDK', icon: Settings },
     { id: 'ai', label: 'Aha AI', icon: Sparkles },
   ];
@@ -774,26 +806,22 @@ export default function App() {
           </div>
           <div className="space-y-2">
             <h1 className="text-2xl font-black uppercase tracking-tight text-white">
-              {lang === 'ru' ? 'Доступ заблокирован' : 'Access Blocked'}
+              {(t as any).accessBlocked || 'Access Blocked'}
             </h1>
             <p className="text-xs text-gray-400 leading-relaxed">
-              {lang === 'ru'
-                ? 'Ваш аккаунт или устройство было заблокировано администратором платформы.'
-                : 'Your account or device identifier has been blocked by platform administrators.'}
+              {(t as any).accessBlockedDesc || 'Your account or device identifier has been blocked by platform administrators.'}
             </p>
           </div>
           {deviceId && (
             <div className="bg-[#251c35] border border-[#3d2b4f] p-3 rounded-2xl text-left space-y-1">
               <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block">
-                {lang === 'ru' ? 'ID вашего устройства:' : 'Your Device ID:'}
+                {(t as any).yourDeviceId || 'Your Device ID:'}
               </span>
               <code className="text-xs font-mono text-purple-300 break-all block">{deviceId}</code>
             </div>
           )}
           <p className="text-[11px] text-gray-500 italic">
-            {lang === 'ru'
-              ? 'Если вы считаете, что это ошибка, обратитесь в службу поддержки.'
-              : 'If you believe this is an error, please contact support.'}
+            {(t as any).contactSupportError || 'If you believe this is an error, please contact support.'}
           </p>
         </motion.div>
       </div>
@@ -852,7 +880,7 @@ export default function App() {
             <div className="flex items-center gap-2">
               <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-yellow-400' : 'animate-spin-slow'}`} />
               <span>
-                {lang === 'ru' ? 'Нет подключения к интернету. Приложение работает в автономном режиме.' : 'No internet connection. App is running in offline mode.'}
+                {(t as any).noConnectionOffline || 'No internet connection. App is running in offline mode.'}
               </span>
             </div>
 
@@ -862,7 +890,7 @@ export default function App() {
               className="px-3 py-1 bg-yellow-500 text-[#15101e] font-black text-[11px] uppercase tracking-wider rounded-lg hover:bg-yellow-400 transition-all flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? (lang === 'ru' ? 'Проверка...' : 'Checking...') : (lang === 'ru' ? 'Синхронизировать сейчас' : 'Sync Now')}</span>
+              <span>{isSyncing ? ((t as any).checking || 'Checking...') : ((t as any).syncNow || 'Sync Now')}</span>
             </button>
           </motion.div>
         )}
@@ -879,16 +907,16 @@ export default function App() {
           >
             <div className="flex items-center gap-2">
               <ServerCrash className="w-4 h-4 animate-pulse" />
-              {lang === 'ru' ? 'Сбой БД: превышен лимит или сервер недоступен.' : 'DB Error: Quota Exceeded or Offline.'}
+              {(t as any).dbErrorQuota || 'DB Error: Quota Exceeded or Offline.'}
             </div>
             
             {vercelFallback.isConfigured() ? (
                 <span className="text-indigo-400/80 font-medium">
-                  {lang === 'ru' ? 'Трафик успешно перенаправлен на Firebase RTDB. Чат и посты защищены от падения.' : 'Traffic successfully routed to RTDB bypass. Chat and posts are protected.'}
+                  {(t as any).rtdbBypassActive || 'Traffic successfully routed to RTDB bypass. Chat and posts are protected.'}
                 </span>
             ) : (
                 <span className="text-red-500/70 font-medium tracking-wide">
-                  {lang === 'ru' ? 'Включен локальный режим. Настройте параметры RTDB в Secrets для сетевого обхода лимитов.' : 'Local fallback active. Set RTDB parameters in Secrets to bypass network limits.'}
+                  {(t as any).localFallbackActive || 'Local fallback active. Set RTDB parameters in Secrets to bypass network limits.'}
                 </span>
             )}
             
@@ -899,7 +927,7 @@ export default function App() {
                 className="px-2.5 py-1 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-[10px] uppercase tracking-wider rounded-md transition-all flex items-center gap-1 active:scale-95 disabled:opacity-50 cursor-pointer"
               >
                 <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>{isSyncing ? (lang === 'ru' ? 'Проверка...' : 'Checking...') : (lang === 'ru' ? 'Синхронизировать сейчас' : 'Sync Now')}</span>
+                <span>{isSyncing ? ((t as any).checking || 'Checking...') : ((t as any).syncNow || 'Sync Now')}</span>
               </button>
 
               <button 
@@ -956,11 +984,11 @@ export default function App() {
                       <div>
                         <div className="flex items-center gap-2 mb-0.5">
                           <h3 className="font-black text-white text-base tracking-tight">
-                            {lang === 'ru' ? 'Приложение Web-App' : 'Web-App Application'}
+                            {(t as any).pwaTitle || 'Web-App Application'}
                           </h3>
                           {isInstalled ? (
                             <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                              {lang === 'ru' ? 'Установлено' : 'Installed'}
+                              {(t as any).pwaInstalled || 'Installed'}
                             </span>
                           ) : (
                             <span className="bg-[#ff4d4d]/20 text-[#ff4d4d] border border-[#ff4d4d]/30 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
@@ -969,9 +997,7 @@ export default function App() {
                           )}
                         </div>
                         <p className="text-xs text-gray-400 leading-snug">
-                          {lang === 'ru'
-                            ? 'Установите веб-приложение на ваш рабочий стол или главный экран смартфона для быстрого доступа'
-                            : 'Install Web-App directly on your home screen or desktop for instant access'}
+                          {(t as any).pwaDesc || 'Install Web-App directly on your home screen or desktop for instant access'}
                         </p>
                       </div>
                     </div>
@@ -986,7 +1012,7 @@ export default function App() {
                       className="w-full sm:w-auto px-5 py-2.5 bg-[#ff4d4d] hover:bg-[#ff6666] text-[#15101e] font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-[#ff4d4d]/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95 shrink-0"
                     >
                       <Smartphone size={16} />
-                      <span>{canInstall ? (lang === 'ru' ? 'Установить Web-App' : 'Install Web-App') : (lang === 'ru' ? 'Инструкция Web-App' : 'Web-App Guide')}</span>
+                      <span>{canInstall ? ((t as any).pwaInstallBtn || 'Install Web-App') : ((t as any).pwaGuideBtn || 'Web-App Guide')}</span>
                     </button>
                   </div>
                   
