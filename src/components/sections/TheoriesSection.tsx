@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Star, Search, ArrowLeft, Share2, Check, Plus, Edit, BookOpen, Sparkles, User, Clock, FileDown, Printer } from 'lucide-react';
+import { ArticleAudioPlayer } from '../ui/ArticleAudioPlayer';
 import { theoriesData } from '../../data/content';
 import { exportContentToPDF } from '../../utils/pdfExport';
 import { Language, translations } from '../../data/translations';
