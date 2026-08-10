@@ -315,17 +315,17 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
 
       {/* Top Kuru Video Disc Badge */}
       {(!isCompact || isFullscreen) && (
-        <div className={`absolute top-3 left-3 pointer-events-none transition-opacity duration-300 z-30 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-red-500/40 text-xs font-black uppercase tracking-wider text-red-400 flex items-center gap-2 shadow-lg">
+        <div className={`absolute top-2 left-2 sm:top-3 sm:left-3 pointer-events-none transition-opacity duration-300 z-30 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="bg-black/80 backdrop-blur-md px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border border-red-500/40 text-[10px] sm:text-xs font-black uppercase tracking-wider text-red-400 flex items-center gap-1.5 sm:gap-2 shadow-lg">
             <Disc
-              size={15}
-              className={`text-red-400 ${isPlaying ? 'animate-[spin_2.5s_linear_infinite]' : ''}`}
+              size={13}
+              className={`text-red-400 sm:w-[15px] sm:h-[15px] ${isPlaying ? 'animate-[spin_2.5s_linear_infinite]' : ''}`}
             />
             <span className="bg-gradient-to-r from-red-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
               Kuru Video
             </span>
             {isPlaying && (
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500 animate-ping" />
             )}
           </div>
         </div>
@@ -334,8 +334,8 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
       {/* Buffering Indicator */}
       {isBuffering && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center gap-2 pointer-events-none z-20">
-          <RotateCw size={36} className="text-red-500 animate-[spin_1s_linear_infinite]" />
-          <span className="text-[11px] font-bold text-red-200 tracking-widest uppercase bg-black/80 px-3 py-1 rounded-full border border-red-500/30">
+          <RotateCw size={32} className="text-red-500 animate-[spin_1s_linear_infinite] sm:w-9 sm:h-9" />
+          <span className="text-[10px] sm:text-[11px] font-bold text-red-200 tracking-widest uppercase bg-black/80 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-red-500/30">
             Загрузка...
           </span>
         </div>
@@ -346,10 +346,10 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           <button
             onClick={togglePlay}
-            className="pointer-events-auto p-4 rounded-full bg-red-600/90 hover:bg-red-500 text-white shadow-2xl hover:scale-110 active:scale-95 transition-all border border-red-400/50 backdrop-blur-md cursor-pointer"
+            className="pointer-events-auto p-2.5 sm:p-4 rounded-full bg-red-600/90 hover:bg-red-500 text-white shadow-2xl hover:scale-110 active:scale-95 transition-all border border-red-400/50 backdrop-blur-md cursor-pointer"
             title={isPlaying ? 'Пауза' : 'Воспроизвести'}
           >
-            {isPlaying ? <Pause size={30} /> : <Play size={30} className="ml-1" />}
+            {isPlaying ? <Pause size={22} className="sm:w-7 sm:h-7" /> : <Play size={22} className="ml-0.5 sm:ml-1 sm:w-7 sm:h-7" />}
           </button>
         </div>
       )}
@@ -357,7 +357,7 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
       {/* COMPACT PREVIEW OVERLAY CONTROLS (Used when isCompact === true and not in Fullscreen) */}
       {isCompact && !isFullscreen && (
         <div
-          className={`absolute bottom-3 inset-x-3 flex items-center justify-between pointer-events-none transition-opacity duration-300 z-30 ${
+          className={`absolute bottom-2 inset-x-2 sm:bottom-3 sm:inset-x-3 flex items-center justify-between pointer-events-none transition-opacity duration-300 z-30 ${
             showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
           }`}
         >
@@ -367,10 +367,10 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
               e.stopPropagation();
               toggleMute();
             }}
-            className="pointer-events-auto p-2 rounded-xl bg-black/80 hover:bg-black border border-white/20 text-white shadow-lg backdrop-blur-md hover:scale-105 active:scale-95 transition-all"
+            className="pointer-events-auto p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-black/80 hover:bg-black border border-white/20 text-white shadow-lg backdrop-blur-md hover:scale-105 active:scale-95 transition-all"
             title={isMuted ? 'Включить звук' : 'Выключить звук'}
           >
-            {isMuted || volume === 0 ? <VolumeX size={18} className="text-red-400" /> : <Volume2 size={18} />}
+            {isMuted || volume === 0 ? <VolumeX size={16} className="text-red-400 sm:w-4 sm:h-4" /> : <Volume2 size={16} className="sm:w-4 sm:h-4" />}
           </button>
 
           {/* Fullscreen button */}
@@ -379,10 +379,10 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
               e.stopPropagation();
               toggleFullscreen();
             }}
-            className="pointer-events-auto p-2 rounded-xl bg-black/80 hover:bg-black border border-white/20 text-white shadow-lg backdrop-blur-md hover:scale-105 active:scale-95 transition-all"
+            className="pointer-events-auto p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-black/80 hover:bg-black border border-white/20 text-white shadow-lg backdrop-blur-md hover:scale-105 active:scale-95 transition-all"
             title="На весь экран"
           >
-            <Maximize size={18} />
+            <Maximize size={16} className="sm:w-4 sm:h-4" />
           </button>
         </div>
       )}
@@ -390,7 +390,7 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
       {/* FULL KURU VIDEO CONTROLS BAR (Shown when !isCompact or in Fullscreen Mode) */}
       {(!isCompact || isFullscreen) && (
         <div
-          className={`absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-4 pt-10 transition-all duration-300 z-30 ${
+          className={`absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-2 sm:p-4 pt-8 sm:pt-10 transition-all duration-300 z-30 ${
             showControls || !isPlaying ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
         >
@@ -400,12 +400,12 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
             onClick={handleProgressClick}
             onMouseMove={handleProgressMouseMove}
             onMouseLeave={handleProgressMouseLeave}
-            className="relative w-full h-2.5 hover:h-4 bg-white/20 hover:bg-white/30 rounded-full cursor-pointer transition-all mb-3 group/progress"
+            className="relative w-full h-2 sm:h-2.5 hover:h-3.5 bg-white/20 hover:bg-white/30 rounded-full cursor-pointer transition-all mb-2 sm:mb-3 group/progress"
           >
             {hoverTime !== null && (
               <div
                 style={{ left: `${hoverPos}px` }}
-                className="absolute bottom-6 -translate-x-1/2 bg-black/90 text-white text-[11px] font-mono px-2 py-0.5 rounded border border-red-500/40 pointer-events-none shadow-md z-40"
+                className="absolute bottom-6 -translate-x-1/2 bg-black/90 text-white text-[10px] sm:text-[11px] font-mono px-1.5 py-0.5 rounded border border-red-500/40 pointer-events-none shadow-md z-40"
               >
                 {formatTime(hoverTime)}
               </div>
@@ -423,44 +423,44 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
 
             <div
               style={{ left: `${progressPct}%` }}
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-red-500 rounded-full opacity-0 group-hover/progress:opacity-100 shadow-lg transition-opacity"
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white border-2 border-red-500 rounded-full opacity-0 group-hover/progress:opacity-100 shadow-lg transition-opacity"
             />
           </div>
 
           {/* Full Controls Row */}
-          <div className="flex items-center justify-between text-white text-xs gap-3">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between text-white text-xs gap-1 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2.5 min-w-0">
               <button
                 onClick={togglePlay}
-                className="p-2 hover:bg-white/10 rounded-xl text-white hover:text-red-400 transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl text-white hover:text-red-400 transition-colors shrink-0"
                 title={isPlaying ? 'Пауза' : 'Воспроизвести'}
               >
-                {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+                {isPlaying ? <Pause size={18} className="sm:w-5 sm:h-5" /> : <Play size={18} className="sm:w-5 sm:h-5" />}
               </button>
 
               <button
                 onClick={() => seek(currentTime - 5)}
-                className="p-2 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl text-gray-300 hover:text-white transition-colors shrink-0"
                 title="-5 секунд"
               >
-                <Rewind size={18} />
+                <Rewind size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
 
               <button
                 onClick={() => seek(currentTime + 5)}
-                className="p-2 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl text-gray-300 hover:text-white transition-colors shrink-0"
                 title="+5 секунд"
               >
-                <FastForward size={18} />
+                <FastForward size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={toggleMute}
-                  className="p-2 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-colors"
+                  className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl text-gray-300 hover:text-white transition-colors"
                   title={isMuted ? 'Включить звук' : 'Выключить звук'}
                 >
-                  {isMuted || volume === 0 ? <VolumeX size={20} className="text-red-400" /> : <Volume2 size={20} />}
+                  {isMuted || volume === 0 ? <VolumeX size={18} className="text-red-400 sm:w-5 sm:h-5" /> : <Volume2 size={18} className="sm:w-5 sm:h-5" />}
                 </button>
                 <input
                   type="range"
@@ -469,20 +469,20 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
                   step="0.05"
                   value={isMuted ? 0 : volume}
                   onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                  className="w-20 sm:w-24 h-1.5 accent-red-500 bg-white/20 rounded-lg cursor-pointer"
+                  className="w-12 xs:w-16 sm:w-20 md:w-24 h-1.5 accent-red-500 bg-white/20 rounded-lg cursor-pointer shrink-0"
                 />
               </div>
 
-              <span className="font-mono text-xs text-gray-300 tracking-wide ml-1">
+              <span className="font-mono text-[10px] sm:text-xs text-gray-300 tracking-tight sm:tracking-wide whitespace-nowrap overflow-hidden text-ellipsis">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <div className="relative">
                 <button
                   onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                  className="px-2.5 py-1 hover:bg-white/10 rounded-xl text-xs font-bold text-gray-200 hover:text-white border border-white/20 transition-colors"
+                  className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 hover:bg-white/10 rounded-md sm:rounded-xl text-[10px] sm:text-xs font-bold text-gray-200 hover:text-white border border-white/20 transition-colors"
                   title="Скорость"
                 >
                   {playbackSpeed}x
@@ -507,18 +507,18 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
 
               <button
                 onClick={togglePiP}
-                className="p-2 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-colors hidden sm:block"
+                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl text-gray-300 hover:text-white transition-colors hidden sm:block"
                 title="Картинка в картинке"
               >
-                <PictureInPicture2 size={20} />
+                <PictureInPicture2 size={18} className="sm:w-5 sm:h-5" />
               </button>
 
               <button
                 onClick={toggleFullscreen}
-                className="p-2 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl text-gray-300 hover:text-white transition-colors"
                 title={isFullscreen ? 'Свернуть' : 'На весь экран'}
               >
-                {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+                {isFullscreen ? <Minimize size={18} className="sm:w-5 sm:h-5" /> : <Maximize size={18} />}
               </button>
             </div>
           </div>

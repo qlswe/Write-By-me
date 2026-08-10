@@ -103,8 +103,8 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-[#15101e] border-b border-[#251c35] shadow-2xl w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2 overflow-hidden box-border">
+      <header className="sticky top-0 z-50 bg-[#15101e] border-b border-[#251c35] shadow-2xl w-full max-w-full">
+        <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between gap-2 box-border">
           <h1 
             onClick={() => setSection('home')}
             className="text-base sm:text-xl md:text-2xl font-black text-white tracking-tighter shrink flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none group min-w-0"
@@ -187,29 +187,30 @@ export const Header: React.FC<HeaderProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute right-0 mt-3 w-40 bg-[#15101e] border border-[#251c35] rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5"
+                    className="absolute right-0 top-full mt-2 w-44 bg-[#15101e] border border-[#3d2b4f] rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] overflow-hidden z-[999] p-1.5"
                   >
                     {(['ru', 'en', 'by', 'de', 'fr', 'zh'] as Language[]).map(l => {
                       const langNames: Record<Language, string> = {
-                        ru: 'Русский',
-                        en: 'English',
-                        by: 'Беларуская',
-                        de: 'Deutsch',
-                        fr: 'Français',
-                        zh: '中文'
+                        ru: 'Русский 🇷🇺',
+                        en: 'English 🇬🇧',
+                        by: 'Беларуская 🇧🇾',
+                        de: 'Deutsch 🇩🇪',
+                        fr: 'Français 🇫🇷',
+                        zh: '中文 🇨🇳'
                       };
                       return (
                       <button
                         key={l}
                         type="button"
                         onClick={() => { setLang(l); setLangOpen(false); }}
-                        className={`w-full text-left px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+                        className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-black tracking-wide transition-all cursor-pointer flex items-center justify-between ${
                           lang === l 
                             ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
-                            : 'text-gray-400 hover:bg-[#251c35] hover:text-white'
+                            : 'text-gray-300 hover:bg-[#251c35] hover:text-white'
                         }`}
                       >
-                        {langNames[l]}
+                        <span>{langNames[l]}</span>
+                        {lang === l && <span className="text-[10px] font-black uppercase">✓</span>}
                       </button>
                     )})}
                   </motion.div>
@@ -220,7 +221,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* IPv6 Popularization & Protocol Badge */}
             <button
               onClick={() => setIpv6ModalOpen(true)}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all duration-300 active:scale-95 shadow-md shadow-emerald-500/10 cursor-pointer"
+              className="hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition-all duration-300 active:scale-95 shadow-md shadow-emerald-500/10 cursor-pointer"
               title={lang === 'ru' ? "IPv6 Центр Популяризации (Dual-Stack ::)" : "IPv6 Protocol Promotion Center"}
             >
               <Globe size={14} className="text-emerald-400 animate-pulse" />
@@ -230,7 +231,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* AHA Protocol v6 Hyper-Acceleration Badge */}
             <button
               onClick={() => setAhaProtocolModalOpen(true)}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-[#ff4d4d]/10 border-[#ff4d4d]/30 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
+              className="hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-[#ff4d4d]/10 border-[#ff4d4d]/30 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/10 cursor-pointer"
               title={lang === 'ru' ? "AHA Protocol v6 (Adaptive IPv6 Hyper-Acceleration)" : "AHA Protocol v6 Hyper-Acceleration"}
             >
               <Zap size={14} className="text-[#ff4d4d] animate-pulse" />
@@ -240,7 +241,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* AHA Built-in Web Browser Badge */}
             <button
               onClick={() => setEmbeddedBrowserOpen(true)}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-400 transition-all duration-300 active:scale-95 shadow-md shadow-purple-500/10 cursor-pointer"
+              className="hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-400 transition-all duration-300 active:scale-95 shadow-md shadow-purple-500/10 cursor-pointer"
               title={lang === 'ru' ? "Встроенный браузер и User-Agent инспектор" : "Embedded Browser & User-Agent Inspector"}
             >
               <Globe size={14} className="text-purple-400 animate-pulse" />
@@ -385,7 +386,7 @@ export const Header: React.FC<HeaderProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden fixed top-16 inset-x-0 bottom-0 z-[100] bg-[#15101e]/98 backdrop-blur-xl px-4 py-5 flex flex-col overflow-y-auto overflow-x-hidden w-full max-w-full box-border border-t border-[#3d2b4f]/60 shadow-2xl"
+            className="md:hidden fixed top-[56px] sm:top-16 inset-x-0 bottom-0 z-[200] bg-[#15101e] backdrop-blur-xl px-4 py-5 flex flex-col overflow-y-auto overflow-x-hidden w-full max-w-full box-border border-t border-[#3d2b4f]/60 shadow-2xl"
           >
             <div className="flex flex-col gap-4 flex-1 shrink-0">
               {navItems.map(item => (
@@ -415,6 +416,29 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             
             <div className="p-4 sm:p-6 border-t border-[#3d2b4f] mt-auto shrink-0 flex flex-col gap-4">
+              {/* Mobile Language Selector */}
+              <div className="flex flex-col gap-2 p-3 bg-[#15101e] border border-[#3d2b4f] rounded-2xl">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-400">
+                  <Globe size={14} className="text-[#ff4d4d]" />
+                  <span>{lang === 'ru' ? 'Язык интерфейса / Language' : 'Interface Language'}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['ru', 'en', 'by', 'de', 'fr', 'zh'] as Language[]).map(l => (
+                    <button
+                      key={l}
+                      onClick={() => setLang(l)}
+                      className={`px-2.5 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer border ${
+                        lang === l
+                          ? 'bg-[#ff4d4d] text-[#15101e] border-[#ff4d4d] shadow-md shadow-[#ff4d4d]/30'
+                          : 'bg-[#251c35]/60 text-gray-300 border-[#3d2b4f]/40 hover:bg-[#3d2b4f] hover:text-white'
+                      }`}
+                    >
+                      {l.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Quick Actions Grid for Mobile */}
               <div className="sm:hidden grid grid-cols-2 gap-2">
                 <button 

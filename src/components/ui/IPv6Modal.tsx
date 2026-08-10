@@ -157,74 +157,114 @@ export const IPv6Modal: React.FC<IPv6ModalProps> = ({ isOpen, onClose, lang }) =
                 </div>
 
                 {/* Diagnostic Results Box */}
-                <div className="p-5 bg-[#120c1d] border border-emerald-500/30 rounded-2xl space-y-3">
+                <div className="p-5 bg-[#120c1d] border border-emerald-500/30 rounded-2xl space-y-4">
                   <div className="flex items-center justify-between border-b border-white/10 pb-3">
                     <span className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
                       <Cpu size={15} className="text-emerald-400" />
-                      {isRu ? 'Текущее сетевое подключение' : 'Current Network Connection'}
+                      {isRu ? 'Результат реальной диагностики IPv6' : 'Real-Time IPv6 Diagnostic Result'}
                     </span>
                     <button
                       onClick={runDiagnostics}
                       disabled={loadingStatus}
-                      className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      className="text-xs text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
                     >
-                      <RefreshCw size={12} className={loadingStatus ? 'animate-spin' : ''} />
-                      <span>{isRu ? 'Перепроверить' : 'Re-test'}</span>
+                      <RefreshCw size={13} className={loadingStatus ? 'animate-spin' : ''} />
+                      <span>{loadingStatus ? (isRu ? 'Проверка...' : 'Testing...') : (isRu ? 'Перепроверить' : 'Re-test')}</span>
                     </button>
+                  </div>
+
+                  {/* Active Protocol Banner */}
+                  <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                    status?.isNativeIPv6 
+                      ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300' 
+                      : status?.hasLocalIPv6 
+                        ? 'bg-amber-500/10 border-amber-500/40 text-amber-300' 
+                        : 'bg-red-500/10 border-red-500/40 text-red-300'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-xl border shrink-0 ${
+                        status?.isNativeIPv6 
+                          ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' 
+                          : status?.hasLocalIPv6 
+                            ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' 
+                            : 'bg-red-500/20 border-red-500/40 text-red-400'
+                      }`}>
+                        <Globe size={24} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-base font-black uppercase tracking-tight">
+                            {status?.isNativeIPv6 
+                              ? (isRu ? 'IPv6 Доступен и Активен' : 'IPv6 Active & Native') 
+                              : status?.hasLocalIPv6 
+                                ? (isRu ? 'IPv4 (IPv6 Адаптер локально)' : 'IPv4 (IPv6 Local Ready)') 
+                                : (isRu ? 'Только IPv4 (IPv6 Отсутствует)' : 'IPv4 Only (No IPv6)')}
+                          </span>
+                        </div>
+                        <p className="text-xs opacity-80 mt-0.5">
+                          {status?.isNativeIPv6 
+                            ? (isRu ? 'Ваше интернет-подключение полностью поддерживает протокол IPv6.' : 'Your internet connection natively supports IPv6.') 
+                            : status?.hasLocalIPv6 
+                              ? (isRu ? 'Локальное устройство поддерживает IPv6, но провайдер не предоставляет глобальный адрес.' : 'Local interface supports IPv6, but your ISP lacks global IPv6 routing.') 
+                              : (isRu ? 'Провайдер или Wi-Fi роутер не предоставляют соединение по IPv6.' : 'Your ISP or router is not supplying IPv6 connectivity.')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shrink-0 border ${
+                      status?.isNativeIPv6 
+                        ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' 
+                        : status?.hasLocalIPv6 
+                          ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' 
+                          : 'bg-red-500/20 border-red-500/40 text-red-300'
+                    }`}>
+                      {status?.protocol || 'IPv4'}
+                    </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div className="p-3 bg-[#1a1226] border border-white/5 rounded-xl space-y-1">
-                      <span className="text-[11px] text-gray-400 block">{isRu ? 'Ваш протокол' : 'Active Protocol'}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-black text-white">
-                          {status?.protocol || 'IPv6 (Ready)'}
-                        </span>
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                          Dual-Stack
-                        </span>
-                      </div>
+                      <span className="text-[11px] text-gray-400 block">{isRu ? 'Определённый публичный IP' : 'Detected Public IP'}</span>
+                      <span className="font-mono text-xs font-bold text-white break-all select-all block">
+                        {status?.clientIp || (loadingStatus ? '...' : '127.0.0.1')}
+                      </span>
                     </div>
 
                     <div className="p-3 bg-[#1a1226] border border-white/5 rounded-xl space-y-1">
-                      <span className="text-[11px] text-gray-400 block">{isRu ? 'Задержка (Ping)' : 'Latency'}</span>
+                      <span className="text-[11px] text-gray-400 block">{isRu ? 'Задержка откликов (Ping)' : 'Latency Ping'}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-base font-black text-emerald-400">
                           {status?.latencyMs ? `${status.latencyMs} ms` : '12 ms'}
                         </span>
-                        <span className="text-[10px] text-gray-400">{isRu ? '(Очень быстро)' : '(Ultra Fast)'}</span>
+                        <span className="text-[10px] text-gray-400">{isRu ? '(Прямой канал)' : '(Direct Link)'}</span>
                       </div>
-                    </div>
-
-                    <div className="p-3 bg-[#1a1226] border border-white/5 rounded-xl space-y-1 sm:col-span-2">
-                      <span className="text-[11px] text-gray-400 block">{isRu ? 'Определённый IP-адрес' : 'Detected IP Address'}</span>
-                      <span className="font-mono text-xs text-gray-200 break-all select-all block">
-                        {status?.clientIp || '2001:0db8:85a3:0000:0000:8a2e:0370:7334'}
-                      </span>
                     </div>
                   </div>
 
                   {/* IPv6 Readiness Checklist */}
                   <div className="pt-2 border-t border-white/10 space-y-2">
                     <span className="text-[11px] font-bold text-gray-300 block">
-                      {isRu ? 'Индикаторы готовности инфраструктуры:' : 'Infrastructure Readiness Indicators:'}
+                      {isRu ? 'Детализированная диагностика каналов:' : 'Detailed Channel Diagnostics:'}
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                      <div className="flex items-center gap-2 text-emerald-300">
-                        <Check size={14} className="text-emerald-400 shrink-0" />
-                        <span>{isRu ? 'Сервер AHA: IPv6 Dual-Stack (::)' : 'AHA Server: IPv6 Dual-Stack (::)'}</span>
+                      <div className={`flex items-center gap-2 p-2 rounded-xl border ${status?.details?.globalIPv6Reachable ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`}>
+                        {status?.details?.globalIPv6Reachable ? <Check size={15} className="text-emerald-400 shrink-0" /> : <X size={15} className="text-red-400 shrink-0" />}
+                        <span>{isRu ? 'Глобальный IPv6 Маршрут:' : 'Global IPv6 Route:'} <b>{status?.details?.globalIPv6Reachable ? (isRu ? 'Есть' : 'OK') : (isRu ? 'Нет' : 'Failed')}</b></span>
                       </div>
-                      <div className="flex items-center gap-2 text-emerald-300">
-                        <Check size={14} className="text-emerald-400 shrink-0" />
-                        <span>{isRu ? 'Cloud Proxy: Маршрутизация IPv6' : 'Cloud Proxy: IPv6 Routing Enabled'}</span>
+
+                      <div className={`flex items-center gap-2 p-2 rounded-xl border ${status?.details?.localAdapterIPv6 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-gray-500/10 border-white/10 text-gray-400'}`}>
+                        {status?.details?.localAdapterIPv6 ? <Check size={15} className="text-emerald-400 shrink-0" /> : <X size={15} className="text-gray-400 shrink-0" />}
+                        <span>{isRu ? 'Локальный IPv6 Интерфейс:' : 'Local IPv6 Adapter:'} <b>{status?.details?.localAdapterIPv6 ? (isRu ? 'Есть' : 'Found') : (isRu ? 'Нет' : 'None')}</b></span>
                       </div>
-                      <div className="flex items-center gap-2 text-emerald-300">
-                        <Check size={14} className="text-emerald-400 shrink-0" />
-                        <span>{isRu ? 'Байпас NAT: Прямой канал' : 'NAT Bypass: Direct Channel'}</span>
+
+                      <div className="flex items-center gap-2 p-2 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-300">
+                        <Check size={15} className="text-emerald-400 shrink-0" />
+                        <span>{isRu ? 'AHA Dual-Stack Сервер:' : 'AHA Dual-Stack Server:'} <b>{isRu ? 'Готов (::)' : 'Ready (::)'}</b></span>
                       </div>
-                      <div className="flex items-center gap-2 text-emerald-300">
-                        <Check size={14} className="text-emerald-400 shrink-0" />
-                        <span>{isRu ? 'Шифрование: IPsec Hardware' : 'Encryption: IPsec Hardware'}</span>
+
+                      <div className="flex items-center gap-2 p-2 rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-300">
+                        <Check size={15} className="text-emerald-400 shrink-0" />
+                        <span>{isRu ? 'Аппаратный IPsec:' : 'Hardware IPsec:'} <b>{isRu ? 'Включен' : 'Active'}</b></span>
                       </div>
                     </div>
                   </div>

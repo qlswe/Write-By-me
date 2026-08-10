@@ -118,6 +118,23 @@ async function startServer() {
     });
   });
 
+  // SSRF Protection Helper Function
+  function isPrivateHost(hostname: string): boolean {
+    const cleanHost = hostname.toLowerCase().trim();
+    if (
+      cleanHost === 'localhost' ||
+      cleanHost === '127.0.0.1' ||
+      cleanHost === '::1' ||
+      cleanHost.startsWith('10.') ||
+      cleanHost.startsWith('192.168.') ||
+      cleanHost.startsWith('169.254.') ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(cleanHost)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
   // Network Protocol Status & Configuration Endpoint
   app.get("/api/network/protocol", (req, res) => {
     res.json({
@@ -141,6 +158,34 @@ async function startServer() {
         return res.status(400).json({ error: "Invalid targetUrl provided to network proxy" });
       }
 
+      // If internal relative endpoint, allow safely
+      if (targetUrl.startsWith("/")) {
+        return res.json({
+          status: "success",
+          proxied: true,
+          targetUrl,
+          method,
+          timestamp: new Date().toISOString(),
+          data: { status: "ok", message: "Internal network proxy validation completed successfully" }
+        });
+      }
+
+      // Check external host for SSRF vulnerabilities
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(targetUrl);
+      } catch {
+        return res.status(400).json({ error: "Invalid URL format" });
+      }
+
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        return res.status(400).json({ error: "Only http and https protocols are supported" });
+      }
+
+      if (isPrivateHost(parsedUrl.hostname)) {
+        return res.status(403).json({ error: "Access to private or loopback networks is blocked for security (SSRF Protection)" });
+      }
+
       // Sanitize header keys to ensure they are valid HTTP tokens (RFC 7230 compliant)
       const sanitizedHeaders: Record<string, string> = {};
       const httpTokenRegex = /^[a-zA-Z0-9!#$%&'*+\-.^_`|~]+$/;
@@ -153,27 +198,12 @@ async function startServer() {
         }
       }
 
-      // Ensure valid X-HTTP-Token or Authorization format
       if (sanitizedHeaders['X-HTTP-Token']) {
-        // Sanitize token value to alphanumeric + hyphens/dots only
         sanitizedHeaders['X-HTTP-Token'] = sanitizedHeaders['X-HTTP-Token'].replace(/[^a-zA-Z0-9_\-\.]/g, "");
       }
 
       sanitizedHeaders['X-AHA-Protocol-Version'] = '6.0-HYPER-IPv6';
       sanitizedHeaders['X-AHA-Proxy-Validated'] = 'true';
-
-      // If internal targetUrl, route directly or fulfill locally
-      if (targetUrl.startsWith("/") || targetUrl.includes("localhost") || targetUrl.includes("127.0.0.1")) {
-        return res.json({
-          status: "success",
-          proxied: true,
-          targetUrl,
-          method,
-          sanitizedHeaders,
-          timestamp: new Date().toISOString(),
-          data: { status: "ok", message: "Internal network proxy validation completed successfully" }
-        });
-      }
 
       // External request forwarding
       const response = await fetch(targetUrl, {
@@ -200,6 +230,119 @@ async function startServer() {
       return res.status(500).json({
         error: "Network Proxy Execution Failed",
         message: err.message || String(err)
+      });
+    }
+  });
+
+  // Dedicated Browser Full-Featured Page Proxy & Engine Endpoint
+  app.post("/api/browser/fetch", async (req, res) => {
+    const startTime = Date.now();
+    try {
+      const { url, userAgent, customHeaders = {}, adBlock = true } = req.body || {};
+
+      if (!url || typeof url !== "string") {
+        return res.status(400).json({ error: "URL parameter is required" });
+      }
+
+      let targetUrl = url.trim();
+      if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://") && !targetUrl.startsWith("/")) {
+        targetUrl = `https://${targetUrl}`;
+      }
+
+      // Handle internal system pages
+      if (targetUrl.startsWith("/") || targetUrl.includes("localhost") || targetUrl.includes("127.0.0.1")) {
+        const latencyMs = Date.now() - startTime;
+        return res.json({
+          url: targetUrl,
+          statusCode: 200,
+          latencyMs,
+          contentType: "text/html",
+          isHttps: true,
+          title: "AHA Internal System Endpoint",
+          headers: {
+            "content-type": "application/json",
+            "x-aha-protocol-version": "6.0-HYPER-IPv6"
+          },
+          html: `<div style="font-family:sans-serif;padding:24px;background:#0d0817;color:#fff;border-radius:16px;">
+            <h2 style="color:#ff4d4d;">AHA Internal System Endpoint</h2>
+            <p>Target URL: ${targetUrl}</p>
+            <p>Status: 200 OK | Latency: ${latencyMs}ms</p>
+          </div>`
+        });
+      }
+
+      let parsed: URL;
+      try {
+        parsed = new URL(targetUrl);
+      } catch {
+        return res.status(400).json({ error: "Malformed URL provided" });
+      }
+
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return res.status(400).json({ error: "Unsupported protocol" });
+      }
+
+      if (isPrivateHost(parsed.hostname)) {
+        return res.status(403).json({ error: "Access to local/private network addresses is blocked (SSRF Protection)" });
+      }
+
+      // Prepare request headers with User-Agent & AHA IPv6 flow labels
+      const requestHeaders: Record<string, string> = {
+        "User-Agent": userAgent || "AhaBrowser/6.0.4 (AHA-OS 6.0; Dual-Stack IPv6)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9,ru;q=0.8",
+        "X-AHA-Protocol-Version": "6.0-HYPER-IPv6",
+        "X-AHA-IPv6-Flow-Label": "0x6AHA" + Math.floor(Math.random() * 0xFFFF).toString(16).toUpperCase(),
+        "X-AHA-AdBlock-Shield": adBlock ? "Active" : "Off"
+      };
+
+      // Merge custom headers safely
+      const httpTokenRegex = /^[a-zA-Z0-9!#$%&'*+\-.^_`|~]+$/;
+      for (const [k, v] of Object.entries(customHeaders)) {
+        if (httpTokenRegex.test(k.trim())) {
+          requestHeaders[k.trim()] = String(v).replace(/[\r\n]/g, "");
+        }
+      }
+
+      const fetchResponse = await fetch(targetUrl, {
+        method: "GET",
+        headers: requestHeaders,
+        redirect: "follow"
+      });
+
+      const contentType = fetchResponse.headers.get("content-type") || "text/html";
+      let rawText = await fetchResponse.text();
+      const latencyMs = Date.now() - startTime;
+
+      // AdBlocker & Tracker Filter (if enabled)
+      if (adBlock) {
+        // Strip common ad scripts & tracker pixel domains
+        rawText = rawText.replace(/<script[^>]*src=["']https?:\/\/(?:google-analytics|doubleclick|googletagservices|connect\.facebook|analytics\.tiktok|yandex\.ru\/metrika|mc\.yandex\.ru)[^"']*["'][^>]*><\/script>/gi, '<!-- [AHA Shield] Ad/Tracker Blocked -->');
+      }
+
+      // Extract title if HTML
+      let pageTitle = parsed.hostname;
+      const titleMatch = rawText.match(/<title[^>]*>(.*?)<\/title>/i);
+      if (titleMatch && titleMatch[1]) {
+        pageTitle = titleMatch[1].trim();
+      }
+
+      return res.json({
+        url: fetchResponse.url || targetUrl,
+        statusCode: fetchResponse.status,
+        latencyMs,
+        contentType,
+        isHttps: (fetchResponse.url || targetUrl).startsWith("https://"),
+        title: pageTitle,
+        headers: Object.fromEntries(fetchResponse.headers.entries()),
+        html: rawText
+      });
+    } catch (err: any) {
+      const latencyMs = Date.now() - startTime;
+      return res.status(500).json({
+        error: "Browser Request Failed",
+        message: err.message || String(err),
+        latencyMs
       });
     }
   });

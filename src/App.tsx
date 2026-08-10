@@ -820,7 +820,7 @@ export default function App() {
     <div className={`min-h-[100dvh] flex flex-col relative overflow-x-hidden font-sans text-[#E0E0E0] ${productionMode ? 'production-visuals' : ''}`}>
       <LoadingScreen isLoading={isLoading} lang={lang as Language} lowPerfMode={lowPerfMode} />
       <Starfield lowPerfMode={lowPerfMode || !productionMode} />
-      {showLoadWidget && <PerformanceWidget />}
+      {showLoadWidget && !mobileMenuOpen && <PerformanceWidget />}
       
       <Header 
         lang={lang as Language} 
@@ -1290,11 +1290,13 @@ export default function App() {
       </AnimatePresence>
 
       {/* Real-time Site Console Widget */}
-      <DevConsoleWidget
-        isOpen={isConsoleOpen}
-        onClose={() => setIsConsoleOpen(false)}
-        onToggle={() => setIsConsoleOpen(prev => !prev)}
-      />
+      {!mobileMenuOpen && (
+        <DevConsoleWidget
+          isOpen={isConsoleOpen}
+          onClose={() => setIsConsoleOpen(false)}
+          onToggle={() => setIsConsoleOpen(prev => !prev)}
+        />
+      )}
 
       <PwaInstallModal 
         isOpen={homePwaModalOpen} 
@@ -1303,7 +1305,7 @@ export default function App() {
       />
 
       {/* Floating Quick Actions Menu on Home Screen */}
-      {section === 'home' && (
+      {section === 'home' && !mobileMenuOpen && (
         <QuickActionsMenu
           lang={lang as Language}
           onCreateTheory={() => {

@@ -5,48 +5,161 @@ export interface IPv6NetworkStatus {
   protocol: 'IPv6' | 'IPv4-Mapped-over-IPv6' | 'IPv4';
   isNativeIPv6: boolean;
   ipv6Enabled: boolean;
+  hasLocalIPv6: boolean;
   serverDualStack: boolean;
   latencyMs?: number;
   advantages: string[];
+  details: {
+    globalIPv6Reachable: boolean;
+    serverAddressIPv6: boolean;
+    localAdapterIPv6: boolean;
+    v6PublicIp?: string;
+    v4PublicIp?: string;
+  };
   timestamp?: string;
 }
 
 const STORAGE_KEY_IPV6_PREFERENCE = 'aha_ipv6_preference_enabled';
 
 /**
- * Checks current connection protocol via /api/network/protocol
+ * Checks for local IPv6 network adapter presence via WebRTC candidates
+ */
+async function detectLocalIPv6Adapter(): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      if (typeof window === 'undefined' || !window.RTCPeerConnection) {
+        resolve(false);
+        return;
+      }
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      let foundV6 = false;
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate && e.candidate.candidate) {
+          const cand = e.candidate.candidate;
+          if (cand.includes(':') && !cand.includes('::ffff:')) {
+            foundV6 = true;
+          }
+        }
+      };
+
+      pc.createDataChannel('v6-probe');
+      pc.createOffer().then((offer) => pc.setLocalDescription(offer)).catch(() => {});
+
+      setTimeout(() => {
+        pc.close();
+        resolve(foundV6);
+      }, 1000);
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+/**
+ * Probe real IPv6 connectivity against public external endpoints & server
  */
 export async function checkIPv6Status(): Promise<IPv6NetworkStatus> {
   const startTime = performance.now();
-  try {
-    const res = await fetch('/api/network/protocol', {
+
+  let globalIPv6Reachable = false;
+  let serverAddressIPv6 = false;
+  let v6PublicIp = '';
+  let v4PublicIp = '';
+  let serverIp = '';
+
+  // Run probes in parallel for max performance
+  const [localAdapterIPv6, serverRes, v6ProbeRes, dsProbeRes] = await Promise.all([
+    detectLocalIPv6Adapter(),
+
+    // Server probe
+    fetch('/api/network/protocol', {
       headers: {
         'X-Prefer-IPv6': 'true',
         'X-Protocol-Preference': 'IPv6'
       }
-    });
+    }).then(r => r.ok ? r.json() : null).catch(() => null),
 
-    const endTime = performance.now();
-    const latency = Math.round(endTime - startTime);
+    // IPv6-only public endpoint test (fails if client has no IPv6 internet connection)
+    (async () => {
+      try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch('https://api6.ipify.org?format=json', {
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        clearTimeout(tid);
+        if (res.ok) {
+          const json = await res.json();
+          return json?.ip || null;
+        }
+      } catch {
+        return null;
+      }
+    })(),
 
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        ...data,
-        latencyMs: latency
-      };
+    // Dual-stack public endpoint test
+    (async () => {
+      try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch('https://api64.ipify.org?format=json', {
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        clearTimeout(tid);
+        if (res.ok) {
+          const json = await res.json();
+          return json?.ip || null;
+        }
+      } catch {
+        return null;
+      }
+    })()
+  ]);
+
+  const latency = Math.round(performance.now() - startTime);
+
+  // Evaluate Server response
+  if (serverRes) {
+    serverIp = serverRes.clientIp || '';
+    if (serverRes.isNativeIPv6 || (serverRes.clientIp && serverRes.clientIp.includes(':'))) {
+      serverAddressIPv6 = true;
     }
-  } catch (err) {
-    logger.warn('Failed to reach IPv6 diagnostic endpoint, using client estimation', err, 'IPv6Manager');
   }
 
-  // Fallback estimation
-  const latency = Math.round(performance.now() - startTime);
+  // Evaluate IPv6-only public probe
+  if (v6ProbeRes && typeof v6ProbeRes === 'string' && v6ProbeRes.includes(':')) {
+    globalIPv6Reachable = true;
+    v6PublicIp = v6ProbeRes;
+  }
+
+  // Evaluate Dual-stack probe
+  if (dsProbeRes && typeof dsProbeRes === 'string') {
+    if (dsProbeRes.includes(':')) {
+      globalIPv6Reachable = true;
+      v6PublicIp = v6PublicIp || dsProbeRes;
+    } else {
+      v4PublicIp = dsProbeRes;
+    }
+  }
+
+  const hasGlobalIPv6 = globalIPv6Reachable || serverAddressIPv6;
+  const activeIp = v6PublicIp || (hasGlobalIPv6 ? serverIp : (v4PublicIp || serverIp || '127.0.0.1'));
+
+  const protocol: 'IPv6' | 'IPv4-Mapped-over-IPv6' | 'IPv4' = hasGlobalIPv6
+    ? 'IPv6'
+    : (localAdapterIPv6 ? 'IPv4-Mapped-over-IPv6' : 'IPv4');
+
   return {
-    clientIp: '2001:db8:85a3::8a2e:0370:7334 (IPv6 Ready)',
-    protocol: 'IPv6',
-    isNativeIPv6: true,
-    ipv6Enabled: true,
+    clientIp: activeIp,
+    protocol: protocol,
+    isNativeIPv6: hasGlobalIPv6,
+    ipv6Enabled: hasGlobalIPv6,
+    hasLocalIPv6: localAdapterIPv6,
     serverDualStack: true,
     latencyMs: latency,
     advantages: [
@@ -55,7 +168,15 @@ export async function checkIPv6Status(): Promise<IPv6NetworkStatus> {
       "Встроенная аппаратная фильтрация и безопасность IPsec",
       "Неограниченный массив IP-адресов (3.4×10^38 адресов)",
       "Полное соответствие стандартам будущего интернета"
-    ]
+    ],
+    details: {
+      globalIPv6Reachable,
+      serverAddressIPv6,
+      localAdapterIPv6,
+      v6PublicIp: v6PublicIp || undefined,
+      v4PublicIp: v4PublicIp || undefined
+    },
+    timestamp: new Date().toISOString()
   };
 }
 
