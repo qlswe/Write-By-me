@@ -235,6 +235,15 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
 
     setTabs(prev => prev.map(t => t.id === tabId ? { ...t, isLoading: true } : t));
 
+    let finalUrl = targetUrl;
+    let finalTitle = targetUrl;
+    let finalStatusCode = 200;
+    let finalLatency = 15;
+    let finalHeaders: Record<string, string> = {};
+    let finalHtml = '';
+    let fetchedSuccessfully = false;
+
+    // TIER 1: Try backend Express endpoint /api/browser/fetch
     try {
       const response = await fetch('/api/browser/fetch', {
         method: 'POST',
@@ -250,72 +259,158 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
         })
       });
 
-      const rawText = await response.text();
-      let data: any = null;
+      if (response.ok) {
+        const rawText = await response.text();
+        try {
+          const data = JSON.parse(rawText);
+          if (data && data.html && !data.html.includes('NOT_FOUND arn1') && data.statusCode < 400) {
+            finalUrl = data.url || targetUrl;
+            finalTitle = data.title || targetUrl;
+            finalStatusCode = data.statusCode || 200;
+            finalLatency = data.latencyMs || 15;
+            finalHeaders = data.headers || {};
+            finalHtml = data.html;
+            fetchedSuccessfully = true;
+          }
+        } catch {
+          // Non-JSON response (e.g. Vercel 404 HTML page)
+        }
+      }
+    } catch {
+      // Server endpoint unavailable
+    }
 
-      try {
-        data = JSON.parse(rawText);
-      } catch {
-        // If response was non-JSON HTML (e.g. proxy HTML error or direct content)
-        data = {
-          url: targetUrl,
-          statusCode: response.status || 500,
-          title: response.ok ? targetUrl : 'Page / Request Error',
-          html: rawText || `<div style="padding:24px;color:#ff4d4d;font-family:sans-serif;background:#0d0817;border-radius:16px;">
-            <h2>Failed to load resource</h2>
-            <p>Target server returned non-JSON response (HTTP ${response.status}).</p>
-          </div>`
+    // TIER 2: If Tier 1 failed or returned non-JSON / Vercel 404, use Client-Side Proxies
+    if (!fetchedSuccessfully) {
+      const extractTitle = (html: string, fallback: string) => {
+        try {
+          const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+          if (match && match[1]) {
+            const clean = match[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
+            if (clean && !clean.includes('NOT_FOUND arn1') && !clean.includes('Request Error')) return clean;
+          }
+        } catch {}
+        return fallback;
+      };
+
+      // 1. Try AllOrigins Proxy (JSON wrapped - handles DuckDuckGo and Wikipedia HTML seamlessly)
+      if (!fetchedSuccessfully) {
+        try {
+          const aoRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
+          if (aoRes.ok) {
+            const aoData = await aoRes.json();
+            if (aoData && aoData.contents && typeof aoData.contents === 'string' && aoData.contents.length > 30 && !aoData.contents.includes('NOT_FOUND arn1')) {
+              finalHtml = aoData.contents;
+              finalTitle = extractTitle(aoData.contents, targetUrl);
+              finalStatusCode = 200;
+              finalLatency = 120;
+              fetchedSuccessfully = true;
+            }
+          }
+        } catch {}
+      }
+
+      // 2. Try CodeTabs Proxy
+      if (!fetchedSuccessfully) {
+        try {
+          const ctRes = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`);
+          if (ctRes.ok) {
+            const ctText = await ctRes.text();
+            if (ctText && ctText.length > 30 && !ctText.includes('NOT_FOUND arn1')) {
+              finalHtml = ctText;
+              finalTitle = extractTitle(ctText, targetUrl);
+              finalStatusCode = 200;
+              finalLatency = 150;
+              fetchedSuccessfully = true;
+            }
+          }
+        } catch {}
+      }
+
+      // 3. Try CorsProxy.io
+      if (!fetchedSuccessfully) {
+        try {
+          const cpRes = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+          if (cpRes.ok) {
+            const cpText = await cpRes.text();
+            if (cpText && cpText.length > 30 && !cpText.includes('NOT_FOUND arn1')) {
+              finalHtml = cpText;
+              finalTitle = extractTitle(cpText, targetUrl);
+              finalStatusCode = 200;
+              finalLatency = 180;
+              fetchedSuccessfully = true;
+            }
+          }
+        } catch {}
+      }
+
+      // 4. Try Direct Fetch
+      if (!fetchedSuccessfully) {
+        try {
+          const directRes = await fetch(targetUrl);
+          if (directRes.ok) {
+            const directText = await directRes.text();
+            if (directText && directText.length > 30 && !directText.includes('NOT_FOUND arn1')) {
+              finalHtml = directText;
+              finalTitle = extractTitle(directText, targetUrl);
+              finalStatusCode = directRes.status;
+              finalLatency = 40;
+              fetchedSuccessfully = true;
+            }
+          }
+        } catch {}
+      }
+    }
+
+    // Auto-inject base tag so relative links and images in proxied HTML load properly
+    if (finalHtml && typeof finalHtml === 'string') {
+      if (finalHtml.includes('<head>')) {
+        finalHtml = finalHtml.replace('<head>', `<head><base href="${targetUrl}" />`);
+      } else if (finalHtml.includes('<html>')) {
+        finalHtml = finalHtml.replace('<html>', `<html><head><base href="${targetUrl}" /></head>`);
+      }
+    }
+
+    // TIER 3: Fallback UI if target site restricts embedded proxies completely
+    if (!fetchedSuccessfully) {
+      finalStatusCode = 404;
+      finalTitle = 'Resource Unavailable';
+      let host = 'Target Domain';
+      try { host = new URL(targetUrl).hostname; } catch {}
+
+      finalHtml = `<div style="font-family:system-ui,-apple-system,sans-serif;padding:36px 24px;background:#0d0817;color:#fff;border-radius:20px;max-width:680px;margin:30px auto;border:1px solid #3d2b4f;box-shadow:0 20px 50px rgba(0,0,0,0.6);text-align:center;">
+        <div style="font-size:48px;margin-bottom:12px;">🌐</div>
+        <h2 style="color:#00f0ff;margin:0 0 12px 0;font-size:22px;font-weight:800;">Target Resource Protected or Offline</h2>
+        <p style="color:#d1d5db;font-size:14px;line-height:1.6;margin-bottom:24px;">
+          The requested URL <strong style="color:#ff4d4d;word-break:break-all;">${targetUrl}</strong> restricts embedded proxies or requires direct browser cookies.
+        </p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:8px;padding:12px 22px;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;text-decoration:none;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 8px 20px rgba(168,85,247,0.4);">
+            Open ${host} in New Tab ↗
+          </a>
+        </div>
+      </div>`;
+    }
+
+    setTabs(prev => prev.map(t => {
+      if (t.id === tabId) {
+        return {
+          ...t,
+          url: finalUrl,
+          title: finalTitle,
+          isLoading: false,
+          statusCode: finalStatusCode,
+          latencyMs: finalLatency,
+          headers: finalHeaders,
+          contentCache: finalHtml
         };
       }
+      return t;
+    }));
 
-      const statusCode = data.statusCode || response.status || 200;
-      const htmlContent = data.html || (data.error ? `<div style="font-family:sans-serif;padding:28px;background:#0d0817;color:#fff;border-radius:16px;border:1px solid #3d2b4f;max-width:640px;margin:20px auto;">
-        <h2 style="color:#ff4d4d;margin-top:0;">Failed to Load Resource</h2>
-        <p style="color:#d1d5db;">${data.error || data.message || 'Request failed'}</p>
-        <div style="margin-top:20px;">
-          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 18px;background:#ff4d4d;color:#fff;text-decoration:none;border-radius:10px;font-weight:bold;font-size:13px;">Open ${targetUrl} in New Tab ↗</a>
-        </div>
-      </div>` : '');
-
-      setTabs(prev => prev.map(t => {
-        if (t.id === tabId) {
-          return {
-            ...t,
-            url: data.url || targetUrl,
-            title: data.title || targetUrl,
-            isLoading: false,
-            statusCode,
-            latencyMs: data.latencyMs || 15,
-            headers: data.headers || {},
-            contentCache: htmlContent
-          };
-        }
-        return t;
-      }));
-
-      if (activeTab && !activeTab.incognito) {
-        const updatedHist = addHistoryEntry(data.url || targetUrl, data.title || targetUrl, false);
-        setHistoryList(updatedHist);
-      }
-    } catch (err: any) {
-      setTabs(prev => prev.map(t => {
-        if (t.id === tabId) {
-          return {
-            ...t,
-            isLoading: false,
-            statusCode: 500,
-            title: 'Request Failed',
-            contentCache: `<div style="padding:28px;color:#ff4d4d;font-family:sans-serif;background:#0d0817;border-radius:16px;max-width:640px;margin:20px auto;border:1px solid #3d2b4f;">
-              <h2 style="margin-top:0;">Failed to load resource</h2>
-              <p style="color:#e5e7eb;">${err.message || String(err)}</p>
-              <div style="margin-top:20px;">
-                <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 18px;background:#ff4d4d;color:#fff;text-decoration:none;border-radius:10px;font-weight:bold;font-size:13px;">Open ${targetUrl} in New Tab ↗</a>
-              </div>
-            </div>`
-          };
-        }
-        return t;
-      }));
+    if (activeTab && !activeTab.incognito) {
+      const updatedHist = addHistoryEntry(finalUrl, finalTitle, false);
+      setHistoryList(updatedHist);
     }
   };
 
