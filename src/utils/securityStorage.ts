@@ -1,8 +1,23 @@
 /**
- * Zero-Trace Ephemeral RAM Storage Engine
+ * Zero-Trace Ephemeral RAM & Session Storage Engine
  * High-Security memory-only storage adapter. Prevents sensitive logs,
  * session keys, bookmarks, and telemetry from touching persistent browser disk (localStorage/indexedDB).
+ * Uses tab-scoped sessionStorage for system reload flags to prevent infinite reload loops.
  */
+
+const SYSTEM_RELOAD_KEYS = new Set([
+  'aha_last_restart',
+  'aha_quota_fallback',
+  'aha_panic_mode',
+  'showLoadWidget',
+  'hideInstallBanner',
+  'productionMode',
+  'aha_security_hidden',
+  'aha_strict_mode',
+  'aha_censor_mode',
+  'aha_reading_font_size',
+  'aha_primary_accent'
+]);
 
 class EphemeralMemoryStore implements Storage {
   private memoryMap = new Map<string, string>();
@@ -23,6 +38,14 @@ class EphemeralMemoryStore implements Storage {
   }
 
   getItem(key: string): string | null {
+    if (SYSTEM_RELOAD_KEYS.has(key)) {
+      try {
+        const sessionVal = window.sessionStorage.getItem(key);
+        if (sessionVal !== null) return sessionVal;
+      } catch {
+        // ignore
+      }
+    }
     if (this.zeroTraceEnabled) {
       return this.memoryMap.get(key) ?? null;
     }
@@ -41,6 +64,7 @@ class EphemeralMemoryStore implements Storage {
   removeItem(key: string): void {
     this.memoryMap.delete(key);
     try {
+      window.sessionStorage.removeItem(key);
       window.localStorage.removeItem(key);
     } catch {
       // ignore
@@ -48,10 +72,18 @@ class EphemeralMemoryStore implements Storage {
   }
 
   setItem(key: string, value: string): void {
-    this.memoryMap.set(key, String(value));
+    const strVal = String(value);
+    this.memoryMap.set(key, strVal);
+    if (SYSTEM_RELOAD_KEYS.has(key)) {
+      try {
+        window.sessionStorage.setItem(key, strVal);
+      } catch {
+        // ignore
+      }
+    }
     if (!this.zeroTraceEnabled) {
       try {
-        window.localStorage.setItem(key, String(value));
+        window.localStorage.setItem(key, strVal);
       } catch {
         // ignore
       }
