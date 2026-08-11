@@ -126,12 +126,13 @@ export async function proxyFetchResponse(
  */
 export async function getNetworkProtocolStatus() {
   try {
-    const res = await secureFetch('/api/network/protocol');
-    if (res.ok) {
-      return await res.json();
+    const res = await fetch('/api/network/protocol').catch(() => null);
+    if (res && res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data) return data;
     }
-  } catch (err) {
-    logger.warn('Failed to query network protocol status', err, 'NetworkProtocol');
+  } catch {
+    // Silent fallback on static deployments
   }
 
   return {

@@ -78,6 +78,23 @@ function getIframeSrcDoc(html: string, baseUrl: string): string {
         e.preventDefault(); 
       } 
     }, true);
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('a').forEach(function(a) {
+        if (a.getAttribute('target') === '_blank') {
+          a.setAttribute('target', '_self');
+        }
+      });
+    });
+
+    document.addEventListener('click', function(e) {
+      var a = e.target && e.target.closest ? e.target.closest('a') : null;
+      if (a) {
+        if (a.getAttribute('target') === '_blank') {
+          a.setAttribute('target', '_self');
+        }
+      }
+    }, true);
   </script>`;
   
   if (html.toLowerCase().includes('<head>')) {
@@ -243,41 +260,104 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
     let finalHtml = '';
     let fetchedSuccessfully = false;
 
-    // TIER 1: Try backend Express endpoint /api/browser/fetch
-    try {
-      const response = await fetch('/api/browser/fetch', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-AHA-Protocol-Version': '6.0-HYPER-IPv6'
-        },
-        body: JSON.stringify({
-          url: targetUrl,
-          userAgent: activeProfile.userAgentString,
-          customHeaders: getAhaBrowserHeaders(activeProfile.id),
-          adBlock
-        })
-      });
+    // TIER 0: Native Wikipedia API (CORS-enabled directly by Wikimedia)
+    if (!fetchedSuccessfully && targetUrl.includes('wikipedia.org')) {
+      try {
+        const parsed = new URL(targetUrl);
+        const hostParts = parsed.hostname.split('.');
+        const wikiLang = hostParts[0] === 'en' || hostParts[0] === 'ru' || hostParts[0] === 'de' || hostParts[0] === 'fr' || hostParts[0] === 'es' ? hostParts[0] : 'en';
 
-      if (response.ok) {
-        const rawText = await response.text();
-        try {
-          const data = JSON.parse(rawText);
-          if (data && data.html && !data.html.includes('NOT_FOUND arn1') && data.statusCode < 400) {
-            finalUrl = data.url || targetUrl;
-            finalTitle = data.title || targetUrl;
-            finalStatusCode = data.statusCode || 200;
-            finalLatency = data.latencyMs || 15;
-            finalHeaders = data.headers || {};
-            finalHtml = data.html;
-            fetchedSuccessfully = true;
+        // Case A: Wikipedia Article Page
+        if (parsed.pathname.includes('/wiki/')) {
+          const rawTitle = parsed.pathname.split('/wiki/')[1];
+          if (rawTitle && !rawTitle.includes('Special:Search')) {
+            const wikiRestUrl = `https://${wikiLang}.wikipedia.org/api/rest_v1/page/html/${rawTitle}`;
+            const wikiRes = await fetch(wikiRestUrl);
+            if (wikiRes.ok) {
+              finalHtml = await wikiRes.text();
+              const cleanTitle = decodeURIComponent(rawTitle).replace(/_/g, ' ');
+              finalTitle = `${cleanTitle} — Wikipedia`;
+              finalStatusCode = 200;
+              finalLatency = 35;
+              fetchedSuccessfully = true;
+            }
           }
-        } catch {
-          // Non-JSON response (e.g. Vercel 404 HTML page)
         }
+
+        // Case B: Wikipedia Search Query
+        if (!fetchedSuccessfully && (targetUrl.includes('search=') || targetUrl.includes('Special:Search'))) {
+          const query = parsed.searchParams.get('search') || parsed.pathname.split('search=')[1] || '';
+          if (query) {
+            const wikiSearchUrl = `https://${wikiLang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+            const wikiSearchRes = await fetch(wikiSearchUrl);
+            if (wikiSearchRes.ok) {
+              const searchData = await wikiSearchRes.json();
+              const items = searchData?.query?.search || [];
+              const itemsList = items.map((item: any) => `
+                <div style="margin-bottom: 16px; padding: 18px; background: #160f24; border: 1px solid #3d2b4f; border-radius: 14px;">
+                  <h3 style="margin: 0 0 6px 0;">
+                    <a href="https://${wikiLang}.wikipedia.org/wiki/${encodeURIComponent(item.title)}" style="color: #00f0ff; text-decoration: none; font-size: 17px; font-weight: bold;">${item.title}</a>
+                  </h3>
+                  <div style="color: #d1d5db; font-size: 13px; line-height: 1.6;">${item.snippet}</div>
+                </div>
+              `).join('');
+
+              finalHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{background:#0d0817;color:#fff;font-family:system-ui,-apple-system,sans-serif;padding:28px;max-width:840px;margin:0 auto;}</style></head><body>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;border-b:1px solid #3d2b4f;padding-bottom:12px;">
+                  <span style="font-size:24px;">📚</span>
+                  <h2 style="color:#00f0ff;margin:0;font-size:20px;font-weight:800;">Wikipedia (${wikiLang.toUpperCase()}) Search: "${query}"</h2>
+                </div>
+                ${itemsList || `<p style="color:#9ca3af;">No results found.</p>`}
+              </body></html>`;
+              finalTitle = `${query} — Wikipedia Search`;
+              finalStatusCode = 200;
+              finalLatency = 40;
+              fetchedSuccessfully = true;
+            }
+          }
+        }
+      } catch {
+        // Fallback to Tier 1
       }
-    } catch {
-      // Server endpoint unavailable
+    }
+
+    // TIER 1: Try backend Express endpoint /api/browser/fetch
+    if (!fetchedSuccessfully) {
+      try {
+        const response = await fetch('/api/browser/fetch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-AHA-Protocol-Version': '6.0-HYPER-IPv6'
+          },
+          body: JSON.stringify({
+            url: targetUrl,
+            userAgent: activeProfile.userAgentString,
+            customHeaders: getAhaBrowserHeaders(activeProfile.id),
+            adBlock
+          })
+        });
+
+        if (response.ok) {
+          const rawText = await response.text();
+          try {
+            const data = JSON.parse(rawText);
+            if (data && data.html && !data.html.includes('NOT_FOUND arn1') && data.statusCode < 400) {
+              finalUrl = data.url || targetUrl;
+              finalTitle = data.title || targetUrl;
+              finalStatusCode = data.statusCode || 200;
+              finalLatency = data.latencyMs || 15;
+              finalHeaders = data.headers || {};
+              finalHtml = data.html;
+              fetchedSuccessfully = true;
+            }
+          } catch {
+            // Non-JSON response (e.g. Vercel 404 HTML page)
+          }
+        }
+      } catch {
+        // Server endpoint unavailable
+      }
     }
 
     // TIER 2: If Tier 1 failed or returned non-JSON / Vercel 404, use Client-Side Proxies
@@ -1016,14 +1096,14 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
                         src={activeTab.url}
                         title="AHA Viewport Frame"
                         className="w-full flex-1 border-none bg-white min-h-0"
-                        sandbox="allow-scripts allow-same-origin allow-forms"
+                        sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"
                       />
                     ) : activeTab?.contentCache ? (
                       <iframe
                         srcDoc={getIframeSrcDoc(activeTab.contentCache, activeTab.url)}
                         title={activeTab.title || 'AHA Web Page'}
                         className="w-full flex-1 border-none bg-white min-h-0"
-                        sandbox="allow-scripts allow-same-origin allow-forms"
+                        sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads"
                       />
                     ) : (
                       <div className="m-auto p-6 text-center text-gray-400 space-y-2">
