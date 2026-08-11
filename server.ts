@@ -240,6 +240,7 @@ async function startServer() {
 
   // Dedicated Browser Full-Featured Page Proxy & Engine Endpoint
   app.post("/api/browser/fetch", async (req, res) => {
+    res.type("application/json");
     const startTime = Date.now();
     try {
       const { url, userAgent, customHeaders = {}, adBlock = true } = req.body || {};
@@ -290,37 +291,85 @@ async function startServer() {
         return res.status(403).json({ error: "Access to local/private network addresses is blocked (SSRF Protection)" });
       }
 
-      // Prepare request headers with User-Agent & AHA IPv6 flow labels
+      // Standard Chrome User-Agent header for external targets (to bypass WAF/Wikipedia blocks)
+      const cleanUserAgent = (userAgent && userAgent.includes("Mozilla/5.0"))
+        ? userAgent
+        : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+
       const requestHeaders: Record<string, string> = {
-        "User-Agent": userAgent || "AhaBrowser/6.0.4 (AHA-OS 6.0; Dual-Stack IPv6)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "User-Agent": cleanUserAgent,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9,ru;q=0.8",
-        "X-AHA-Protocol-Version": "6.0-HYPER-IPv6",
-        "X-AHA-IPv6-Flow-Label": "0x6AHA" + Math.floor(Math.random() * 0xFFFF).toString(16).toUpperCase(),
-        "X-AHA-AdBlock-Shield": adBlock ? "Active" : "Off"
+        "Cache-Control": "max-age=0"
       };
 
-      // Merge custom headers safely
-      const httpTokenRegex = /^[a-zA-Z0-9!#$%&'*+\-.^_`|~]+$/;
-      for (const [k, v] of Object.entries(customHeaders)) {
-        if (httpTokenRegex.test(k.trim())) {
-          requestHeaders[k.trim()] = String(v).replace(/[\r\n]/g, "");
+      // Safely fetch target URL with Wikipedia/Mobile fallback
+      let fetchResponse: Response | null = null;
+      let rawText = "";
+
+      try {
+        fetchResponse = await fetch(targetUrl, {
+          method: "GET",
+          headers: requestHeaders,
+          redirect: "follow"
+        });
+      } catch (firstErr: any) {
+        // Fallback for Wikipedia desktop -> mobile if DNS/CORS fails
+        if (parsed.hostname.includes("wikipedia.org") && !parsed.hostname.includes(".m.wikipedia.org")) {
+          const mobileUrl = targetUrl.replace("://en.wikipedia.org", "://en.m.wikipedia.org").replace("://ru.wikipedia.org", "://ru.m.wikipedia.org");
+          try {
+            fetchResponse = await fetch(mobileUrl, {
+              method: "GET",
+              headers: requestHeaders,
+              redirect: "follow"
+            });
+          } catch {
+            // ignore
+          }
         }
       }
 
-      const fetchResponse = await fetch(targetUrl, {
-        method: "GET",
-        headers: requestHeaders,
-        redirect: "follow"
-      });
+      const latencyMs = Date.now() - startTime;
+
+      if (!fetchResponse) {
+        return res.json({
+          url: targetUrl,
+          statusCode: 502,
+          latencyMs,
+          contentType: "text/html",
+          isHttps: targetUrl.startsWith("https://"),
+          title: `Network Failure — ${parsed.hostname}`,
+          headers: {},
+          html: `<div style="font-family:sans-serif;padding:28px;background:#0d0817;color:#fff;border-radius:16px;max-width:640px;margin:20px auto;border:1px solid #3d2b4f;">
+            <h2 style="color:#ff4d4d;margin-top:0;">Failed to Load Resource</h2>
+            <p style="color:#d1d5db;">Could not establish network connection to <strong style="color:#00f0ff;">${targetUrl}</strong>.</p>
+            <p style="color:#9ca3af;font-size:13px;">This target server may block proxy requests, require direct credentials, or be unavailable.</p>
+            <div style="margin-top:20px;">
+              <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 18px;background:#ff4d4d;color:#fff;text-decoration:none;border-radius:10px;font-weight:bold;font-size:13px;">Open ${targetUrl} in New Tab ↗</a>
+            </div>
+          </div>`
+        });
+      }
 
       const contentType = fetchResponse.headers.get("content-type") || "text/html";
-      let rawText = await fetchResponse.text();
-      const latencyMs = Date.now() - startTime;
+      rawText = await fetchResponse.text();
+
+      // If Wikipedia desktop blocked with 403 / 429, try Wikipedia mobile
+      if (!fetchResponse.ok && parsed.hostname.includes("wikipedia.org") && !parsed.hostname.includes(".m.wikipedia.org")) {
+        const mobileUrl = targetUrl.replace("://en.wikipedia.org", "://en.m.wikipedia.org").replace("://ru.wikipedia.org", "://ru.m.wikipedia.org");
+        try {
+          const mobileRes = await fetch(mobileUrl, { method: "GET", headers: requestHeaders, redirect: "follow" });
+          if (mobileRes.ok) {
+            fetchResponse = mobileRes;
+            rawText = await mobileRes.text();
+          }
+        } catch {
+          // keep original response
+        }
+      }
 
       // AdBlocker & Tracker Filter (if enabled)
       if (adBlock) {
-        // Strip common ad scripts & tracker pixel domains
         rawText = rawText.replace(/<script[^>]*src=["']https?:\/\/(?:google-analytics|doubleclick|googletagservices|connect\.facebook|analytics\.tiktok|yandex\.ru\/metrika|mc\.yandex\.ru)[^"']*["'][^>]*><\/script>/gi, '<!-- [AHA Shield] Ad/Tracker Blocked -->');
       }
 
@@ -343,10 +392,18 @@ async function startServer() {
       });
     } catch (err: any) {
       const latencyMs = Date.now() - startTime;
-      return res.status(500).json({
-        error: "Browser Request Failed",
-        message: err.message || String(err),
-        latencyMs
+      return res.json({
+        url: req.body?.url || "https://aha-browser.v6/error",
+        statusCode: 500,
+        latencyMs,
+        contentType: "text/html",
+        isHttps: true,
+        title: "Browser Request Exception",
+        headers: {},
+        html: `<div style="font-family:sans-serif;padding:28px;background:#0d0817;color:#fff;border-radius:16px;border:1px solid #3d2b4f;">
+          <h2 style="color:#ff4d4d;margin-top:0;">Browser Request Error</h2>
+          <p style="color:#e5e7eb;">${err.message || String(err)}</p>
+        </div>`
       });
     }
   });

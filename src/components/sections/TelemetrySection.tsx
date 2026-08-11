@@ -15,6 +15,7 @@ import {
   Bar, 
   LineChart, 
   Line, 
+  ComposedChart,
   PieChart,
   Pie,
   Cell,
@@ -158,7 +159,7 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
     });
   }, [logs, timeRange]);
 
-  // Process activity over time, OS distribution, Browser distribution, Hourly peak
+  // Process activity over time, OS distribution, Browser distribution, Hourly peak & Engagement metrics
   const { 
     chartData, 
     activeSections, 
@@ -166,9 +167,14 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
     topSection, 
     activeUsersCount,
     osDistribution,
-    hourlyActivity
+    hourlyActivity,
+    userActivityTimeline,
+    featureEngagementData,
+    sessionFrequencyData
   } = useMemo(() => {
     const daysMap = new Map<string, { label: string; counts: Record<string, number>; total: number }>();
+    const daysUserMap = new Map<string, { activeUsers: Set<string>; sessions: Set<string> }>();
+    const userSessionMap = new Map<string, Set<string>>();
     const daysArray: { key: string; label: string }[] = [];
 
     const numDays = timeRange === '24h' ? 1 : timeRange === '30d' ? 30 : 7;
@@ -188,6 +194,7 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
       });
       daysArray.push({ key, label });
       daysMap.set(key, { label, counts: {}, total: 0 });
+      daysUserMap.set(key, { activeUsers: new Set(), sessions: new Set() });
     }
 
     const sectionsSet = new Set<string>();
@@ -213,6 +220,14 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
         if (!isNaN(d.getTime())) logDate = d;
       }
 
+      const userIdentifier = log.userId || log.userEmail || log.deviceId || log.fingerprint || 'anonymous';
+      const sessionIdentifier = log.sessionId || (logDate ? `${userIdentifier}_${logDate.toDateString()}` : 'session');
+
+      if (!userSessionMap.has(userIdentifier)) {
+        userSessionMap.set(userIdentifier, new Set());
+      }
+      userSessionMap.get(userIdentifier)!.add(sessionIdentifier);
+
       if (logDate) {
         // Hour peak
         hoursCount[logDate.getHours()]++;
@@ -233,6 +248,12 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
           totalVisitsCount += 1;
 
           sectionTotals[sec] = (sectionTotals[sec] || 0) + 1;
+
+          const dayUserEntry = daysUserMap.get(dayKey);
+          if (dayUserEntry) {
+            dayUserEntry.activeUsers.add(userIdentifier);
+            dayUserEntry.sessions.add(sessionIdentifier);
+          }
         }
       }
 
@@ -261,6 +282,52 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
       return item;
     });
 
+    // Timeline for user activity & sessions over time
+    const userActivityTimelineData = daysArray.map((day) => {
+      const entry = daysMap.get(day.key)!;
+      const userEntry = daysUserMap.get(day.key)!;
+      return {
+        date: day.label,
+        totalEvents: entry.total,
+        activeUsers: userEntry.activeUsers.size,
+        uniqueSessions: userEntry.sessions.size
+      };
+    });
+
+    // Feature Engagement List
+    const featureEngagementList = Object.entries(sectionTotals)
+      .map(([sec, visits], idx) => ({
+        section: sec,
+        label: getSectionLabel(sec, lang),
+        visits,
+        percentage: totalVisitsCount > 0 ? Math.round((visits / totalVisitsCount) * 100) : 0,
+        fill: getSectionColor(sec, idx)
+      }))
+      .sort((a, b) => b.visits - a.visits);
+
+    // Session Frequency Buckets
+    const sessionBuckets = {
+      single: 0,
+      returning: 0,
+      frequent: 0,
+      power: 0
+    };
+
+    userSessionMap.forEach((sessionsSet) => {
+      const count = sessionsSet.size;
+      if (count === 1) sessionBuckets.single++;
+      else if (count <= 4) sessionBuckets.returning++;
+      else if (count <= 10) sessionBuckets.frequent++;
+      else sessionBuckets.power++;
+    });
+
+    const sessionFreqList = [
+      { name: lang === 'ru' ? '1 Визит' : '1 Session', value: sessionBuckets.single, color: '#3b82f6' },
+      { name: lang === 'ru' ? '2-4 Визита' : '2-4 Sessions', value: sessionBuckets.returning, color: '#10b981' },
+      { name: lang === 'ru' ? '5-10 Визитов' : '5-10 Sessions', value: sessionBuckets.frequent, color: '#a855f7' },
+      { name: lang === 'ru' ? '11+ Визитов' : '11+ Sessions', value: sessionBuckets.power, color: '#ff4d4d' },
+    ].filter(b => b.value > 0);
+
     let topSecName = 'home';
     let topSecCount = -1;
     Object.entries(sectionTotals).forEach(([sec, count]) => {
@@ -283,7 +350,10 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
       topSection: getSectionLabel(topSecName, lang),
       activeUsersCount: uniqueUsersSet.size,
       osDistribution: osData,
-      hourlyActivity: hourData
+      hourlyActivity: hourData,
+      userActivityTimeline: userActivityTimelineData,
+      featureEngagementData: featureEngagementList,
+      sessionFrequencyData: sessionFreqList
     };
   }, [timeFilteredLogs, timeRange, lang]);
 
@@ -1008,6 +1078,167 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+
+      {/* TERTIARY CHARTS GRID: User Activity Timeline & Session Return Frequency */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* User Activity & Session Frequency Composed Chart */}
+        <div className="lg:col-span-2 bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
+              <Users className="text-[#00f0ff]" size={18} />
+              {lang === 'ru' ? 'Динамика активности пользователей и сессий' : 'User Activity & Session Frequency Over Time'}
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">
+              {lang === 'ru' ? 'Соотношение общего объема событий, уникальных пользователей и активных сессий' : 'Correlation between total telemetry events, active users, and sessions'}
+            </p>
+          </div>
+
+          <div className="w-full h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={userActivityTimeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#3d2b4f" opacity={0.4} />
+                <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} tickLine={false} />
+                <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#120a21',
+                    borderColor: '#3d2b4f',
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
+                    fontSize: '12px',
+                    color: '#fff'
+                  }}
+                />
+                <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
+                <Area
+                  type="monotone"
+                  dataKey="totalEvents"
+                  name={lang === 'ru' ? 'Всего событий' : 'Total Events'}
+                  fill="#ff4d4d"
+                  stroke="#ff4d4d"
+                  fillOpacity={0.15}
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="uniqueSessions"
+                  name={lang === 'ru' ? 'Уникальные сессии' : 'Unique Sessions'}
+                  stroke="#a855f7"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: '#a855f7' }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="activeUsers"
+                  name={lang === 'ru' ? 'Активные пользователи' : 'Active Users'}
+                  stroke="#00f0ff"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: '#00f0ff' }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Session Frequency / Return Rate Pie Chart */}
+        <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
+              <RefreshCw className="text-[#10b981]" size={18} />
+              {lang === 'ru' ? 'Частота возврата сессий' : 'Session Return Frequency'}
+            </h3>
+            <p className="text-xs text-gray-400 mb-4">
+              {lang === 'ru' ? 'Распределение по количеству повторных сессий на пользователя' : 'Distribution of user visit counts and retention'}
+            </p>
+          </div>
+
+          <div className="w-full h-64">
+            {sessionFrequencyData.length === 0 ? (
+              <div className="flex justify-center items-center h-full text-gray-500 text-xs">
+                {lang === 'ru' ? 'Нет данных по сессиям' : 'No session data available'}
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={sessionFrequencyData}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={45}
+                    outerRadius={75}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {sessionFrequencyData.map((entry, index) => (
+                      <Cell key={`freq-cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#120a21',
+                      borderColor: '#3d2b4f',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      color: '#fff'
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* FEATURE ENGAGEMENT BAR CHART */}
+      <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
+              <TrendingUp className="text-[#f59e0b]" size={18} />
+              {lang === 'ru' ? 'Вовлеченность пользователей по функциям и разделам' : 'Feature & Section Engagement Ranking'}
+            </h3>
+            <p className="text-xs text-gray-400">
+              {lang === 'ru' ? 'Сравнение количества кликов и переходов между инструментами платформы' : 'Comparison of total interactions across platform features'}
+            </p>
+          </div>
+        </div>
+
+        <div className="w-full h-64">
+          {featureEngagementData.length === 0 ? (
+            <div className="flex justify-center items-center h-full text-gray-500 text-xs">
+              {lang === 'ru' ? 'Нет данных вовлеченности' : 'No feature engagement data'}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                layout="vertical"
+                data={featureEngagementData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#3d2b4f" opacity={0.3} horizontal={false} />
+                <XAxis type="number" stroke="#9ca3af" fontSize={11} tickLine={false} />
+                <YAxis dataKey="label" type="category" stroke="#9ca3af" fontSize={11} tickLine={false} width={100} />
+                <Tooltip
+                  formatter={(val: any) => [`${val} ${lang === 'ru' ? 'событий' : 'events'}`, lang === 'ru' ? 'Посещения' : 'Visits']}
+                  contentStyle={{
+                    backgroundColor: '#120a21',
+                    borderColor: '#3d2b4f',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    color: '#fff'
+                  }}
+                />
+                <Bar dataKey="visits" name={lang === 'ru' ? 'События' : 'Visits'} radius={[0, 8, 8, 0]}>
+                  {featureEngagementData.map((entry, index) => (
+                    <Cell key={`feat-cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

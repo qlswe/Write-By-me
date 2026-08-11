@@ -61,6 +61,7 @@ interface AhaEmbeddedBrowserModalProps {
 
 const SEARCH_ENGINES = [
   { id: 'duckduckgo', name: 'DuckDuckGo (In Frame)', searchUrl: 'https://html.duckduckgo.com/html/?q=' },
+  { id: 'wikipedia', name: 'Wikipedia Mobile', searchUrl: 'https://en.m.wikipedia.org/w/index.php?search=' },
   { id: 'google', name: 'Google (External Tab)', searchUrl: 'https://www.google.com/search?q=' },
   { id: 'bing', name: 'Bing', searchUrl: 'https://www.bing.com/search?q=' },
   { id: 'aha', name: 'AHA Protocol Search', searchUrl: '/#theories?q=' }
@@ -249,7 +250,32 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
         })
       });
 
-      const data = await response.json();
+      const rawText = await response.text();
+      let data: any = null;
+
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        // If response was non-JSON HTML (e.g. proxy HTML error or direct content)
+        data = {
+          url: targetUrl,
+          statusCode: response.status || 500,
+          title: response.ok ? targetUrl : 'Page / Request Error',
+          html: rawText || `<div style="padding:24px;color:#ff4d4d;font-family:sans-serif;background:#0d0817;border-radius:16px;">
+            <h2>Failed to load resource</h2>
+            <p>Target server returned non-JSON response (HTTP ${response.status}).</p>
+          </div>`
+        };
+      }
+
+      const statusCode = data.statusCode || response.status || 200;
+      const htmlContent = data.html || (data.error ? `<div style="font-family:sans-serif;padding:28px;background:#0d0817;color:#fff;border-radius:16px;border:1px solid #3d2b4f;max-width:640px;margin:20px auto;">
+        <h2 style="color:#ff4d4d;margin-top:0;">Failed to Load Resource</h2>
+        <p style="color:#d1d5db;">${data.error || data.message || 'Request failed'}</p>
+        <div style="margin-top:20px;">
+          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 18px;background:#ff4d4d;color:#fff;text-decoration:none;border-radius:10px;font-weight:bold;font-size:13px;">Open ${targetUrl} in New Tab ↗</a>
+        </div>
+      </div>` : '');
 
       setTabs(prev => prev.map(t => {
         if (t.id === tabId) {
@@ -258,10 +284,10 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
             url: data.url || targetUrl,
             title: data.title || targetUrl,
             isLoading: false,
-            statusCode: data.statusCode || response.status,
+            statusCode,
             latencyMs: data.latencyMs || 15,
             headers: data.headers || {},
-            contentCache: data.html || ''
+            contentCache: htmlContent
           };
         }
         return t;
@@ -279,9 +305,12 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
             isLoading: false,
             statusCode: 500,
             title: 'Request Failed',
-            contentCache: `<div style="padding:20px;color:#ff4d4d;font-family:sans-serif;">
-              <h2>Failed to load resource</h2>
-              <p>${err.message || String(err)}</p>
+            contentCache: `<div style="padding:28px;color:#ff4d4d;font-family:sans-serif;background:#0d0817;border-radius:16px;max-width:640px;margin:20px auto;border:1px solid #3d2b4f;">
+              <h2 style="margin-top:0;">Failed to load resource</h2>
+              <p style="color:#e5e7eb;">${err.message || String(err)}</p>
+              <div style="margin-top:20px;">
+                <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 18px;background:#ff4d4d;color:#fff;text-decoration:none;border-radius:10px;font-weight:bold;font-size:13px;">Open ${targetUrl} in New Tab ↗</a>
+              </div>
             </div>`
           };
         }
@@ -826,8 +855,14 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
                       <div className="flex items-center gap-2 min-w-0">
                         <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
                         <span className="font-mono text-[11px] text-gray-200 truncate">{activeTab?.url}</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] shrink-0">
-                          {activeTab?.statusCode || 200} OK ({activeTab?.latencyMs || 12}ms)
+                        <span className={`px-2 py-0.5 rounded font-mono text-[10px] shrink-0 ${
+                          (activeTab?.statusCode || 200) < 300 
+                            ? 'bg-emerald-500/20 text-emerald-300' 
+                            : (activeTab?.statusCode || 200) < 400 
+                              ? 'bg-cyan-500/20 text-cyan-300' 
+                              : 'bg-rose-500/20 text-rose-300'
+                        }`}>
+                          {activeTab?.statusCode || 200} {(activeTab?.statusCode || 200) < 300 ? 'OK' : (activeTab?.statusCode || 200) === 403 ? 'Forbidden' : (activeTab?.statusCode || 200) === 404 ? 'Not Found' : 'Error'} ({activeTab?.latencyMs || 12}ms)
                         </span>
                       </div>
 
