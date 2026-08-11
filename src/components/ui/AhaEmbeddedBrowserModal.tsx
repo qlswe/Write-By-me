@@ -31,7 +31,9 @@ import {
   Info,
   Shield,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Share2,
+  Link2
 } from 'lucide-react';
 import { 
   AHA_CUSTOM_USER_AGENTS, 
@@ -95,6 +97,56 @@ function getIframeSrcDoc(html: string, baseUrl: string): string {
         }
       }
     }, true);
+
+    var longPressTimer = null;
+    function triggerContextMenu(e, href) {
+      if (!href) return;
+      try {
+        var resolvedUrl = new URL(href, document.baseURI || window.location.href).href;
+        window.parent.postMessage({
+          type: 'AHA_BROWSER_LONG_PRESS',
+          url: resolvedUrl,
+          clientX: e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 200),
+          clientY: e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 200)
+        }, '*');
+      } catch(err) {
+        window.parent.postMessage({
+          type: 'AHA_BROWSER_LONG_PRESS',
+          url: href,
+          clientX: 200,
+          clientY: 200
+        }, '*');
+      }
+    }
+
+    document.addEventListener('contextmenu', function(e) {
+      var a = e.target && e.target.closest ? e.target.closest('a') : null;
+      var targetUrl = a ? (a.href || a.getAttribute('href')) : null;
+      if (targetUrl) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerContextMenu(e, targetUrl);
+      }
+    }, true);
+
+    document.addEventListener('touchstart', function(e) {
+      var a = e.target && e.target.closest ? e.target.closest('a') : null;
+      var targetUrl = a ? (a.href || a.getAttribute('href')) : null;
+      if (targetUrl) {
+        if (longPressTimer) clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(function() {
+          triggerContextMenu(e, targetUrl);
+        }, 450);
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function() {
+      if (longPressTimer) clearTimeout(longPressTimer);
+    }, true);
+
+    document.addEventListener('touchmove', function() {
+      if (longPressTimer) clearTimeout(longPressTimer);
+    }, true);
   </script>`;
   
   if (html.toLowerCase().includes('<head>')) {
@@ -140,6 +192,66 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
   const [inputUrl, setInputUrl] = useState<string>('https://aha-browser.v6/home');
   const [copiedSource, setCopiedSource] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Long press / Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    url: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [contextToast, setContextToast] = useState<string | null>(null);
+
+  const showContextToast = (msg: string) => {
+    setContextToast(msg);
+    setTimeout(() => setContextToast(null), 2500);
+  };
+
+  const handleOpenContextMenu = (url: string, x?: number, y?: number) => {
+    if (!url) return;
+    setContextMenu({
+      isOpen: true,
+      url,
+      x: x ?? window.innerWidth / 2,
+      y: y ?? window.innerHeight / 2
+    });
+  };
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'AHA_BROWSER_LONG_PRESS') {
+        const { url, clientX, clientY } = event.data;
+        handleOpenContextMenu(url, clientX, clientY);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Long press handler generator for React elements in browser UI
+  const createLongPressProps = (url: string) => {
+    let timer: any = null;
+    return {
+      onContextMenu: (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleOpenContextMenu(url, e.clientX, e.clientY);
+      },
+      onTouchStart: (e: React.TouchEvent) => {
+        const touch = e.touches[0];
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          handleOpenContextMenu(url, touch.clientX, touch.clientY);
+        }, 450);
+      },
+      onTouchEnd: () => {
+        if (timer) clearTimeout(timer);
+      },
+      onTouchMove: () => {
+        if (timer) clearTimeout(timer);
+      }
+    };
+  };
 
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
 
@@ -1398,6 +1510,140 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
               <span className="text-purple-400 font-bold">AHA Browser Engine v6.0</span>
             </div>
           </div>
+
+          {/* Long-Press Context Menu Popup Overlay */}
+          <AnimatePresence>
+            {contextMenu?.isOpen && (
+              <div 
+                className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4"
+                onClick={() => setContextMenu(null)}
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 15 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-sm bg-[#160f24] border border-[#ff4d4d]/50 rounded-2xl shadow-[0_20px_60px_-15px_rgba(255,77,77,0.35)] overflow-hidden flex flex-col p-4 space-y-3"
+                >
+                  {/* Menu Header */}
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                      <div className="p-2 bg-[#ff4d4d]/20 text-[#ff4d4d] rounded-xl shrink-0 border border-[#ff4d4d]/30">
+                        <Link2 size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-[10px] uppercase font-mono tracking-wider font-bold text-[#ff4d4d] block">
+                          {isRu ? 'Меню действия с ссылкой' : 'Link Context Menu'}
+                        </span>
+                        <span className="text-xs font-mono text-gray-200 truncate block font-semibold" title={contextMenu.url}>
+                          {contextMenu.url}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setContextMenu(null)}
+                      className="text-gray-400 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Menu Options */}
+                  <div className="space-y-2 pt-1">
+                    {/* 1. Копировать ссылку */}
+                    <button
+                      onClick={() => {
+                        const targetUrl = contextMenu.url;
+                        navigator.clipboard.writeText(targetUrl);
+                        showContextToast(isRu ? 'Ссылка скопирована в буфер обмена' : 'Link copied to clipboard');
+                        setContextMenu(null);
+                      }}
+                      className="w-full p-3 bg-[#1e1530] hover:bg-[#ff4d4d]/20 border border-[#3d2b4f] hover:border-[#ff4d4d]/60 rounded-xl flex items-center gap-3 text-xs font-bold text-white transition-all cursor-pointer group"
+                    >
+                      <div className="p-2 bg-black/40 group-hover:bg-[#ff4d4d] text-gray-300 group-hover:text-white rounded-lg transition-colors">
+                        <Copy size={16} />
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <span className="block text-white group-hover:text-[#ff4d4d] transition-colors font-bold">
+                          {isRu ? 'Копировать ссылку' : 'Copy Link'}
+                        </span>
+                        <span className="block text-[10px] text-gray-400 font-normal truncate">
+                          {isRu ? 'Сохранить URL в буфер обмена' : 'Copy URL address to clipboard'}
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* 2. Поделиться */}
+                    <button
+                      onClick={() => {
+                        const targetUrl = contextMenu.url;
+                        setContextMenu(null);
+                        if (navigator.share) {
+                          navigator.share({
+                            title: activeTab?.title || 'AHA Browser Link',
+                            url: targetUrl
+                          }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(targetUrl);
+                          showContextToast(isRu ? 'Ссылка скопирована для отправки' : 'Link copied to share');
+                        }
+                      }}
+                      className="w-full p-3 bg-[#1e1530] hover:bg-[#ff4d4d]/20 border border-[#3d2b4f] hover:border-[#ff4d4d]/60 rounded-xl flex items-center gap-3 text-xs font-bold text-white transition-all cursor-pointer group"
+                    >
+                      <div className="p-2 bg-black/40 group-hover:bg-[#ff4d4d] text-gray-300 group-hover:text-white rounded-lg transition-colors">
+                        <Share2 size={16} />
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <span className="block text-white group-hover:text-[#ff4d4d] transition-colors font-bold">
+                          {isRu ? 'Поделиться' : 'Share'}
+                        </span>
+                        <span className="block text-[10px] text-gray-400 font-normal truncate">
+                          {isRu ? 'Отправить ссылку через системное меню' : 'Share link via system dialog'}
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* 3. Открыть в системном браузере */}
+                    <button
+                      onClick={() => {
+                        window.open(contextMenu.url, '_blank', 'noopener,noreferrer');
+                        setContextMenu(null);
+                      }}
+                      className="w-full p-3 bg-[#1e1530] hover:bg-[#ff4d4d]/20 border border-[#3d2b4f] hover:border-[#ff4d4d]/60 rounded-xl flex items-center gap-3 text-xs font-bold text-white transition-all cursor-pointer group"
+                    >
+                      <div className="p-2 bg-black/40 group-hover:bg-[#ff4d4d] text-gray-300 group-hover:text-white rounded-lg transition-colors">
+                        <ExternalLink size={16} />
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <span className="block text-white group-hover:text-[#ff4d4d] transition-colors font-bold">
+                          {isRu ? 'Открыть в системном браузере' : 'Open in System Browser'}
+                        </span>
+                        <span className="block text-[10px] text-gray-400 font-normal truncate">
+                          {isRu ? 'Перейти в основном браузере устройства' : 'Open in device default browser'}
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Toast Alert */}
+          <AnimatePresence>
+            {contextToast && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100000] px-4 py-2.5 bg-emerald-400 text-black font-bold text-xs rounded-2xl shadow-2xl flex items-center gap-2 border border-emerald-200"
+              >
+                <Check size={16} />
+                <span>{contextToast}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </AnimatePresence>

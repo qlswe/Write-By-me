@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Globe, ShieldCheck, Zap, Gauge, Check, X, RefreshCw, Cpu, Wifi, ArrowRight, Layers, ExternalLink } from 'lucide-react';
+import { Globe, ShieldCheck, Zap, Gauge, Check, X, RefreshCw, Cpu, Wifi, ArrowRight, Layers, ExternalLink, Server, Copy, CheckCircle, Terminal, Radio } from 'lucide-react';
 import { 
   checkIPv6Status, 
   isIPv6PriorityForced, 
@@ -21,7 +21,16 @@ export const IPv6Modal: React.FC<IPv6ModalProps> = ({ isOpen, onClose, lang }) =
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [status, setStatus] = useState<IPv6NetworkStatus | null>(null);
   const [isForcedIPv6, setIsForcedIPv6] = useState<boolean>(isIPv6PriorityForced());
-  const [activeTab, setActiveTab] = useState<'status' | 'benefits' | 'setup'>('status');
+  const [activeTab, setActiveTab] = useState<'status' | 'benefits' | 'setup' | 'vercel'>('status');
+
+  // Vercel config options
+  const [customDomain, setCustomDomain] = useState('my-app.vercel.app');
+  const [enableSecurityHeaders, setEnableSecurityHeaders] = useState(true);
+  const [enableAhaProtocol, setEnableAhaProtocol] = useState(true);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedDns, setCopiedDns] = useState(false);
+  const [pingTesting, setPingTesting] = useState(false);
+  const [edgeLatencies, setEdgeLatencies] = useState<{ node: string; ip: string; ping: number }[] | null>(null);
 
   const runDiagnostics = async () => {
     setLoadingStatus(true);
@@ -121,6 +130,17 @@ export const IPv6Modal: React.FC<IPv6ModalProps> = ({ isOpen, onClose, lang }) =
               >
                 <Layers size={14} />
                 <span>{isRu ? 'Как включить в РФ' : 'Enable in ISP'}</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('vercel')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'vercel' 
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' 
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Server size={14} />
+                <span>{isRu ? 'Vercel IPv6 Настройки' : 'Vercel IPv6 Setup'}</span>
               </button>
             </div>
           </div>
@@ -332,6 +352,139 @@ export const IPv6Modal: React.FC<IPv6ModalProps> = ({ isOpen, onClose, lang }) =
                     <span>test-ipv6.com</span>
                     <ExternalLink size={14} />
                   </a>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'vercel' && (
+              <div className="space-y-4 text-xs text-gray-300">
+                {/* Intro Card */}
+                <div className="p-4 bg-cyan-950/20 border border-cyan-500/30 rounded-2xl space-y-2">
+                  <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm">
+                    <Server size={18} className="text-cyan-400" />
+                    <span>{isRu ? 'Интеграция Vercel Dual-Stack (IPv4 + IPv6)' : 'Vercel Dual-Stack IPv6 Integration'}</span>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    {isRu 
+                      ? 'Платформа Vercel автоматически маршрутизирует трафик через IPv6 для кастомных доменов с AAAA-записями. Скопируйте готовый vercel.json и настройки DNS ниже.'
+                      : 'Vercel Edge automatically routes incoming IPv6 requests when AAAA DNS records are attached to your custom domain.'}
+                  </p>
+                </div>
+
+                {/* Domain Input & DNS Table */}
+                <div className="p-4 bg-[#1b1328] border border-[#3d2b4f] rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                      <Terminal size={14} className="text-cyan-400" />
+                      {isRu ? '1. DNS Записи (Vercel DNS / Cloudflare):' : '1. DNS Records:'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        const records = `AAAA @ 2606:4700:3030::6815:102d\nAAAA www 2606:4700:3030::6815:102d\nCNAME cname.vercel-dns.com`;
+                        navigator.clipboard.writeText(records);
+                        setCopiedDns(true);
+                        setTimeout(() => setCopiedDns(false), 2000);
+                      }}
+                      className="px-2.5 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded-lg font-bold text-[11px] flex items-center gap-1 transition-colors"
+                    >
+                      {copiedDns ? <CheckCircle size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      {copiedDns ? (isRu ? 'Скопировано!' : 'Copied!') : (isRu ? 'Копировать DNS' : 'Copy DNS')}
+                    </button>
+                  </div>
+
+                  <div className="bg-[#0f0a17] p-3 rounded-xl border border-white/5 space-y-2 font-mono text-[11px]">
+                    <div className="flex justify-between items-center pb-1 border-b border-white/5 text-gray-500 font-sans text-[10px]">
+                      <span>ТИП</span>
+                      <span>ИМЯ</span>
+                      <span>ЗНАЧЕНИЕ / IPV6 АДРЕС</span>
+                    </div>
+                    <div className="flex justify-between items-center text-emerald-400">
+                      <span className="font-bold">AAAA</span>
+                      <span>@</span>
+                      <span className="select-all">2606:4700:3030::6815:102d</span>
+                    </div>
+                    <div className="flex justify-between items-center text-emerald-400">
+                      <span className="font-bold">AAAA</span>
+                      <span>www</span>
+                      <span className="select-all">2606:4700:3030::6815:102d</span>
+                    </div>
+                    <div className="flex justify-between items-center text-cyan-400">
+                      <span className="font-bold">CNAME</span>
+                      <span>app</span>
+                      <span className="select-all">cname.vercel-dns.com</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Config Generator */}
+                <div className="p-4 bg-[#1b1328] border border-[#3d2b4f] rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                      <Terminal size={14} className="text-cyan-400" />
+                      {isRu ? '2. Генератор файла vercel.json:' : '2. vercel.json Generator:'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        const json = JSON.stringify({
+                          version: 2,
+                          headers: [
+                            {
+                              source: "/(.*)",
+                              headers: [
+                                ...(enableAhaProtocol ? [{ key: "X-AHA-Protocol-Version", value: "6.0-HYPER-IPv6" }] : []),
+                                ...(enableSecurityHeaders ? [
+                                  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+                                  { key: "X-Content-Type-Options", value: "nosniff" },
+                                  { key: "X-Frame-Options", value: "SAMEORIGIN" }
+                                ] : [])
+                              ]
+                            }
+                          ]
+                        }, null, 2);
+                        navigator.clipboard.writeText(json);
+                        setCopiedCode(true);
+                        setTimeout(() => setCopiedCode(false), 2000);
+                      }}
+                      className="px-2.5 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 rounded-lg font-bold text-[11px] flex items-center gap-1 transition-colors"
+                    >
+                      {copiedCode ? <CheckCircle size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      {copiedCode ? (isRu ? 'Скопировано!' : 'Copied!') : (isRu ? 'Копировать vercel.json' : 'Copy vercel.json')}
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <label className="flex items-center gap-2 text-[11px] text-gray-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enableAhaProtocol}
+                        onChange={(e) => setEnableAhaProtocol(e.target.checked)}
+                        className="rounded border-white/20 bg-black/50 text-cyan-500 focus:ring-0"
+                      />
+                      <span>Заголовок AHA IPv6 Protocol</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-[11px] text-gray-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enableSecurityHeaders}
+                        onChange={(e) => setEnableSecurityHeaders(e.target.checked)}
+                        className="rounded border-white/20 bg-black/50 text-cyan-500 focus:ring-0"
+                      />
+                      <span>Заголовки безопасности (HSTS / CSP)</span>
+                    </label>
+                  </div>
+
+                  <pre className="p-3 bg-[#0a0711] border border-white/10 rounded-xl font-mono text-[10px] text-cyan-300 overflow-x-auto max-h-40">
+{`{
+  "version": 2,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [${enableAhaProtocol ? `\n        { "key": "X-AHA-Protocol-Version", "value": "6.0-HYPER-IPv6" }` : ''}${enableSecurityHeaders ? `${enableAhaProtocol ? ',' : ''}\n        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },\n        { "key": "X-Content-Type-Options", "value": "nosniff" }` : ''}
+      ]
+    }
+  ]
+}`}
+                  </pre>
                 </div>
               </div>
             )}
