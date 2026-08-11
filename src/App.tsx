@@ -20,6 +20,7 @@ import { usePWA } from './hooks/usePWA';
 import { applyPrimaryAccentColor } from './utils/theme';
 import { initPageVisibilityOptimizer } from './utils/performanceOptimizer';
 import { applyFontSizeToDocument } from './hooks/useFontSize';
+import { safeStorage } from './utils/securityStorage';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -123,7 +124,7 @@ export default function App() {
 
   // Restore accessible reading font size on mount
   useEffect(() => {
-    const savedFont = localStorage.getItem('aha_reading_font_size');
+    const savedFont = safeStorage.getItem('aha_reading_font_size');
     if (savedFont) {
       const parsed = parseInt(savedFont, 10);
       if (!isNaN(parsed) && parsed >= 80 && parsed <= 150) {
@@ -133,12 +134,12 @@ export default function App() {
   }, []);
 
   // Production Mode (High Fidelity)
-  const [productionMode, setProductionMode] = useState(() => localStorage.getItem('productionMode') === 'true');
+  const [productionMode, setProductionMode] = useState(() => safeStorage.getItem('productionMode') === 'true');
 
   const toggleProductionMode = () => {
     const newVal = !productionMode;
     setProductionMode(newVal);
-    localStorage.setItem('productionMode', String(newVal));
+    safeStorage.setItem('productionMode', String(newVal));
     setToast(newVal ? t.sdkModeProduction : t.sdkModeMain);
     sdk.logging.action('Toggle Production Mode', { enabled: newVal });
   };
@@ -151,11 +152,11 @@ export default function App() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   // Panic / Camouflage Mode
-  const [isPanicked, setIsPanicked] = useState(() => localStorage.getItem('aha_panic_mode') === 'true');
+  const [isPanicked, setIsPanicked] = useState(() => safeStorage.getItem('aha_panic_mode') === 'true');
 
   useEffect(() => {
     const checkPanic = () => {
-      setIsPanicked(localStorage.getItem('aha_panic_mode') === 'true');
+      setIsPanicked(safeStorage.getItem('aha_panic_mode') === 'true');
     };
     window.addEventListener('storage', checkPanic);
     window.addEventListener('aha_panic_triggered', checkPanic);
@@ -267,7 +268,7 @@ export default function App() {
   // Filters
   const [theoryCategory, setTheoryCategory] = useState('all');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [offlineMode, setOfflineMode] = useState(() => !!localStorage.getItem('aha_quota_fallback'));
+  const [offlineMode, setOfflineMode] = useState(() => !!safeStorage.getItem('aha_quota_fallback'));
 
   useEffect(() => {
     const fallbackHandler = () => setOfflineMode(true);
@@ -280,7 +281,7 @@ export default function App() {
 
     // Apply cached accent color immediately before Firestore responds
     try {
-      const cachedAccent = localStorage.getItem('aha_primary_accent');
+      const cachedAccent = safeStorage.getItem('aha_primary_accent');
       if (cachedAccent) applyPrimaryAccentColor(cachedAccent);
     } catch (e) {}
 
@@ -302,8 +303,8 @@ export default function App() {
         
         // Listen for global fallback flag from admin
         if (data.forceKVFallback) {
-          if (!localStorage.getItem('aha_quota_fallback')) {
-            localStorage.setItem('aha_quota_fallback', Date.now().toString());
+          if (!safeStorage.getItem('aha_quota_fallback')) {
+            safeStorage.setItem('aha_quota_fallback', Date.now().toString());
             setOfflineMode(true);
             window.dispatchEvent(new Event('aha_quota_fallback_active'));
             if (reloadTimer) clearTimeout(reloadTimer);
@@ -312,9 +313,9 @@ export default function App() {
             }, 500); // Reload to clean Firebase listeners
           }
         } else if (data.forceKVFallback === false) {
-          const fallbackCreated = localStorage.getItem('aha_quota_fallback');
+          const fallbackCreated = safeStorage.getItem('aha_quota_fallback');
           if (fallbackCreated) {
-             localStorage.removeItem('aha_quota_fallback');
+             safeStorage.removeItem('aha_quota_fallback');
              setOfflineMode(false);
              if (reloadTimer) clearTimeout(reloadTimer);
              reloadTimer = setTimeout(() => {
@@ -324,9 +325,9 @@ export default function App() {
         }
 
         if (data.massRestartTimestamp) {
-          const lastRestart = localStorage.getItem('aha_last_restart');
+          const lastRestart = safeStorage.getItem('aha_last_restart');
           if (!lastRestart || parseInt(lastRestart, 10) < data.massRestartTimestamp) {
-            localStorage.setItem('aha_last_restart', Date.now().toString());
+            safeStorage.setItem('aha_last_restart', Date.now().toString());
             if (isMounted) window.location.reload();
           }
         }
@@ -423,7 +424,7 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const [showLoadWidget, setShowLoadWidget] = useState(() => {
-    const saved = localStorage.getItem('showLoadWidget');
+    const saved = safeStorage.getItem('showLoadWidget');
     return saved ? JSON.parse(saved) : false;
   });
 
@@ -432,7 +433,7 @@ export default function App() {
   const toggleLoadWidget = () => {
     setShowLoadWidget((prev: boolean) => {
       const next = !prev;
-      localStorage.setItem('showLoadWidget', JSON.stringify(next));
+      safeStorage.setItem('showLoadWidget', JSON.stringify(next));
       return next;
     });
   };
@@ -706,7 +707,7 @@ export default function App() {
 
   const handleCloseBanner = () => {
     setShowBanner(false);
-    localStorage.setItem('hideInstallBanner', 'true');
+    safeStorage.setItem('hideInstallBanner', 'true');
   };
 
   const handleSaveHomeContent = async () => {
@@ -836,7 +837,7 @@ export default function App() {
     return (
       <DisguisePage 
         onDeactivate={() => {
-          localStorage.removeItem('aha_panic_mode');
+          safeStorage.removeItem('aha_panic_mode');
           setIsPanicked(false);
           window.dispatchEvent(new CustomEvent('aha_panic_triggered'));
         }} 
@@ -932,7 +933,7 @@ export default function App() {
 
               <button 
                 onClick={() => {
-                  localStorage.removeItem('aha_quota_fallback');
+                  safeStorage.removeItem('aha_quota_fallback');
                   setOfflineMode(false);
                   window.location.reload();
                 }}

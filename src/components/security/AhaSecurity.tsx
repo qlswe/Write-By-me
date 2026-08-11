@@ -2,20 +2,21 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { createRoot, Root } from 'react-dom/client';
 import DOMPurify from 'dompurify';
-import { ShieldCheck, X, Activity, EyeOff, Lock, ShieldAlert, Trash2, Siren, Ghost, FileText, FileWarning, Eye } from 'lucide-react';
+import { ShieldCheck, X, Activity, EyeOff, Lock, ShieldAlert, Trash2, Siren, Ghost, FileText, FileWarning, Eye, Cpu, Network, CheckCircle, Copy, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { KuruVideoPlayer } from '../ui/KuruVideoPlayer';
+import { safeStorage, setZeroTraceMode, isZeroTraceActive } from '../../utils/securityStorage';
 
 // Global threat counter
-let globalThreatsBlocked = parseInt(localStorage.getItem('aha_threats_blocked') || '0', 10);
+let globalThreatsBlocked = parseInt(safeStorage.getItem('aha_threats_blocked') || '0', 10);
 
 // 1. Core Sanitizer
 export const sanitizeContent = (dirty: string) => {
-  const isStrict = localStorage.getItem('aha_strict_mode') === 'true';
-  const isCensored = localStorage.getItem('aha_censor_mode') === 'true';
+  const isStrict = safeStorage.getItem('aha_strict_mode') === 'true';
+  const isCensored = safeStorage.getItem('aha_censor_mode') === 'true';
   
   // Basic bad word filter
   let text = dirty;
@@ -35,18 +36,18 @@ export const sanitizeContent = (dirty: string) => {
     ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class', 'className', 'controls', 'autoplay', 'loop', 'muted', 'poster', 'type', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'style'],
   });
 
-  // Count removed items (DOMPurify.removed is an array of removed elements/attributes)
+  // Count removed items
   if (DOMPurify.removed && DOMPurify.removed.length > 0) {
     const removals = DOMPurify.removed.length;
     setTimeout(() => {
       globalThreatsBlocked += removals;
-      localStorage.setItem('aha_threats_blocked', globalThreatsBlocked.toString());
+      safeStorage.setItem('aha_threats_blocked', globalThreatsBlocked.toString());
       
       try {
-        const currentLogs = JSON.parse(localStorage.getItem('aha_security_logs') || '[]');
+        const currentLogs = JSON.parse(safeStorage.getItem('aha_security_logs') || '[]');
         const newLog = `[${new Date().toLocaleTimeString()}] Blocked ${removals} suspicious elements (XSS/Strict)`;
         const newLogs = [newLog, ...currentLogs].slice(0, 20);
-        localStorage.setItem('aha_security_logs', JSON.stringify(newLogs));
+        safeStorage.setItem('aha_security_logs', JSON.stringify(newLogs));
       } catch(e) {}
 
       window.dispatchEvent(new CustomEvent('aha_threat_blocked'));
@@ -151,26 +152,28 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
   const [isHidden, setIsHidden] = useState(false);
   const [globalHidden, setGlobalHidden] = useState(false);
   const [threatsBlocked, setThreatsBlocked] = useState(globalThreatsBlocked);
-  const [isStrict, setIsStrict] = useState(localStorage.getItem('aha_strict_mode') === 'true');
-  const [isCensored, setIsCensored] = useState(localStorage.getItem('aha_censor_mode') === 'true');
-  const [activeTab, setActiveTab] = useState<'status' | 'logs' | 'tools'>('status');
+  const [isStrict, setIsStrict] = useState(safeStorage.getItem('aha_strict_mode') === 'true');
+  const [isCensored, setIsCensored] = useState(safeStorage.getItem('aha_censor_mode') === 'true');
+  const [zeroTrace, setZeroTrace] = useState(isZeroTraceActive());
+  const [activeTab, setActiveTab] = useState<'status' | 'tools' | 'ipv6' | 'logs'>('status');
   const [logs, setLogs] = useState<string[]>([]);
   const [isPanicking, setIsPanicking] = useState(false);
+  const [copiedVercelConfig, setCopiedVercelConfig] = useState(false);
 
   useEffect(() => {
-    const hiddenState = localStorage.getItem('aha_security_hidden');
+    const hiddenState = safeStorage.getItem('aha_security_hidden');
     if (hiddenState === 'true') {
       setIsHidden(true);
     }
     
     try {
-      setLogs(JSON.parse(localStorage.getItem('aha_security_logs') || '[]'));
+      setLogs(JSON.parse(safeStorage.getItem('aha_security_logs') || '[]'));
     } catch(e){}
 
     const handleThreat = () => {
         setThreatsBlocked(globalThreatsBlocked);
         try {
-            setLogs(JSON.parse(localStorage.getItem('aha_security_logs') || '[]'));
+            setLogs(JSON.parse(safeStorage.getItem('aha_security_logs') || '[]'));
         } catch(e){}
     };
     window.addEventListener('aha_threat_blocked', handleThreat);
@@ -192,24 +195,27 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
   const handleHide = () => {
     setIsHidden(true);
     setIsOpen(false);
-    localStorage.setItem('aha_security_hidden', 'true');
+    safeStorage.setItem('aha_security_hidden', 'true');
   };
 
   const toggleToggle = (key: string, setter: any, currentState: boolean) => {
     const newVal = !currentState;
     setter(newVal);
-    localStorage.setItem(key, newVal.toString());
+    safeStorage.setItem(key, newVal.toString());
     if (key === 'aha_strict_mode' || key === 'aha_censor_mode') {
       window.location.reload(); 
     }
   };
 
-  const clearCache = () => {
-    if (window.confirm('Очистить локальный кэш и логи безопасности?')) {
-      localStorage.removeItem('aha_threats_blocked');
-      localStorage.removeItem('aha_strict_mode');
-      localStorage.removeItem('aha_censor_mode');
-      localStorage.removeItem('aha_security_logs');
+  const toggleZeroTrace = () => {
+    const nextVal = !zeroTrace;
+    setZeroTrace(nextVal);
+    setZeroTraceMode(nextVal);
+  };
+
+  const clearCacheAndRAM = () => {
+    if (window.confirm('Очистить локальный кэш и провести 7-проходную очистку RAM? Все данные будут стёрты без следов.')) {
+      safeStorage.wipeAllTraces();
       window.location.reload();
     }
   };
@@ -217,9 +223,28 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
   const handlePanic = async () => {
     if (window.confirm("Включить режим маскировки? Это скроет текущий интерфейс сайта.")) {
         setIsPanicking(true);
-        localStorage.setItem('aha_panic_mode', 'true');
+        safeStorage.setItem('aha_panic_mode', 'true');
         window.location.href = window.location.origin;
     }
+  };
+
+  const copyVercelConfig = () => {
+    const config = `{
+  "version": 2,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-[#AHA]-Protocol-Version", "value": "6.0-HYPER-IPv6" },
+        { "key": "X-Forwarded-Proto", "value": "https" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
+      ]
+    }
+  ]
+}`;
+    navigator.clipboard.writeText(config);
+    setCopiedVercelConfig(true);
+    setTimeout(() => setCopiedVercelConfig(false), 2000);
   };
 
   if (isHidden || globalHidden || autoHide) return null;
@@ -233,12 +258,12 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-full left-0 mb-4 w-80 bg-[#15101e]/98 backdrop-blur-xl border border-[#ff4d4d]/30 rounded-xl shadow-[0_10px_40px_-10px_rgba(255,77,77,0.3)] overflow-hidden flex flex-col max-h-[400px]"
+            className="absolute bottom-full left-0 mb-4 w-96 bg-[#15101e]/98 backdrop-blur-xl border border-[#ff4d4d]/30 rounded-xl shadow-[0_10px_40px_-10px_rgba(255,77,77,0.3)] overflow-hidden flex flex-col max-h-[460px]"
           >
             <div className="p-4 border-b border-white/5 flex justify-between items-center bg-gradient-to-r from-[#ff4d4d]/10 to-transparent shrink-0">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="text-green-500 w-5 h-5" />
-                <h3 className="text-white font-black text-sm uppercase tracking-wider">Aha Security</h3>
+                <h3 className="text-white font-black text-sm uppercase tracking-wider">Aha Security Suite</h3>
               </div>
               <button onClick={() => setIsOpen(false)} className="text-white/50 hover:text-[#ff4d4d] transition-colors">
                 <X className="w-5 h-5" />
@@ -249,12 +274,13 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
             <div className="flex bg-[#0d0b14] border-b border-white/5 shrink-0">
                 <button onClick={() => setActiveTab('status')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${activeTab === 'status' ? 'text-[#ff4d4d] bg-[#ff4d4d]/10 border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>Статус</button>
                 <button onClick={() => setActiveTab('tools')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${activeTab === 'tools' ? 'text-[#ff4d4d] bg-[#ff4d4d]/10 border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>Защита</button>
+                <button onClick={() => setActiveTab('ipv6')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${activeTab === 'ipv6' ? 'text-[#ff4d4d] bg-[#ff4d4d]/10 border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>Vercel IPv6</button>
                 <button onClick={() => setActiveTab('logs')} className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${activeTab === 'logs' ? 'text-[#ff4d4d] bg-[#ff4d4d]/10 border-b-2 border-[#ff4d4d]' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>Логи</button>
             </div>
 
             <div className="overflow-y-auto hidden-scrollbar flex-1 p-4">
               {activeTab === 'status' && (
-                <div className="space-y-5">
+                <div className="space-y-4">
                     <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
                         <span className="text-white/60 text-xs font-medium">Статус системы:</span>
                         <span className="text-green-400 font-mono text-xs font-bold flex items-center gap-1.5">
@@ -267,7 +293,20 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
                         <span className="text-[#ff4d4d] font-black text-xl">{threatsBlocked}</span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 mt-2 text-center text-xs">
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Cpu className="w-4 h-4 text-emerald-400" />
+                        <div>
+                          <p className="text-xs font-bold text-emerald-300">Режим RAM-Only (Zero-Trace)</p>
+                          <p className="text-[10px] text-emerald-400/70">Дисковое localStorage отключено</p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">
+                        {zeroTrace ? 'RAM ACTIVE' : 'DISK ON'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-center text-xs">
                         <div className="bg-white/5 rounded-lg p-2 flex flex-col justify-center items-center gap-1">
                             <Lock className={`w-4 h-4 ${isStrict ? 'text-green-400' : 'text-gray-500'}`} />
                             <span className={isStrict ? 'text-green-400' : 'text-gray-500'}>Строгий</span>
@@ -282,6 +321,19 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
 
               {activeTab === 'tools' && (
                 <div className="space-y-4">
+                    {/* Zero Trace RAM Storage Toggle */}
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 cursor-pointer" onClick={toggleZeroTrace}>
+                        <div className="flex flex-col">
+                          <span className="text-emerald-300 text-xs font-bold flex items-center gap-1.5">
+                            <Cpu className="w-4 h-4 text-emerald-400" /> Zero-Trace Memory Mode
+                          </span>
+                          <span className="text-emerald-400/70 text-[10px] mt-0.5">Не сохраняет ничего в localStorage (ОЗУ)</span>
+                        </div>
+                        <button className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${zeroTrace ? 'bg-emerald-500' : 'bg-white/20'}`}>
+                          <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${zeroTrace ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+
                     {/* Strict Mode Toggle */}
                     <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer" onClick={() => toggleToggle('aha_strict_mode', setIsStrict, isStrict)}>
                         <div className="flex flex-col">
@@ -322,6 +374,49 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
                 </div>
               )}
 
+              {activeTab === 'ipv6' && (
+                <div className="space-y-3 text-xs text-gray-300">
+                  <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl">
+                    <p className="font-bold text-cyan-300 flex items-center gap-1.5 mb-1">
+                      <Network className="w-4 h-4" /> Vercel Native IPv6 Transfer Guide
+                    </p>
+                    <p className="text-[11px] text-gray-400 leading-relaxed">
+                      Чтобы перевести Vercel-проект на IPv6, добавьте AAAA-записи и конфигурацию двойного стека.
+                    </p>
+                  </div>
+
+                  <div className="bg-black/50 p-2.5 rounded-lg border border-white/10 space-y-1.5 font-mono text-[11px]">
+                    <div className="text-cyan-400 font-bold">1. DNS AAAA (Cloudflare / Reg.ru):</div>
+                    <p className="text-gray-300">Тип: <span className="text-emerald-400 font-bold">AAAA</span></p>
+                    <p className="text-gray-300">Имя: <span className="text-emerald-400">@</span> или <span className="text-emerald-400">subdomain</span></p>
+                    <p className="text-gray-300">Значение: <span className="text-emerald-300 select-all">2606:4700:3030::6815:102d</span></p>
+                  </div>
+
+                  <div className="bg-black/50 p-2.5 rounded-lg border border-white/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-cyan-400 font-bold font-mono text-[11px]">2. vercel.json config:</span>
+                      <button onClick={copyVercelConfig} className="px-2 py-1 bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500 hover:text-black rounded text-[10px] font-bold flex items-center gap-1 transition-colors">
+                        {copiedVercelConfig ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        {copiedVercelConfig ? 'Скопировано!' : 'Копировать'}
+                      </button>
+                    </div>
+                    <pre className="text-[10px] text-gray-400 font-mono bg-black/70 p-2 rounded overflow-x-auto">
+{`{
+  "version": 2,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-AHA-Protocol-Version", "value": "6.0-HYPER-IPv6" }
+      ]
+    }
+  ]
+}`}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'logs' && (
                   <div className="space-y-3">
                       {logs.length === 0 ? (
@@ -346,18 +441,19 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
             {/* Bottom Actions */}
             <div className="p-3 border-t border-white/5 bg-[#0d0b14] flex gap-2 shrink-0">
                 <button
-                  onClick={clearCache}
+                  onClick={clearCacheAndRAM}
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 bg-white/5 hover:bg-[#ff4d4d]/20 text-white/60 hover:text-[#ff4d4d] rounded-lg text-[10px] font-medium transition-colors border border-transparent hover:border-[#ff4d4d]/30"
+                  title="Очистить память RAM и диск"
                 >
-                  <Trash2 className="w-3 h-3" />
-                  Кэш
+                  <Trash2 className="w-3 h-3 text-[#ff4d4d]" />
+                  RAM / Disk Purge
                 </button>
                 <button
                   onClick={handleHide}
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg text-[10px] font-medium transition-colors"
                 >
                   <EyeOff className="w-3 h-3" />
-                  Скрыть виджет
+                  Скрыть
                 </button>
             </div>
           </motion.div>
@@ -379,21 +475,22 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
 export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' }) => {
   const { logout } = useAuth();
   const [threatsBlocked, setThreatsBlocked] = useState(globalThreatsBlocked);
-  const [isStrict, setIsStrict] = useState(localStorage.getItem('aha_strict_mode') === 'true');
-  const [isCensored, setIsCensored] = useState(localStorage.getItem('aha_censor_mode') === 'true');
+  const [isStrict, setIsStrict] = useState(safeStorage.getItem('aha_strict_mode') === 'true');
+  const [isCensored, setIsCensored] = useState(safeStorage.getItem('aha_censor_mode') === 'true');
+  const [zeroTrace, setZeroTrace] = useState(isZeroTraceActive());
   const [activeTab, setActiveTab] = useState<'status' | 'tools' | 'logs'>('status');
   const [logs, setLogs] = useState<string[]>([]);
   const [isPanicking, setIsPanicking] = useState(false);
 
   useEffect(() => {
     try {
-      setLogs(JSON.parse(localStorage.getItem('aha_security_logs') || '[]'));
+      setLogs(JSON.parse(safeStorage.getItem('aha_security_logs') || '[]'));
     } catch(e){}
 
     const handleThreat = () => {
       setThreatsBlocked(globalThreatsBlocked);
       try {
-        setLogs(JSON.parse(localStorage.getItem('aha_security_logs') || '[]'));
+        setLogs(JSON.parse(safeStorage.getItem('aha_security_logs') || '[]'));
       } catch(e){}
     };
     window.addEventListener('aha_threat_blocked', handleThreat);
@@ -403,7 +500,7 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
   const toggleToggle = (key: string, setter: any, currentState: boolean) => {
     const newVal = !currentState;
     setter(newVal);
-    localStorage.setItem(key, newVal.toString());
+    safeStorage.setItem(key, newVal.toString());
     if (key === 'aha_strict_mode' || key === 'aha_censor_mode') {
       window.location.reload(); 
     }
@@ -411,13 +508,10 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
 
   const clearCache = () => {
     const confirmMsg = lang === 'ru' 
-      ? 'Очистить локальный кэш и логи безопасности?' 
-      : 'Clear local cache and security logs?';
+      ? 'Очистить RAM и дисковый кэш?' 
+      : 'Clear RAM and disk cache?';
     if (window.confirm(confirmMsg)) {
-      localStorage.removeItem('aha_threats_blocked');
-      localStorage.removeItem('aha_strict_mode');
-      localStorage.removeItem('aha_censor_mode');
-      localStorage.removeItem('aha_security_logs');
+      safeStorage.wipeAllTraces();
       window.location.reload();
     }
   };
@@ -428,7 +522,7 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
       : "Enable panic mode? This will hide the current interface.";
     if (window.confirm(confirmMsg)) {
       setIsPanicking(true);
-      localStorage.setItem('aha_panic_mode', 'true');
+      safeStorage.setItem('aha_panic_mode', 'true');
       window.location.href = window.location.origin;
     }
   };

@@ -1,4 +1,5 @@
 import { sanitizeHttpHeaderValue } from './network';
+import { safeStorage } from './securityStorage';
 
 export interface UserAgentProfile {
   id: string;
@@ -110,9 +111,9 @@ const STORAGE_KEY_ADBLOCK = 'aha_browser_adblock_enabled';
  * Gets the active User-Agent profile configured for the embedded browser and network requests.
  */
 export function getActiveUserAgentProfile(): UserAgentProfile {
-  const savedId = localStorage.getItem(STORAGE_KEY_SELECTED_UA);
+  const savedId = safeStorage.getItem(STORAGE_KEY_SELECTED_UA);
   if (savedId === 'custom') {
-    const customStr = localStorage.getItem(STORAGE_KEY_CUSTOM_UA_STR) || 'CustomAhaAgent/1.0 (AHA-OS; IPv6)';
+    const customStr = safeStorage.getItem(STORAGE_KEY_CUSTOM_UA_STR) || 'CustomAhaAgent/1.0 (AHA-OS; IPv6)';
     return {
       id: 'custom',
       name: 'Custom User-Agent (Пользовательский UA)',
@@ -132,12 +133,12 @@ export function getActiveUserAgentProfile(): UserAgentProfile {
  */
 export function setActiveUserAgentProfile(id: string, customUAString?: string): UserAgentProfile {
   if (id === 'custom' && customUAString) {
-    localStorage.setItem(STORAGE_KEY_SELECTED_UA, 'custom');
-    localStorage.setItem(STORAGE_KEY_CUSTOM_UA_STR, customUAString.trim());
+    safeStorage.setItem(STORAGE_KEY_SELECTED_UA, 'custom');
+    safeStorage.setItem(STORAGE_KEY_CUSTOM_UA_STR, customUAString.trim());
     return getActiveUserAgentProfile();
   }
   const profile = AHA_CUSTOM_USER_AGENTS.find(u => u.id === id) || AHA_CUSTOM_USER_AGENTS[0];
-  localStorage.setItem(STORAGE_KEY_SELECTED_UA, profile.id);
+  safeStorage.setItem(STORAGE_KEY_SELECTED_UA, profile.id);
   return profile;
 }
 
@@ -149,7 +150,7 @@ export function getAhaBrowserHeaders(customUaId?: string): Record<string, string
     ? (AHA_CUSTOM_USER_AGENTS.find(u => u.id === customUaId) || getActiveUserAgentProfile())
     : getActiveUserAgentProfile();
 
-  const activeFlow = localStorage.getItem('aha_v6_active_flow_label') || '0x6AHA9F';
+  const activeFlow = safeStorage.getItem('aha_v6_active_flow_label') || '0x6AHA9F';
 
   return {
     'User-Agent': sanitizeHttpHeaderValue(profile.userAgentString),
@@ -166,7 +167,7 @@ export function getAhaBrowserHeaders(customUaId?: string): Record<string, string
  */
 export function getStoredBookmarks(): BookmarkItem[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_BOOKMARKS);
+    const raw = safeStorage.getItem(STORAGE_KEY_BOOKMARKS);
     if (raw) return JSON.parse(raw);
   } catch (e) {
     console.error('Failed to parse bookmarks', e);
@@ -190,14 +191,14 @@ export function saveBookmark(title: string, url: string, category: string = 'Gen
     createdAt: new Date().toISOString()
   };
   const updated = [newItem, ...current.filter(b => b.url !== url)];
-  localStorage.setItem(STORAGE_KEY_BOOKMARKS, JSON.stringify(updated));
+  safeStorage.setItem(STORAGE_KEY_BOOKMARKS, JSON.stringify(updated));
   return updated;
 }
 
 export function removeBookmark(id: string): BookmarkItem[] {
   const current = getStoredBookmarks();
   const updated = current.filter(b => b.id !== id);
-  localStorage.setItem(STORAGE_KEY_BOOKMARKS, JSON.stringify(updated));
+  safeStorage.setItem(STORAGE_KEY_BOOKMARKS, JSON.stringify(updated));
   return updated;
 }
 
@@ -206,7 +207,7 @@ export function removeBookmark(id: string): BookmarkItem[] {
  */
 export function getStoredHistory(): HistoryItem[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_HISTORY);
+    const raw = safeStorage.getItem(STORAGE_KEY_HISTORY);
     if (raw) return JSON.parse(raw);
   } catch (e) {
     console.error('Failed to parse history', e);
@@ -225,12 +226,12 @@ export function addHistoryEntry(url: string, title: string, incognito: boolean =
     incognito: false
   };
   const updated = [newItem, ...current.filter(h => h.url !== url)].slice(0, 100);
-  localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(updated));
+  safeStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(updated));
   return updated;
 }
 
 export function clearBrowserHistory(): HistoryItem[] {
-  localStorage.removeItem(STORAGE_KEY_HISTORY);
+  safeStorage.removeItem(STORAGE_KEY_HISTORY);
   return [];
 }
 
@@ -238,11 +239,11 @@ export function clearBrowserHistory(): HistoryItem[] {
  * AdBlocker Shield toggle
  */
 export function isAdBlockEnabled(): boolean {
-  return localStorage.getItem(STORAGE_KEY_ADBLOCK) !== 'false';
+  return safeStorage.getItem(STORAGE_KEY_ADBLOCK) !== 'false';
 }
 
 export function setAdBlockEnabled(enabled: boolean): boolean {
-  localStorage.setItem(STORAGE_KEY_ADBLOCK, String(enabled));
+  safeStorage.setItem(STORAGE_KEY_ADBLOCK, String(enabled));
   return enabled;
 }
 
