@@ -33,7 +33,12 @@ import {
   Maximize2,
   Minimize2,
   Share2,
-  Link2
+  Link2,
+  Type,
+  Sun,
+  Moon,
+  Printer,
+  Sparkles
 } from 'lucide-react';
 import { 
   AHA_CUSTOM_USER_AGENTS, 
@@ -188,10 +193,14 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
   const [activeTabId, setActiveTabId] = useState<string>('tab-1');
 
   // Modal View Modes
-  const [activeView, setActiveView] = useState<'viewport' | 'source' | 'ua_editor' | 'headers' | 'bookmarks' | 'history' | 'security'>('viewport');
+  const [activeView, setActiveView] = useState<'viewport' | 'reader' | 'source' | 'ua_editor' | 'headers' | 'bookmarks' | 'history' | 'security'>('viewport');
   const [inputUrl, setInputUrl] = useState<string>('https://aha-browser.v6/home');
   const [copiedSource, setCopiedSource] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  // Reader Mode State
+  const [readerFontSize, setReaderFontSize] = useState<number>(105);
+  const [readerTheme, setReaderTheme] = useState<'dark' | 'sepia' | 'light'>('dark');
 
   // Long press / Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -985,6 +994,18 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
             </button>
 
             <button
+              onClick={() => setActiveView('reader')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 ${
+                activeView === 'reader'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <BookOpen size={13} />
+              <span>{isRu ? 'Режим чтения' : 'Reader'}</span>
+            </button>
+
+            <button
               onClick={() => setActiveView('source')}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 ${
                 activeView === 'source'
@@ -1231,6 +1252,133 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeView === 'reader' && (
+              <div className="w-full h-full overflow-y-auto p-2 max-w-3xl mx-auto space-y-3">
+                {/* Reader Controls Toolbar */}
+                <div className="p-3 bg-[#140e21] border border-[#3d2b4f] rounded-2xl flex flex-wrap items-center justify-between gap-3 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <BookOpen size={18} className="text-amber-400" />
+                    <span className="text-xs font-bold text-white">{isRu ? 'Режим чтения (Reader View)' : 'Reader View'}</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {/* Font Size Controls */}
+                    <div className="flex items-center bg-[#0a0710] border border-[#3d2b4f] rounded-xl p-1 gap-1">
+                      <button
+                        onClick={() => setReaderFontSize(prev => Math.max(80, prev - 10))}
+                        className="px-2 py-0.5 hover:bg-white/10 rounded text-gray-300 font-bold transition-colors cursor-pointer"
+                        title="Decrease Font Size"
+                      >
+                        A-
+                      </button>
+                      <span className="text-[10px] font-mono text-amber-300 px-1">{readerFontSize}%</span>
+                      <button
+                        onClick={() => setReaderFontSize(prev => Math.min(160, prev + 10))}
+                        className="px-2 py-0.5 hover:bg-white/10 rounded text-gray-300 font-bold transition-colors cursor-pointer"
+                        title="Increase Font Size"
+                      >
+                        A+
+                      </button>
+                    </div>
+
+                    {/* Theme Picker */}
+                    <div className="flex items-center bg-[#0a0710] border border-[#3d2b4f] rounded-xl p-1 gap-1">
+                      <button
+                        onClick={() => setReaderTheme('dark')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                          readerTheme === 'dark' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        <Moon size={12} className="inline mr-1" />
+                        Dark
+                      </button>
+                      <button
+                        onClick={() => setReaderTheme('sepia')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                          readerTheme === 'sepia' ? 'bg-[#3b2a1a] text-[#e8d0a9] border border-[#6b4c2e]' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        Sepia
+                      </button>
+                      <button
+                        onClick={() => setReaderTheme('light')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                          readerTheme === 'light' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        <Sun size={12} className="inline mr-1" />
+                        Light
+                      </button>
+                    </div>
+
+                    {/* Copy Text Button */}
+                    <button
+                      onClick={() => {
+                        const pageText = activeTab?.contentCache ? activeTab.contentCache.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+                        navigator.clipboard.writeText(pageText || activeTab?.url || '');
+                        showContextToast(isRu ? 'Текст статьи скопирован' : 'Article text copied');
+                      }}
+                      className="px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Copy size={13} />
+                      <span>{isRu ? 'Копировать' : 'Copy'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Article Content Sheet */}
+                <div 
+                  className={`p-6 sm:p-8 rounded-2xl border transition-all space-y-6 min-h-[400px] ${
+                    readerTheme === 'sepia'
+                      ? 'bg-[#221c11] text-[#e8d0a9] border-[#4a3a22]'
+                      : readerTheme === 'light'
+                        ? 'bg-[#f8f6f0] text-[#1c1917] border-[#e2dec9] shadow-xl'
+                        : 'bg-[#120f1a] text-gray-200 border-[#3d2b4f]'
+                  }`}
+                  style={{ fontSize: `${(readerFontSize / 100) * 15}px`, lineHeight: '1.75' }}
+                >
+                  <div className="space-y-2 border-b pb-4 opacity-90 border-current/20">
+                    <span className="text-xs uppercase font-mono tracking-widest opacity-60 block font-bold">
+                      {new URL(activeTab?.url || 'https://aha-browser.v6').hostname}
+                    </span>
+                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+                      {activeTab?.title || (isRu ? 'Заголовок статьи' : 'Article Title')}
+                    </h1>
+                    <div className="flex items-center gap-3 text-xs font-mono opacity-70 pt-1">
+                      <span>⏱️ ~{Math.max(1, Math.ceil((activeTab?.contentCache?.length || 500) / 1200))} {isRu ? 'мин чтения' : 'min read'}</span>
+                      <span>•</span>
+                      <span>🔒 {isRu ? 'Без рекламы и трекеров' : 'Clean Distraction-Free'}</span>
+                    </div>
+                  </div>
+
+                  <div className="prose max-w-none space-y-4 font-sans leading-relaxed">
+                    {activeTab?.contentCache ? (
+                      activeTab.contentCache
+                        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+                        .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '')
+                        .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '')
+                        .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, '')
+                        .replace(/<[^>]*>/g, '\n')
+                        .split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 25)
+                        .slice(0, 40)
+                        .map((paragraph, idx) => (
+                          <p key={idx} className="mb-4">
+                            {paragraph}
+                          </p>
+                        ))
+                    ) : (
+                      <p className="opacity-70 italic text-center py-12">
+                        {isRu ? 'Загрузите веб-страницу для отображения в режиме чтения.' : 'Load a webpage to view its content in reader mode.'}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

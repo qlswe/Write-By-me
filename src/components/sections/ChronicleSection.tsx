@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Globe, RefreshCw, Swords, Plus, Edit, Trash2, Calendar, Clock } from 'lucide-react';
+import { Globe, RefreshCw, Swords, Plus, Edit, Trash2, Calendar, Clock, MapPin, List, Bell, BellOff, Sparkles, Check } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { getNextEventDate, getEventProgress, formatCountdown, pluralize } from '../../utils/time';
 import { usePerfLogger } from '../../utils/logger';
 import { useAuth } from '../../hooks/useAuth';
-import { deleteDoc, doc } from 'firebase/firestore';
+import { deleteDoc, doc, collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
+import { safeStorage } from '../../utils/securityStorage';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { ChronicleSkeletonList } from '../ui/SkeletonLoaders';
+import { AhaMap } from '../ui/AhaMap';
 
 interface ChronicleSectionProps {
   lang: Language;
@@ -144,9 +146,71 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
 
   const [now, setNow] = useState(new Date());
   const [eventToDelete, setEventToDelete] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'both' | 'map' | 'timeline'>('both');
+  const [isSubscribed, setIsSubscribed] = useState(() => {
+    return safeStorage.getItem('aha_chronicle_subscribed') !== 'false';
+  });
+
   const { user } = useAuth();
   const isAdmin = role === 'admin';
   const isModerator = role === 'admin' || role === 'moderator' || isAdmin;
+  const isRu = lang === 'ru';
+
+  // Real-time Firestore Subscription for NEW Chronicle Events
+  useEffect(() => {
+    if (!isSubscribed) return;
+
+    const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'), limit(10));
+    let isInitialLoad = true;
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (isInitialLoad) {
+        isInitialLoad = false;
+        return;
+      }
+
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const eventData = change.doc.data();
+          const rawTitle = eventData.title;
+          const eventTitle = typeof rawTitle === 'string'
+            ? rawTitle
+            : (rawTitle?.[lang] || rawTitle?.ru || rawTitle?.en || (isRu ? 'Новое событие' : 'New Event'));
+
+          const toastMessage = isRu
+            ? `🔔 Новое событие в Хронике: "${eventTitle}"!`
+            : `🔔 New Chronicle Event added: "${eventTitle}"!`;
+
+          // Dispatch toast to application
+          window.dispatchEvent(new CustomEvent('aha_toast', { detail: toastMessage }));
+
+          // Play subtle audio alert if supported
+          try {
+            const audio = new Audio('/notification.mp3');
+            audio.play().catch(() => {});
+          } catch (e) {}
+        }
+      });
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'events');
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isSubscribed, lang, isRu]);
+
+  const toggleSubscription = () => {
+    const nextSub = !isSubscribed;
+    setIsSubscribed(nextSub);
+    safeStorage.setItem('aha_chronicle_subscribed', String(nextSub));
+
+    const notificationMsg = nextSub
+      ? (isRu ? '🔔 Вы подписились на уведомления о новых событиях Хроники' : '🔔 Subscribed to new Chronicle event alerts')
+      : (isRu ? '🔕 Подписка на уведомления Хроники отключена' : '🔕 Unsubscribed from Chronicle event alerts');
+
+    window.dispatchEvent(new CustomEvent('aha_toast', { detail: notificationMsg }));
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -166,55 +230,160 @@ export const ChronicleSection: React.FC<ChronicleSectionProps> = ({ lang, lowPer
   };
 
   return (
-    <div className="bg-[#15101e] rounded-[3rem] p-8 sm:p-12 border border-[#3d2b4f]/30 shadow-[0_0_50px_rgba(0,0,0,0.3)]">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-16">
+    <div className="bg-[#15101e] rounded-[3rem] p-8 sm:p-12 border border-[#3d2b4f]/30 shadow-[0_0_50px_rgba(0,0,0,0.3)] space-y-10">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 pb-6 border-b border-[#3d2b4f]/40">
         <div>
-          <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-[#ff4d4d]/10 flex items-center justify-center border border-[#ff4d4d]/20">
-              <Calendar className="text-[#ff4d4d]" size={24} />
-            </div>
-            {t.navChronicle}
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-[#ff4d4d]/10 flex items-center justify-center border border-[#ff4d4d]/20">
+                <Calendar className="text-[#ff4d4d]" size={24} />
+              </div>
+              {t.navChronicle}
+            </h2>
+            {isSubscribed && (
+              <span className="px-2.5 py-1 bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] font-black rounded-full uppercase flex items-center gap-1.5 shadow-md animate-pulse">
+                <Bell size={11} className="text-amber-400" />
+                {isRu ? 'Подписка активна' : 'Live Subscribed'}
+              </span>
+            )}
+          </div>
           <p className="text-white/60 text-sm mt-3 font-medium tracking-wide">{t.chronicleDesc}</p>
         </div>
-        {isModerator && (
-          <button 
-            onClick={onCreate} 
-            className="flex items-center gap-3 bg-[#ff4d4d] text-[#15101e] px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,77,77,0.3)] border border-white/20"
+
+        <div className="flex flex-wrap items-center gap-3 self-stretch lg:self-auto justify-between lg:justify-end">
+          {/* Real-time Event Subscription Button */}
+          <button
+            onClick={toggleSubscription}
+            className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer shadow-lg border ${
+              isSubscribed
+                ? 'bg-amber-400/20 text-amber-300 border-amber-400/40 hover:bg-amber-400/30 shadow-[0_0_20px_rgba(251,191,36,0.2)]'
+                : 'bg-[#1a1329] text-gray-400 border-[#3d2b4f] hover:text-white hover:bg-white/10'
+            }`}
+            title={isSubscribed ? (isRu ? 'Отключить подписку' : 'Unsubscribe') : (isRu ? 'Подписаться на события' : 'Subscribe')}
           >
-            <Plus size={20} />
-            {t.createEvent}
+            {isSubscribed ? (
+              <>
+                <Bell size={15} className="text-amber-400 animate-bounce" />
+                <span>{isRu ? 'Уведомления ВКЛ' : 'Alerts ON'}</span>
+              </>
+            ) : (
+              <>
+                <BellOff size={15} />
+                <span>{isRu ? 'Подписаться' : 'Subscribe'}</span>
+              </>
+            )}
           </button>
-        )}
+
+          {/* Mode Switcher */}
+          <div className="flex items-center bg-[#1a1329] border border-[#3d2b4f] rounded-2xl p-1 gap-1">
+            <button
+              onClick={() => setViewMode('both')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                viewMode === 'both' ? 'bg-[#ff4d4d] text-black font-black shadow-lg' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <Globe size={14} />
+              <span>{isRu ? 'Всё вместе' : 'All Views'}</span>
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                viewMode === 'map' ? 'bg-[#ff4d4d] text-black font-black shadow-lg' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <MapPin size={14} />
+              <span>{isRu ? 'Карта Leaflet' : 'Leaflet Map'}</span>
+            </button>
+            <button
+              onClick={() => setViewMode('timeline')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                viewMode === 'timeline' ? 'bg-[#ff4d4d] text-black font-black shadow-lg' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              <List size={14} />
+              <span>{isRu ? 'Лента хроники' : 'Timeline'}</span>
+            </button>
+          </div>
+
+          {isModerator && (
+            <button 
+              onClick={onCreate} 
+              className="flex items-center gap-3 bg-[#ff4d4d] text-[#15101e] px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_rgba(255,77,77,0.3)] border border-white/20 cursor-pointer"
+            >
+              <Plus size={18} />
+              {t.createEvent}
+            </button>
+          )}
+        </div>
       </div>
 
-      {loading ? (
-        <ChronicleSkeletonList count={4} />
-      ) : events.length === 0 ? (
-        <div className="text-center py-20 text-white/40 bg-[#15101e]/30 rounded-3xl border-2 border-dashed border-[#3d2b4f]/50">
-          <Calendar size={48} className="mx-auto mb-4 text-[#3d2b4f]" />
-          <p className="text-xl font-bold uppercase tracking-widest">{t.noResults}</p>
-        </div>
-      ) : (
-        <div className="relative space-y-12">
-          {/* Timeline Line */}
-          <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-[#ff4d4d]/50 via-[#3d2b4f]/30 to-transparent hidden md:block" />
+      {/* World Map Component Section */}
+      {(viewMode === 'both' || viewMode === 'map') && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-4"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+              <MapPin size={14} className="text-[#ff4d4d]" />
+              {isRu ? 'Геолокация активных узлов Хроники (AhaMap)' : 'Chronicle Active Hotspots Map'}
+            </span>
+          </div>
 
-          {events.map((event, index) => (
-            <EventCard 
-              key={event.id}
-              event={event}
-              index={index}
-              now={now}
-              t={t}
-              lang={lang}
-              lowPerfMode={lowPerfMode}
-              isModerator={isModerator}
-              isAdmin={isAdmin}
-              onEdit={onEdit}
-              onDelete={setEventToDelete}
-            />
-          ))}
+          <AhaMap
+            lang={lang}
+            events={events}
+            lowPerfMode={lowPerfMode}
+            onSelectEvent={(selectedEv) => {
+              // Optionally scroll or highlight in list
+            }}
+          />
+        </motion.div>
+      )}
+
+      {/* Chronicle Timeline Section */}
+      {(viewMode === 'both' || viewMode === 'timeline') && (
+        <div className="space-y-6 pt-4">
+          {viewMode === 'both' && (
+            <div className="flex items-center justify-between pb-2 border-b border-[#3d2b4f]/20">
+              <span className="text-xs font-mono font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                <Clock size={14} className="text-[#ff4d4d]" />
+                {isRu ? 'Временная лента событий' : 'Chronicle Events Timeline'}
+              </span>
+            </div>
+          )}
+
+          {loading ? (
+            <ChronicleSkeletonList count={4} />
+          ) : events.length === 0 ? (
+            <div className="text-center py-20 text-white/40 bg-[#15101e]/30 rounded-3xl border-2 border-dashed border-[#3d2b4f]/50">
+              <Calendar size={48} className="mx-auto mb-4 text-[#3d2b4f]" />
+              <p className="text-xl font-bold uppercase tracking-widest">{t.noResults}</p>
+            </div>
+          ) : (
+            <div className="relative space-y-12">
+              {/* Timeline Line */}
+              <div className="absolute left-8 top-0 bottom-0 w-px bg-gradient-to-b from-[#ff4d4d]/50 via-[#3d2b4f]/30 to-transparent hidden md:block" />
+
+              {events.map((event, index) => (
+                <EventCard 
+                  key={event.id}
+                  event={event}
+                  index={index}
+                  now={now}
+                  t={t}
+                  lang={lang}
+                  lowPerfMode={lowPerfMode}
+                  isModerator={isModerator}
+                  isAdmin={isAdmin}
+                  onEdit={onEdit}
+                  onDelete={setEventToDelete}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

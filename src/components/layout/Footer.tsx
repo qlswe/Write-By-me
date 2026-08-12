@@ -55,14 +55,11 @@ export const Footer: React.FC<FooterProps> = ({ lang, setFeedbackOpen }) => {
               </div>
 
               <button
-                onClick={() => {
-                  if (canInstall) installPWA();
-                  else setPwaModalOpen(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-[#15101e] hover:bg-[#3d2b4f] border border-[#3d2b4f] hover:border-[#ff4d4d] text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                onClick={() => setPwaModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#15101e] hover:bg-[#3d2b4f] border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md"
               >
-                <Smartphone size={16} className="text-[#ff4d4d]" />
-                <span>{isInstalled ? (lang === 'ru' ? 'Web-App Установлено' : 'Web-App Installed') : (lang === 'ru' ? 'Установить Web-App' : 'Install Web-App')}</span>
+                <Smartphone size={16} className="text-cyan-400 animate-pulse" />
+                <span>{lang === 'ru' ? 'ПК & Мобильные Приложения' : 'PC & Mobile Apps Center'}</span>
               </button>
             </div>
           </div>

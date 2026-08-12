@@ -248,6 +248,16 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-[10px] sm:text-[11px] font-black tracking-wide">{lang === 'ru' ? 'Браузер' : 'Browser'}</span>
             </button>
 
+            {/* PC & Mobile App & Script Hub Badge */}
+            <button
+              onClick={() => setPwaModalOpen(true)}
+              className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-emerald-500/20 border-cyan-500/40 text-cyan-200 hover:border-cyan-300 transition-all duration-300 active:scale-95 shadow-lg shadow-cyan-500/10 cursor-pointer"
+              title={lang === 'ru' ? "Центр Приложений (EXE для ПК, APK для Android, PWA)" : "App Center (Windows EXE, Android APK, PWA)"}
+            >
+              <Smartphone size={14} className="text-cyan-400 animate-pulse" />
+              <span className="text-[10px] sm:text-[11px] font-black tracking-wide">{lang === 'ru' ? 'EXE, APK & App' : 'EXE, APK & App'}</span>
+            </button>
+
             <button 
               onClick={() => sdk.reloadApp()}
               className="hidden md:flex items-center justify-center p-2 rounded-xl border bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d] transition-all duration-300 active:scale-95 shadow-md shadow-[#ff4d4d]/5"
@@ -459,10 +469,18 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <button 
                   onClick={() => { setEmbeddedBrowserOpen(true); setMobileMenuOpen(false); }}
-                  className="flex items-center justify-center gap-2 bg-[#15101e] border border-purple-500/40 text-purple-300 p-3 rounded-xl text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer col-span-2"
+                  className="flex items-center justify-center gap-2 bg-[#15101e] border border-purple-500/40 text-purple-300 p-3 rounded-xl text-xs font-bold hover:bg-purple-500/20 transition-all cursor-pointer"
                 >
                   <Globe size={16} className="text-purple-400 animate-pulse" />
-                  <span>{lang === 'ru' ? 'Встроенный браузер (AHA Browser & UA)' : 'AHA Browser & UA Inspector'}</span>
+                  <span>{lang === 'ru' ? 'Браузер' : 'Browser'}</span>
+                </button>
+
+                <button 
+                  onClick={() => { setPwaModalOpen(true); setMobileMenuOpen(false); }}
+                  className="flex items-center justify-center gap-2 bg-[#15101e] border border-cyan-500/40 text-cyan-300 p-3 rounded-xl text-xs font-bold hover:bg-cyan-500/20 transition-all cursor-pointer"
+                >
+                  <Smartphone size={16} className="text-cyan-400 animate-pulse" />
+                  <span>{lang === 'ru' ? 'EXE, APK & App' : 'EXE, APK & App'}</span>
                 </button>
 
                 {onToggleConsole && (
