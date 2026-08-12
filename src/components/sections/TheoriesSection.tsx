@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, Search, ArrowLeft, Share2, Check, Plus, Edit, BookOpen, Sparkles, User, Clock, FileDown, Printer } from 'lucide-react';
+import { Star, Search, ArrowLeft, Share2, Check, Plus, Edit, BookOpen, Sparkles, User, Clock, FileDown, Printer, Quote } from 'lucide-react';
 import { ArticleAudioPlayer } from '../ui/ArticleAudioPlayer';
+import { ArticleReadingMeta, ArticleCitationModal, ArticleTableOfContents } from '../ui/ArticleTools';
 import { theoriesData } from '../../data/content';
 import { exportContentToPDF } from '../../utils/pdfExport';
 import { Language, translations } from '../../data/translations';
@@ -58,6 +59,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   const { trackRender } = usePerfLogger('TheoriesSection');
   const debouncedTheorySearch = useDebounce(theorySearch, 150);
   const [selectedTheoryId, setSelectedTheoryId] = useState<string | null>(null);
+  const [showCiteModal, setShowCiteModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [theoryToDelete, setTheoryToDelete] = useState<string | null>(null);
   const { user } = useAuth();
@@ -153,14 +155,42 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="bg-[#251c35] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#3d2b4f] relative overflow-hidden printable-theory-article"
           >
-            {/* Print-Only Header Banner */}
-            <div className="hidden print-header-banner">
-              <div className="print-header-logo">
-                AHA PLATFORM <span className="text-[#ff4d4d] font-normal">| {lang === 'ru' ? 'ТЕОРИЯ' : 'THEORY'}</span>
+            {/* Print-Only Cover Page with Metadata */}
+            <div className="hidden print-cover-page">
+              <div className="print-cover-header">
+                <div className="print-cover-logo">
+                  🏛️ AHA PLATFORM | {lang === 'ru' ? 'МИНИСТЕРСТВО АХАХИ' : 'MINISTRY OF AHA'}
+                </div>
+                <div className="print-cover-doc-type">
+                  {lang === 'ru' ? 'ОФИЦИАЛЬНАЯ ТЕОРИЯ / ARCHIVE' : 'OFFICIAL THEORY / ARCHIVE'}
+                </div>
               </div>
-              <div className="print-header-meta">
-                <div>{(selectedTheory.category || 'General').toUpperCase()}</div>
-                <div>{new Date(selectedTheory.createdAt || Date.now()).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}</div>
+
+              <div className="print-cover-body">
+                <div className="print-cover-badge">
+                  {(selectedTheory.category || 'General').toUpperCase()}
+                </div>
+                <h1 className="print-cover-title">
+                  {selectedTheory.title[lang] || selectedTheory.title['en']}
+                </h1>
+                {(selectedTheory.summary?.[lang] || selectedTheory.summary?.['en']) && (
+                  <div className="print-cover-summary">
+                    <strong>{lang === 'ru' ? 'Аннотация:' : 'Abstract:'}</strong>{' '}
+                    {selectedTheory.summary[lang] || selectedTheory.summary['en']}
+                  </div>
+                )}
+              </div>
+
+              <div className="print-cover-footer">
+                <div className="print-cover-meta-grid">
+                  <div><strong>{lang === 'ru' ? 'Автор / Источник:' : 'Author / Source:'}</strong> AHA Research Department</div>
+                  <div><strong>{lang === 'ru' ? 'Дата публикации:' : 'Published:'}</strong> {new Date(selectedTheory.createdAt || Date.now()).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}</div>
+                  <div><strong>{lang === 'ru' ? 'Идентификатор:' : 'ID:'}</strong> {selectedTheory.id}</div>
+                  <div><strong>{lang === 'ru' ? 'Гриф:' : 'Classification:'}</strong> UNCLASSIFIED / PUBLIC</div>
+                </div>
+                <div className="print-cover-stamp">
+                  AHA VERIFIED
+                </div>
               </div>
             </div>
 
@@ -177,7 +207,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               {t.navTheories}
             </button>
             
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30 category-badge-print">
@@ -188,9 +218,15 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                     <TimeAgo date={selectedTheory.createdAt} lang={lang} />
                   </div>
                 </div>
-                <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight tracking-tighter">
+                <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight tracking-tighter mb-4">
                   {selectedTheory.title[lang] || selectedTheory.title['en']}
                 </h2>
+
+                {/* Article Statistics & Reading Meta */}
+                <ArticleReadingMeta
+                  htmlContent={selectedTheory.content[lang] || selectedTheory.content['en']}
+                  lang={lang}
+                />
               </div>
               
               <div className="flex flex-wrap gap-3 shrink-0 justify-end print:hidden">
@@ -203,6 +239,13 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                     <Edit size={18} />
                   </button>
                 )}
+                <button 
+                  onClick={() => setShowCiteModal(true)}
+                  className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-purple-400 hover:bg-purple-400/10 hover:border-purple-400/30 transition-all border border-transparent cursor-pointer flex items-center justify-center"
+                  title={lang === 'ru' ? 'Академическое цитирование (ГОСТ / APA / BibTeX)' : 'Cite Article (GOST / APA / BibTeX)'}
+                >
+                  <Quote size={18} />
+                </button>
                 <button 
                   onClick={() => exportContentToPDF({
                     title: selectedTheory.title[lang] || selectedTheory.title['en'],
@@ -251,6 +294,12 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               </div>
             )}
 
+            {/* Interactive Table of Contents */}
+            <ArticleTableOfContents
+              htmlContent={selectedTheory.content[lang] || selectedTheory.content['en']}
+              lang={lang}
+            />
+
             <div 
               ref={contentRef}
               className="prose prose-invert prose-p:text-white/80 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none mb-8 text-base sm:text-lg leading-relaxed"
@@ -273,6 +322,18 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             <div className="pt-10 border-t border-[#3d2b4f] print:hidden">
               <CommentsSection targetId={selectedTheory.id} lang={lang} lowPerfMode={lowPerfMode} role={role} onOpenChat={onOpenChat} />
             </div>
+
+            {/* Academic Citation Modal */}
+            <ArticleCitationModal
+              isOpen={showCiteModal}
+              onClose={() => setShowCiteModal(false)}
+              title={selectedTheory.title[lang] || selectedTheory.title['en']}
+              htmlContent={selectedTheory.content[lang] || selectedTheory.content['en']}
+              category={selectedTheory.category}
+              createdAt={selectedTheory.createdAt}
+              articleId={selectedTheory.id}
+              lang={lang}
+            />
           </motion.div>
         ) : (
           <motion.div 

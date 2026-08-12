@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUsers, UserData } from '../../hooks/useUsers';
 import { useAuth } from '../../hooks/useAuth';
 import { translations, Language } from '../../data/translations';
-import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Settings, Lock, Trash2, Ban, ImageOff, Plus, Mail, Smartphone, Copy, Check } from 'lucide-react';
+import { Shield, User, UserCheck, MessageSquare, ChevronDown, Search, X, Settings, Lock, Trash2, Ban, ImageOff, Plus, Mail, Smartphone, Copy, Check, Megaphone, Bell, Send, AlertTriangle, CheckCircle2, Sparkles, AlertOctagon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -393,28 +393,128 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
   const [newBlockEmailInput, setNewBlockEmailInput] = useState('');
   const [newBlockDeviceIdInput, setNewBlockDeviceIdInput] = useState('');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceReason, setMaintenanceReason] = useState('');
+  const [maintenanceReasonInput, setMaintenanceReasonInput] = useState('');
+  const [isSavingReason, setIsSavingReason] = useState(false);
+  const [reasonSavedMsg, setReasonSavedMsg] = useState(false);
+
+  // Broadcast Notification State
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastType, setBroadcastType] = useState<'info' | 'warning' | 'alert' | 'success'>('info');
+  const [activeBroadcast, setActiveBroadcast] = useState<any>(null);
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
+  const [broadcastStatusMsg, setBroadcastStatusMsg] = useState('');
+
   const [securityHidden, setSecurityHidden] = useState(false);
   const [protectedViewFeatureEnabled, setProtectedViewFeatureEnabled] = useState(true);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+    const unsubGeneral = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setMaintenanceMode(data.maintenanceMode || false);
         setSecurityHidden(data.securityHidden || false);
         setProtectedViewFeatureEnabled(data.protectedViewFeatureEnabled !== false);
+        if (data.maintenanceReason !== undefined) {
+          setMaintenanceReason(data.maintenanceReason || '');
+          setMaintenanceReasonInput(prev => prev === '' ? (data.maintenanceReason || '') : prev);
+        }
       }
     });
-    return () => unsub();
+
+    const unsubBroadcast = onSnapshot(doc(db, 'settings', 'broadcast'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setActiveBroadcast(data.activeBroadcast || null);
+      } else {
+        setActiveBroadcast(null);
+      }
+    });
+
+    return () => {
+      unsubGeneral();
+      unsubBroadcast();
+    };
   }, []);
+
+  const handleSaveMaintenanceReason = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!isAdmin) return;
+    setIsSavingReason(true);
+    try {
+      const docRef = doc(db, 'settings', 'general');
+      await setDoc(docRef, { 
+        maintenanceReason: maintenanceReasonInput.trim(),
+        maintenanceUpdatedAt: Date.now() 
+      }, { merge: true });
+      setReasonSavedMsg(true);
+      setTimeout(() => setReasonSavedMsg(false), 2500);
+    } catch (error) {
+      console.error("Error saving maintenance reason:", error);
+    } finally {
+      setIsSavingReason(false);
+    }
+  };
 
   const toggleMaintenanceMode = async () => {
     if (!isAdmin) return;
     try {
       const docRef = doc(db, 'settings', 'general');
-      await setDoc(docRef, { maintenanceMode: !maintenanceMode }, { merge: true });
+      await setDoc(docRef, { 
+        maintenanceMode: !maintenanceMode,
+        maintenanceReason: maintenanceReasonInput.trim(),
+        maintenanceUpdatedAt: Date.now()
+      }, { merge: true });
     } catch (error) {
       console.error("Error toggling maintenance mode:", error);
+    }
+  };
+
+  const handleSendBroadcast = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!isModeratorOrAdmin) return;
+    if (!broadcastMessage.trim()) return;
+
+    setIsSendingBroadcast(true);
+    try {
+      const broadcastObj = {
+        id: `broadcast_${Date.now()}`,
+        title: broadcastTitle.trim() || (lang === 'ru' ? 'Системное оповещение' : 'System Announcement'),
+        message: broadcastMessage.trim(),
+        type: broadcastType,
+        sender: currentUser?.displayName || (lang === 'ru' ? 'Администрация' : 'Admin Staff'),
+        timestamp: Date.now()
+      };
+
+      await setDoc(doc(db, 'settings', 'broadcast'), {
+        activeBroadcast: broadcastObj,
+        lastUpdated: Date.now()
+      }, { merge: true });
+
+      setBroadcastStatusMsg(lang === 'ru' ? '🚀 Уведомление мгновенно отправлено всем онлайн пользователям!' : '🚀 Instant notification broadcasted to all users!');
+      setBroadcastTitle('');
+      setBroadcastMessage('');
+      setTimeout(() => setBroadcastStatusMsg(''), 4000);
+    } catch (err) {
+      console.error("Error sending broadcast notification:", err);
+      setBroadcastStatusMsg(lang === 'ru' ? 'Ошибка отправки уведомления' : 'Error sending broadcast');
+    } finally {
+      setIsSendingBroadcast(false);
+    }
+  };
+
+  const handleClearBroadcast = async () => {
+    if (!isModeratorOrAdmin) return;
+    try {
+      await setDoc(doc(db, 'settings', 'broadcast'), {
+        activeBroadcast: null,
+        lastUpdated: Date.now()
+      }, { merge: true });
+      setBroadcastStatusMsg(lang === 'ru' ? 'Активное вещание снято' : 'Broadcast cleared');
+      setTimeout(() => setBroadcastStatusMsg(''), 2500);
+    } catch (err) {
+      console.error("Error clearing broadcast:", err);
     }
   };
 
@@ -598,32 +698,206 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
             )}
           </div>
 
-          <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-xl ${maintenanceMode ? 'bg-red-500/20 text-red-400' : 'bg-[#3d2b4f]/30 text-[#ff4d4d]'}`}>
-                <Settings size={20} />
+          {/* Realtime Broadcast Notification Studio (Instant Site-wide Alerts) */}
+          <div className="bg-gradient-to-br from-[#1c1228] via-[#15101e] to-[#0d0a14] border border-[#ff4d4d]/40 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4 relative overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[#3d2b4f]/60 pb-3.5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-[#ff4d4d]/20 text-[#ff4d4d] border border-[#ff4d4d]/30 shadow-md">
+                  <Megaphone size={22} className="animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white uppercase tracking-wider text-base flex items-center gap-2">
+                    <span>{lang === 'ru' ? 'Системное Моментальное Вещание' : 'System Instant Broadcast'}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 font-mono">LIVE</span>
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    {lang === 'ru' ? 'Отправляйте всплывающие уведомления всем онлайн-пользователям без задержек и лимитов.' : 'Send instant popup alerts to all online users without hourly limits.'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-black text-white uppercase tracking-widest text-sm">
-                  {t.adminMaintenanceMode}
-                </h3>
-                <p className="text-xs text-gray-400">
-                  {(t as any).adminMaintenanceDesc || t.adminCloseSite}
-                </p>
+
+              {activeBroadcast && (
+                <button
+                  type="button"
+                  onClick={handleClearBroadcast}
+                  className="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Снять активное уведомление"
+                >
+                  <Trash2 size={13} />
+                  <span>{lang === 'ru' ? 'Снять вещание' : 'Clear Alert'}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Quick Template Chips */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider font-mono">
+                {lang === 'ru' ? 'Быстрые шаблоны уведомлений:' : 'Quick Notification Templates:'}
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { title: lang === 'ru' ? '🛠️ Технические работы' : '🛠️ Scheduled Maintenance', msg: lang === 'ru' ? 'Ведутся профилактические работы на серверах. Сайт может перезагружаться.' : 'Maintenance in progress. System might reload temporarily.', type: 'warning' },
+                  { title: lang === 'ru' ? '🚀 Глобальное Обновление 6.0' : '🚀 Global Update 6.0 Released', msg: lang === 'ru' ? 'Выпущено обновление! Обновите страницу для получения новых функций.' : 'New update live! Refresh to access new features.', type: 'success' },
+                  { title: lang === 'ru' ? '📢 Важное Объявление' : '📢 Important Announcement', msg: lang === 'ru' ? 'Пожалуйста, ознакомьтесь с новыми правилами и материалами.' : 'Please read the latest updates and announcements.', type: 'info' },
+                  { title: lang === 'ru' ? '⚠️ Внимание всем пользователям' : '⚠️ Attention All Users', msg: lang === 'ru' ? 'В связи с высокими нагрузками включен режим оптимизации.' : 'High traffic optimization mode is currently active.', type: 'alert' }
+                ].map((tmpl, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setBroadcastTitle(tmpl.title);
+                      setBroadcastMessage(tmpl.msg);
+                      setBroadcastType(tmpl.type as any);
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-[#261836] hover:bg-[#ff4d4d]/20 text-gray-300 hover:text-white border border-[#3d2b4f] hover:border-[#ff4d4d]/40 text-xs transition-all cursor-pointer"
+                  >
+                    {tmpl.title}
+                  </button>
+                ))}
               </div>
             </div>
-            <button
-              onClick={toggleMaintenanceMode}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
-                maintenanceMode ? 'bg-red-500' : 'bg-[#0d0b14]'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  maintenanceMode ? 'translate-x-6' : 'translate-x-1'
-                }`}
+
+            {/* Broadcast Form */}
+            <form onSubmit={handleSendBroadcast} className="space-y-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <input
+                    type="text"
+                    value={broadcastTitle}
+                    onChange={(e) => setBroadcastTitle(e.target.value)}
+                    placeholder={lang === 'ru' ? 'Заголовок уведомления (например: 🚀 Релиз 6.0)' : 'Notification Title'}
+                    className="w-full bg-[#0d0b14] border border-[#3d2b4f] focus:border-[#ff4d4d] text-white text-xs rounded-xl px-3.5 py-2.5 outline-none transition-all font-sans"
+                  />
+                </div>
+                <div>
+                  <select
+                    value={broadcastType}
+                    onChange={(e) => setBroadcastType(e.target.value as any)}
+                    className="w-full bg-[#0d0b14] border border-[#3d2b4f] focus:border-[#ff4d4d] text-white text-xs rounded-xl px-3 py-2.5 outline-none transition-all font-mono"
+                  >
+                    <option value="info">🔵 Info / Информация</option>
+                    <option value="warning">🟡 Warning / Предупреждение</option>
+                    <option value="alert">🔴 Alert / Важное</option>
+                    <option value="success">🟢 Success / Успех</option>
+                  </select>
+                </div>
+              </div>
+
+              <textarea
+                value={broadcastMessage}
+                onChange={(e) => setBroadcastMessage(e.target.value)}
+                placeholder={lang === 'ru' ? 'Текст моментального системного уведомления...' : 'Instant system broadcast message...'}
+                rows={2}
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f] focus:border-[#ff4d4d] text-white text-xs rounded-xl p-3 outline-none transition-all font-sans leading-relaxed resize-none"
               />
-            </button>
+
+              <div className="flex items-center justify-between gap-3 pt-1">
+                {broadcastStatusMsg ? (
+                  <span className="text-xs font-bold text-emerald-400 font-mono animate-pulse">
+                    {broadcastStatusMsg}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-gray-400">
+                    {lang === 'ru' ? 'Уведомление придет всем в реальном времени со звуком' : 'Broadcast triggers instantly with sound on all screens'}
+                  </span>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSendingBroadcast || !broadcastMessage.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-[#ff4d4d] hover:from-[#ff4d4d] hover:to-red-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider shadow-lg hover:shadow-[0_0_20px_rgba(255,77,77,0.4)] transition-all cursor-pointer flex items-center gap-2 active:scale-95 shrink-0"
+                >
+                  <Send size={14} />
+                  <span>{isSendingBroadcast ? (lang === 'ru' ? 'Отправка...' : 'Sending...') : (lang === 'ru' ? 'Отправить всем моментально' : 'Broadcast Now')}</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Currently Active Broadcast Preview */}
+            {activeBroadcast && (
+              <div className="mt-3 p-3.5 rounded-2xl bg-[#0d0b14]/80 border border-[#3d2b4f] text-xs space-y-1">
+                <div className="flex items-center justify-between text-[#ff4d4d] font-bold font-mono text-[10px] uppercase">
+                  <span>{lang === 'ru' ? 'Активное системное вещание:' : 'Currently Active Broadcast:'}</span>
+                  <span>{activeBroadcast.sender} • {new Date(activeBroadcast.timestamp || Date.now()).toLocaleTimeString()}</span>
+                </div>
+                <div className="font-bold text-white text-sm">{activeBroadcast.title}</div>
+                <div className="text-gray-300 font-sans">{activeBroadcast.message}</div>
+              </div>
+            )}
+          </div>
+
+          {/* Maintenance Mode & Custom Reason Management */}
+          <div className="bg-[#15101e] border border-[#3d2b4f]/40 rounded-3xl p-5 sm:p-6 shadow-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-2xl ${maintenanceMode ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-[#3d2b4f]/30 text-[#ff4d4d]'}`}>
+                  <Settings size={22} className={maintenanceMode ? 'animate-spin' : ''} />
+                </div>
+                <div>
+                  <h3 className="font-black text-white uppercase tracking-widest text-sm flex items-center gap-2">
+                    <span>{t.adminMaintenanceMode}</span>
+                    {maintenanceMode && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 font-mono font-bold">
+                        {lang === 'ru' ? 'САЙТ ЗАКРЫТ' : 'SITE CLOSED'}
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    {(t as any).adminMaintenanceDesc || (lang === 'ru' ? 'Блокирует доступ к сайту для всех пользователей, кроме администраторов.' : 'Locks site access for standard users.')}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={toggleMaintenanceMode}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                  maintenanceMode ? 'bg-red-500' : 'bg-[#0d0b14]'
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                    maintenanceMode ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Custom Maintenance Reason Input */}
+            <form onSubmit={handleSaveMaintenanceReason} className="space-y-2 pt-2 border-t border-[#3d2b4f]/40">
+              <label className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                <AlertOctagon size={14} className="text-[#ff4d4d]" />
+                <span>{lang === 'ru' ? 'Кастомная причина закрытия сайта (отображается на экране):' : 'Custom Site Closure Reason (Shown on Screen):'}</span>
+              </label>
+
+              <textarea
+                value={maintenanceReasonInput}
+                onChange={(e) => setMaintenanceReasonInput(e.target.value)}
+                placeholder={lang === 'ru' ? 'Введите причину (например: Проводятся плановые технические работы до 18:00. Скоро вернемся!)...' : 'Type closure reason...'}
+                rows={3}
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f] focus:border-[#ff4d4d] text-white text-xs rounded-xl p-3 outline-none transition-all font-sans leading-relaxed resize-none"
+              />
+
+              <div className="flex items-center justify-between gap-2 pt-1">
+                {reasonSavedMsg ? (
+                  <span className="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1">
+                    <CheckCircle2 size={14} />
+                    {lang === 'ru' ? 'Причина сохранена!' : 'Reason saved!'}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-gray-500">
+                    {lang === 'ru' ? 'Эта причина будет крупно показана на заблокированном экране.' : 'Will be displayed prominently on locked maintenance screen.'}
+                  </span>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSavingReason}
+                  className="px-4 py-2 rounded-xl bg-[#3d2b4f]/60 hover:bg-[#ff4d4d] text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                >
+                  <Check size={14} />
+                  <span>{isSavingReason ? (lang === 'ru' ? 'Сохранение...' : 'Saving...') : (lang === 'ru' ? 'Сохранить причину' : 'Save Reason')}</span>
+                </button>
+              </div>
+            </form>
           </div>
 
           <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">

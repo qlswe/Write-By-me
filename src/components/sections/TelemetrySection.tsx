@@ -412,6 +412,17 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
       'Ядра CPU',
       'ОЗУ Память (ГБ)',
       'Тип Сети',
+      'Скорость Загрузки (Mbps)',
+      'Задержка RTT (ms)',
+      'GPU Производитель',
+      'GPU Видеокарта',
+      'Батарея (%)',
+      'Батарея Зарядка',
+      'Аудио Сэмплрейт',
+      'Точек Сенсора (Touch)',
+      'Глубина Цвета',
+      'PWA Standalone',
+      'Do Not Track',
       'AdBlock Активен',
       'Device ID',
       'Fingerprint',
@@ -455,6 +466,17 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
         log.cores ?? '',
         log.memory ?? '',
         log.connectionType || '',
+        log.downlinkMbps ?? '',
+        log.rttMs ?? '',
+        log.gpuVendor || '',
+        log.gpuRenderer || '',
+        log.batteryLevel || '',
+        log.batteryCharging || '',
+        log.audioSampleRate || '',
+        log.touchPoints ?? '',
+        log.colorDepth || '',
+        log.pwaStandalone ? 'Да' : 'Нет',
+        log.doNotTrack || '',
         log.adblockDetected ? (lang === 'ru' ? 'Да' : 'Yes') : (lang === 'ru' ? 'Нет' : 'No'),
         log.deviceId || '',
         log.fingerprint || '',
@@ -1451,17 +1473,29 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
                 </div>
 
                 <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl space-y-1">
-                  <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">Display & Viewport</span>
-                  <div className="text-gray-200">Screen: {selectedLog.screen}</div>
+                  <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">Display & Touch</span>
+                  <div className="text-gray-200">Screen: {selectedLog.screen} ({selectedLog.colorDepth || '24-bit'})</div>
                   <div className="text-gray-400">Viewport: {selectedLog.viewport}</div>
-                  <div className="text-gray-400">Timezone: {selectedLog.timezone}</div>
+                  <div className="text-gray-400">Orientation: {selectedLog.orientation || 'N/A'}</div>
+                  <div className="text-cyan-400 text-[10px]">Touch Points: {selectedLog.touchPoints ?? '0'}</div>
+                  <div className="text-gray-400 text-[10px]">Timezone: {selectedLog.timezone} (Offset: {selectedLog.timezoneOffset ?? '0'}m)</div>
                 </div>
 
                 <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl space-y-1">
-                  <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">Hardware & Network</span>
-                  <div className="text-emerald-400">CPU Cores: {selectedLog.cores}</div>
-                  <div className="text-emerald-400">Device Memory: {selectedLog.memory} GB</div>
-                  <div className="text-gray-400">Network: {selectedLog.connectionType || 'Unknown'}</div>
+                  <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">Hardware & GPU Acceleration</span>
+                  <div className="text-emerald-400">CPU Cores: {selectedLog.cores} | RAM: {selectedLog.memory} GB</div>
+                  <div className="text-cyan-300 text-[10px] break-all">GPU Vendor: {selectedLog.gpuVendor || 'N/A'}</div>
+                  <div className="text-cyan-300 text-[10px] break-all">GPU Renderer: {selectedLog.gpuRenderer || 'N/A'}</div>
+                  <div className="text-purple-300 text-[10px]">Audio Context: {selectedLog.audioSampleRate || 'N/A'}</div>
+                </div>
+
+                <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl space-y-1">
+                  <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">Network & Battery Capabilities</span>
+                  <div className="text-amber-300">Type: {selectedLog.connectionType || 'Unknown'} ({selectedLog.downlinkMbps || '?'} Mbps)</div>
+                  <div className="text-amber-300/80 text-[10px]">RTT Latency: {selectedLog.rttMs || '?'} ms | SaveData: {selectedLog.saveData ? 'Active' : 'Off'}</div>
+                  <div className="text-emerald-400 text-[10px]">Battery: {selectedLog.batteryLevel || 'N/A'} ({selectedLog.batteryCharging || 'N/A'})</div>
+                  <div className="text-gray-400 text-[10px]">Standalone PWA: {selectedLog.pwaStandalone ? 'Yes' : 'No'} | PDF: {selectedLog.pdfViewerEnabled ? 'Yes' : 'No'}</div>
+                  <div className="text-gray-400 text-[10px]">DNT Header: {selectedLog.doNotTrack || 'Unspecified'} | Cookies: {selectedLog.cookieEnabled ? 'Enabled' : 'Disabled'}</div>
                 </div>
               </div>
 

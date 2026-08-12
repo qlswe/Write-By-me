@@ -127,35 +127,164 @@
       transform: translateX(100%);
     }
   }
+
+  /* SafeHtml Typography & Russian Quote Styling */
+  .safe-html {
+    quotes: "«" "»" "„" "“";
+    text-rendering: optimizeLegibility;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .safe-html q,
+  .safe-html blockquote {
+    quotes: "«" "»" "„" "“";
+  }
+
+  .safe-html q::before {
+    content: open-quote;
+  }
+
+  .safe-html q::after {
+    content: close-quote;
+  }
+
+  /* Paragraph margins & indents */
+  .safe-html p {
+    margin-top: 0;
+    margin-bottom: 1em;
+    line-height: 1.7;
+  }
+
+  .safe-html p + p {
+    margin-top: 0.75em;
+  }
+
+  .safe-html p:last-child {
+    margin-bottom: 0;
+  }
+
+  .safe-html.indent-paragraphs p + p {
+    text-indent: 1.25em;
+    margin-top: 0;
+  }
+
+  /* Blockquotes typography with angle quotes */
+  .safe-html blockquote {
+    position: relative;
+    padding-left: 1.25rem;
+    padding-right: 0.5rem;
+    border-left: 3px solid #ff4d4d;
+    margin-top: 1.25em;
+    margin-bottom: 1.25em;
+    font-style: italic;
+    color: rgba(224, 224, 224, 0.9);
+  }
+
+  .safe-html blockquote::before {
+    content: open-quote;
+    font-size: 1.4em;
+    line-height: 0;
+    margin-right: 0.2em;
+    vertical-align: -0.3em;
+    color: #ff4d4d;
+  }
+
+  .safe-html blockquote::after {
+    content: close-quote;
+    font-size: 1.4em;
+    line-height: 0;
+    margin-left: 0.2em;
+    vertical-align: -0.3em;
+    color: #ff4d4d;
+  }
+
+  /* Typography support for dashes (тире) & special punctuation */
+  .safe-html .dash,
+  .safe-html .em-dash {
+    white-space: nowrap;
+  }
+
+  /* Headings & Lists inside SafeHtml */
+  .safe-html h1, .safe-html h2, .safe-html h3,
+  .safe-html h4, .safe-html h5, .safe-html h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.75em;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #ffffff;
+  }
+
+  .safe-html ul,
+  .safe-html ol {
+    margin-top: 0.5em;
+    margin-bottom: 1em;
+    padding-left: 1.5em;
+  }
+
+  .safe-html ul {
+    list-style-type: disc;
+  }
+
+  .safe-html ol {
+    list-style-type: decimal;
+  }
+
+  .safe-html li {
+    margin-bottom: 0.35em;
+  }
 }
 
 /* Printer-Friendly Layout for Theory Articles & Documents */
 @media print {
-  /* Hide non-essential layout and UI elements */
+  /* Complete Hiding of Non-Essential & Interactive UI Elements */
   header,
   footer,
   nav,
   aside,
-  .no-print,
-  .print\:hidden,
   button,
   input,
   textarea,
   select,
+  form,
+  iframe,
+  video,
+  audio,
+  .no-print,
+  .print\:hidden,
+  [role="button"],
   [role="banner"],
   [role="navigation"],
-  .comments-section,
+  [role="dialog"],
+  [role="tooltip"],
   .fixed,
-  .sticky {
+  .sticky,
+  .comments-section,
+  .comments-container,
+  .reaction-bar,
+  .share-buttons,
+  .favorite-btn,
+  .interactive-controls,
+  .action-buttons,
+  .audio-player,
+  .video-player,
+  .navigation-bar,
+  .sidebar,
+  .toast,
+  .modal-backdrop,
+  .pwa-install-modal,
+  .cookie-banner,
+  .scroll-to-top,
+  .starfield-canvas {
     display: none !important;
   }
 
-  /* Reset global page background and text colors for paper/PDF output */
+  /* Reset global page background and text colors for high-contrast paper/PDF output */
   html,
   body,
   #root {
     background: #ffffff !important;
-    color: #111827 !important;
+    color: #0f172a !important;
     overflow: visible !important;
     width: 100% !important;
     height: auto !important;
@@ -171,10 +300,10 @@
     display: none !important;
   }
 
-  /* Force container visibility and clean styling */
+  /* Force printable article container visibility & crisp high-contrast layout */
   .printable-theory-article {
     background: #ffffff !important;
-    color: #111827 !important;
+    color: #0f172a !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
@@ -186,7 +315,119 @@
     backdrop-filter: none !important;
   }
 
-  /* Print Header Banner */
+  /* Print Cover Page Layout for Theory Articles */
+  .print-cover-page {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    min-height: 88vh !important;
+    padding: 2.5rem 2rem !important;
+    border: 3px double #0f172a !important;
+    margin-bottom: 2rem !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-sizing: border-box !important;
+  }
+
+  .print-cover-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-bottom: 2px solid #dc2626 !important;
+    padding-bottom: 1rem !important;
+  }
+
+  .print-cover-logo {
+    font-size: 13pt !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+    letter-spacing: -0.5px !important;
+    font-family: system-ui, -apple-system, sans-serif !important;
+  }
+
+  .print-cover-doc-type {
+    font-size: 9pt !important;
+    font-weight: 800 !important;
+    color: #dc2626 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+  }
+
+  .print-cover-body {
+    margin: 2.5rem 0 !important;
+  }
+
+  .print-cover-badge {
+    display: inline-block !important;
+    padding: 4px 12px !important;
+    border: 2px solid #dc2626 !important;
+    color: #dc2626 !important;
+    font-weight: 800 !important;
+    font-size: 9.5pt !important;
+    border-radius: 4px !important;
+    letter-spacing: 1.5px !important;
+    margin-bottom: 1.25rem !important;
+    background: #fef2f2 !important;
+    text-transform: uppercase !important;
+  }
+
+  .print-cover-title {
+    font-size: 26pt !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.8px !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .print-cover-summary {
+    background: #f8fafc !important;
+    border-left: 4px solid #dc2626 !important;
+    border-right: 1px solid #e2e8f0 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 1.25rem 1.5rem !important;
+    border-radius: 0 8px 8px 0 !important;
+    font-size: 11pt !important;
+    color: #334155 !important;
+    line-height: 1.6 !important;
+  }
+
+  .print-cover-footer {
+    border-top: 1px solid #cbd5e1 !important;
+    padding-top: 1.25rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+  }
+
+  .print-cover-meta-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px 24px !important;
+    font-size: 9.5pt !important;
+    color: #475569 !important;
+  }
+
+  .print-cover-meta-grid strong {
+    color: #0f172a !important;
+  }
+
+  .print-cover-stamp {
+    border: 2px dashed #dc2626 !important;
+    color: #dc2626 !important;
+    padding: 6px 14px !important;
+    font-size: 8.5pt !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px !important;
+    border-radius: 6px !important;
+    transform: rotate(-3deg) !important;
+    text-transform: uppercase !important;
+  }
+
+  /* Compact Print Header Banner (for non-cover pages or inline articles) */
   .print-header-banner {
     display: flex !important;
     justify-content: space-between;
@@ -211,33 +452,49 @@
     font-weight: 600;
   }
 
-  /* Typography formatting for print */
+  /* Typography formatting for print - Crisp, High-Contrast */
   .printable-theory-article h1,
   .printable-theory-article h2,
   .printable-theory-article h3,
   .printable-theory-article h4 {
     color: #0f172a !important;
     font-weight: 800 !important;
-    page-break-after: avoid;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .printable-theory-article h1 {
+    font-size: 24pt !important;
+    line-height: 1.2 !important;
+    margin-bottom: 16px !important;
   }
 
   .printable-theory-article h2 {
-    font-size: 22pt !important;
+    font-size: 18pt !important;
     line-height: 1.25 !important;
-    margin-bottom: 12px !important;
+    margin-top: 20pt !important;
+    margin-bottom: 10pt !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding-bottom: 4pt !important;
+  }
+
+  .printable-theory-article h3 {
+    font-size: 14pt !important;
+    margin-top: 14pt !important;
+    margin-bottom: 6pt !important;
   }
 
   .printable-theory-article p,
   .printable-theory-article li,
   .printable-theory-article span {
-    color: #334155 !important;
+    color: #0f172a !important;
   }
 
   .printable-theory-article .prose {
-    color: #334155 !important;
+    color: #0f172a !important;
     max-width: 100% !important;
     font-size: 11pt !important;
-    line-height: 1.7 !important;
+    line-height: 1.65 !important;
   }
 
   .printable-theory-article .prose h1,
@@ -246,16 +503,26 @@
     color: #0f172a !important;
     margin-top: 18pt !important;
     margin-bottom: 8pt !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   .printable-theory-article .prose p {
-    color: #1e293b !important;
-    margin-bottom: 12pt !important;
+    color: #0f172a !important;
+    margin-bottom: 10pt !important;
   }
 
   .printable-theory-article .prose a {
-    color: #dc2626 !important;
+    color: #b91c1c !important;
     text-decoration: underline !important;
+    font-weight: 600 !important;
+  }
+
+  .printable-theory-article .prose a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #64748b;
+    font-weight: normal;
   }
 
   .printable-theory-article .prose code {
@@ -264,7 +531,7 @@
     padding: 2px 6px !important;
     border-radius: 4px !important;
     border: 1px solid #cbd5e1 !important;
-    font-family: monospace !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
     font-size: 9.5pt !important;
   }
 
@@ -274,25 +541,51 @@
     border: 1px solid #cbd5e1 !important;
     border-radius: 8px !important;
     padding: 12px !important;
-    page-break-inside: avoid;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
     white-space: pre-wrap !important;
     word-break: break-all !important;
   }
 
   .printable-theory-article blockquote {
-    border-left: 4px solid #ff4d4d !important;
-    background-color: #fff5f5 !important;
-    color: #475569 !important;
-    padding: 10px 16px !important;
+    border-left: 4px solid #dc2626 !important;
+    background-color: #fef2f2 !important;
+    color: #1e293b !important;
+    padding: 12px 18px !important;
     margin: 16px 0 !important;
     border-radius: 0 8px 8px 0 !important;
+    font-style: italic !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
-  .printable-theory-article img {
+  .printable-theory-article img,
+  .printable-theory-article figure,
+  .printable-theory-article table {
     max-width: 100% !important;
     height: auto !important;
-    border-radius: 8px !important;
-    page-break-inside: avoid;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .printable-theory-article table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 16px 0 !important;
+  }
+
+  .printable-theory-article th,
+  .printable-theory-article td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 8px 12px !important;
+    text-align: left !important;
+    font-size: 10pt !important;
+  }
+
+  .printable-theory-article th {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
   }
 
   /* Badge styling for print */
@@ -305,14 +598,16 @@
   /* Footer watermark on printed page */
   .print-footer-watermark {
     display: flex !important;
-    justify-content: space-between;
-    align-items: center;
-    border-top: 1px solid #cbd5e1;
-    margin-top: 32px;
-    padding-top: 12px;
-    font-size: 8.5pt;
-    color: #94a3b8 !important;
-    font-family: monospace;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-top: 1px solid #cbd5e1 !important;
+    margin-top: 32px !important;
+    padding-top: 12px !important;
+    font-size: 8.5pt !important;
+    color: #64748b !important;
+    font-family: ui-monospace, SFMono-Regular, monospace !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   /* Page margins and orientation setup */

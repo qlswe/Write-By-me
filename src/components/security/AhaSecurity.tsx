@@ -112,7 +112,7 @@ export const SafeHtml: React.FC<{ html: string; className?: string }> = ({ html,
 
   return (
     <>
-      <div ref={containerRef} className={className} dangerouslySetInnerHTML={{ __html: cleanHtml }} onClick={handleClick} />
+      <div ref={containerRef} className={`safe-html ${className || ''}`.trim()} dangerouslySetInnerHTML={{ __html: cleanHtml }} onClick={handleClick} />
       
       {/* Fullscreen Image Modal for SafeHtml */}
       {typeof document !== 'undefined' && document.body && createPortal(

@@ -42,6 +42,7 @@ import { UserData } from './hooks/useUsers';
 import { HomeStatsWidget } from './components/ui/HomeStatsWidget';
 import { QuickActionsMenu } from './components/ui/QuickActionsMenu';
 import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
+import { BroadcastBanner } from './components/ui/BroadcastBanner';
 import { AhaSecurityBadge, SafeHtml } from './components/security/AhaSecurity';
 import { DisguisePage } from './components/security/DisguisePage';
 import { DevConsoleWidget } from './components/ui/DevConsoleWidget';
@@ -268,6 +269,8 @@ export default function App() {
   // Filters
   const [theoryCategory, setTheoryCategory] = useState('all');
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceReason, setMaintenanceReason] = useState('');
+  const [maintenanceUpdatedAt, setMaintenanceUpdatedAt] = useState<number | undefined>(undefined);
   const [offlineMode, setOfflineMode] = useState(() => !!safeStorage.getItem('aha_quota_fallback'));
 
   useEffect(() => {
@@ -293,6 +296,8 @@ export default function App() {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setMaintenanceMode(data.maintenanceMode || false);
+        setMaintenanceReason(data.maintenanceReason || '');
+        setMaintenanceUpdatedAt(data.maintenanceUpdatedAt || undefined);
 
         // Apply primary accent color from Firestore
         if (data.primaryAccentColor) {
@@ -830,7 +835,7 @@ export default function App() {
   }
 
   if (!isLoading && maintenanceMode && !isAuthorizedForMaintenance) {
-    return <MaintenanceScreen lang={lang as Language} />;
+    return <MaintenanceScreen lang={lang as Language} customReason={maintenanceReason} updatedAt={maintenanceUpdatedAt} />;
   }
 
   if (isPanicked) {
@@ -850,6 +855,9 @@ export default function App() {
       <LoadingScreen isLoading={isLoading} lang={lang as Language} lowPerfMode={lowPerfMode} />
       <Starfield lowPerfMode={lowPerfMode || !productionMode} />
       {showLoadWidget && !mobileMenuOpen && <PerformanceWidget />}
+      
+      {/* Realtime Broadcast Notification Banner */}
+      <BroadcastBanner lang={lang as Language} />
       
       <Header 
         lang={lang as Language} 

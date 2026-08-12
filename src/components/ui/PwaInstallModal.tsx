@@ -52,7 +52,7 @@ export const PwaInstallModal: React.FC<PwaInstallModalProps> = ({ isOpen, onClos
   // Script Studio Customization Options
   const [targetPlatform, setTargetPlatform] = useState<PcScriptPlatform>('windows-exe');
   const [appName, setAppName] = useState('Aha Ministry');
-  const [targetUrl, setTargetUrl] = useState(() => window.location.origin);
+  const [targetUrl, setTargetUrl] = useState('https://aha-raio.vercel.app');
   const [protocolHandler, setProtocolHandler] = useState('aha');
   const [windowWidth, setWindowWidth] = useState(1280);
   const [windowHeight, setWindowHeight] = useState(800);
@@ -724,7 +724,40 @@ echo "Target URL: ${url}"
                 </div>
               </div>
 
-              {/* PWA 1-Click Installation */}
+              {/* PWA 1-Click Installation & Official Vercel Domains */}
+              <div className="bg-[#0e0a17] border border-[#3d2b4f] p-4 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-cyan-400">
+                    <Globe size={18} />
+                    <h4 className="font-bold text-xs uppercase">{loc('Официальные Vercel Домены Приложения', 'Official Vercel App Domains', 'Афіцыйныя Vercel Дамены', 'Offizielle Vercel-Domains', 'Domaines Vercel Officiels', '官方 Vercel 应用域名')}</h4>
+                  </div>
+                  <span className="text-[10px] text-cyan-300 bg-cyan-500/20 border border-cyan-400/30 px-2 py-0.5 rounded-full font-bold">HTTPS Vercel Edge</span>
+                </div>
+                <p className="text-[11px] text-gray-300 leading-relaxed">
+                  {loc('Для установки Web-App и обхода блокировок используйте эти быстрые официальные адреса:', 'Use these fast official addresses to access and install the Web-App:', 'Для ўстаноўкі Web-App і абыходу блакіровак выкарыстоўвайце гэтыя адрасы:', 'Verwenden Sie diese offiziellen Adressen für den Zugriff auf die Web-App:', 'Utilisez ces adresses officielles pour accéder à la Web-App :', '使用以下官方地址访问并安装 Web-App：')}
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <a 
+                    href="https://aha-raio.vercel.app" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2 bg-[#171026] hover:bg-cyan-500/20 border border-cyan-500/40 rounded-xl text-cyan-300 font-mono text-xs font-bold flex items-center gap-2 transition-all shadow-md"
+                  >
+                    <span>aha-raio.vercel.app</span>
+                    <ExternalLink size={14} />
+                  </a>
+                  <a 
+                    href="https://ministry-ahahi.vercel.app" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2 bg-[#171026] hover:bg-cyan-500/20 border border-cyan-500/40 rounded-xl text-cyan-300 font-mono text-xs font-bold flex items-center gap-2 transition-all shadow-md"
+                  >
+                    <span>ministry-ahahi.vercel.app</span>
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-[#0e0a17] border border-[#3d2b4f] p-4 rounded-2xl space-y-3">
                   <div className="flex items-center gap-2 text-cyan-400">
@@ -922,6 +955,60 @@ echo "Target URL: ${url}"
                       onChange={(e) => setAppName(e.target.value)}
                       className="w-full bg-[#18102a] border border-[#3d2b4f] rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-[#00f0ff]"
                     />
+                  </div>
+                </div>
+
+                {/* Target App URL ($AppUrl) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider block">
+                      {loc('URL Адрес Приложения ($AppUrl):', 'Target App URL ($AppUrl):', 'URL Адрас ($AppUrl):', 'Ziel-App-URL ($AppUrl):', 'URL Cible ($AppUrl):', '目标应用 URL ($AppUrl)：')}
+                    </label>
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      {loc('Пресеты:', 'Presets:', 'Прэсэты:', 'Presets:', 'Préréglages:', '预设：')}
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={targetUrl}
+                    onChange={(e) => setTargetUrl(e.target.value)}
+                    className="w-full bg-[#18102a] border border-cyan-500/40 rounded-xl px-3 py-2 text-xs text-cyan-300 font-mono focus:outline-none focus:border-[#ff4d4d]"
+                    placeholder="https://aha-raio.vercel.app"
+                  />
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setTargetUrl('https://aha-raio.vercel.app')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all border cursor-pointer ${
+                        targetUrl === 'https://aha-raio.vercel.app' 
+                          ? 'bg-cyan-500/30 text-cyan-300 border-cyan-400' 
+                          : 'bg-[#18102a] text-gray-400 border-[#3d2b4f] hover:text-white'
+                      }`}
+                    >
+                      aha-raio.vercel.app
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTargetUrl('https://ministry-ahahi.vercel.app')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all border cursor-pointer ${
+                        targetUrl === 'https://ministry-ahahi.vercel.app' 
+                          ? 'bg-cyan-500/30 text-cyan-300 border-cyan-400' 
+                          : 'bg-[#18102a] text-gray-400 border-[#3d2b4f] hover:text-white'
+                      }`}
+                    >
+                      ministry-ahahi.vercel.app
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTargetUrl(window.location.origin)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all border cursor-pointer ${
+                        targetUrl === window.location.origin 
+                          ? 'bg-purple-500/30 text-purple-300 border-purple-400' 
+                          : 'bg-[#18102a] text-gray-400 border-[#3d2b4f] hover:text-white'
+                      }`}
+                    >
+                      {loc('Текущий хост', 'Current host', 'Бягучы хост', 'Aktueller Host', 'Hôte actuel', '当前主机')}
+                    </button>
                   </div>
                 </div>
 

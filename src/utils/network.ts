@@ -44,9 +44,13 @@ export async function secureFetch(url: string, options: NetworkRequestOptions = 
 
   const sanitizedHeaders = new Headers();
 
-  // Standard safe AHA Protocol headers
+  // Standard safe AHA Protocol headers & User-Agent
+  const ahaUserAgent = 'AhaBrowser/6.0.4 (AHA-OS 6.0; Dual-Stack IPv6; AHA-Protocol-v6)';
+  sanitizedHeaders.set('User-Agent', ahaUserAgent);
+  sanitizedHeaders.set('X-AHA-User-Agent', ahaUserAgent);
   sanitizedHeaders.set('X-AHA-Protocol-Version', '6.0-HYPER-IPv6');
   sanitizedHeaders.set('X-AHA-Direct-Route', 'IPv6-Native-Hyper');
+  sanitizedHeaders.set('X-AHA-NAT-Bypass', 'Active-Direct-P2P');
 
   if (httpToken) {
     const cleanToken = sanitizeHttpToken(httpToken);

@@ -12,12 +12,14 @@ async function startServer() {
 
   // AHA Protocol v6 (Adaptive Hyper-Acceleration IPv6) Global Middleware
   app.use((req, res, next) => {
-    // Stamp AHA Protocol v6 Headers onto all network traffic
+    // Stamp AHA Protocol v6 Headers & User-Agent onto all network traffic
     res.setHeader('X-AHA-Protocol-Version', '6.0-HYPER-IPv6');
+    res.setHeader('X-AHA-User-Agent', 'AhaBrowser/6.0.4 (AHA-OS 6.0; Dual-Stack IPv6; AHA-Protocol-v6)');
     res.setHeader('X-AHA-IPv6-Flow-Label', '0x6AHA' + Math.floor(Math.random() * 0xFFFF).toString(16).toUpperCase());
     res.setHeader('X-AHA-Direct-Route', 'IPv6-Native-Hyper');
     res.setHeader('X-AHA-NAT-Bypass', 'Active-Direct-P2P');
     res.setHeader('X-AHA-v6-Latency-Boost', 'Enabled-0.8ms');
+    res.setHeader('Server', 'AHA-Protocol/6.0-HYPER-IPv6-Server');
     next();
   });
 

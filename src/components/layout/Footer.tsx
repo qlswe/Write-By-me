@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Smartphone, Download, CheckCircle2 } from 'lucide-react';
 import { DailyFortune } from '../ui/DailyFortune';
+import { TelegramButton } from '../ui/TelegramButton';
 import { Language, translations } from '../../data/translations';
 import { logger, usePerfLogger } from '../../utils/logger';
 import { usePWA } from '../../hooks/usePWA';
@@ -64,9 +65,14 @@ export const Footer: React.FC<FooterProps> = ({ lang, setFeedbackOpen }) => {
             </div>
           </div>
           
+          {/* Official Telegram Channel Promo Card */}
+          <div className="mt-10">
+            <TelegramButton lang={lang} variant="card" />
+          </div>
+
           <div className="mt-12 pt-8 border-t border-[#3d2b4f] flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400">
             <p>&copy; 2026 クルシーP. {t.rights}</p>
-            <div className="flex items-center gap-4 flex-wrap justify-center">
+            <div className="flex items-center gap-3 flex-wrap justify-center">
               <button
                 onClick={() => {
                   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', altKey: true }));
@@ -80,10 +86,10 @@ export const Footer: React.FC<FooterProps> = ({ lang, setFeedbackOpen }) => {
               <button onClick={() => logger.exportLogs()} className="hover:text-[#ff4d4d] transition-colors text-xs opacity-50 cursor-pointer">
                 Export Logs
               </button>
-              <a href="https://t.me/ministry_aha" target="_blank" rel="noreferrer" className="hover:text-[#ff4d4d] transition-colors">
-                Telegram
-              </a>
-              <a href="https://github.com/qlswe" target="_blank" rel="noreferrer" className="hover:text-[#ff4d4d] transition-colors">
+              
+              <TelegramButton lang={lang} variant="compact" />
+
+              <a href="https://github.com/qlswe" target="_blank" rel="noreferrer" className="hover:text-[#ff4d4d] transition-colors text-xs px-2.5 py-1.5 rounded-lg bg-[#15101e] border border-[#3d2b4f]">
                 GitHub
               </a>
             </div>

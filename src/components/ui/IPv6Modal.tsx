@@ -24,7 +24,7 @@ export const IPv6Modal: React.FC<IPv6ModalProps> = ({ isOpen, onClose, lang }) =
   const [activeTab, setActiveTab] = useState<'status' | 'benefits' | 'setup' | 'vercel'>('status');
 
   // Vercel config options
-  const [customDomain, setCustomDomain] = useState('my-app.vercel.app');
+  const [customDomain, setCustomDomain] = useState('aha-raio.vercel.app');
   const [enableSecurityHeaders, setEnableSecurityHeaders] = useState(true);
   const [enableAhaProtocol, setEnableAhaProtocol] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -359,16 +359,36 @@ export const IPv6Modal: React.FC<IPv6ModalProps> = ({ isOpen, onClose, lang }) =
             {activeTab === 'vercel' && (
               <div className="space-y-4 text-xs text-gray-300">
                 {/* Intro Card */}
-                <div className="p-4 bg-cyan-950/20 border border-cyan-500/30 rounded-2xl space-y-2">
+                <div className="p-4 bg-cyan-950/20 border border-cyan-500/30 rounded-2xl space-y-3">
                   <div className="flex items-center gap-2 text-cyan-300 font-bold text-sm">
                     <Server size={18} className="text-cyan-400" />
-                    <span>{isRu ? 'Интеграция Vercel Dual-Stack (IPv4 + IPv6)' : 'Vercel Dual-Stack IPv6 Integration'}</span>
+                    <span>{isRu ? 'Официальные Vercel Домены (IPv4 + IPv6)' : 'Official Vercel Domains (IPv4 + IPv6)'}</span>
                   </div>
                   <p className="text-xs text-gray-400 leading-relaxed">
                     {isRu 
-                      ? 'Платформа Vercel автоматически маршрутизирует трафик через IPv6 для кастомных доменов с AAAA-записями. Скопируйте готовый vercel.json и настройки DNS ниже.'
-                      : 'Vercel Edge automatically routes incoming IPv6 requests when AAAA DNS records are attached to your custom domain.'}
+                      ? 'Официальные зеркала и развертывания системы доступны по основным адресам:'
+                      : 'Official Vercel deployments and mirrors are accessible at:'}
                   </p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <a 
+                      href="https://aha-raio.vercel.app" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-[#120e1e] hover:bg-cyan-500/20 border border-cyan-500/40 rounded-xl text-cyan-300 font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all"
+                    >
+                      <span>aha-raio.vercel.app</span>
+                      <ExternalLink size={12} />
+                    </a>
+                    <a 
+                      href="https://ministry-ahahi.vercel.app" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-[#120e1e] hover:bg-cyan-500/20 border border-cyan-500/40 rounded-xl text-cyan-300 font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all"
+                    >
+                      <span>ministry-ahahi.vercel.app</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
                 </div>
 
                 {/* Domain Input & DNS Table */}

@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, Search, ArrowLeft, Plus, Edit, Newspaper, Sparkles, Clock, User, FileDown, Printer } from 'lucide-react';
+import { Star, Search, ArrowLeft, Plus, Edit, Newspaper, Sparkles, Clock, User, FileDown, Printer, Quote } from 'lucide-react';
+import { ArticleReadingMeta, ArticleCitationModal, ArticleTableOfContents } from '../ui/ArticleTools';
 import { blogPostsData } from '../../data/content';
 import { exportContentToPDF } from '../../utils/pdfExport';
 import { Language, translations } from '../../data/translations';
@@ -57,6 +58,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
   const { trackRender } = usePerfLogger('BlogSection');
   const debouncedBlogSearch = useDebounce(blogSearch, 150);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [showCiteModal, setShowCiteModal] = useState(false);
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const { user } = useAuth();
   const isAdmin = role === 'admin';
@@ -127,14 +129,42 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="bg-[#251c35] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#3d2b4f] relative overflow-hidden printable-theory-article"
           >
-            {/* Print-Only Header Banner */}
-            <div className="hidden print-header-banner">
-              <div className="print-header-logo">
-                AHA PLATFORM <span className="text-[#ff4d4d] font-normal">| {lang === 'ru' ? 'БЛОГ' : 'BLOG'}</span>
+            {/* Print-Only Cover Page with Metadata */}
+            <div className="hidden print-cover-page">
+              <div className="print-cover-header">
+                <div className="print-cover-logo">
+                  🏛️ AHA PLATFORM | {lang === 'ru' ? 'МИНИСТЕРСТВО АХАХИ' : 'MINISTRY OF AHA'}
+                </div>
+                <div className="print-cover-doc-type">
+                  {lang === 'ru' ? 'ПУБЛИКАЦИЯ БЛОГА' : 'BLOG PUBLICATION'}
+                </div>
               </div>
-              <div className="print-header-meta">
-                <div>{(selectedPost.category || 'General').toUpperCase()}</div>
-                <div>{new Date(selectedPost.createdAt || Date.now()).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}</div>
+
+              <div className="print-cover-body">
+                <div className="print-cover-badge">
+                  {(selectedPost.category || 'General').toUpperCase()}
+                </div>
+                <h1 className="print-cover-title">
+                  {selectedPost.title[lang] || selectedPost.title['en']}
+                </h1>
+                {(selectedPost.summary?.[lang] || selectedPost.summary?.['en']) && (
+                  <div className="print-cover-summary">
+                    <strong>{lang === 'ru' ? 'Аннотация:' : 'Abstract:'}</strong>{' '}
+                    {selectedPost.summary[lang] || selectedPost.summary['en']}
+                  </div>
+                )}
+              </div>
+
+              <div className="print-cover-footer">
+                <div className="print-cover-meta-grid">
+                  <div><strong>{lang === 'ru' ? 'Автор / Редакция:' : 'Author / Editorial:'}</strong> AHA Editorial Team</div>
+                  <div><strong>{lang === 'ru' ? 'Дата публикации:' : 'Published:'}</strong> {new Date(selectedPost.createdAt || Date.now()).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}</div>
+                  <div><strong>{lang === 'ru' ? 'Идентификатор:' : 'ID:'}</strong> {selectedPost.id}</div>
+                  <div><strong>{lang === 'ru' ? 'Статус:' : 'Status:'}</strong> VERIFIED PUBLICATION</div>
+                </div>
+                <div className="print-cover-stamp">
+                  AHA VERIFIED
+                </div>
               </div>
             </div>
 
@@ -151,7 +181,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               {t.navBlog}
             </button>
             
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mb-8">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30 category-badge-print">
@@ -162,9 +192,15 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                     <TimeAgo date={selectedPost.createdAt} lang={lang} />
                   </div>
                 </div>
-                <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight tracking-tighter">
+                <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight tracking-tighter mb-4">
                   {selectedPost.title[lang] || selectedPost.title['en']}
                 </h2>
+
+                {/* Article Statistics & Reading Meta */}
+                <ArticleReadingMeta
+                  htmlContent={selectedPost.content[lang] || selectedPost.content['en']}
+                  lang={lang}
+                />
               </div>
               
               <div className="flex flex-wrap gap-3 shrink-0 justify-end print:hidden">
@@ -177,6 +213,13 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                     <Edit size={18} />
                   </button>
                 )}
+                <button 
+                  onClick={() => setShowCiteModal(true)}
+                  className="p-4 rounded-2xl bg-[#3d2b4f]/30 text-white/40 hover:text-purple-400 hover:bg-purple-400/10 hover:border-purple-400/30 transition-all border border-transparent cursor-pointer flex items-center justify-center"
+                  title={lang === 'ru' ? 'Академическое цитирование (ГОСТ / APA / BibTeX)' : 'Cite Article (GOST / APA / BibTeX)'}
+                >
+                  <Quote size={18} />
+                </button>
                 <button 
                   onClick={() => exportContentToPDF({
                     title: selectedPost.title[lang] || selectedPost.title['en'],
@@ -215,6 +258,12 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               </div>
             )}
 
+            {/* Interactive Table of Contents */}
+            <ArticleTableOfContents
+              htmlContent={selectedPost.content[lang] || selectedPost.content['en']}
+              lang={lang}
+            />
+
             <SafeHtml 
               html={selectedPost.content[lang] || selectedPost.content['en']}
               className="prose prose-invert prose-p:text-white/80 prose-headings:text-white prose-a:text-[#ff4d4d] max-w-none mb-8 text-base sm:text-lg leading-relaxed"
@@ -229,6 +278,18 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
             <div className="pt-10 border-t border-[#3d2b4f] print:hidden">
               <CommentsSection targetId={selectedPost.id} lang={lang} lowPerfMode={lowPerfMode} role={role} onOpenChat={onOpenChat} />
             </div>
+
+            {/* Academic Citation Modal */}
+            <ArticleCitationModal
+              isOpen={showCiteModal}
+              onClose={() => setShowCiteModal(false)}
+              title={selectedPost.title[lang] || selectedPost.title['en']}
+              htmlContent={selectedPost.content[lang] || selectedPost.content['en']}
+              category={selectedPost.category}
+              createdAt={selectedPost.createdAt}
+              articleId={selectedPost.id}
+              lang={lang}
+            />
           </motion.div>
         ) : (
           <motion.div 

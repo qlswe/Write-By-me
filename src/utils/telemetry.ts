@@ -13,17 +13,88 @@ export interface TelemetryData {
   platform: string;
   screen: string;
   viewport: string;
+  colorDepth: string;
+  orientation: string;
+  touchPoints: number;
   language: string;
+  languages: string[];
   timezone: string;
+  timezoneOffset: number;
   cores: string | number;
   memory: string | number;
+  gpuVendor: string;
+  gpuRenderer: string;
   connectionType: string;
+  downlinkMbps: string | number;
+  rttMs: string | number;
+  saveData: boolean;
+  doNotTrack: string;
+  cookieEnabled: boolean;
+  pdfViewerEnabled: boolean;
+  pwaStandalone: boolean;
+  batteryLevel: string;
+  batteryCharging: string;
+  audioSampleRate: string;
   referrer: string;
   localTime: string;
   currentSection: string;
   timestamp: any;
   sessionId: string;
 }
+
+/**
+ * Extracts WebGL unmasked vendor and renderer (GPU graphics hardware)
+ */
+export const getGpuInfo = (): { vendor: string; renderer: string } => {
+  if (typeof window === 'undefined') return { vendor: 'N/A', renderer: 'N/A' };
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl) return { vendor: 'No WebGL', renderer: 'No WebGL' };
+    const debugInfo = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
+    if (!debugInfo) return { vendor: 'Standard GL', renderer: 'Generic Hardware' };
+    const vendor = (gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'Unknown';
+    const renderer = (gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'Unknown';
+    return { vendor: String(vendor), renderer: String(renderer) };
+  } catch (e) {
+    return { vendor: 'WebGL Error', renderer: 'WebGL Error' };
+  }
+};
+
+/**
+ * Reads battery status if supported by browser Battery API
+ */
+export const getBatteryInfo = async (): Promise<{ level: string; charging: string }> => {
+  if (typeof window === 'undefined') return { level: 'N/A', charging: 'N/A' };
+  try {
+    const nav = navigator as any;
+    if (typeof nav.getBattery === 'function') {
+      const b = await nav.getBattery();
+      return {
+        level: `${Math.round((b.level || 0) * 100)}%`,
+        charging: b.charging ? 'Charging' : 'Discharging'
+      };
+    }
+  } catch (e) {}
+  return { level: 'N/A', charging: 'N/A' };
+};
+
+/**
+ * Extracts AudioContext hardware capabilities
+ */
+export const getAudioCapabilities = (): string => {
+  if (typeof window === 'undefined') return 'N/A';
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      const rate = ctx.sampleRate;
+      ctx.close();
+      return `${rate} Hz`;
+    }
+  } catch (e) {}
+  return 'Not Supported';
+};
 
 // Generate or retrieve session ID with localStorage & sessionStorage fallback
 const getSessionId = (): string => {
@@ -246,6 +317,12 @@ export const logUserTelemetry = async (
     const adblockDetected = await checkAdBlockerActive();
     const deviceId = getDeviceId();
     const fingerprint = getDeviceFingerprint();
+    const gpu = getGpuInfo();
+    const battery = await getBatteryInfo();
+    const audioRate = getAudioCapabilities();
+
+    const conn = (navigator as any).connection || {};
+    const screenObj = window.screen || ({} as any);
 
     const data: Partial<TelemetryData> = {
       userId,
@@ -254,15 +331,35 @@ export const logUserTelemetry = async (
       deviceId,
       fingerprint,
       adblockDetected,
-      userAgent: navigator.userAgent || 'unknown',
+      userAgent: (() => {
+        const raw = navigator.userAgent || 'unknown';
+        return raw.includes('AHA-Protocol') ? raw : `${raw} AHA-Protocol/6.0-HYPER-IPv6 (AhaBrowser/6.0.4)`;
+      })(),
       platform: navigator.platform || 'unknown',
-      screen: `${window.screen?.width || 0}x${window.screen?.height || 0}`,
+      screen: `${screenObj.width || 0}x${screenObj.height || 0}`,
       viewport: `${window.innerWidth || 0}x${window.innerHeight || 0}`,
+      colorDepth: `${screenObj.colorDepth || 24}-bit`,
+      orientation: screenObj.orientation?.type || 'unknown',
+      touchPoints: navigator.maxTouchPoints || 0,
       language: navigator.language || 'unknown',
+      languages: Array.from(navigator.languages || [navigator.language || 'en']),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
+      timezoneOffset: new Date().getTimezoneOffset(),
       cores: navigator.hardwareConcurrency || 'unknown',
       memory: (navigator as any).deviceMemory || 'unknown',
-      connectionType: (navigator as any).connection?.effectiveType || 'unknown',
+      gpuVendor: gpu.vendor,
+      gpuRenderer: gpu.renderer,
+      connectionType: conn.effectiveType || 'unknown',
+      downlinkMbps: conn.downlink || 'N/A',
+      rttMs: conn.rtt || 'N/A',
+      saveData: Boolean(conn.saveData),
+      doNotTrack: String(navigator.doNotTrack || (window as any).doNotTrack || 'unspecified'),
+      cookieEnabled: Boolean(navigator.cookieEnabled),
+      pdfViewerEnabled: Boolean((navigator as any).pdfViewerEnabled),
+      pwaStandalone: Boolean(window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone),
+      batteryLevel: battery.level,
+      batteryCharging: battery.charging,
+      audioSampleRate: audioRate,
       referrer: document.referrer || 'direct',
       localTime: new Date().toLocaleString(),
       currentSection,
@@ -300,6 +397,10 @@ export const logUserTelemetry = async (
     try {
       const deviceId = getDeviceId();
       const fingerprint = getDeviceFingerprint();
+      const gpu = getGpuInfo();
+      const conn = (navigator as any).connection || {};
+      const screenObj = window.screen || ({} as any);
+
       const fallbackItem = {
         userId,
         userEmail,
@@ -307,15 +408,24 @@ export const logUserTelemetry = async (
         deviceId,
         fingerprint,
         adblockDetected: true,
-        userAgent: navigator.userAgent || 'unknown',
+        userAgent: (() => {
+          const raw = navigator.userAgent || 'unknown';
+          return raw.includes('AHA-Protocol') ? raw : `${raw} AHA-Protocol/6.0-HYPER-IPv6 (AhaBrowser/6.0.4)`;
+        })(),
         platform: navigator.platform || 'unknown',
-        screen: `${window.screen?.width || 0}x${window.screen?.height || 0}`,
+        screen: `${screenObj.width || 0}x${screenObj.height || 0}`,
         viewport: `${window.innerWidth || 0}x${window.innerHeight || 0}`,
+        colorDepth: `${screenObj.colorDepth || 24}-bit`,
+        touchPoints: navigator.maxTouchPoints || 0,
         language: navigator.language || 'unknown',
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
         cores: navigator.hardwareConcurrency || 'unknown',
         memory: (navigator as any).deviceMemory || 'unknown',
-        connectionType: (navigator as any).connection?.effectiveType || 'unknown',
+        gpuVendor: gpu.vendor,
+        gpuRenderer: gpu.renderer,
+        connectionType: conn.effectiveType || 'unknown',
+        downlinkMbps: conn.downlink || 'N/A',
+        rttMs: conn.rtt || 'N/A',
         referrer: document.referrer || 'direct',
         localTime: new Date().toLocaleString(),
         currentSection,

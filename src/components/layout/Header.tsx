@@ -9,6 +9,7 @@ import { ProfileModal } from '../ui/ProfileModal';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { EmailLoginModal } from '../ui/EmailLoginModal';
 import { PwaInstallModal } from '../ui/PwaInstallModal';
+import { TelegramButton } from '../ui/TelegramButton';
 import { IPv6Modal } from '../ui/IPv6Modal';
 import { AhaProtocolModal } from '../ui/AhaProtocolModal';
 import { AhaEmbeddedBrowserModal } from '../ui/AhaEmbeddedBrowserModal';
@@ -247,6 +248,11 @@ export const Header: React.FC<HeaderProps> = ({
               <Globe size={14} className="text-purple-400 animate-pulse" />
               <span className="text-[10px] sm:text-[11px] font-black tracking-wide">{lang === 'ru' ? 'Браузер' : 'Browser'}</span>
             </button>
+
+            {/* Telegram Channel Button */}
+            <div className="hidden xl:block">
+              <TelegramButton lang={lang} variant="compact" />
+            </div>
 
             {/* PC & Mobile App & Script Hub Badge */}
             <button
