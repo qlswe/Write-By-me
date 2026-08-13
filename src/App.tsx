@@ -72,7 +72,7 @@ import { SdkSettingsSection } from './components/sections/SdkSettingsSection';
 import { CanvasSection } from './components/sections/CanvasSection';
 import { TelemetrySection } from './components/sections/TelemetrySection';
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry';
+type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry' | 'browser';
 
 let hasPrintedStopWarning = false;
 
@@ -650,6 +650,7 @@ export default function App() {
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'users' as const, label: t.navUsers, icon: User },
     ...(role === 'admin' ? [{ id: 'telemetry' as const, label: (t as any).telemetry || (lang === 'ru' ? 'Статистика' : lang === 'by' ? 'Статыстыка' : 'Telemetry'), icon: BarChart2 }] : []),
+    { id: 'browser' as const, label: lang === 'ru' ? 'Браузер AHA-v6' : 'AHA-v6 Browser', icon: Globe },
     { id: 'sdk', label: 'SDK', icon: Settings },
     { id: 'ai', label: 'Aha AI', icon: Sparkles },
   ];
@@ -1213,6 +1214,28 @@ export default function App() {
               )}
               {section === 'telemetry' && role === 'admin' && (
                 <TelemetrySection lang={lang as Language} />
+              )}
+              {section === 'browser' && (
+                <div className="bg-[#251c35] rounded-2xl p-8 shadow-xl border border-[#3d2b4f] text-center space-y-6">
+                  <div className="w-16 h-16 bg-purple-500/20 border border-purple-500/40 text-purple-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                    <Globe size={32} className="animate-pulse text-purple-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-black text-white">{lang === 'ru' ? 'Встроенный Браузер AHA-v6' : 'AHA-v6 Embedded Browser'}</h2>
+                    <p className="text-sm text-gray-400 max-w-lg mx-auto leading-relaxed">
+                      {lang === 'ru' 
+                        ? 'Полноценный изолированный веб-браузер с выбором кастомного User-Agent, поддержкой IPv6 Flow Labeling, AdBlocker и защитой от уязвимостей.'
+                        : 'Full-featured isolation web browser with custom User-Agent manager, IPv6 Flow Labeling support, AdBlocker shield, and SSRF security protection.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => window.dispatchEvent(new Event('openAhaBrowser'))}
+                    className="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-black text-sm uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-purple-600/30 inline-flex items-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Globe size={18} />
+                    <span>{lang === 'ru' ? 'Запустить Браузер AHA-v6' : 'Launch AHA-v6 Browser'}</span>
+                  </button>
+                </div>
               )}
             </Suspense>
           </motion.div>

@@ -96,9 +96,14 @@ export const Header: React.FC<HeaderProps> = ({
     const handleOpenEmailLogin = () => {
       setEmailLoginModalOpen(true);
     };
+    const handleOpenBrowser = () => {
+      setEmbeddedBrowserOpen(true);
+    };
     window.addEventListener('openEmailLogin', handleOpenEmailLogin);
+    window.addEventListener('openAhaBrowser', handleOpenBrowser);
     return () => {
       window.removeEventListener('openEmailLogin', handleOpenEmailLogin);
+      window.removeEventListener('openAhaBrowser', handleOpenBrowser);
     };
   }, []);
 
@@ -134,7 +139,12 @@ export const Header: React.FC<HeaderProps> = ({
                 <motion.button
                   key={item.id}
                   data-active={isActive}
-                  onClick={() => setSection(item.id)}
+                  onClick={() => {
+                    setSection(item.id);
+                    if (item.id === 'browser') {
+                      setEmbeddedBrowserOpen(true);
+                    }
+                  }}
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
                   className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black tracking-wide transition-colors whitespace-nowrap cursor-pointer ${
@@ -237,31 +247,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Zap size={14} className="text-[#ff4d4d] animate-pulse" />
               <span className="text-[10px] sm:text-[11px] font-black tracking-wide">AHA-v6</span>
-            </button>
-
-            {/* AHA Built-in Web Browser Badge */}
-            <button
-              onClick={() => setEmbeddedBrowserOpen(true)}
-              className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-purple-500/10 border-purple-500/30 text-purple-300 hover:bg-purple-500/20 hover:border-purple-400 transition-all duration-300 active:scale-95 shadow-md shadow-purple-500/10 cursor-pointer"
-              title={lang === 'ru' ? "Встроенный браузер и User-Agent инспектор" : "Embedded Browser & User-Agent Inspector"}
-            >
-              <Globe size={14} className="text-purple-400 animate-pulse" />
-              <span className="text-[10px] sm:text-[11px] font-black tracking-wide">{lang === 'ru' ? 'Браузер' : 'Browser'}</span>
-            </button>
-
-            {/* Telegram Channel Button */}
-            <div className="hidden xl:block">
-              <TelegramButton lang={lang} variant="compact" />
-            </div>
-
-            {/* PC & Mobile App & Script Hub Badge */}
-            <button
-              onClick={() => setPwaModalOpen(true)}
-              className="hidden md:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-emerald-500/20 border-cyan-500/40 text-cyan-200 hover:border-cyan-300 transition-all duration-300 active:scale-95 shadow-lg shadow-cyan-500/10 cursor-pointer"
-              title={lang === 'ru' ? "Центр Приложений (EXE для ПК, APK для Android, PWA)" : "App Center (Windows EXE, Android APK, PWA)"}
-            >
-              <Smartphone size={14} className="text-cyan-400 animate-pulse" />
-              <span className="text-[10px] sm:text-[11px] font-black tracking-wide">{lang === 'ru' ? 'EXE, APK & App' : 'EXE, APK & App'}</span>
             </button>
 
             <button 
@@ -410,6 +395,9 @@ export const Header: React.FC<HeaderProps> = ({
                   key={item.id}
                   onClick={() => {
                     setSection(item.id);
+                    if (item.id === 'browser') {
+                      setEmbeddedBrowserOpen(true);
+                    }
                     setMobileMenuOpen(false);
                   }}
                   className={`flex items-center justify-between p-4 rounded-xl text-xl font-semibold w-full ${
