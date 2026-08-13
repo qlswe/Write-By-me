@@ -314,7 +314,12 @@ export function useAuth() {
       await signInWithRedirect(auth, provider);
     } catch (err: any) {
       console.warn("Google Redirect Auth error:", err);
-      setError(err.message || "Error signing in with Google via redirect");
+      if (err.code === 'auth/unauthorized-domain') {
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+        setError(`UNAUTHORIZED_DOMAIN:${currentHost}`);
+      } else {
+        setError(err.code || err.message || "Error signing in with Google via redirect");
+      }
       setIsLoggingIn(false);
     }
   };
@@ -327,11 +332,6 @@ export function useAuth() {
     provider.setCustomParameters({ prompt: 'select_account' });
     
     const isIframe = typeof window !== 'undefined' && window.self !== window.top;
-    if (isIframe) {
-      setIsLoggingIn(false);
-      setError("IFRAME_AUTH_RESTRICTED");
-      return;
-    }
 
     try {
       await signInWithPopup(auth, provider);
@@ -342,10 +342,17 @@ export function useAuth() {
         setIsLoggingIn(false);
         return;
       }
-      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
-        setError("POPUP_BLOCKED");
+      if (err.code === 'auth/unauthorized-domain') {
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+        setError(`UNAUTHORIZED_DOMAIN:${currentHost}`);
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError("OPERATION_NOT_ALLOWED");
+      } else if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+        setError(isIframe ? "IFRAME_AUTH_RESTRICTED" : "POPUP_BLOCKED");
+      } else if (err.message && err.message.toLowerCase().includes('iframe')) {
+        setError("IFRAME_AUTH_RESTRICTED");
       } else {
-        setError(err.message || "Error signing in with Google");
+        setError(err.code || err.message || "Error signing in with Google");
       }
     } finally {
       setIsLoggingIn(false);

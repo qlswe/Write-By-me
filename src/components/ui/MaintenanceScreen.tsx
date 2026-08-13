@@ -4,6 +4,7 @@ import { ShieldAlert, LogOut, Mail, MessageSquare, Lock } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { GoogleLoginButton } from './GoogleLoginButton';
+import { EmailLoginModal } from './EmailLoginModal';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { safeStorage } from '../../utils/securityStorage';
@@ -22,6 +23,13 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({
   const { user, logout } = useAuth();
   const t = translations[lang] || translations.ru;
   const isRu = lang === 'ru';
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setIsEmailModalOpen(true);
+    window.addEventListener('openEmailLogin', handleOpen);
+    return () => window.removeEventListener('openEmailLogin', handleOpen);
+  }, []);
 
   const loc = (ru: string, en: string, by: string, de: string, fr: string, zh: string) => {
     switch (lang) {
@@ -158,6 +166,12 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({
           </div>
         )}
       </motion.div>
+
+      <EmailLoginModal 
+        isOpen={isEmailModalOpen} 
+        onClose={() => setIsEmailModalOpen(false)} 
+        lang={lang} 
+      />
     </div>
   );
 };

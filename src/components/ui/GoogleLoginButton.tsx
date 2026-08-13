@@ -55,8 +55,11 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
     lg: "w-5 h-5 sm:w-6 sm:h-6 shrink-0"
   };
 
+  const isUnauthorizedDomain = typeof error === 'string' && error.startsWith('UNAUTHORIZED_DOMAIN');
+  const unauthorizedHost = isUnauthorizedDomain ? error.split(':')[1] || window.location.hostname : '';
+
   const isPopupBlocked = error === 'POPUP_BLOCKED' || (typeof error === 'string' && error.includes('popup-blocked'));
-  const isIframeBlocked = error === 'IFRAME_AUTH_RESTRICTED' || error === 'POPUP_BLOCKED_IFRAME' || isIframe;
+  const isIframeBlocked = error === 'IFRAME_AUTH_RESTRICTED' || error === 'POPUP_BLOCKED_IFRAME';
 
   return (
     <div className="flex flex-col items-center gap-2 max-w-full">
@@ -75,8 +78,50 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       </button>
 
       {error && (
-        <div className="text-[11px] text-red-300 font-medium text-center bg-[#1c132c]/95 border border-[#ff4d4d]/40 px-3.5 py-2.5 rounded-xl max-w-xs shadow-lg space-y-2">
-          {isIframeBlocked ? (
+        <div className="text-[11px] text-red-300 font-medium text-center bg-[#1c132c]/95 border border-[#ff4d4d]/40 px-3.5 py-3 rounded-xl max-w-sm shadow-xl space-y-2.5">
+          {isUnauthorizedDomain ? (
+            <div className="space-y-2 text-left">
+              <div className="flex items-center gap-1.5 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                ⚠️ {loc('Домен не авторизован', 'Domain Not Authorized', 'Дамен не аўтарызаваны', 'Domain nicht autorisiert', 'Domaine non autorisé', '域名未授权')}
+              </div>
+              <p className="text-gray-200 text-[11px] leading-relaxed">
+                {loc(
+                  `Сайт ${unauthorizedHost} не добавлен в список Authorized Domains в Firebase Console.`,
+                  `Domain ${unauthorizedHost} is not in Firebase Auth Authorized Domains.`,
+                  `Сайт ${unauthorizedHost} не дададзены ў Authorized Domains Firebase.`,
+                  `Domain ${unauthorizedHost} ist nicht in den autorisierten Firebase-Domänen.`,
+                  `Le domaine ${unauthorizedHost} n'est pas autorisé dans Firebase Auth.`,
+                  `域名 ${unauthorizedHost} 未添加到 Firebase 授权域名列表中。`
+                )}
+              </p>
+              <div className="p-2 bg-[#0d0b14] rounded-lg border border-amber-500/30 text-[10px] font-mono text-amber-200 break-all">
+                Firebase Console ➔ Authentication ➔ Settings ➔ Authorized Domains ➔ Add "{unauthorizedHost}"
+              </div>
+              <div className="flex flex-col gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+                  className="w-full py-2 px-3 bg-[#ff4d4d] text-[#15101e] hover:bg-white font-black rounded-lg transition-all shadow-md cursor-pointer block text-xs"
+                >
+                  {loc(
+                    '✉️ Войти по Email / Паролю',
+                    '✉️ Sign in with Email / Password',
+                    '✉️ Ўвайсці па Email / Паролі',
+                    '✉️ Mit E-Mail / Passwort anmelden',
+                    '✉️ Connexion par e-mail / mot de passe',
+                    '✉️ 使用电子邮箱 / 密码登录'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(window.location.href, '_blank')}
+                  className="w-full py-1.5 px-3 bg-[#3d2b4f]/80 hover:bg-[#3d2b4f] text-gray-200 font-bold rounded-lg transition-all cursor-pointer block text-[11px] text-center"
+                >
+                  {loc('🌐 Открыть в новой вкладке', '🌐 Open in new tab', '🌐 Адкрыць у новай укладцы', '🌐 In neuem Tab öffnen', '🌐 Ouvrir dans un nouvel onglet', '🌐 在新标签页中打开')}
+                </button>
+              </div>
+            </div>
+          ) : isIframeBlocked ? (
             <div className="space-y-2">
               <p className="text-gray-200 text-[11px] leading-snug">
                 {loc(
@@ -88,27 +133,36 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
                   '嵌入式预览框架阻止 Google 登录弹窗。'
                 )}
               </p>
-              <button
-                type="button"
-                onClick={() => window.open(window.location.href, '_blank')}
-                className="w-full py-2 px-3 bg-[#ff4d4d] text-[#15101e] hover:bg-[#ff6666] font-black rounded-lg transition-all shadow-md cursor-pointer block text-xs"
-              >
-                {loc(
-                  '🚀 Открыть в новой вкладке для входа',
-                  '🚀 Open in new tab to sign in',
-                  '🚀 Адкрыць у новай укладцы',
-                  '🚀 In neuem Tab öffnen',
-                  '🚀 Ouvrir dans un nouvel onglet',
-                  '🚀 在新标签页中打开登录'
-                )}
-              </button>
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => window.open(window.location.href, '_blank')}
+                  className="w-full py-2 px-3 bg-[#ff4d4d] text-[#15101e] hover:bg-[#ff6666] font-black rounded-lg transition-all shadow-md cursor-pointer block text-xs"
+                >
+                  {loc(
+                    '🚀 Открыть в новой вкладке для входа',
+                    '🚀 Open in new tab to sign in',
+                    '🚀 Адкрыць у новай укладцы',
+                    '🚀 In neuem Tab öffnen',
+                    '🚀 Ouvrir dans un nouvel onglet',
+                    '🚀 在新标签页中打开登录'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+                  className="w-full py-1.5 px-3 bg-[#3d2b4f]/80 hover:bg-[#3d2b4f] text-gray-200 font-bold rounded-lg transition-all cursor-pointer block text-[11px]"
+                >
+                  {loc('✉️ Войти по Email', '✉️ Sign in with Email', '✉️ Ўвайсці па Email', '✉️ Mit E-Mail anmelden', '✉️ Connexion par e-mail', '✉️ 使用电子邮箱登录')}
+                </button>
+              </div>
             </div>
           ) : isPopupBlocked ? (
             <div className="space-y-2">
               <p className="text-gray-200 text-[11px] leading-snug">
                 {loc(
-                  'Всплывающее окно заблокировано браузером. Используйте перенаправление или откройте в новой вкладке.',
-                  'Popup was blocked by browser. Use redirect sign-in or open in new tab.',
+                  'Всплывающее окно заблокировано браузером. Используйте перенаправление или воспользуйтесь входом по Email.',
+                  'Popup was blocked by browser. Use redirect sign-in or Email sign-in.',
                   'Усплывальнае акно заблакавана браўзерам.',
                   'Pop-up wurde vom Browser blockiert.',
                   'La fenêtre contextuelle a été bloquée par le navigateur.',
@@ -132,22 +186,31 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => window.open(window.location.href, '_blank')}
-                  className="w-full py-1.5 px-3 bg-[#3d2b4f]/60 hover:bg-[#3d2b4f] text-gray-200 font-bold rounded-lg transition-all cursor-pointer block text-[11px]"
+                  onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+                  className="w-full py-1.5 px-3 bg-[#3d2b4f]/80 hover:bg-[#3d2b4f] text-gray-200 font-bold rounded-lg transition-all cursor-pointer block text-[11px]"
                 >
-                  {loc(
-                    '🌐 Открыть в новой вкладке',
-                    '🌐 Open in new tab',
-                    '🌐 Адкрыць у новай укладцы',
-                    '🌐 In neuem Tab öffnen',
-                    '🌐 Ouvrir dans un nouvel onglet',
-                    '🌐 在新标签页中打开'
-                  )}
+                  {loc('✉️ Войти по Email / Паролю', '✉️ Sign in with Email / Password', '✉️ Ўвайсці па Email', '✉️ Mit E-Mail anmelden', '✉️ Connexion par e-mail', '✉️ 使用电子邮箱登录')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(window.location.href, '_blank')}
+                  className="w-full py-1.5 px-3 bg-black/40 hover:bg-black/60 text-gray-400 hover:text-white font-medium rounded-lg transition-all cursor-pointer block text-[10px]"
+                >
+                  {loc('🌐 Открыть в новой вкладке', '🌐 Open in new tab', '🌐 Адкрыць у новай укладцы', '🌐 In neuem Tab öffnen', '🌐 Ouvrir dans un nouvel onglet', '🌐 在新标签页中打开')}
                 </button>
               </div>
             </div>
           ) : (
-            <span>{error}</span>
+            <div className="space-y-2">
+              <span className="block text-gray-200 text-xs font-semibold">{error}</span>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event('openEmailLogin'))}
+                className="w-full py-2 px-3 bg-[#ff4d4d] text-[#15101e] hover:bg-white font-black rounded-lg transition-all shadow-md cursor-pointer block text-xs"
+              >
+                {loc('✉️ Войти по Email / Паролю', '✉️ Sign in with Email / Password', '✉️ Ўвайсці па Email', '✉️ Mit E-Mail anmelden', '✉️ Connexion par e-mail', '✉️ 使用电子邮箱登录')}
+              </button>
+            </div>
           )}
         </div>
       )}
