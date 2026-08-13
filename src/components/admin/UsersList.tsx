@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { CachedAvatar } from '../ui/CachedAvatar';
+import { logTelemetryEvent } from '../../utils/telemetry';
 
 interface UsersListProps {
   lang: Language;
@@ -418,7 +419,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
         setProtectedViewFeatureEnabled(data.protectedViewFeatureEnabled !== false);
         if (data.maintenanceReason !== undefined) {
           setMaintenanceReason(data.maintenanceReason || '');
-          setMaintenanceReasonInput(prev => prev === '' ? (data.maintenanceReason || '') : prev);
+          setMaintenanceReasonInput(data.maintenanceReason || '');
         }
       }
     });
@@ -442,14 +443,25 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
     if (e) e.preventDefault();
     if (!isAdmin) return;
     setIsSavingReason(true);
+    const cleanReason = maintenanceReasonInput.trim();
     try {
       const docRef = doc(db, 'settings', 'general');
+      const now = Date.now();
       await setDoc(docRef, { 
-        maintenanceReason: maintenanceReasonInput.trim(),
-        maintenanceUpdatedAt: Date.now() 
+        maintenanceReason: cleanReason,
+        maintenanceUpdatedAt: now 
       }, { merge: true });
       setReasonSavedMsg(true);
       setTimeout(() => setReasonSavedMsg(false), 2500);
+
+      logTelemetryEvent(
+        'maintenance_reason_updated',
+        { reason: cleanReason, timestamp: now },
+        'users',
+        currentUser?.uid || 'admin',
+        currentUser?.email || 'admin',
+        currentUser?.displayName || 'Admin'
+      );
     } catch (error) {
       console.error("Error saving maintenance reason:", error);
     } finally {
@@ -459,13 +471,25 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
 
   const toggleMaintenanceMode = async () => {
     if (!isAdmin) return;
+    const nextMode = !maintenanceMode;
+    const cleanReason = maintenanceReasonInput.trim();
+    const now = Date.now();
     try {
       const docRef = doc(db, 'settings', 'general');
       await setDoc(docRef, { 
-        maintenanceMode: !maintenanceMode,
-        maintenanceReason: maintenanceReasonInput.trim(),
-        maintenanceUpdatedAt: Date.now()
+        maintenanceMode: nextMode,
+        maintenanceReason: cleanReason,
+        maintenanceUpdatedAt: now
       }, { merge: true });
+
+      logTelemetryEvent(
+        'maintenance_mode_toggled',
+        { mode: nextMode ? 'LOCKED' : 'OPEN', reason: cleanReason, timestamp: now },
+        'users',
+        currentUser?.uid || 'admin',
+        currentUser?.email || 'admin',
+        currentUser?.displayName || 'Admin'
+      );
     } catch (error) {
       console.error("Error toggling maintenance mode:", error);
     }

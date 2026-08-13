@@ -48,12 +48,30 @@ interface TelemetryLog {
   viewport: string;
   language: string;
   timezone: string;
+  timezoneOffset?: number;
   cores: string | number;
   memory: string | number;
   connectionType: string;
+  downlinkMbps?: string | number;
+  rttMs?: string | number;
+  gpuVendor?: string;
+  gpuRenderer?: string;
+  batteryLevel?: string;
+  batteryCharging?: string;
+  audioSampleRate?: string;
+  touchPoints?: number;
+  colorDepth?: string;
+  orientation?: string;
+  pwaStandalone?: boolean;
+  pdfViewerEnabled?: boolean;
+  saveData?: boolean;
+  cookieEnabled?: boolean;
+  doNotTrack?: string;
   referrer: string;
   localTime: string;
   currentSection: string;
+  eventName?: string;
+  eventDetails?: string;
   timestamp: any;
   sessionId: string;
 }
@@ -1347,9 +1365,16 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
                         )}
                       </td>
                       <td className="py-3.5 px-4 font-mono font-bold">
-                        <span className="px-2 py-1 bg-[#15101e] text-[#ff4d4d] rounded-md uppercase tracking-wider text-[10px] border border-[#ff4d4d]/20">
-                          {getSectionLabel(log.currentSection || 'home', lang)}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className="px-2 py-0.5 bg-[#15101e] text-[#ff4d4d] rounded-md uppercase tracking-wider text-[10px] border border-[#ff4d4d]/20">
+                            {getSectionLabel(log.currentSection || 'home', lang)}
+                          </span>
+                          {log.eventName && (
+                            <span className="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-300 rounded text-[9px] border border-cyan-500/30 max-w-[130px] truncate" title={log.eventName}>
+                              ⚡ {log.eventName}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5 text-gray-300">
@@ -1471,6 +1496,22 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
                   <div className="text-gray-400">Time: {selectedLog.localTime}</div>
                   <div className="text-purple-400 text-[10px]">Session ID: {selectedLog.sessionId || 'N/A'}</div>
                 </div>
+
+                {(selectedLog.eventName || selectedLog.eventDetails) && (
+                  <div className="bg-[#15101e] border border-cyan-500/40 p-3.5 rounded-2xl col-span-1 sm:col-span-2 space-y-1">
+                    <span className="text-cyan-400 uppercase tracking-widest text-[10px] block font-sans font-bold flex items-center gap-1">
+                      ⚡ Recorded Event Data
+                    </span>
+                    {selectedLog.eventName && (
+                      <div className="text-white font-bold text-xs">Event Name: <span className="text-cyan-300 font-mono">{selectedLog.eventName}</span></div>
+                    )}
+                    {selectedLog.eventDetails && (
+                      <pre className="text-cyan-200 text-[11px] bg-[#0d0b14] p-2.5 rounded-xl border border-cyan-500/20 whitespace-pre-wrap font-mono overflow-x-auto mt-1 max-h-40">
+                        {selectedLog.eventDetails}
+                      </pre>
+                    )}
+                  </div>
+                )}
 
                 <div className="bg-[#15101e] border border-[#3d2b4f]/60 p-3.5 rounded-2xl space-y-1">
                   <span className="text-gray-500 uppercase tracking-widest text-[10px] block font-sans font-bold">Display & Touch</span>

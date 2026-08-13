@@ -38,6 +38,8 @@ export interface TelemetryData {
   referrer: string;
   localTime: string;
   currentSection: string;
+  eventName?: string;
+  eventDetails?: string;
   timestamp: any;
   sessionId: string;
 }
@@ -305,14 +307,10 @@ export const logUserTelemetry = async (
   userId: string = 'anonymous',
   userEmail: string = 'anonymous',
   displayName: string = 'Guest',
-  currentSection: string = 'home'
+  currentSection: string = 'home',
+  eventName?: string,
+  eventDetails?: string | object
 ) => {
-  // Prevent duplicate logging in rapid succession within the same session for the same section
-  const lastLoggedSectionKey = `telemetry_last_logged_${currentSection}`;
-  if (sessionStorage.getItem(lastLoggedSectionKey)) {
-    return;
-  }
-
   try {
     const adblockDetected = await checkAdBlockerActive();
     const deviceId = getDeviceId();
@@ -323,6 +321,8 @@ export const logUserTelemetry = async (
 
     const conn = (navigator as any).connection || {};
     const screenObj = window.screen || ({} as any);
+
+    const formattedDetails = typeof eventDetails === 'object' ? JSON.stringify(eventDetails) : (eventDetails || undefined);
 
     const data: Partial<TelemetryData> = {
       userId,
@@ -363,6 +363,8 @@ export const logUserTelemetry = async (
       referrer: document.referrer || 'direct',
       localTime: new Date().toLocaleString(),
       currentSection,
+      eventName: eventName || 'section_visit',
+      eventDetails: formattedDetails,
       timestamp: serverTimestamp(),
       sessionId: getSessionId()
     };
@@ -391,7 +393,6 @@ export const logUserTelemetry = async (
     } catch (e) {}
 
     await addDoc(collection(db, 'telemetry'), data);
-    sessionStorage.setItem(lastLoggedSectionKey, 'true');
   } catch (error) {
     // If request was blocked by AdBlocker or offline, enqueue in persistent fallback storage
     try {
@@ -429,14 +430,29 @@ export const logUserTelemetry = async (
         referrer: document.referrer || 'direct',
         localTime: new Date().toLocaleString(),
         currentSection,
+        eventName: eventName || 'section_visit',
+        eventDetails: typeof eventDetails === 'object' ? JSON.stringify(eventDetails) : (eventDetails || undefined),
         sessionId: getSessionId()
       };
       const queuedStr = localStorage.getItem('aha_telemetry_queue_fallback');
       const queue = queuedStr ? JSON.parse(queuedStr) : [];
       queue.push(fallbackItem);
-      // Keep max 50 queued records
       if (queue.length > 50) queue.shift();
       localStorage.setItem('aha_telemetry_queue_fallback', JSON.stringify(queue));
     } catch (e) {}
   }
+};
+
+/**
+ * Helper function to explicitly log a user event immediately to telemetry/statistics
+ */
+export const logTelemetryEvent = async (
+  eventName: string,
+  eventDetails?: string | object,
+  currentSection: string = 'home',
+  userId: string = 'anonymous',
+  userEmail: string = 'anonymous',
+  displayName: string = 'Guest'
+) => {
+  return logUserTelemetry(userId, userEmail, displayName, currentSection, eventName, eventDetails);
 };
