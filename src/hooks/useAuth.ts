@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { auth, db } from '../firebase';
+import { auth, db, googleProvider } from '../firebase';
 import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { getDeviceId } from '../utils/deviceId';
@@ -17,6 +17,7 @@ let authInitialized = false;
 let userDocUnsubscribe: (() => void) | null = null;
 let blockedDevicesList: string[] = [];
 let blockedEmailsList: string[] = [];
+let globalAuthError: string | null = null;
 let userIsBlockedDoc = false;
 
 const checkBlockingState = () => {
@@ -91,8 +92,17 @@ const initAuth = () => {
   authInitialized = true;
 
   queueMicrotask(() => {
-    getRedirectResult(auth).catch((error) => {
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) {
+        localStorage.setItem('auth_session_start_time', Date.now().toString());
+      }
+    }).catch((error) => {
       console.warn("Redirect result check:", error);
+      if (error.code === 'auth/unauthorized-domain') {
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+        globalAuthError = `UNAUTHORIZED_DOMAIN:${currentHost}`;
+        notifySubscribers();
+      }
     });
   });
 
@@ -308,10 +318,8 @@ export function useAuth() {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     setError(null);
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
     try {
-      await signInWithRedirect(auth, provider);
+      await signInWithRedirect(auth, googleProvider);
     } catch (err: any) {
       console.warn("Google Redirect Auth error:", err);
       if (err.code === 'auth/unauthorized-domain') {
@@ -328,31 +336,64 @@ export function useAuth() {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     setError(null);
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
     
     const isIframe = typeof window !== 'undefined' && window.self !== window.top;
 
+    if (isIframe) {
+      try {
+        await signInWithPopup(auth, googleProvider);
+        localStorage.setItem('auth_session_start_time', Date.now().toString());
+      } catch (err: any) {
+        console.warn("Google Auth popup error inside iframe:", err);
+        if (err.code === 'auth/popup-closed-by-user') {
+          setIsLoggingIn(false);
+          return;
+        }
+        if (err.code === 'auth/unauthorized-domain') {
+          const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+          setError(`UNAUTHORIZED_DOMAIN:${currentHost}`);
+        } else {
+          setError("IFRAME_AUTH_RESTRICTED");
+        }
+      } finally {
+        setIsLoggingIn(false);
+      }
+      return;
+    }
+
     try {
-      await signInWithPopup(auth, provider);
+      // Primary call: signInWithPopup executed synchronously from click gesture
+      await signInWithPopup(auth, googleProvider);
       localStorage.setItem('auth_session_start_time', Date.now().toString());
-    } catch (err: any) {
-      console.warn("Google Auth error:", err);
-      if (err.code === 'auth/popup-closed-by-user') {
+    } catch (popupErr: any) {
+      console.warn("Google Popup Auth failed, falling back to Redirect:", popupErr);
+      if (popupErr.code === 'auth/popup-closed-by-user') {
         setIsLoggingIn(false);
         return;
       }
-      if (err.code === 'auth/unauthorized-domain') {
+      if (popupErr.code === 'auth/unauthorized-domain') {
         const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
         setError(`UNAUTHORIZED_DOMAIN:${currentHost}`);
-      } else if (err.code === 'auth/operation-not-allowed') {
+        setIsLoggingIn(false);
+        return;
+      }
+      if (popupErr.code === 'auth/operation-not-allowed') {
         setError("OPERATION_NOT_ALLOWED");
-      } else if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
-        setError(isIframe ? "IFRAME_AUTH_RESTRICTED" : "POPUP_BLOCKED");
-      } else if (err.message && err.message.toLowerCase().includes('iframe')) {
-        setError("IFRAME_AUTH_RESTRICTED");
-      } else {
-        setError(err.code || err.message || "Error signing in with Google");
+        setIsLoggingIn(false);
+        return;
+      }
+
+      // If popup is blocked by mobile browser or adblocker, fall back to signInWithRedirect
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirectErr: any) {
+        console.warn("Google Redirect Auth error:", redirectErr);
+        if (redirectErr.code === 'auth/unauthorized-domain') {
+          const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+          setError(`UNAUTHORIZED_DOMAIN:${currentHost}`);
+        } else {
+          setError("POPUP_BLOCKED");
+        }
       }
     } finally {
       setIsLoggingIn(false);
@@ -446,7 +487,7 @@ export function useAuth() {
     isVerified: globalIsVerified,
     isBlocked: globalIsBlocked,
     deviceId: getDeviceId(),
-    error, 
+    error: error || globalAuthError, 
     loginWithGoogle, 
     loginWithGoogleRedirect,
     loginWithEmail, 
