@@ -15,11 +15,27 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
   className = '', 
   size = 'md' 
 }) => {
-  const { loginWithGoogle, isLoggingIn, error } = useAuth();
+  const { loginWithGoogle, loginWithGoogleRedirect, isLoggingIn, error } = useAuth();
   const t = translations[lang] as any;
+
+  const loc = (ru: string, en: string, by: string, de: string, fr: string, zh: string) => {
+    switch (lang) {
+      case 'en': return en;
+      case 'by': return by;
+      case 'de': return de;
+      case 'fr': return fr;
+      case 'zh': return zh;
+      default: return ru;
+    }
+  };
 
   const handleClick = async () => {
     await loginWithGoogle();
+    if (onClick) onClick();
+  };
+
+  const handleRedirectClick = async () => {
+    await loginWithGoogleRedirect();
     if (onClick) onClick();
   };
 
@@ -39,6 +55,9 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
     lg: "w-5 h-5 sm:w-6 sm:h-6 shrink-0"
   };
 
+  const isPopupBlocked = error === 'POPUP_BLOCKED' || (typeof error === 'string' && error.includes('popup-blocked'));
+  const isIframeBlocked = error === 'IFRAME_AUTH_RESTRICTED' || error === 'POPUP_BLOCKED_IFRAME' || isIframe;
+
   return (
     <div className="flex flex-col items-center gap-2 max-w-full">
       <button 
@@ -56,21 +75,76 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       </button>
 
       {error && (
-        <div className="text-[11px] text-red-300 font-medium text-center bg-[#1c132c]/95 border border-[#ff4d4d]/40 px-3.5 py-2.5 rounded-xl max-w-xs shadow-lg">
-          {error === 'IFRAME_AUTH_RESTRICTED' || error === 'POPUP_BLOCKED_IFRAME' || isIframe ? (
+        <div className="text-[11px] text-red-300 font-medium text-center bg-[#1c132c]/95 border border-[#ff4d4d]/40 px-3.5 py-2.5 rounded-xl max-w-xs shadow-lg space-y-2">
+          {isIframeBlocked ? (
             <div className="space-y-2">
               <p className="text-gray-200 text-[11px] leading-snug">
-                {lang === 'ru'
-                  ? 'Встроенное окно превью (iframe) блокирует авторизацию Google из-за политик безопасности браузера.'
-                  : 'Embedded preview frame blocks Google sign-in due to browser security policies.'}
+                {loc(
+                  'Встроенный фрейм превью блокирует всплывающее окно авторизации Google.',
+                  'Embedded preview frame blocks Google sign-in popups.',
+                  'Убудаваны фрэйм прэв\'ю блакуе ўсплывальнае акно аўтарызацыі.',
+                  'Eingebetteter Vorschauframe blockiert Google-Anmeldefenster.',
+                  'Le cadre d\'aperçu intégré bloque la fenêtre de connexion Google.',
+                  '嵌入式预览框架阻止 Google 登录弹窗。'
+                )}
               </p>
               <button
                 type="button"
                 onClick={() => window.open(window.location.href, '_blank')}
-                className="w-full py-2 px-3 bg-[#ff4d4d] text-[#15101e] hover:bg-[#ff6666] font-black rounded-lg transition-all shadow-md cursor-pointer block"
+                className="w-full py-2 px-3 bg-[#ff4d4d] text-[#15101e] hover:bg-[#ff6666] font-black rounded-lg transition-all shadow-md cursor-pointer block text-xs"
               >
-                {lang === 'ru' ? '🚀 Открыть в новой вкладке для входа' : '🚀 Open in new tab to sign in'}
+                {loc(
+                  '🚀 Открыть в новой вкладке для входа',
+                  '🚀 Open in new tab to sign in',
+                  '🚀 Адкрыць у новай укладцы',
+                  '🚀 In neuem Tab öffnen',
+                  '🚀 Ouvrir dans un nouvel onglet',
+                  '🚀 在新标签页中打开登录'
+                )}
               </button>
+            </div>
+          ) : isPopupBlocked ? (
+            <div className="space-y-2">
+              <p className="text-gray-200 text-[11px] leading-snug">
+                {loc(
+                  'Всплывающее окно заблокировано браузером. Используйте перенаправление или откройте в новой вкладке.',
+                  'Popup was blocked by browser. Use redirect sign-in or open in new tab.',
+                  'Усплывальнае акно заблакавана браўзерам.',
+                  'Pop-up wurde vom Browser blockiert.',
+                  'La fenêtre contextuelle a été bloquée par le navigateur.',
+                  '弹窗已被浏览器拦截。'
+                )}
+              </p>
+              <div className="flex flex-col gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={handleRedirectClick}
+                  className="w-full py-2 px-3 bg-[#ff4d4d] text-[#15101e] hover:bg-[#ff6666] font-black rounded-lg transition-all shadow-md cursor-pointer block text-xs"
+                >
+                  {loc(
+                    '🔑 Войти через перенаправление',
+                    '🔑 Sign in with Redirect',
+                    '🔑 Ўвайсці праз перанакіраванне',
+                    '🔑 Mit Weiterleitung anmelden',
+                    '🔑 Connexion avec redirection',
+                    '🔑 通过重定向登录'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(window.location.href, '_blank')}
+                  className="w-full py-1.5 px-3 bg-[#3d2b4f]/60 hover:bg-[#3d2b4f] text-gray-200 font-bold rounded-lg transition-all cursor-pointer block text-[11px]"
+                >
+                  {loc(
+                    '🌐 Открыть в новой вкладке',
+                    '🌐 Open in new tab',
+                    '🌐 Адкрыць у новай укладцы',
+                    '🌐 In neuem Tab öffnen',
+                    '🌐 Ouvrir dans un nouvel onglet',
+                    '🌐 在新标签页中打开'
+                  )}
+                </button>
+              </div>
             </div>
           ) : (
             <span>{error}</span>
@@ -84,9 +158,17 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
           onClick={() => window.open(window.location.href, '_blank')}
           className="text-[10px] text-gray-400 hover:text-white underline transition-colors cursor-pointer"
         >
-          {lang === 'ru' ? 'Не входит? Откройте в новой вкладке' : 'Login blocked? Open in new tab'}
+          {loc(
+            'Не входит? Откройте в новой вкладке',
+            'Login blocked? Open in new tab',
+            'Не ўваходзіць? Адкрыйце ў новай укладцы',
+            'Anmeldung blockiert? In neuem Tab öffnen',
+            'Blocage ? Ouvrir dans un nouvel onglet',
+            '无法登录？在新标签页中打开'
+          )}
         </button>
       )}
     </div>
   );
 };
+

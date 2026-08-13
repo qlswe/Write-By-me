@@ -304,6 +304,21 @@ export function useAuth() {
     };
   }, []);
 
+  const loginWithGoogleRedirect = async () => {
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
+    setError(null);
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      await signInWithRedirect(auth, provider);
+    } catch (err: any) {
+      console.warn("Google Redirect Auth error:", err);
+      setError(err.message || "Error signing in with Google via redirect");
+      setIsLoggingIn(false);
+    }
+  };
+
   const loginWithGoogle = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
@@ -311,6 +326,13 @@ export function useAuth() {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
+    const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+    if (isIframe) {
+      setIsLoggingIn(false);
+      setError("IFRAME_AUTH_RESTRICTED");
+      return;
+    }
+
     try {
       await signInWithPopup(auth, provider);
       localStorage.setItem('auth_session_start_time', Date.now().toString());
@@ -320,19 +342,10 @@ export function useAuth() {
         setIsLoggingIn(false);
         return;
       }
-      const isIframe = window.self !== window.top;
-      if (isIframe) {
-        setError("IFRAME_AUTH_RESTRICTED");
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+        setError("POPUP_BLOCKED");
       } else {
-        if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
-          try {
-            await signInWithRedirect(auth, provider);
-          } catch (redirectError: any) {
-            setError(redirectError.message);
-          }
-        } else {
-          setError(err.message || "Error signing in with Google");
-        }
+        setError(err.message || "Error signing in with Google");
       }
     } finally {
       setIsLoggingIn(false);
@@ -428,6 +441,7 @@ export function useAuth() {
     deviceId: getDeviceId(),
     error, 
     loginWithGoogle, 
+    loginWithGoogleRedirect,
     loginWithEmail, 
     registerWithEmail,
     logout, 
