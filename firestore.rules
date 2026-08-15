@@ -87,8 +87,8 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
       allow update: if isAdmin() || 
-        (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes']) == false) ||
-        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes']));
+        (isSignedIn() && resource.data.authorId == request.auth.uid) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes', 'reactions', 'commentCount', 'shares', 'bookmarkCount', 'pinned']));
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
@@ -96,18 +96,22 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
       allow update: if isAdmin() || 
-        (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes', 'pokeCount']) == false) ||
-        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes'])) ||
-        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pokeCount']));
+        (isSignedIn() && resource.data.authorId == request.auth.uid) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes', 'reactions', 'pokeCount']));
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    match /postReactions/{targetId} {
+      allow read: if true;
+      allow write: if isSignedIn();
     }
 
     match /comments/{commentId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
       allow update: if isAdmin() || 
-        (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes']) == false) ||
-        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes']));
+        (isSignedIn() && resource.data.authorId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasAny(['upvotes', 'downvotes', 'reactions']) == false) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes', 'reactions']));
       allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
@@ -126,7 +130,20 @@ service cloud.firestore {
     match /user_posts/{postId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
-      allow update, delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if isAdmin() || 
+        (isSignedIn() && resource.data.uid == request.auth.uid) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'reactions', 'comments', 'shares', 'bookmarkCount']));
+      allow delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // User Stories
+    match /user_stories/{storyId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isAdmin() || 
+        (isSignedIn() && resource.data.authorId == request.auth.uid) ||
+        (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views', 'likes', 'reactions', 'replies']));
+      allow delete: if isSignedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
     // Admin controlled areas
@@ -171,6 +188,13 @@ service cloud.firestore {
     // Admin Audit Logs
     match /admin_audit_logs/{logId} {
       allow read, write: if isAdmin();
+    }
+
+    // User Notifications (Post activity, comments, replies, reactions)
+    match /user_notifications/{notificationId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
   }
 }

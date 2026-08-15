@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { BookOpen, Copy, Check, Quote, FileText, List, Eye, Clock, Hash, Share2, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Language } from '../../data/translations';
+import { extractPlainText } from './MarkdownRenderer';
 
 interface ArticleToolsProps {
   title: string;
@@ -14,8 +15,8 @@ interface ArticleToolsProps {
 
 export const ArticleReadingMeta: React.FC<{ htmlContent: string; lang: Language }> = ({ htmlContent, lang }) => {
   const stats = useMemo(() => {
-    // Strip HTML tags to get raw text
-    const text = htmlContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    // Extract clean plain text from either Markdown or HTML
+    const text = extractPlainText(htmlContent);
     const charCount = text.length;
     const wordCount = text.split(/\s+/).filter(Boolean).length;
     // Average reading speed: 180 words per minute for RU/EN
@@ -171,17 +172,31 @@ export const ArticleTableOfContents: React.FC<{ htmlContent: string; lang: Langu
   const headings = useMemo(() => {
     if (!htmlContent) return [];
     
-    // Extract headers h1, h2, h3
-    const regex = /<h([1-3])\b[^>]*>(.*?)<\/h\1>/gi;
     const items: { level: number; text: string; id: string }[] = [];
-    let match;
 
-    while ((match = regex.exec(htmlContent)) !== null) {
+    // 1. Extract HTML headers <h1-3>
+    const htmlRegex = /<h([1-3])\b[^>]*>(.*?)<\/h\1>/gi;
+    let match;
+    while ((match = htmlRegex.exec(htmlContent)) !== null) {
       const level = parseInt(match[1], 10);
       const rawText = match[2].replace(/<[^>]*>/g, '').trim();
       if (rawText) {
-        const id = 'heading-' + rawText.toLowerCase().replace(/[^a-z0-9а-яё]+/gi, '-');
+        const id = 'heading-' + rawText.toLowerCase().replace(/[^a-z0-9а-яё]+/gi, '-').replace(/^-|-$/g, '');
         items.push({ level, text: rawText, id });
+      }
+    }
+
+    // 2. If no HTML headers found, extract Markdown headers (#, ##, ###)
+    if (items.length === 0) {
+      const mdRegex = /^(#{1,3})\s+(.+)$/gm;
+      let mdMatch;
+      while ((mdMatch = mdRegex.exec(htmlContent)) !== null) {
+        const level = mdMatch[1].length;
+        const rawText = mdMatch[2].replace(/[*_~`]/g, '').trim();
+        if (rawText) {
+          const id = 'heading-' + rawText.toLowerCase().replace(/[^a-z0-9а-яё]+/gi, '-').replace(/^-|-$/g, '');
+          items.push({ level, text: rawText, id });
+        }
       }
     }
 
@@ -203,7 +218,12 @@ export const ArticleTableOfContents: React.FC<{ htmlContent: string; lang: Langu
             href={`#${h.id}`}
             onClick={(e) => {
               e.preventDefault();
-              // Scroll to heading in DOM if present
+              // Scroll to heading by ID or matching text
+              const elById = document.getElementById(h.id);
+              if (elById) {
+                elById.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+              }
               const el = Array.from(document.querySelectorAll('h1, h2, h3')).find(
                 node => node.textContent?.trim() === h.text
               );

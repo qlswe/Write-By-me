@@ -90,6 +90,24 @@
       },
       "required": ["uid", "text", "createdAt"]
     },
+    "user_stories": {
+      "title": "User Story",
+      "description": "User published 24h stories with gradients, media, or text.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "text": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "gradient": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "views": { "type": "array", "items": { "type": "string" } },
+        "likes": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["authorId", "authorName", "createdAt"]
+    },
     "telemetry": {
       "title": "User Telemetry",
       "description": "Standard permitted user browser and environment telemetry.",
@@ -175,6 +193,10 @@
     "/user_posts/{postId}": {
       "schema": "user_posts",
       "description": "Collection of user-created posts (Юзы)."
+    },
+    "/user_stories/{storyId}": {
+      "schema": "user_stories",
+      "description": "Collection of user published 24h stories."
     },
     "/sdk_reports/{reportId}": {
       "schema": "sdk_reports",

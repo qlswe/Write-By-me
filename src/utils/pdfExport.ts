@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { printHtmlReport } from './printReport';
+import { extractPlainText } from '../components/ui/MarkdownRenderer';
 
 export interface PDFExportOptions {
   title: string;
@@ -14,12 +15,41 @@ export interface PDFExportOptions {
 }
 
 /**
- * Strips HTML tags for clean plain-text fallback
+ * Strips HTML tags and markdown tokens for clean plain-text fallback
  */
 function stripHtml(html: string): string {
-  const tmp = document.createElement('DIV');
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || '';
+  return extractPlainText(html);
+}
+
+/**
+ * Basic Markdown to HTML converter for clean PDF print reports
+ */
+function formatContentForPrint(content: string): string {
+  if (!content) return '';
+  // If already full of HTML tags, return as is
+  if (/<(p|div|h[1-6]|table|ul|ol|blockquote)\b/i.test(content)) {
+    return content;
+  }
+
+  // Convert markdown to clean styled HTML for PDF printing
+  return content
+    // Headers
+    .replace(/^### (.*$)/gim, '<h3 style="font-size: 16px; font-weight: bold; margin-top: 16px; margin-bottom: 8px; color: #0f172a;">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 style="font-size: 18px; font-weight: bold; margin-top: 20px; margin-bottom: 10px; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1 style="font-size: 22px; font-weight: bold; margin-top: 24px; margin-bottom: 12px; color: #0f172a;">$1</h1>')
+    // Bold & Italic
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Blockquote
+    .replace(/^\> (.*$)/gim, '<blockquote style="border-left: 3px solid #ff4d4d; padding: 8px 12px; margin: 12px 0; background: #f8fafc; color: #475569; font-style: italic;">$1</blockquote>')
+    // Code blocks
+    .replace(/```([\s\S]*?)```/g, '<pre style="background: #f1f5f9; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; overflow-x: auto; margin: 12px 0;"><code>$1</code></pre>')
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code style="background: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #d946ef;">$1</code>')
+    // Lists
+    .replace(/^\- (.*$)/gim, '<li style="margin-bottom: 4px;">$1</li>')
+    // Paragraphs
+    .replace(/\n\n/g, '<br/><br/>');
 }
 
 /**
@@ -113,7 +143,7 @@ export function exportContentToPDF(options: PDFExportOptions): void {
 
       <!-- Main Body Content -->
       <div style="font-size: 14px; color: #1e293b; text-align: justify; line-height: 1.7;" class="pdf-content-body">
-        ${contentHtml}
+        ${formatContentForPrint(contentHtml)}
       </div>
 
       <!-- Footer Document Stamp -->

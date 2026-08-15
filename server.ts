@@ -28,8 +28,15 @@ async function startServer() {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  // Serve static uploads for videos and media files
-  app.use('/uploads', express.static(uploadsDir));
+  const ALLOWED_MEDIA_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm', 'ogg', 'mov', 'mp3', 'wav', 'm4a']);
+
+  // Serve static uploads for videos and media files safely
+  app.use('/uploads', express.static(uploadsDir, {
+    setHeaders: (res) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Security-Policy', "default-src 'none'; media-src 'self'; img-src 'self' data:;");
+    }
+  }));
 
   // Health check endpoints for container and deployment validation
   app.get("/api/health", (req, res) => {
@@ -443,7 +450,11 @@ async function startServer() {
       } else {
         ext = ext.replace(/[^a-z0-9]/g, "");
       }
-      if (!ext) ext = "bin";
+      
+      // Strict whitelist check to prevent upload of executable/script files
+      if (!ALLOWED_MEDIA_EXTS.has(ext)) {
+        ext = "jpg"; // fallback safe image format
+      }
 
       const safeName = `media_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
       const filePath = path.join(uploadsDir, safeName);

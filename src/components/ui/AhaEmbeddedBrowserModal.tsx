@@ -59,6 +59,7 @@ import {
   HistoryItem
 } from '../../utils/ahaBrowser';
 import { Language } from '../../data/translations';
+import { CustomSelect } from './CustomSelect';
 
 interface AhaEmbeddedBrowserModalProps {
   isOpen: boolean;
@@ -965,18 +966,17 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
               <span className="hidden md:inline">{adBlock ? 'Shield ON' : 'Shield OFF'}</span>
             </button>
 
-            <select
-              value={activeProfile.id}
-              onChange={(e) => handleSelectProfile(e.target.value)}
-              className="px-2 py-1 bg-[#241838] border border-[#4d3663] text-gray-200 text-xs font-bold rounded-xl focus:outline-none focus:border-[#ff4d4d] cursor-pointer"
-            >
-              {AHA_CUSTOM_USER_AGENTS.map((prof) => (
-                <option key={prof.id} value={prof.id}>
-                  {prof.name}
-                </option>
-              ))}
-              <option value="custom">{isRu ? '⚙️ Свой UA...' : '⚙️ Custom UA...'}</option>
-            </select>
+            <div className="w-36 sm:w-44">
+              <CustomSelect
+                value={activeProfile.id}
+                onChange={(val) => handleSelectProfile(val)}
+                className="!px-2 !py-1 !bg-[#241838] !border-[#4d3663] !text-gray-200 !text-xs !font-bold !rounded-xl"
+                options={[
+                  ...AHA_CUSTOM_USER_AGENTS.map((prof) => ({ value: prof.id, label: prof.name })),
+                  { value: "custom", label: isRu ? "⚙️ Свой UA..." : "⚙️ Custom UA..." }
+                ]}
+              />
+            </div>
           </div>
 
           {/* Sub-Header View Mode Selector Pills */}

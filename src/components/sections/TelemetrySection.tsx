@@ -33,6 +33,8 @@ import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { AdminAuditLogs } from '../admin/AdminAuditLogs';
 import { logAdminAction } from '../../utils/auditLogger';
 import { printHtmlReport } from '../../utils/printReport';
+import { AnalyticsCharts } from '../telemetry/AnalyticsCharts';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface TelemetryLog {
   id: string;
@@ -793,494 +795,60 @@ export const TelemetrySection: React.FC<{ lang: Language }> = ({ lang }) => {
         <AdminAuditLogs lang={lang} />
       ) : (
         <>
-          {/* Filter Controls Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1e152d] border border-[#3d2b4f] p-3 rounded-2xl">
-        <div className="flex items-center gap-2">
-          <Filter size={15} className="text-[#ff4d4d] ml-1" />
-          <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">{lang === 'ru' ? 'Период:' : 'Period:'}</span>
-          <div className="flex items-center bg-[#15101e] border border-[#3d2b4f] rounded-xl p-1">
-            {(['24h', '7d', '30d', 'all'] as const).map(p => (
-              <button
-                key={p}
-                onClick={() => {
-                  setTimeRange(p);
-                  setCurrentPage(1);
-                }}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  timeRange === p ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {p.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
+          {/* Visual Analytics & Engagement Dashboard Component */}
+          <AnalyticsCharts
+            logs={logs}
+            lang={lang}
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+            selectedSection={selectedSectionFilter}
+            onSectionChange={setSelectedSectionFilter}
+          />
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{lang === 'ru' ? 'Раздел:' : 'Section:'}</span>
-          <select
-            value={selectedSectionFilter}
-            onChange={(e) => {
-              setSelectedSectionFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="bg-[#15101e] border border-[#3d2b4f] text-gray-200 text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#ff4d4d] cursor-pointer"
-          >
-            <option value="ALL">{lang === 'ru' ? 'Все разделы' : 'All Sections'}</option>
-            {activeSections.map((sec) => (
-              <option key={sec} value={sec}>{getSectionLabel(sec, lang)}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4 hover:border-[#ff4d4d]/50 transition-all">
-          <div className="p-3 bg-red-500/20 text-[#ff4d4d] rounded-2xl border border-red-500/30">
-            <TrendingUp size={24} />
-          </div>
-          <div>
-            <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-              {lang === 'ru' ? 'Всего событий' : 'Total Events'}
-            </div>
-            <div className="text-2xl font-black text-white mt-0.5">{totalVisits}</div>
-          </div>
-        </div>
-
-        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4 hover:border-cyan-500/50 transition-all">
-          <div className="p-3 bg-cyan-500/20 text-cyan-400 rounded-2xl border border-cyan-500/30">
-            <Layers size={24} />
-          </div>
-          <div>
-            <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-              {lang === 'ru' ? 'Популярный раздел' : 'Popular Section'}
-            </div>
-            <div className="text-xl font-black text-white mt-0.5 truncate max-w-[140px]">{topSection}</div>
-          </div>
-        </div>
-
-        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4 hover:border-purple-500/50 transition-all">
-          <div className="p-3 bg-purple-500/20 text-purple-400 rounded-2xl border border-purple-500/30">
-            <Users size={24} />
-          </div>
-          <div>
-            <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-              {lang === 'ru' ? 'Активные пользователи' : 'Active Users'}
-            </div>
-            <div className="text-2xl font-black text-white mt-0.5">{activeUsersCount}</div>
-          </div>
-        </div>
-
-        <div className="p-5 bg-[#251c35] border border-[#3d2b4f] rounded-3xl shadow-xl flex items-center gap-4 hover:border-emerald-500/50 transition-all">
-          <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl border border-emerald-500/30">
-            <Database size={24} />
-          </div>
-          <div>
-            <div className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">
-              {lang === 'ru' ? 'Записей в выборке' : 'Filtered Logs'}
-            </div>
-            <div className="text-2xl font-black text-white mt-0.5">{filteredLogs.length}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* MAIN CHART: Section Activity Dynamics */}
-      <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h3 className="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
-              <BarChart2 className="text-[#ff4d4d]" size={20} />
-              {lang === 'ru' ? 'Динамика активности по разделам' : 'Section Activity Dynamics'}
-            </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {lang === 'ru' ? 'Количество переходов и просмотров в разрезе времени' : 'Visual breakdown of user events by section over time'}
-            </p>
-          </div>
-
-          <div className="flex items-center bg-[#15101e] border border-[#3d2b4f] rounded-xl p-1 shrink-0">
-            <button
-              onClick={() => setChartType('area')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                chartType === 'area' ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {lang === 'ru' ? 'Область' : 'Area'}
-            </button>
-            <button
-              onClick={() => setChartType('bar')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                chartType === 'bar' ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {lang === 'ru' ? 'Столбцы' : 'Bar'}
-            </button>
-            <button
-              onClick={() => setChartType('line')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                chartType === 'line' ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {lang === 'ru' ? 'Линии' : 'Line'}
-            </button>
-          </div>
-        </div>
-
-        <div className="w-full h-72 sm:h-80 pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            {chartType === 'area' ? (
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  {activeSections.map((sec, idx) => (
-                    <linearGradient key={sec} id={`grad_${sec}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={getSectionColor(sec, idx)} stopOpacity={0.6}/>
-                      <stop offset="95%" stopColor={getSectionColor(sec, idx)} stopOpacity={0.0}/>
-                    </linearGradient>
-                  ))}
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3d2b4f" opacity={0.5} />
-                <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#120a21',
-                    borderColor: '#3d2b4f',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
-                    fontSize: '12px',
-                    color: '#fff'
-                  }}
-                />
-                <Legend
-                  formatter={(value) => getSectionLabel(value, lang)}
-                  wrapperStyle={{ paddingTop: '15px', fontSize: '11px' }}
-                />
-                {activeSections
-                  .filter((sec) => selectedSectionFilter === 'ALL' || selectedSectionFilter.toLowerCase() === sec)
-                  .map((sec, idx) => (
-                    <Area
-                      key={sec}
-                      type="monotone"
-                      dataKey={sec}
-                      name={sec}
-                      stroke={getSectionColor(sec, idx)}
-                      fill={`url(#grad_${sec})`}
-                      strokeWidth={2}
-                    />
-                  ))}
-              </AreaChart>
-            ) : chartType === 'bar' ? (
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3d2b4f" opacity={0.5} />
-                <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#120a21',
-                    borderColor: '#3d2b4f',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
-                    fontSize: '12px',
-                    color: '#fff'
-                  }}
-                />
-                <Legend
-                  formatter={(value) => getSectionLabel(value, lang)}
-                  wrapperStyle={{ paddingTop: '15px', fontSize: '11px' }}
-                />
-                {activeSections
-                  .filter((sec) => selectedSectionFilter === 'ALL' || selectedSectionFilter.toLowerCase() === sec)
-                  .map((sec, idx) => (
-                    <Bar
-                      key={sec}
-                      dataKey={sec}
-                      name={sec}
-                      fill={getSectionColor(sec, idx)}
-                      radius={[6, 6, 0, 0]}
-                    />
-                  ))}
-              </BarChart>
-            ) : (
-              <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3d2b4f" opacity={0.5} />
-                <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#120a21',
-                    borderColor: '#3d2b4f',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
-                    fontSize: '12px',
-                    color: '#fff'
-                  }}
-                />
-                <Legend
-                  formatter={(value) => getSectionLabel(value, lang)}
-                  wrapperStyle={{ paddingTop: '15px', fontSize: '11px' }}
-                />
-                {activeSections
-                  .filter((sec) => selectedSectionFilter === 'ALL' || selectedSectionFilter.toLowerCase() === sec)
-                  .map((sec, idx) => (
-                    <Line
-                      key={sec}
-                      type="monotone"
-                      dataKey={sec}
-                      name={sec}
-                      stroke={getSectionColor(sec, idx)}
-                      strokeWidth={3}
-                      dot={{ r: 4, fill: getSectionColor(sec, idx) }}
-                    />
-                  ))}
-              </LineChart>
-            )}
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* SECONDARY CHARTS GRID: OS Distribution & Hourly Peak Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* OS & Platform Distribution */}
-        <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
-              <PieIcon className="text-cyan-400" size={18} />
-              {lang === 'ru' ? 'Распределение по ОС и платформам' : 'OS & Platform Breakdown'}
-            </h3>
-            <p className="text-xs text-gray-400 mb-4">
-              {lang === 'ru' ? 'Операционные системы активных пользователей' : 'Operating systems detected in session logs'}
-            </p>
-          </div>
-
-          <div className="w-full h-56">
-            {osDistribution.length === 0 ? (
-              <div className="flex justify-center items-center h-full text-gray-500 text-xs">Нет данных</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={osDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {osDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#120a21',
-                      borderColor: '#3d2b4f',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      color: '#fff'
+          {/* Table Quick Filters Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1e152d] border border-[#3d2b4f] p-3 rounded-2xl">
+            <div className="flex items-center gap-2">
+              <Filter size={15} className="text-[#ff4d4d] ml-1" />
+              <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">{lang === 'ru' ? 'Фильтр таблицы:' : 'Table Filter:'}</span>
+              <div className="flex items-center bg-[#15101e] border border-[#3d2b4f] rounded-xl p-1">
+                {(['24h', '7d', '30d', 'all'] as const).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => {
+                      setTimeRange(p);
+                      setCurrentPage(1);
                     }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Hourly Peak Activity */}
-        <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
-              <Clock className="text-purple-400" size={18} />
-              {lang === 'ru' ? 'Пиковая активность по часам (24h)' : 'Peak Activity Hours (24h)'}
-            </h3>
-            <p className="text-xs text-gray-400 mb-4">
-              {lang === 'ru' ? 'Распределение посещений по времени суток' : 'Events distribution throughout 24-hour cycle'}
-            </p>
-          </div>
-
-          <div className="w-full h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hourlyActivity} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3d2b4f" opacity={0.3} />
-                <XAxis dataKey="hour" stroke="#9ca3af" fontSize={10} interval={3} tickLine={false} />
-                <YAxis stroke="#9ca3af" fontSize={10} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#120a21',
-                    borderColor: '#3d2b4f',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    color: '#fff'
-                  }}
-                />
-                <Bar dataKey="visits" name={lang === 'ru' ? 'События' : 'Visits'} fill="#a855f7" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* TERTIARY CHARTS GRID: User Activity Timeline & Session Return Frequency */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* User Activity & Session Frequency Composed Chart */}
-        <div className="lg:col-span-2 bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
-              <Users className="text-[#00f0ff]" size={18} />
-              {lang === 'ru' ? 'Динамика активности пользователей и сессий' : 'User Activity & Session Frequency Over Time'}
-            </h3>
-            <p className="text-xs text-gray-400 mb-4">
-              {lang === 'ru' ? 'Соотношение общего объема событий, уникальных пользователей и активных сессий' : 'Correlation between total telemetry events, active users, and sessions'}
-            </p>
-          </div>
-
-          <div className="w-full h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={userActivityTimeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3d2b4f" opacity={0.4} />
-                <XAxis dataKey="date" stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <YAxis stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#120a21',
-                    borderColor: '#3d2b4f',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.8)',
-                    fontSize: '12px',
-                    color: '#fff'
-                  }}
-                />
-                <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} />
-                <Area
-                  type="monotone"
-                  dataKey="totalEvents"
-                  name={lang === 'ru' ? 'Всего событий' : 'Total Events'}
-                  fill="#ff4d4d"
-                  stroke="#ff4d4d"
-                  fillOpacity={0.15}
-                  strokeWidth={2}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="uniqueSessions"
-                  name={lang === 'ru' ? 'Уникальные сессии' : 'Unique Sessions'}
-                  stroke="#a855f7"
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: '#a855f7' }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="activeUsers"
-                  name={lang === 'ru' ? 'Активные пользователи' : 'Active Users'}
-                  stroke="#00f0ff"
-                  strokeWidth={3}
-                  dot={{ r: 4, fill: '#00f0ff' }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Session Frequency / Return Rate Pie Chart */}
-        <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
-          <div>
-            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
-              <RefreshCw className="text-[#10b981]" size={18} />
-              {lang === 'ru' ? 'Частота возврата сессий' : 'Session Return Frequency'}
-            </h3>
-            <p className="text-xs text-gray-400 mb-4">
-              {lang === 'ru' ? 'Распределение по количеству повторных сессий на пользователя' : 'Distribution of user visit counts and retention'}
-            </p>
-          </div>
-
-          <div className="w-full h-64">
-            {sessionFrequencyData.length === 0 ? (
-              <div className="flex justify-center items-center h-full text-gray-500 text-xs">
-                {lang === 'ru' ? 'Нет данных по сессиям' : 'No session data available'}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      timeRange === p ? 'bg-[#ff4d4d] text-white shadow-md' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {p.toUpperCase()}
+                  </button>
+                ))}
               </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sessionFrequencyData}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={45}
-                    outerRadius={75}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {sessionFrequencyData.map((entry, index) => (
-                      <Cell key={`freq-cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#120a21',
-                      borderColor: '#3d2b4f',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      color: '#fff'
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* FEATURE ENGAGEMENT BAR CHART */}
-      <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2 mb-1">
-              <TrendingUp className="text-[#f59e0b]" size={18} />
-              {lang === 'ru' ? 'Вовлеченность пользователей по функциям и разделам' : 'Feature & Section Engagement Ranking'}
-            </h3>
-            <p className="text-xs text-gray-400">
-              {lang === 'ru' ? 'Сравнение количества кликов и переходов между инструментами платформы' : 'Comparison of total interactions across platform features'}
-            </p>
-          </div>
-        </div>
-
-        <div className="w-full h-64">
-          {featureEngagementData.length === 0 ? (
-            <div className="flex justify-center items-center h-full text-gray-500 text-xs">
-              {lang === 'ru' ? 'Нет данных вовлеченности' : 'No feature engagement data'}
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                layout="vertical"
-                data={featureEngagementData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#3d2b4f" opacity={0.3} horizontal={false} />
-                <XAxis type="number" stroke="#9ca3af" fontSize={11} tickLine={false} />
-                <YAxis dataKey="label" type="category" stroke="#9ca3af" fontSize={11} tickLine={false} width={100} />
-                <Tooltip
-                  formatter={(val: any) => [`${val} ${lang === 'ru' ? 'событий' : 'events'}`, lang === 'ru' ? 'Посещения' : 'Visits']}
-                  contentStyle={{
-                    backgroundColor: '#120a21',
-                    borderColor: '#3d2b4f',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    color: '#fff'
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{lang === 'ru' ? 'Раздел:' : 'Section:'}</span>
+              <div className="w-36 sm:w-44">
+                <CustomSelect
+                  value={selectedSectionFilter}
+                  onChange={(val) => {
+                    setSelectedSectionFilter(val);
+                    setCurrentPage(1);
                   }}
+                  className="!bg-[#15101e] !border-[#3d2b4f] !text-gray-200 !text-xs !rounded-xl !px-3 !py-1.5"
+                  options={[
+                    { value: 'ALL', label: lang === 'ru' ? 'Все разделы' : 'All Sections' },
+                    ...activeSections.map((sec) => ({
+                      value: sec,
+                      label: getSectionLabel(sec, lang)
+                    }))
+                  ]}
                 />
-                <Bar dataKey="visits" name={lang === 'ru' ? 'События' : 'Visits'} radius={[0, 8, 8, 0]}>
-                  {featureEngagementData.map((entry, index) => (
-                    <Cell key={`feat-cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
+              </div>
+            </div>
+          </div>
 
       {/* Table Section */}
       <div className="bg-[#251c35] border border-[#3d2b4f] rounded-3xl p-6 shadow-2xl relative overflow-hidden">

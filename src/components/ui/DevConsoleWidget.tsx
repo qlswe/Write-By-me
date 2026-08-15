@@ -14,6 +14,7 @@ import { getDeviceId } from '../../utils/deviceId';
 import { doc, getDoc, disableNetwork, enableNetwork } from 'firebase/firestore';
 import { AhaQueryMonitor } from '../monitoring/AhaQueryMonitor';
 import { purgeNonAdminDataAndResetPlatform, purgeTelemetryOnly } from '../../utils/platformReset';
+import { CustomSelect } from './CustomSelect';
 
 interface DevConsoleWidgetProps {
   isOpen: boolean;
@@ -509,19 +510,22 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                     </div>
 
                     {/* Level Filter Dropdown */}
-                    <select
-                      value={filterLevel}
-                      onChange={(e) => setFilterLevel(e.target.value)}
-                      className="bg-[#1a0e30] border border-[#3d2b4f] text-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#ff4d4d] text-xs"
-                    >
-                      <option value="ALL">Все уровни</option>
-                      <option value="INFO">Info</option>
-                      <option value="WARN">Warn</option>
-                      <option value="ERROR">Error</option>
-                      <option value="PERF">Perf</option>
-                      <option value="SYSTEM">System</option>
-                      <option value="ACTION">Action</option>
-                    </select>
+                    <div className="w-32 sm:w-36">
+                      <CustomSelect
+                        value={filterLevel}
+                        onChange={(val) => setFilterLevel(val)}
+                        className="!bg-[#1a0e30] !border-[#3d2b4f] !text-gray-200 !rounded-lg !px-2.5 !py-1 !text-xs !font-medium"
+                        options={[
+                          { value: "ALL", label: "Все уровни" },
+                          { value: "INFO", label: "Info" },
+                          { value: "WARN", label: "Warn" },
+                          { value: "ERROR", label: "Error" },
+                          { value: "PERF", label: "Perf" },
+                          { value: "SYSTEM", label: "System" },
+                          { value: "ACTION", label: "Action" }
+                        ]}
+                      />
+                    </div>
 
                     {/* Auto Scroll Toggle */}
                     <button

@@ -3,7 +3,7 @@ import { Language } from '../data/translations';
 
 /**
  * Checks if a user is currently online based on their lastSeen timestamp.
- * A user is considered online if lastSeen was updated within the past 5 minutes.
+ * A user is considered online if lastSeen was updated within the past 2 minutes (120 seconds).
  * AI Bots (isBot: true) are always online.
  */
 export function checkIsUserOnline(u?: { lastSeen?: string; isBot?: boolean } | null): boolean {
@@ -15,7 +15,24 @@ export function checkIsUserOnline(u?: { lastSeen?: string; isBot?: boolean } | n
     const lastSeenMs = new Date(u.lastSeen).getTime();
     if (isNaN(lastSeenMs)) return false;
     const diffMs = Date.now() - lastSeenMs;
-    return diffMs < 5 * 60 * 1000; // 5 minutes threshold
+    // 2 minutes threshold (120,000 ms) for crisp real-time presence
+    return diffMs >= 0 && diffMs < 2 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Checks if a user is away/idle (between 2 and 5 minutes since last activity).
+ */
+export function checkIsUserAway(u?: { lastSeen?: string; isBot?: boolean } | null): boolean {
+  if (!u || u.isBot || !u.lastSeen) return false;
+
+  try {
+    const lastSeenMs = new Date(u.lastSeen).getTime();
+    if (isNaN(lastSeenMs)) return false;
+    const diffMs = Date.now() - lastSeenMs;
+    return diffMs >= 2 * 60 * 1000 && diffMs < 5 * 60 * 1000;
   } catch {
     return false;
   }
@@ -23,12 +40,12 @@ export function checkIsUserOnline(u?: { lastSeen?: string; isBot?: boolean } | n
 
 /**
  * Formats a user's lastSeen timestamp into a readable localized status string.
- * e.g., "🟢 В сети", "⚪ Был(а) 12 мин. назад", "⚪ Не в сети"
+ * e.g., "🟢 В сети", "🟡 Отошел (3 мин. назад)", "⚪ Был(а) 12 мин. назад", "⚪ Не в сети"
  */
 export function formatLastSeenStatus(
   u?: { lastSeen?: string; isBot?: boolean; displayName?: string } | null,
   lang: Language = 'ru'
-): { statusText: string; isOnline: boolean } {
+): { statusText: string; isOnline: boolean; isAway?: boolean } {
   if (!u) {
     return {
       statusText: lang === 'ru' ? '⚪ Не в сети' : '⚪ Offline',
@@ -48,6 +65,15 @@ export function formatLastSeenStatus(
     return {
       statusText: lang === 'ru' ? '🟢 В сети' : '🟢 Online',
       isOnline: true,
+    };
+  }
+
+  const isAway = checkIsUserAway(u);
+  if (isAway) {
+    return {
+      statusText: lang === 'ru' ? '🟡 Отошел / Неактивен' : '🟡 Away / Inactive',
+      isOnline: false,
+      isAway: true,
     };
   }
 
@@ -103,3 +129,4 @@ export function formatLastSeenStatus(
     };
   }
 }
+

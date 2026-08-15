@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload, Download, Sparkles } from 'lucide-react';
+import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload, Download, Sparkles, Plus, Eye, Flame, Trash2 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { updateProfile as updateAuthProfile } from 'firebase/auth';
@@ -14,6 +14,9 @@ import { encrypt, decrypt } from '../../utils/encryption';
 import CryptoJS from 'crypto-js';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { MediaViewer } from './MediaViewer';
+import { useStories } from '../../hooks/useStories';
+import { CreateStoryModal } from '../feed/CreateStoryModal';
+import { StoryViewerModal } from '../feed/StoryViewerModal';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -58,9 +61,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [showChats, setShowChats] = useState(false);
   const [showPosts, setShowPosts] = useState(false);
+  const [activeProfileTab, setActiveProfileTab] = useState<'info' | 'posts' | 'stories'>('info');
+  const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Stories hook for profile
+  const { stories, createStory, toggleLikeStory, deleteStory, markStoryViewed } = useStories();
+  const userStories = stories.filter(s => s.authorId === user?.uid);
 
   const handleGenerateAiAvatar = async () => {
     if (!user || isGeneratingAi) return;
@@ -819,45 +830,89 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
 
             {/* Scrollable Content */}
             <div className="px-8 pt-6 pb-8 flex-1 overflow-y-auto custom-scrollbar">
-              {/* Avatar - Now part of the content flow as requested */}
+              {/* Avatar with dynamic Story Frame */}
               <div className="flex flex-col items-center justify-center mb-8 gap-4">
                 <div className="relative group">
-                  <img 
-                    src={photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} 
-                    alt="Avatar" 
-                    className="w-40 h-40 rounded-[3rem] border-[8px] border-[#251c35]/30 bg-[#251c35] object-cover shadow-2xl transition-transform group-hover:scale-105"
-                  />
+                  {/* Story Frame if user has active stories */}
+                  {userStories.length > 0 ? (
+                    <div 
+                      onClick={() => {
+                        setViewerIndex(0);
+                        setIsViewerOpen(true);
+                      }}
+                      className="p-1.5 rounded-[3.2rem] bg-gradient-to-tr from-amber-400 via-[#ff4d4d] to-fuchsia-500 shadow-[0_0_30px_rgba(255,77,77,0.35)] cursor-pointer transition-transform hover:scale-105"
+                      title={lang === 'ru' ? 'Смотреть историю профиля' : 'View profile story'}
+                    >
+                      <img 
+                        src={photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} 
+                        alt="Avatar" 
+                        className="w-38 h-38 sm:w-40 sm:h-40 rounded-[3rem] border-4 border-[#15101e] bg-[#251c35] object-cover shadow-2xl"
+                      />
+                    </div>
+                  ) : (
+                    <img 
+                      src={photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} 
+                      alt="Avatar" 
+                      className="w-38 h-38 sm:w-40 sm:h-40 rounded-[3rem] border-[6px] border-[#251c35]/40 bg-[#251c35] object-cover shadow-2xl transition-transform group-hover:scale-105"
+                    />
+                  )}
+
                   {isOwnProfile && (
                     <button 
                       onClick={() => setIsEditingPhoto(true)}
                       className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity rounded-[3rem] text-white"
+                      title={lang === 'ru' ? 'Изменить фото профиля' : 'Change avatar'}
                     >
-                      <Camera size={40} />
+                      <Camera size={36} />
                     </button>
                   )}
-                  <div className="absolute -bottom-2 -right-2 p-3 bg-[#ff4d4d] rounded-2xl shadow-xl border-4 border-[#15101e] text-[#15101e]">
-                    <Award size={24} />
-                  </div>
+
+                  {/* Story indicator pill or Award badge */}
+                  {userStories.length > 0 ? (
+                    <button
+                      onClick={() => {
+                        setViewerIndex(0);
+                        setIsViewerOpen(true);
+                      }}
+                      className="absolute -bottom-2 -right-2 px-2.5 py-1 bg-gradient-to-r from-amber-400 to-[#ff4d4d] rounded-xl shadow-xl border-2 border-[#15101e] text-[#15101e] font-black text-[10px] uppercase tracking-wider flex items-center gap-1 active:scale-95"
+                    >
+                      <Sparkles size={12} />
+                      <span>{lang === 'ru' ? 'Сториз' : 'Story'}</span>
+                    </button>
+                  ) : (
+                    <div className="absolute -bottom-2 -right-2 p-2.5 bg-[#ff4d4d] rounded-2xl shadow-xl border-4 border-[#15101e] text-[#15101e]">
+                      <Award size={20} />
+                    </div>
+                  )}
                 </div>
 
-                {/* AI Avatar Generator Button */}
-                {isOwnProfile && (
-                  <button
-                    onClick={handleGenerateAiAvatar}
-                    disabled={isGeneratingAi}
-                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 via-[#ff4d4d] to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg hover:shadow-[0_0_20px_rgba(255,77,77,0.4)] transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <Sparkles size={16} className={isGeneratingAi ? 'animate-spin text-yellow-300' : 'animate-pulse text-yellow-300'} />
-                    <span>
-                      {isGeneratingAi
-                        ? (lang === 'ru' ? 'ИИ генерирует аватар...' : 'AI generating avatar...')
-                        : (!photoURL 
-                            ? (lang === 'ru' ? 'Сгенерировать аватар' : 'Generate Avatar')
-                            : (lang === 'ru' ? 'Сгенерировать аватар (ИИ)' : 'Generate AI Avatar'))
-                      }
-                    </span>
-                  </button>
-                )}
+                {/* AI Avatar & Story Actions */}
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {isOwnProfile && (
+                    <>
+                      <button
+                        onClick={handleGenerateAiAvatar}
+                        disabled={isGeneratingAi}
+                        className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 via-[#ff4d4d] to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-[11px] uppercase tracking-wider rounded-xl shadow-md hover:shadow-[0_0_15px_rgba(255,77,77,0.4)] transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        <Sparkles size={14} className={isGeneratingAi ? 'animate-spin text-yellow-300' : 'text-yellow-300'} />
+                        <span>
+                          {isGeneratingAi
+                            ? (lang === 'ru' ? 'Генерация...' : 'Generating...')
+                            : (lang === 'ru' ? 'ИИ Аватар' : 'AI Avatar')}
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={() => setIsCreateStoryOpen(true)}
+                        className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#ff4d4d]/20 hover:bg-[#ff4d4d]/30 border border-[#ff4d4d]/40 text-[#ff4d4d] hover:text-white font-black text-[11px] uppercase tracking-wider rounded-xl shadow-sm transition-all active:scale-95"
+                      >
+                        <Plus size={14} className="stroke-[3]" />
+                        <span>{lang === 'ru' ? '+ Сториз' : '+ Story'}</span>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               {isEditingPhoto && isOwnProfile && (
                 <div className="mb-6 p-6 bg-[#1a1326] rounded-[2rem] border-2 border-dashed border-[#ff4d4d]/30 hover:border-[#ff4d4d]/60 transition-colors space-y-6 relative overflow-hidden shadow-2xl">
@@ -1055,19 +1110,35 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                 )}
               </div>
 
-              {/* Tabs for Posts */}
-              <div className="flex border-b border-[#15101e] mb-6">
+              {/* Tabs for Profile */}
+              <div className="flex border-b border-[#251c35] mb-6 overflow-x-auto custom-scrollbar">
                 <button
-                  onClick={() => { setShowPosts(false); setShowChats(false); }}
-                  className={`px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${!showPosts && !showChats ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
+                  onClick={() => { setActiveProfileTab('info'); setShowChats(false); }}
+                  className={`px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap ${!showChats && activeProfileTab === 'info' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
                 >
                   {t.profileInfo}
                 </button>
                 <button
-                  onClick={() => { setShowPosts(true); setShowChats(false); }}
-                  className={`px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${showPosts ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
+                  onClick={() => { setActiveProfileTab('posts'); setShowChats(false); }}
+                  className={`px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 ${!showChats && activeProfileTab === 'posts' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
                 >
-                  {t.profileUses}
+                  <span>{t.profileUses}</span>
+                  {posts.length > 0 && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 font-mono">
+                      {posts.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => { setActiveProfileTab('stories'); setShowChats(false); }}
+                  className={`px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 ${!showChats && activeProfileTab === 'stories' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
+                >
+                  <span>{lang === 'ru' ? 'Истории' : 'Stories'}</span>
+                  {userStories.length > 0 && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-[#ff4d4d] text-[#15101e] font-black font-mono">
+                      {userStories.length}
+                    </span>
+                  )}
                 </button>
               </div>
 
@@ -1089,7 +1160,127 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       onClose();
                     }} />
                   </motion.div>
-                ) : showPosts ? (
+                ) : activeProfileTab === 'stories' ? (
+                  <motion.div
+                    key="stories"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-4 mb-8"
+                  >
+                    {/* Create Story Button for Profile */}
+                    {isOwnProfile && (
+                      <div className="p-4 bg-gradient-to-r from-amber-500/10 via-[#ff4d4d]/10 to-purple-500/10 border border-[#ff4d4d]/30 rounded-2xl flex items-center justify-between gap-3">
+                        <div>
+                          <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                            {lang === 'ru' ? 'Ваши Истории (24 часа)' : 'Your Stories (24h)'}
+                          </h4>
+                          <p className="text-[10px] text-white/50">
+                            {lang === 'ru' ? 'Делитесь текстом, мыслями или фотографиями' : 'Share text, thoughts, or photos'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setIsCreateStoryOpen(true)}
+                          className="px-4 py-2 bg-[#ff4d4d] hover:bg-[#ff6666] text-[#15101e] font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1.5 shrink-0"
+                        >
+                          <Plus size={14} className="stroke-[3]" />
+                          <span>{lang === 'ru' ? 'Создать' : 'Create'}</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {userStories.length === 0 ? (
+                      <div className="text-center py-12 bg-[#15101e]/30 rounded-2xl border border-[#3d2b4f]/20 p-6 space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-[#ff4d4d]/10 border border-[#ff4d4d]/20 text-[#ff4d4d] flex items-center justify-center mx-auto">
+                          <Sparkles size={24} />
+                        </div>
+                        <p className="text-sm font-black text-white/70">
+                          {lang === 'ru' ? 'Нет активных историй' : 'No active stories'}
+                        </p>
+                        <p className="text-xs text-white/40 max-w-xs mx-auto">
+                          {lang === 'ru' 
+                            ? 'Опубликуйте короткую текстовую историю или фото со сроком жизни 24 часа.' 
+                            : 'Publish a 24-hour story with text and images.'}
+                        </p>
+                        {isOwnProfile && (
+                          <button
+                            onClick={() => setIsCreateStoryOpen(true)}
+                            className="mt-2 px-5 py-2.5 bg-[#ff4d4d] text-[#15101e] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg hover:bg-white transition-all active:scale-95"
+                          >
+                            {lang === 'ru' ? 'Опубликовать историю' : 'Post a Story'}
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {userStories.map((story, idx) => (
+                          <div
+                            key={story.id}
+                            className={`p-4 rounded-2xl border transition-all cursor-pointer relative group flex flex-col justify-between min-h-[140px] overflow-hidden ${
+                              story.bgGradient 
+                                ? `bg-gradient-to-br ${story.bgGradient} border-white/20 shadow-lg` 
+                                : 'bg-[#1a1326] border-[#3d2b4f]/40 hover:border-[#ff4d4d]/50'
+                            }`}
+                            onClick={() => {
+                              const storyIdx = stories.findIndex(s => s.id === story.id);
+                              setViewerIndex(storyIdx >= 0 ? storyIdx : 0);
+                              setIsViewerOpen(true);
+                            }}
+                          >
+                            {/* Photo Background preview if present */}
+                            {story.mediaUrl && (
+                              <div className="absolute inset-0 z-0">
+                                <img
+                                  src={story.mediaUrl}
+                                  alt="Story Media"
+                                  className="w-full h-full object-cover opacity-30 group-hover:scale-105 transition-transform duration-500"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#15101e] via-[#15101e]/60 to-transparent" />
+                              </div>
+                            )}
+
+                            <div className="relative z-10 space-y-2">
+                              <p className="text-xs font-bold text-white leading-relaxed line-clamp-3 drop-shadow-md">
+                                {story.text || (story.mediaUrl ? (lang === 'ru' ? '[Фотография]' : '[Photo]') : '')}
+                              </p>
+                            </div>
+
+                            <div className="relative z-10 flex items-center justify-between pt-3 border-t border-white/10 text-[10px] text-white/70">
+                              <div className="flex items-center gap-3">
+                                <span className="flex items-center gap-1 font-mono">
+                                  <Eye size={12} className="text-cyan-400" />
+                                  {story.viewersCount || 0}
+                                </span>
+                                <span className="flex items-center gap-1 font-mono">
+                                  <Flame size={12} className="text-amber-400" />
+                                  {story.likesCount || 0}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span className="text-white/40 text-[9px] font-mono">
+                                  {new Date(story.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                {isOwnProfile && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteStory(story.id);
+                                    }}
+                                    className="p-1 rounded-lg text-white/40 hover:text-red-400 hover:bg-black/30 transition-colors"
+                                    title={lang === 'ru' ? 'Удалить историю' : 'Delete story'}
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                ) : activeProfileTab === 'posts' ? (
                   <motion.div
                     key="posts"
                     initial={{ opacity: 0 }}
@@ -1180,7 +1371,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                                       </div>
                                     </div>
                                   ) : (
-                                    <div className="mt-3 max-w-[320px] w-full">
+                                    <div className="mt-3 max-w-full rounded-xl overflow-hidden border border-[#3d2b4f]/40 bg-black/40">
                                       <MediaViewer url={post.pixelsSnapshot} isCompact={true} />
                                     </div>
                                   )
@@ -1379,6 +1570,32 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Story Viewer Modal */}
+          <StoryViewerModal
+            isOpen={isViewerOpen}
+            onClose={() => setIsViewerOpen(false)}
+            stories={stories}
+            initialStoryIndex={viewerIndex}
+            onLike={toggleLikeStory}
+            onDelete={deleteStory}
+            onView={markStoryViewed}
+            currentUserId={currentUser?.uid}
+            lang={lang}
+          />
+
+          {/* Create Story Modal */}
+          <CreateStoryModal
+            isOpen={isCreateStoryOpen}
+            onClose={() => setIsCreateStoryOpen(false)}
+            onCreateStory={createStory}
+            user={{
+              uid: currentUser?.uid || '',
+              displayName: currentUser?.displayName || 'User',
+              photoURL: currentPhoto || currentUser?.photoURL || null
+            }}
+            lang={lang}
+          />
         </motion.div>
       </div>
     </AnimatePresence>

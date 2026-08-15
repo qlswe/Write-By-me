@@ -1,87 +1,53 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, Plus, Search, User as UserIcon, Shield, Clock, ArrowLeft, Send, Trash2, ChevronUp, ChevronDown, Pencil, X, Check, Camera, Palette as PaletteIcon, Activity, Key, ShieldAlert, ShieldCheck, Cpu, RefreshCw, Ticket, Info, Sparkles, Video, Link as LinkIcon, FileDown } from 'lucide-react';
-import { exportContentToPDF } from '../../utils/pdfExport';
-import { MediaViewer } from '../ui/MediaViewer';
+import { 
+  Activity, 
+  Search, 
+  ShieldCheck, 
+  Cpu, 
+  Key, 
+  ShieldAlert, 
+  Sparkles, 
+  Flame, 
+  Lightbulb, 
+  Laugh, 
+  Calendar, 
+  Ticket, 
+  Shield, 
+  Check, 
+  RefreshCw,
+  X,
+  Lock
+} from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { db } from '../../firebase';
-import { collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, serverTimestamp, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, limit, where } from 'firebase/firestore';
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  doc, 
+  serverTimestamp, 
+  updateDoc, 
+  deleteDoc, 
+  limit 
+} from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
-import { TimeAgo } from '../ui/TimeAgo';
 import { ConfirmModal } from '../ui/ConfirmModal';
-import { useLimits } from '../../hooks/useLimits';
-import { AdsBlock } from '../ui/AdsBlock';
-
-import { vercelFallback } from '../../utils/vercelFallback';
-import { CanvasSection } from './CanvasSection';
-import { PromoSection } from './PromoSection';
+import { StoriesBar } from '../feed/StoriesBar';
+import { FacebookPostCreator } from '../feed/FacebookPostCreator';
+import { 
+  notifyPostComment, 
+  notifyCommentReply, 
+  notifyPostReaction 
+} from '../../utils/notificationService';
+import { FacebookPostCard, PostData, CommentData } from '../feed/FacebookPostCard';
 import { ChronicleSection } from './ChronicleSection';
-import { decryptImage, encryptImage } from '../../utils/encryption';
-import { generatePrefixedId } from '../../utils/idGenerator';
-import { sdk } from '../../sdk';
-import { uploadMediaFile, sanitizePayloadForFirestore } from '../../utils/mediaUploader';
-import { logAdminAction } from '../../utils/auditLogger';
-
-
-interface ForumThread {
-  id: string;
-  title: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorPhoto?: string;
-  createdAt: any;
-  commentCount: number;
-  upvotes?: string[];
-  downvotes?: string[];
-  isEdited?: boolean;
-  imageUrl?: string;
-  isProtected?: boolean;
-}
-
-interface ForumComment {
-  id: string;
-  threadId: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  authorPhoto?: string;
-  createdAt: any;
-  upvotes?: string[];
-  downvotes?: string[];
-  isEdited?: boolean;
-  isBot?: boolean;
-  replyToId?: string;
-  pokeCount?: number;
-}
-
-export const checkContentModeration = (text: string, lang: Language): { isSafe: boolean; message: string } => {
-  const t = text.toLowerCase();
-  
-  // List of forbidden 18+ topics (sexually explicit, pornography, NSFW links)
-  // Ensure we do NOT block general swearing (хуй, пизда, ебать, блять) because "маты разрешены"
-  const forbiddenKeywords = [
-    'порно', 'porno', 'porn', 'hentai', 'хентай', 'онлифанс', 'onlyfans', 'порнуха', 
-    'порнография', 'pornography', 'эротика', 'erotica', 'эротическ', 'обнаженка', 'нюдсы', 
-    'нюдс', 'nudes', 'nude', 'adult video', 'секс видео', 'sex video', 'секс-видео',
-    'onlyfans', 'порнофильм', 'redtube', 'pornhub', 'xnxx', 'xvideos', 'milf', 'милф',
-    'zoophilia', 'зоофилия', 'педофилия', 'pedophilia', 'incest', 'инцест'
-  ];
-
-  const hasForbidden = forbiddenKeywords.some(keyword => t.includes(keyword));
-
-  if (hasForbidden) {
-    return {
-      isSafe: false,
-      message: lang === 'ru' 
-        ? 'Опачки! На нашей радиостанции запрещён 18+ контент (порнография, эротика и т.д.). Маты использовать можно, а вот порнуху сюда тащить не надо! 🎭'
-        : 'Whoops! 18+ content (pornography, erotica, etc.) is strictly forbidden on our radio station. Swearing is allowed, but keep it SFW! 🎭'
-    };
-  }
-
-  return { isSafe: true, message: '' };
-};
+import { PromoSection } from './PromoSection';
+import { vercelFallback } from '../../utils/vercelFallback';
+import { safeStorage } from '../../utils/securityStorage';
 
 interface ForumSectionProps {
   lang: Language;
@@ -95,1653 +61,818 @@ interface ForumSectionProps {
   onCreateEvent?: any;
 }
 
-const quotes: Record<string, string[]> = {
-  ru: [
-    "Ха-ха-ха! Смертный, добро пожаловать в обитель Радости! Здесь нет правил, кроме одного — будь весел! Ткни меня ещё раз!",
-    "Я подсыпал радость в твою овсянку сегодня утром! Слышишь этот смех? Это вселенная смеется над нами!",
-    "Форум? О, вы обсуждаете теории лора? А знали ли вы, что я однажды дал силу Безымянного простому червю? Это было восхитительно!",
-    "Пиши комментарии, ставь апвоуты, нарушай правила (но не слишком сильно, а то админы рассердятся)! Разве жизнь — не прекрасная шутка?",
-    "Ты кликаешь по мне... Означает ли это, что мы теперь лучшие друзья? Или я просто контролирую твой указательный палец? Ха-ха-ха!",
-    "Аха одобряет этот тред! Или не одобряет... Какая разница, если это весело?!"
-  ],
-  by: [
-    "Ха-ха-ха! Смяротны, вітаем у мясціне Радасці! Тут няма правілаў, акрамя аднаго — будзь вясёлым! Ткні мяне яшэ раз!",
-    "Я падсыпаў радасць у тваю аўсянку сёння раніцай! Чуеш гэты смех? Гэта сусвет смяецца з нас!",
-    "Форум? О, вы абмяркоўваеце тэорыі лору? А ці ведалі вы, што я аднойчы даў сілу Безыменнага звычайнаму чарвяку? Гэта было цудоўна!",
-    "Пішы каментарыі, стаў апвоўты, парушай правілы (але не занадта моцна, а то адміны раззлуюцца)! Хіба жыццё — не выдатны жарт?",
-    "Ты клікаеш па мне... Ці азначае гэта, што мы цяпер лепшыя сябры? Ці я проста кантралюю твой палец? Ха-ха-ха!"
-  ],
-  de: [
-    "Ha-ha-ha! Sterblicher, willkommen im Reich der Elation! Es gibt hier keine Regeln außer einer: Sei fröhlich! Klicke mich noch einmal!",
-    "Ich habe heute Morgen etwas Elation in deine Haferflocken gemischt! Hörst du das Lachen? Das ist das Universum, das über uns kichert!",
-    "Ein Forum? Oh, ihr diskutiert über Lore-Theorien? Wusstet ihr, dass ich einst einen einfachen Wurm zum Äonen-Emanator ernannt habe? Es war herrlich!",
-    "Schreibe Kommentare, gib Upvotes, brich die Regeln (aber nicht zu sehr, sonst weinen die Admins)! Ist das Leben nicht ein wunderbarer Witz?",
-    "Du klickst mich weiter an... Bedeutet das, dass wir jetzt beste Freunde sind? Oder kontrolliere ich deinen Zeigefinger? Ha-ha-ha!",
-    "Aha stimmt diesem Thread zu! Oder vielleicht auch nicht... Wen interessiert das schon, solange es Spaß macht?!"
-  ],
-  fr: [
-    "Ha-ha-ha ! Mortel, bienvenue dans la demeure de l'Allégresse ! Il n'y a pas de règles ici sauf une : sois joyeux ! Touche-moi encore !",
-    "J'ai glissé un peu d'Allégresse dans tes flocons d'avoine ce matin ! Tu entends ce rire ? C'est l'univers qui se moque de nous !",
-    "Un forum ? Oh, vous discutez de théories de lore ? Saviez-vous que j'ai un jour élevé un simple ver au rang d'Émanateur ? C'était glorieux !",
-    "Écris des commentaires, mets des votes positifs, enfreins les règles (mais pas trop, sinon les admins vont pleurer) ! La vie n'est-elle pas une farce magnifique ?",
-    "Tu continues de cliquer sur moi... Cela signifie-t-il que nous sommes meilleurs amis ? Ou est-ce moi qui contrôle ton index ? Ha-ha-ha !",
-    "Aha approuve ce fil ! Ou peut-être pas... Qui s'en soucie, tant que c'est amusant !?"
-  ],
-  zh: [
-    "哈-哈-哈！凡人，欢迎来到阿哈的欢愉居所！这里除了保持快乐，没有任何规则！再戳我一下！",
-    "我今天早上往你的麦片里加了点欢愉！听到笑声了吗？那是宇宙在嘲笑我们！",
-    "论坛？哦，在讨论背景设定？你知道我曾经把一个无名之辈（一条虫子）升格为令使吗？那真是太妙了！",
-    "发评论，点赞，打破规则（但别太过分，否则管理员会哭的）！生活难道不就是一个伟大的玩笑吗？",
-    "你一直在点我... 这意味着我们是最好的朋友吗？还是我在控制你的食指？哈-哈-哈！",
-    "阿哈批准了这个帖子！或者不批准... 只要有趣，谁在乎呢？！"
-  ]
-};
-
-let sharedAhaAudioCtx: AudioContext | null = null;
-
-const ForumBotComment: React.FC<{
-  comment: ForumComment;
-  lang: Language;
-  t: any;
-  isReply: boolean;
-}> = ({ comment, lang, t, isReply }) => {
-  const [localPokeCount, setLocalPokeCount] = useState(comment.pokeCount || 0);
-  const [isJiggling, setIsJiggling] = useState(false);
-
-  const activeQuotes = quotes[lang] || quotes['en'] || quotes['ru'];
-  const initialIndex = Math.abs(comment.threadId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % activeQuotes.length;
-  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(initialIndex);
-
-  useEffect(() => {
-    setLocalPokeCount(comment.pokeCount || 0);
-  }, [comment.pokeCount]);
-
-  const handlePoke = async () => {
-    // 1. Play sound IMMEDIATELY
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        if (!sharedAhaAudioCtx) {
-          sharedAhaAudioCtx = new AudioContextClass();
-        }
-        const ctx = sharedAhaAudioCtx;
-        if (ctx.state === 'suspended') {
-          ctx.resume().catch(() => {});
-        }
-        const notes = [440, 554, 659, 880];
-        notes.forEach((freq, idx) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
-          gain.gain.setValueAtTime(0.06, ctx.currentTime + idx * 0.08);
-          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.08 + 0.15);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(ctx.currentTime + idx * 0.08);
-          osc.stop(ctx.currentTime + idx * 0.08 + 0.16);
-        });
-      }
-    } catch (err) {
-      console.warn('Audio blocked:', err);
-    }
-
-    // 2. Visual jiggle
-    setIsJiggling(true);
-    setTimeout(() => setIsJiggling(false), 500);
-
-    // 3. Increment local state instantly for lightning fast feedback
-    setLocalPokeCount(prev => prev + 1);
-
-    // 4. Cycle quote
-    let newIndex = Math.floor(Math.random() * activeQuotes.length);
-    if (newIndex === currentQuoteIndex && activeQuotes.length > 1) {
-      newIndex = (newIndex + 1) % activeQuotes.length;
-    }
-    setCurrentQuoteIndex(newIndex);
-
-    // 5. Update count in Firestore or fallback DB
-    try {
-      if (vercelFallback.isAvailable()) {
-        await vercelFallback.lpush(`poke_fallback:${comment.id}`, String((comment.pokeCount || 0) + 1));
-      } else {
-        const commentRef = doc(db, 'forum_comments', comment.id);
-        await updateDoc(commentRef, {
-          pokeCount: increment(1)
-        });
-      }
-    } catch (e) {
-      console.error('Failed to save poke count:', e);
-    }
-  };
-
-  return (
-    <motion.div 
-      key={comment.id}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`bg-[#15101e] border-2 border-[#ff4d4d]/40 rounded-2xl p-4 sm:p-5 flex gap-4 relative overflow-hidden bg-gradient-to-br from-[#ff4d4d]/5 to-transparent ${isReply ? 'ml-8 sm:ml-12 mt-2 border-l-4 border-l-[#ff4d4d]/80' : ''}`}
-    >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff4d4d]/5 rounded-full blur-2xl pointer-events-none" />
-
-      <motion.img 
-        animate={isJiggling ? { 
-          scale: [1, 1.2, 0.9, 1.1, 1],
-          rotate: [0, -10, 10, -5, 5, 0]
-        } : {}}
-        transition={{ duration: 0.5 }}
-        src="https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e"
-        alt="Aha Bot"
-        className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-[#ff4d4d]/50 shrink-0 cursor-pointer shadow-[0_0_15px_rgba(255,77,77,0.3)] active:scale-90 transition-transform"
-        onClick={handlePoke}
-      />
-      <div className="flex-1 min-w-0 z-10">
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <div className="font-bold text-white text-sm truncate flex items-center gap-1.5">
-            <span className="text-[#ff4d4d] font-black tracking-wider uppercase">Aha Bot</span>
-            <Shield size={12} className="text-[#ff4d4d]" />
-            <span className="text-[9px] bg-[#ff4d4d]/15 border border-[#ff4d4d]/30 text-[#ff4d4d] px-1.5 py-0.5 rounded font-black uppercase tracking-widest">
-              {lang === 'ru' ? 'ЭЛАТИЯ' : 'ELATION'}
-            </span>
-          </div>
-          <div className="text-[10px] text-[#ff4d4d]/60 font-mono">
-            {lang === 'ru' ? `Ткнули: ${localPokeCount}` : `Poked: ${localPokeCount}`}
-          </div>
-        </div>
-
-        <div className="text-white/90 text-sm whitespace-pre-wrap break-words leading-relaxed mb-4 font-medium border-l-2 border-l-[#ff4d4d]/40 pl-3">
-          {activeQuotes[currentQuoteIndex]}
-        </div>
-
-        <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handlePoke}
-            className="px-3.5 py-1.5 bg-[#ff4d4d] hover:bg-white text-[#15101e] text-[10px] font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 shadow-[0_0_15px_rgba(255,77,77,0.2)] transition-colors"
-          >
-            <span>🎭</span>
-            {lang === 'ru' ? 'Ткнуть бота!' : 'Poke Aha Bot!'}
-          </motion.button>
-          
-          {localPokeCount > 0 && (
-            <motion.span 
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-[10px] text-gray-400 italic"
-            >
-              {localPokeCount >= 10 
-                ? (lang === 'ru' ? '🎉 Аха безумно хохочет!' : '🎉 Aha is laughing maniacally!')
-                : (lang === 'ru' ? '✨ Ой, щекотно!' : '✨ Oh, that tickles!')}
-            </motion.span>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-const compressAndGetBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 600;
-        const MAX_HEIGHT = 600;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.7));
-        } else {
-          resolve(e.target?.result as string);
-        }
-      };
-      img.onerror = () => reject(new Error('Image load failed'));
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = () => reject(new Error('File read failed'));
-    reader.readAsDataURL(file);
-  });
-};
-
-export const ForumSection: React.FC<ForumSectionProps> = ({ 
-  lang, 
-  onOpenChat, 
+export const ForumSection: React.FC<ForumSectionProps> = ({
+  lang,
+  onOpenChat,
   role,
-  lowPerfMode = false,
+  lowPerfMode,
   events = [],
   promoCodes = [],
-  handleCopy = () => {},
-  onEditEvent = () => {},
-  onCreateEvent = () => {}
+  handleCopy,
+  onEditEvent,
+  onCreateEvent
 }) => {
   const { user } = useAuth();
   const t = translations[lang];
-  const { checkLimit, incrementUsage } = useLimits();
-  const [protectedViewFeatureEnabled, setProtectedViewFeatureEnabled] = useState<boolean>(true);
 
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
-      if (docSnap.exists()) {
-        setProtectedViewFeatureEnabled(docSnap.data().protectedViewFeatureEnabled !== false);
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  const [threads, setThreads] = useState<ForumThread[]>([]);
-  const [selectedThread, setSelectedThread] = useState<ForumThread | null>(null);
-  const [comments, setComments] = useState<ForumComment[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newContent, setNewContent] = useState('');
-  const [newComment, setNewComment] = useState('');
+  // Feed State
+  const [threads, setThreads] = useState<PostData[]>([]);
+  const [comments, setComments] = useState<CommentData[]>([]);
+  const [activeTab, setActiveTab] = useState<'all' | 'popular' | 'memes' | 'theories' | 'events' | 'security'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Custom states for Consolidated Activities & Posts section
-  const [activeTab, setActiveTab] = useState<'posts' | 'activities' | 'security'>('posts');
-  const [subActivityTab, setSubActivityTab] = useState<'events' | 'promos'>('events');
-  const [attachedImage, setAttachedImage] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  
-  // Doodling states
-  const [isDoodling, setIsDoodling] = useState(false);
-  const [doodleColor, setDoodleColor] = useState('#ff4d4d');
-  const [doodleBrushSize, setDoodleBrushSize] = useState(4);
-  const doodleCanvasRef = useRef<HTMLCanvasElement>(null);
-  const doodleDrawingRef = useRef(false);
 
-  // Security concept states
-  const [isE2EEEnabled, setIsE2EEEnabled] = useState(() => {
-    return localStorage.getItem('aha_security_e2ee') !== 'false';
+  // Edit / Delete State
+  const [editingPost, setEditingPost] = useState<PostData | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<{ id: string; postId: string } | null>(null);
+
+  // Security Console State
+  const [isE2EEEnabled, setIsE2EEEnabled] = useState(() => safeStorage.getItem('aha_e2ee_enabled') === 'true');
+  const [isAntiIPCCensorEnabled, setIsAntiIPCCensorEnabled] = useState(() => safeStorage.getItem('aha_anti_ipc_enabled') === 'true');
+  const [protectedViewFeatureEnabled, setProtectedViewFeatureEnabled] = useState(() => safeStorage.getItem('aha_protected_view') === 'true');
+  const [securityLogs, setSecurityLogs] = useState<{ id: string; time: string; type: string; msg: string }[]>(() => {
+    const saved = safeStorage.getItem('aha_security_logs_feed');
+    return saved ? JSON.parse(saved) : [
+      { id: '1', time: new Date().toLocaleTimeString(), type: 'SUCCESS', msg: 'AHA-SHIELD v6.0 core operational' },
+      { id: '2', time: new Date().toLocaleTimeString(), type: 'INFO', msg: 'SSRF & Content Sanitizer armed' }
+    ];
   });
-  const [isAntiIPCCensorEnabled, setIsAntiIPCCensorEnabled] = useState(() => {
-    return localStorage.getItem('aha_security_censor') !== 'false';
-  });
-  const [securityLogs, setSecurityLogs] = useState<Array<{ id: string; time: string; type: string; msg: string }>>([
-    { id: '1', time: new Date().toLocaleTimeString(), type: 'INFO', msg: 'Fools-Guard Firewall Core online.' },
-    { id: '2', time: new Date().toLocaleTimeString(), type: 'SUCCESS', msg: 'Anti-KMM Encryption Protocol loaded successfully.' }
-  ]);
 
-  const addSecurityLog = (type: 'INFO' | 'WARNING' | 'SUCCESS' | 'ALERT', msg: string) => {
-    setSecurityLogs(prev => [
-      { id: Date.now().toString(), time: new Date().toLocaleTimeString(), type, msg },
-      ...prev.slice(0, 49)
-    ]);
-  };
+  const addSecurityLog = useCallback((type: 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT', msg: string) => {
+    const newLog = { id: Math.random().toString(), time: new Date().toLocaleTimeString(), type, msg };
+    setSecurityLogs(prev => {
+      const updated = [newLog, ...prev].slice(0, 30);
+      safeStorage.setItem('aha_security_logs_feed', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('aha_security_e2ee', String(isE2EEEnabled));
-  }, [isE2EEEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem('aha_security_censor', String(isAntiIPCCensorEnabled));
-  }, [isAntiIPCCensorEnabled]);
-
-  // Handle active drawing on canvas
-  const startDoodling = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    const canvas = doodleCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    doodleDrawingRef.current = true;
-    ctx.beginPath();
-    
-    const rect = canvas.getBoundingClientRect();
-    let clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    let clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
-    ctx.moveTo(clientX - rect.left, clientY - rect.top);
-    ctx.strokeStyle = doodleColor;
-    ctx.lineWidth = doodleBrushSize;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-  };
-
-  const drawDoodle = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!doodleDrawingRef.current) return;
-    e.preventDefault();
-    const canvas = doodleCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    let clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    let clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-    ctx.lineTo(clientX - rect.left, clientY - rect.top);
-    ctx.stroke();
-  };
-
-  const stopDoodling = () => {
-    doodleDrawingRef.current = false;
-  };
-
-  const clearDoodle = () => {
-    const canvas = doodleCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  };
-
-  const saveDoodleAttachment = () => {
-    const canvas = doodleCanvasRef.current;
-    if (!canvas) return;
-    const dataUrl = canvas.toDataURL('image/png');
-    setAttachedImage(dataUrl);
-    setIsDoodling(false);
-    addSecurityLog('SUCCESS', 'Doodle attached to post draft.');
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsUploading(true);
-    try {
-      if (file.type.startsWith('video/')) {
-        const uploadedUrl = await uploadMediaFile(file);
-        setAttachedImage(uploadedUrl);
-        setIsUploading(false);
-      } else {
-        const base64 = await compressAndGetBase64(file);
-        const uploadedUrl = await uploadMediaFile(base64, file.name);
-        setAttachedImage(uploadedUrl);
-        setIsUploading(false);
-      }
-      addSecurityLog('SUCCESS', `Media file loaded successfully: ${file.name}`);
-    } catch (err) {
-      console.error(err);
-      addSecurityLog('ALERT', 'Failed to compress or upload media file.');
-      setIsUploading(false);
-    }
-  };
-  
-  const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
-  const [commentToDelete, setCommentToDelete] = useState<{id: string, threadId: string} | null>(null);
-  
-  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
-  const [editThreadTitle, setEditThreadTitle] = useState('');
-  const [editThreadContent, setEditThreadContent] = useState('');
-  
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editCommentContent, setEditCommentContent] = useState('');
-  
-  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
-  const [replyContent, setReplyContent] = useState('');
-
+  // Fetch Threads in Realtime
   useEffect(() => {
     const q = query(collection(db, 'forum_threads'), orderBy('createdAt', 'desc'), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const threadsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ForumThread[];
-      
-      // Explicitly sort on the client-side so that any post with a pending/null createdAt (i.e. just created) is put on top!
-      const sortedThreads = [...threadsData].sort((a, b) => {
-        const getTime = (t: ForumThread) => {
-          if (!t.createdAt) return Date.now(); // Newly created thread with pending serverTimestamp
-          if (typeof t.createdAt === 'string') return new Date(t.createdAt).getTime();
-          if (typeof (t.createdAt as any).toMillis === 'function') return (t.createdAt as any).toMillis();
-          if ((t.createdAt as any).seconds) return (t.createdAt as any).seconds * 1000;
+      const threadsData = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      })) as PostData[];
+
+      // Sort client side
+      const sorted = [...threadsData].sort((a, b) => {
+        const getTime = (p: PostData) => {
+          if (!p.createdAt) return Date.now();
+          if (typeof p.createdAt === 'string') return new Date(p.createdAt).getTime();
+          if (typeof (p.createdAt as any).toMillis === 'function') return (p.createdAt as any).toMillis();
+          if ((p.createdAt as any).seconds) return (p.createdAt as any).seconds * 1000;
           return Date.now();
         };
         return getTime(b) - getTime(a);
       });
-      
-      setThreads(sortedThreads);
+
+      setThreads(sorted);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'forum_threads');
     });
 
-    let fallbackInterval: ReturnType<typeof setInterval>;
-    const fetchFallback = async () => {
-      if (vercelFallback.isAvailable()) {
-        try {
-          const fallbackData = await vercelFallback.lrange('forum_threads', 0, 100);
-          if (fallbackData && fallbackData.length > 0) {
-            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str) as ForumThread[];
-            
-            setThreads(prev => {
-              const mapped = new Map([...prev, ...parsed].map(t => [t.id, t]));
-              const sorted = Array.from(mapped.values()).sort((a, b) => {
-                  const timeA = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : ((a.createdAt as any)?.toMillis?.() || 0);
-                  const timeB = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : ((b.createdAt as any)?.toMillis?.() || 0);
-                  return timeB - timeA;
-              });
-              return sorted;
-            });
-          }
-        } catch (e) {}
-      }
-    };
-    
-    fetchFallback();
-    fallbackInterval = setInterval(fetchFallback, 5000);
-
-    return () => {
-      unsubscribe();
-      clearInterval(fallbackInterval);
-    }
+    return () => unsubscribe();
   }, []);
 
+  // Fetch Comments in Realtime
   useEffect(() => {
-    if (!selectedThread) return;
-    const q = query(
-      collection(db, 'forum_comments'), 
-      where('threadId', '==', selectedThread.id), 
-      orderBy('createdAt', 'asc'),
-      limit(100)
-    );
+    const q = query(collection(db, 'forum_comments'), orderBy('createdAt', 'asc'), limit(200));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const commentsData = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() } as ForumComment));
+      const commentsData = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      })) as CommentData[];
       setComments(commentsData);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'forum_comments');
     });
 
-    let fallbackInterval: ReturnType<typeof setInterval>;
-    const fetchFallback = async () => {
-      if (vercelFallback.isAvailable()) {
-        try {
-          const fallbackData = await vercelFallback.lrange(`forum_comments:${selectedThread.id}`, 0, 100);
-          if (fallbackData && fallbackData.length > 0) {
-            const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str).reverse() as ForumComment[];
-            
-            setComments(prev => {
-              const mapped = new Map([...prev, ...parsed].map(c => [c.id, c]));
-              const sorted = Array.from(mapped.values()).sort((a, b) => {
-                  const timeA = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : ((a.createdAt as any)?.toMillis?.() || 0);
-                  const timeB = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : ((b.createdAt as any)?.toMillis?.() || 0);
-                  return timeA - timeB;
-              });
-              return sorted;
-            });
-          }
-        } catch (e) {}
-      }
-    };
+    return () => unsubscribe();
+  }, []);
 
-    fetchFallback();
-    fallbackInterval = setInterval(fetchFallback, 5000);
-
-    return () => {
-      unsubscribe();
-      clearInterval(fallbackInterval);
-    };
-  }, [selectedThread]);
-
-  const handleCreateThread = async () => {
-    if (!checkLimit('threads_monthly')) {
-      alert(lang === 'ru' ? 'Вы исчерпали лимит в 20 тредов за месяц. Приобретите Aha Premium.' : 'You have reached the monthly thread limit of 20. Get Aha Premium.');
+  // Create New Post
+  const handleCreatePost = async (postData: {
+    title: string;
+    content: string;
+    imageUrl?: string;
+    feeling?: string;
+    category?: string;
+    isProtected?: boolean;
+  }) => {
+    if (!user) {
+      window.dispatchEvent(new CustomEvent('openEmailLogin'));
       return;
     }
-    if (!user || !newTitle.trim() || !newContent.trim() || isSubmitting) return;
-
-    // --- MODERATION SYSTEM (18+ content forbidden, swearing allowed) ---
-    const modTitle = checkContentModeration(newTitle, lang);
-    if (!modTitle.isSafe) {
-      alert(modTitle.message);
-      return;
-    }
-    const modContent = checkContentModeration(newContent, lang);
-    if (!modContent.isSafe) {
-      alert(modContent.message);
-      return;
-    }
-    // --------------------------------------------------------------------
 
     setIsSubmitting(true);
-    incrementUsage('threads_monthly');
     try {
-      const rawThreadData = {
-        title: newTitle.trim(),
-        content: newContent.trim(),
+      const payload: any = {
+        title: postData.title,
+        content: postData.content,
         authorId: user.uid,
-        authorName: user.displayName || 'Anonymous',
-        authorPhoto: user.photoURL || '',
-        createdAt: new Date().toISOString(), // Fallback ready format
-        commentCount: 1,
-        upvotes: [],
-        downvotes: [],
-        imageUrl: attachedImage ? encryptImage(attachedImage) : ''
+        authorName: user.displayName || 'Путник Радости',
+        authorPhoto: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`,
+        createdAt: serverTimestamp(),
+        commentCount: 0,
+        reactions: {},
+        category: postData.category || 'general',
+        isProtected: postData.isProtected || false
       };
 
-      const threadData = await sanitizePayloadForFirestore(rawThreadData);
+      if (postData.imageUrl) payload.imageUrl = postData.imageUrl;
+      if (postData.feeling) payload.feeling = postData.feeling;
 
-      let threadId = generatePrefixedId('thread') + '_' + user.uid;
+      await addDoc(collection(db, 'forum_threads'), payload);
 
-      const threadRef = await addDoc(collection(db, 'forum_threads'), {
-        ...threadData,
-        createdAt: serverTimestamp()
-      });
-      
-      threadId = threadRef.id;
+      window.dispatchEvent(new CustomEvent('aha_toast', {
+        detail: lang === 'ru' ? '🎉 Публикация успешно размещена в ленте!' : '🎉 Post published to feed!'
+      }));
 
-      await addDoc(collection(db, 'forum_comments'), {
-        threadId: threadRef.id,
-        content: (t as any).forumBotWelcome || "Welcome to the forum!",
-        authorId: 'system-bot',
-        authorName: 'Aha Bot',
-        authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
+      addSecurityLog('SUCCESS', `New post published by ${user.displayName || user.uid}`);
+    } catch (err) {
+      console.error('Error creating post:', err);
+      window.dispatchEvent(new CustomEvent('aha_toast', {
+        detail: lang === 'ru' ? 'Ошибка при публикации поста' : 'Error publishing post'
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // React to Post (Facebook floating reactions)
+  const handleReact = async (postId: string, reactionEmoji: string) => {
+    if (!user) {
+      window.dispatchEvent(new CustomEvent('openEmailLogin'));
+      return;
+    }
+
+    try {
+      const targetPost = threads.find(t => t.id === postId);
+      if (!targetPost) return;
+
+      const updatedReactions: Record<string, string[]> = {};
+      if (targetPost.reactions) {
+        for (const [em, users] of Object.entries(targetPost.reactions)) {
+          if (Array.isArray(users)) {
+            updatedReactions[em] = [...users];
+          }
+        }
+      }
+
+      let userCurrentEmoji: string | null = null;
+      for (const [em, users] of Object.entries(updatedReactions)) {
+        if (users.includes(user.uid)) {
+          userCurrentEmoji = em;
+          updatedReactions[em] = users.filter(uid => uid !== user.uid);
+        }
+      }
+
+      // If clicking same emoji, toggle off. Otherwise set new emoji!
+      if (userCurrentEmoji !== reactionEmoji) {
+        if (!updatedReactions[reactionEmoji]) updatedReactions[reactionEmoji] = [];
+        updatedReactions[reactionEmoji].push(user.uid);
+
+        // Notify post author about reaction
+        notifyPostReaction({
+          postAuthorId: targetPost.authorId,
+          postId: targetPost.id,
+          postTitle: targetPost.title || targetPost.content,
+          reactionEmoji,
+          actor: {
+            uid: user.uid,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+          }
+        }).catch(() => {});
+      }
+
+      // Cleanup empty arrays
+      for (const [em, users] of Object.entries(updatedReactions)) {
+        if (users.length === 0) delete updatedReactions[em];
+      }
+
+      // Optimistic update
+      setThreads(prev => prev.map(t => t.id === postId ? { ...t, reactions: updatedReactions } : t));
+
+      // Firestore update
+      const docRef = doc(db, 'forum_threads', postId);
+      await updateDoc(docRef, { reactions: updatedReactions });
+    } catch (err) {
+      console.error('Error updating reaction:', err);
+    }
+  };
+
+  // Add Comment to Post
+  const handleAddComment = async (postId: string, text: string, replyToId?: string) => {
+    if (!user) {
+      window.dispatchEvent(new CustomEvent('openEmailLogin'));
+      return;
+    }
+
+    try {
+      const targetPost = threads.find(t => t.id === postId);
+      const commentPayload: any = {
+        threadId: postId,
+        content: text,
+        authorId: user.uid,
+        authorName: user.displayName || 'Путник Радости',
+        authorPhoto: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`,
         createdAt: serverTimestamp(),
         upvotes: [],
-        downvotes: [],
-        isBot: true
-      });
-
-      const payload = { ...threadData, id: threadId, createdAt: new Date().toISOString() };
-      if (vercelFallback.isAvailable()) {
-        try {
-          await vercelFallback.lpush('forum_threads', JSON.stringify(payload));
-        } catch (e) {}
-      }
-
-      setThreads(prev => [payload, ...prev.filter(t => t.id !== threadId)]);
-
-      setIsCreating(false);
-      setNewTitle('');
-      setNewContent('');
-      setAttachedImage(null);
-      addSecurityLog('SUCCESS', `New post "${threadData.title}" created successfully${attachedImage ? ' with attached image' : ''}.`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'forum_threads');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCreateComment = async (replyToId?: string) => {
-    if (!checkLimit('comments_daily')) {
-      alert(lang === 'ru' ? 'Вы исчерпали лимит в 50 комментариев за день. Приобретите Aha Premium.' : 'You have reached the daily comment limit of 50. Get Aha Premium.');
-      return;
-    }
-    const contentToSubmit = replyToId ? replyContent : newComment;
-    if (!user || !selectedThread || !contentToSubmit.trim() || isSubmitting) return;
-
-    // --- MODERATION SYSTEM (18+ content forbidden, swearing allowed) ---
-    const modComment = checkContentModeration(contentToSubmit, lang);
-    if (!modComment.isSafe) {
-      alert(modComment.message);
-      return;
-    }
-    // --------------------------------------------------------------------
-
-    setIsSubmitting(true);
-    incrementUsage('comments_daily');
-    try {
-      const rawCommentData = {
-        threadId: selectedThread.id,
-        content: contentToSubmit.trim(),
-        authorId: user.uid,
-        authorName: user.displayName || 'Anonymous',
-        authorPhoto: user.photoURL || '',
-        createdAt: new Date().toISOString(),
-        upvotes: [],
-        downvotes: [],
-        ...(replyToId ? { replyToId } : {})
+        downvotes: []
       };
 
-      const commentData = await sanitizePayloadForFirestore(rawCommentData);
+      if (replyToId) commentPayload.replyToId = replyToId;
 
-      const docRef = await addDoc(collection(db, 'forum_comments'), {
-        ...commentData,
-        createdAt: serverTimestamp()
-      });
-      
-      const commentId = docRef.id;
-      const payload = { ...commentData, id: commentId, createdAt: new Date().toISOString() };
+      await addDoc(collection(db, 'forum_comments'), commentPayload);
 
-      const threadRef = doc(db, 'forum_threads', selectedThread.id);
-      await updateDoc(threadRef, {
-        commentCount: increment(1)
-      }).catch(() => {});
-
-      if (vercelFallback.isAvailable()) {
-        try {
-          await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
-        } catch (e) {}
+      // Notify post author
+      if (targetPost) {
+        notifyPostComment({
+          postAuthorId: targetPost.authorId,
+          postId: targetPost.id,
+          postTitle: targetPost.title || targetPost.content,
+          commentAuthor: {
+            uid: user.uid,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+          },
+          commentSnippet: text
+        }).catch(() => {});
       }
-      setComments(prev => [...prev.filter(c => c.id !== commentId), payload]);
-      
+
+      // If this is a reply to another comment, notify the comment author
       if (replyToId) {
-        setReplyContent('');
-        setReplyingToCommentId(null);
-      } else {
-        setNewComment('');
+        const parentComment = comments.find(c => c.id === replyToId);
+        if (parentComment) {
+          notifyCommentReply({
+            parentCommentAuthorId: parentComment.authorId,
+            postId,
+            postTitle: targetPost?.title || '',
+            commentAuthor: {
+              uid: user.uid,
+              displayName: user.displayName,
+              photoURL: user.photoURL
+            },
+            replySnippet: text
+          }).catch(() => {});
+        }
       }
 
-      // --- AHA BOT FULL AUTONOMOUS REPLY ENGINE ---
-      const isBotMentioned = 
-        contentToSubmit.toLowerCase().includes('bot') || 
-        contentToSubmit.toLowerCase().includes('бот') || 
-        contentToSubmit.toLowerCase().includes('aha') || 
-        contentToSubmit.toLowerCase().includes('аха') ||
-        (replyToId && comments.find(c => c.id === replyToId)?.isBot);
+      // Autonomous Bot response if mentioned or asked
+      const lowerText = text.toLowerCase();
+      const isBotMentioned = lowerText.includes('аха') || lowerText.includes('aha') || lowerText.includes('@аха') || lowerText.includes('@aha') || lowerText.includes('бот') || lowerText.includes('bot');
+      const isReplyingToBot = replyToId && comments.some(c => c.id === replyToId && c.isBot);
 
-      if (isBotMentioned) {
+      if (isBotMentioned || isReplyingToBot) {
         setTimeout(async () => {
+          let botReply = "";
           try {
-            const botReplyText = await sdk.genai.generate(
-              contentToSubmit.trim(), 
-              lang,
-              `Ты - ИИ Радиостанции Ахи (Aha Bot), отвечаешь в комментариях на форуме. Твой тон: саркастичный, безумный, веселый, издевательский, хаотичный эон Радости. Отвечай кратко (1-3 предложения), подкалывай автора комментария, используй маты (маты разрешены, матерные слова делают тебя смешнее).`
-            );
-
-            const botCommentData = {
-              threadId: selectedThread.id,
-              content: botReplyText,
-              authorId: 'system-bot',
-              authorName: 'Aha Bot',
-              authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
-              createdAt: new Date().toISOString(),
-              upvotes: [],
-              downvotes: [],
-              isBot: true,
-              replyToId: replyToId || null,
-              pokeCount: 0
-            };
-
-            const botRef = await addDoc(collection(db, 'forum_comments'), {
-              ...botCommentData,
-              createdAt: serverTimestamp()
-            });
+            const aiPrompt = lang === 'ru'
+              ? `Ты — остроумный, веселый ИИ-помощник Аха Бот (Aha Bot) из сообщества Honkai Star Rail. Пользователь оставил комментарий/вопрос:\n"${text}"\nВ посте: "${targetPost?.title || ''} - ${targetPost?.content?.slice(0, 150) || ''}"\nОтветь живо, весело, с юмором Радости и эмодзи (1-2 предложения).`
+              : `You are the witty, playful AI assistant Aha Bot in the Honkai Star Rail community. A user commented/asked:\n"${text}"\nIn post: "${targetPost?.title || ''} - ${targetPost?.content?.slice(0, 150) || ''}"\nReply wittily with joyful humor and emojis (1-2 sentences).`;
             
-            const botCommentId = botRef.id;
-            const payload = { ...botCommentData, id: botCommentId, createdAt: new Date().toISOString() };
-
-            const threadRef = doc(db, 'forum_threads', selectedThread.id);
-            await updateDoc(threadRef, {
-              commentCount: increment(1)
-            }).catch(() => {});
-
-            if (vercelFallback.isAvailable()) {
-              try {
-                await vercelFallback.lpush(`forum_comments:${selectedThread.id}`, JSON.stringify(payload));
-              } catch (e) {}
-            }
-            setComments(prev => [...prev.filter(c => c.id !== botCommentId), payload]);
+            botReply = await sdk.genai.generate(aiPrompt, lang);
           } catch (e) {
-            console.error('Aha Bot failed to reply:', e);
+            console.warn("AI generation failed in comment reply:", e);
           }
-        }, 1500);
+
+          if (!botReply || botReply.includes('error')) {
+            const botQuotes = [
+              'Ха-ха-ха! Радость пронизывает все сущее! Твои слова услышаны Ахой! 🎭',
+              'Мудро сказано! Или безумно? Какая разница, если это смешно! 🚀',
+              'Аха ставит свой божественный лайк этой мысли! ✨',
+              'КММ в ярости от этого комментария, а мы празднуем! 🤡'
+            ];
+            botReply = botQuotes[Math.floor(Math.random() * botQuotes.length)];
+          }
+
+          await addDoc(collection(db, 'forum_comments'), {
+            threadId: postId,
+            content: botReply,
+            authorId: 'system-aha-bot',
+            authorName: 'Aha Bot 6.0 🎭',
+            authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=d946ef&color=fff',
+            createdAt: serverTimestamp(),
+            isBot: true,
+            replyToId: replyToId || undefined,
+            upvotes: [],
+            downvotes: []
+          });
+        }, 1000);
       }
-      // ---------------------------------------------
-
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'forum_comments');
-    } finally {
-      setIsSubmitting(false);
+    } catch (err) {
+      console.error('Error adding comment:', err);
     }
   };
 
-  const confirmDeleteThread = async () => {
-    if (!threadToDelete) return;
-    const threadItem = threads.find(t => t.id === threadToDelete);
+  // Summon Aha Bot on any post directly
+  const handleSummonAhaBot = async (postId: string) => {
     try {
-      await deleteDoc(doc(db, 'forum_threads', threadToDelete));
-      if (selectedThread?.id === threadToDelete) setSelectedThread(null);
+      const targetPost = threads.find(t => t.id === postId);
+      if (!targetPost) return;
 
-      logAdminAction(user, 'DELETE_FORUM_THREAD', 'content_management', {
-        targetId: threadToDelete,
-        targetName: threadItem?.title || threadToDelete,
-        details: `Тема форума "${threadItem?.title || threadToDelete}" была удалена`
+      window.dispatchEvent(new CustomEvent('aha_toast', { 
+        detail: lang === 'ru' ? '🎭 Аха-Бот читает пост и придумывает ответ...' : '🎭 Aha Bot is reading the post...' 
+      }));
+
+      const prompt = `Ты — Эон Радости Аха из Honkai: Star Rail (или безумный весёлый Аха-Бот). Прочитай этот пост пользователя:\nЗаголовок: "${targetPost.title || ''}"\nТекст: "${targetPost.content || ''}"\nНапиши короткий (1-3 предложения), искрометный, остроумный, смешной комментарий с эмодзи в стиле Недотёп в масках и Радости.`;
+
+      let botReply = "";
+      try {
+        botReply = await sdk.genai.generate(prompt, lang);
+      } catch (e) {
+        console.warn("AI generation failed, fallbacking", e);
+      }
+
+      if (!botReply || botReply.includes('error')) {
+        const fallbacks = [
+          'Ха-ха-ха! Великолепно! Даже Звездный Экспресс не разгонится быстрее, чем этот пост! 🚂✨',
+          'Аха одобряет этот ход мысли! Добавим немного космического хаоса в ленту! 🎭💥',
+          'КММ пыталась заблокировать этот пост, но Радость победила! 🤡🪐',
+          'Вот это поворот! Эоны аплодируют стоя! 🌟🎉'
+        ];
+        botReply = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+      }
+
+      await addDoc(collection(db, 'forum_comments'), {
+        threadId: postId,
+        content: botReply,
+        authorId: 'system-aha-bot',
+        authorName: 'Aha Bot 6.0 🎭',
+        authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=d946ef&color=fff',
+        createdAt: serverTimestamp(),
+        isBot: true,
+        upvotes: [],
+        downvotes: []
       });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `forum_threads/${threadToDelete}`);
-    } finally {
-      setThreadToDelete(null);
+
+      // Send notification to the post author
+      if (targetPost.authorId) {
+        notifyPostComment({
+          postAuthorId: targetPost.authorId,
+          postId: targetPost.id,
+          postTitle: targetPost.title || targetPost.content,
+          commentAuthor: {
+            uid: 'system-aha-bot',
+            displayName: 'Aha Bot 6.0 🎭',
+            photoURL: 'https://ui-avatars.com/api/?name=Aha+Bot&background=d946ef&color=fff'
+          },
+          commentSnippet: botReply
+        }).catch(() => {});
+      }
+
+      window.dispatchEvent(new CustomEvent('aha_toast', { 
+        detail: lang === 'ru' ? '✨ Аха-Бот оставил комментарий!' : '✨ Aha Bot replied with a comment!' 
+      }));
+    } catch (err) {
+      console.error('Error summoning Aha Bot:', err);
     }
   };
 
+  // Vote on Comment
+  const handleVoteComment = async (comment: CommentData, type: 'up' | 'down') => {
+    if (!user) {
+      window.dispatchEvent(new CustomEvent('openEmailLogin'));
+      return;
+    }
+
+    try {
+      const currentUpvotes = comment.upvotes || [];
+      const hasUpvoted = currentUpvotes.includes(user.uid);
+      const newUpvotes = hasUpvoted 
+        ? currentUpvotes.filter(uid => uid !== user.uid)
+        : [...currentUpvotes, user.uid];
+
+      const docRef = doc(db, 'forum_comments', comment.id);
+      await updateDoc(docRef, { upvotes: newUpvotes });
+
+      setComments(prev => prev.map(c => c.id === comment.id ? { ...c, upvotes: newUpvotes } : c));
+    } catch (err) {
+      console.error('Error voting comment:', err);
+    }
+  };
+
+  // Edit Comment
+  const handleEditComment = async (commentId: string, newContent: string) => {
+    try {
+      const docRef = doc(db, 'forum_comments', commentId);
+      await updateDoc(docRef, {
+        content: newContent,
+        isEdited: true
+      });
+      setComments(prev => prev.map(c => c.id === commentId ? { ...c, content: newContent, isEdited: true } : c));
+    } catch (err) {
+      console.error('Error editing comment:', err);
+    }
+  };
+
+  // Delete Post
+  const confirmDeletePost = async () => {
+    if (!postToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'forum_threads', postToDelete));
+      setThreads(prev => prev.filter(t => t.id !== postToDelete));
+      setPostToDelete(null);
+      window.dispatchEvent(new CustomEvent('aha_toast', {
+        detail: lang === 'ru' ? 'Пост удален' : 'Post deleted'
+      }));
+    } catch (err) {
+      console.error('Error deleting post:', err);
+    }
+  };
+
+  // Delete Comment
   const confirmDeleteComment = async () => {
     if (!commentToDelete) return;
     try {
       await deleteDoc(doc(db, 'forum_comments', commentToDelete.id));
-      const threadRef = doc(db, 'forum_threads', commentToDelete.threadId);
-      const threadDoc = await getDoc(threadRef);
-      if (threadDoc.exists()) {
-        await updateDoc(threadRef, {
-          commentCount: Math.max(0, (threadDoc.data().commentCount || 1) - 1)
-        });
-      }
-
-      logAdminAction(user, 'DELETE_FORUM_COMMENT', 'content_management', {
-        targetId: commentToDelete.id,
-        targetName: commentToDelete.threadId,
-        details: `Комментарий к теме ${commentToDelete.threadId} был удален`
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `forum_comments/${commentToDelete.id}`);
-    } finally {
+      setComments(prev => prev.filter(c => c.id !== commentToDelete.id));
       setCommentToDelete(null);
+    } catch (err) {
+      console.error('Error deleting comment:', err);
     }
   };
 
-  const handleUpdateThread = async () => {
-    if (!editingThreadId || !editThreadTitle.trim() || !editThreadContent.trim() || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      await updateDoc(doc(db, 'forum_threads', editingThreadId), {
-        title: editThreadTitle.trim(),
-        content: editThreadContent.trim(),
-        isEdited: true
-      });
-      setEditingThreadId(null);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `forum_threads/${editingThreadId}`);
-    } finally {
-      setIsSubmitting(false);
+  // Filter Posts by Tab and Search
+  const filteredPosts = threads.filter(post => {
+    const matchesSearch = 
+      post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.authorName?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (activeTab === 'memes') {
+      return post.category === 'memes' || post.feeling?.includes('🎭') || post.content.toLowerCase().includes('мем');
     }
-  };
-
-  const handleUpdateComment = async () => {
-    if (!editingCommentId || !editCommentContent.trim() || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      await updateDoc(doc(db, 'forum_comments', editingCommentId), {
-        content: editCommentContent.trim(),
-        isEdited: true
-      });
-      setEditingCommentId(null);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `forum_comments/${editingCommentId}`);
-    } finally {
-      setIsSubmitting(false);
+    if (activeTab === 'theories') {
+      return post.category === 'theories' || post.feeling?.includes('💡') || post.title.toLowerCase().includes('теория');
     }
-  };
-
-  const handleVote = async (type: 'thread' | 'comment', item: ForumThread | ForumComment, voteType: 'up' | 'down') => {
-    if (!user) return;
-    
-    const collectionName = type === 'thread' ? 'forum_threads' : 'forum_comments';
-    const docRef = doc(db, collectionName, item.id);
-    const upvotes = item.upvotes || [];
-    const downvotes = item.downvotes || [];
-    
-    const hasUpvoted = upvotes.includes(user.uid);
-    const hasDownvoted = downvotes.includes(user.uid);
-    
-    let xpChange = 0;
-
-    try {
-      if (voteType === 'up') {
-        if (hasUpvoted) {
-          await updateDoc(docRef, { upvotes: arrayRemove(user.uid) });
-          xpChange = -5;
-        } else {
-          await updateDoc(docRef, {
-            upvotes: arrayUnion(user.uid),
-            downvotes: arrayRemove(user.uid)
-          });
-          xpChange = hasDownvoted ? 10 : 5;
-        }
-      } else {
-        if (hasDownvoted) {
-          await updateDoc(docRef, { downvotes: arrayRemove(user.uid) });
-          xpChange = 5;
-        } else {
-          await updateDoc(docRef, {
-            downvotes: arrayUnion(user.uid),
-            upvotes: arrayRemove(user.uid)
-          });
-          xpChange = hasUpvoted ? -10 : -5;
-        }
-      }
-
-      if (item.authorId !== 'system-bot' && item.authorId !== user.uid) {
-        const authorRef = doc(db, 'users', item.authorId);
-        await updateDoc(authorRef, {
-          xp: increment(xpChange),
-          reputation: increment(xpChange > 0 ? 1 : (xpChange < 0 ? -1 : 0))
-        });
-      }
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `${collectionName}/${item.id}`);
+    if (activeTab === 'popular') {
+      const totalReactions = Object.values(post.reactions || {}).reduce((acc, u) => acc + (u?.length || 0), 0) + (post.upvotes?.length || 0);
+      return totalReactions >= 2 || (post.commentCount || 0) >= 2;
     }
-  };
 
-  useEffect(() => {
-    if (selectedThread) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [selectedThread]);
-
-  const filteredThreads = threads.filter(t => 
-    t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  if (selectedThread) {
-    const topLevelComments = comments.filter(c => !c.replyToId).reverse();
-    const getReplies = (parentId: string) => comments.filter(c => c.replyToId === parentId);
-
-    const renderComment = (comment: ForumComment, isReply: boolean = false) => {
-      if (comment.isBot) {
-        return <ForumBotComment key={comment.id} comment={comment} lang={lang} t={t} isReply={isReply} />;
-      }
-
-      return (
-        <motion.div 
-          key={comment.id}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`bg-[#15101e] border border-[#3d2b4f]/20 rounded-2xl p-4 sm:p-5 flex gap-4 group ${isReply ? 'ml-8 sm:ml-12 mt-2 border-l-2 border-l-[#ff4d4d]/30' : ''}`}
-        >
-          <img 
-            src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=1c1528&color=fff`}
-            alt={comment.authorName}
-            className="w-10 h-10 rounded-full border border-[#3d2b4f]/50 shrink-0"
-          />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <div className="font-bold text-white text-sm truncate flex items-center gap-2">
-                {comment.authorName}
-                {comment.isEdited && <span className="text-[10px] text-white/40 font-normal">({t.edited || "edited"})</span>}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="text-[10px] text-white/40 flex items-center gap-1 shrink-0">
-                  <TimeAgo date={comment.createdAt} lang={lang} />
-                </div>
-                <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-                  {user?.uid === comment.authorId && (
-                    <button 
-                      onClick={() => {
-                        setEditingCommentId(comment.id);
-                        setEditCommentContent(comment.content);
-                      }}
-                      className="p-1.5 text-white/60 hover:text-blue-400 transition-all rounded-md hover:bg-blue-400/10"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  )}
-                  {(user?.uid === comment.authorId || role === 'admin' || role === 'moderator' || role === 'beta-tester') && (
-                    <button 
-                      onClick={() => setCommentToDelete({id: comment.id, threadId: selectedThread.id})}
-                      className="p-1.5 text-white/60 hover:text-red-400 transition-all rounded-md hover:bg-red-400/10"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {editingCommentId === comment.id ? (
-              <div className="mt-2 space-y-3">
-                <textarea
-                  value={editCommentContent}
-                  onChange={(e) => setEditCommentContent(e.target.value)}
-                  className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-y text-sm"
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setEditingCommentId(null)}
-                    className="px-3 py-1.5 rounded-lg text-white/40 hover:text-white transition-colors text-xs font-bold"
-                  >
-                    {(t as any).forumCancel || t.profileCancel}
-                  </button>
-                  <button
-                    onClick={handleUpdateComment}
-                    disabled={!editCommentContent.trim() || isSubmitting}
-                    className="bg-[#ff4d4d] text-[#15101e] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs"
-                  >
-                    {isSubmitting ? '...' : ((t as any).forumSave || t.profileSave)}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="text-white/80 text-sm whitespace-pre-wrap break-words mb-3">{comment.content}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-lg border border-[#3d2b4f]/30 w-fit">
-                    <button
-                      onClick={() => handleVote('comment', comment, 'up')}
-                      disabled={!user}
-                      className={`p-1 rounded transition-all ${comment.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-white/40 hover:text-green-500 hover:bg-green-500/5'}`}
-                    >
-                      <ChevronUp size={16} />
-                    </button>
-                    <span className={`text-[10px] font-black px-2 min-w-[1.5rem] text-center ${((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-white/40'}`}>
-                      {(comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)}
-                    </span>
-                    <button
-                      onClick={() => handleVote('comment', comment, 'down')}
-                      disabled={!user}
-                      className={`p-1 rounded transition-all ${comment.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-white/40 hover:text-red-500 hover:bg-red-500/5'}`}
-                    >
-                      <ChevronDown size={16} />
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-                    {user && !isReply && (
-                      <button 
-                        onClick={() => setReplyingToCommentId(comment.id)}
-                        className="p-1.5 text-white/40 hover:text-[#ff4d4d] transition-all rounded-md hover:bg-[#ff4d4d]/10 text-xs font-bold tracking-widest"
-                      >
-                        {(t as any).forumReply || "Reply"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {replyingToCommentId === comment.id && (
-              <div className="mt-4 bg-[#0d0b14] rounded-xl p-3 border border-[#3d2b4f]/30">
-                <textarea
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  placeholder={(t as any).forumYourReply || "Your reply..."}
-                  className="w-full bg-transparent text-white placeholder-white/40 focus:outline-none min-h-[60px] resize-y text-sm mb-2"
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => {
-                      setReplyingToCommentId(null);
-                      setReplyContent('');
-                    }}
-                    className="px-3 py-1.5 rounded-lg text-white/40 hover:text-white transition-colors text-xs font-bold"
-                  >
-                    {(t as any).forumCancel || t.profileCancel}
-                  </button>
-                  <button
-                    onClick={() => handleCreateComment(comment.id)}
-                    disabled={!replyContent.trim() || isSubmitting}
-                    className="bg-[#ff4d4d] text-[#15101e] px-4 py-1.5 rounded-lg font-bold transition-colors disabled:opacity-50 text-xs flex items-center gap-2"
-                  >
-                    {isSubmitting ? '...' : (
-                      <>
-                        <Send size={12} />
-                        {(t as any).forumReply || "Reply"}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </motion.div>
-      );
-    };
-
-    return (
-      <div className="space-y-6">
-        <button 
-          onClick={() => setSelectedThread(null)}
-          className="flex items-center gap-2 text-white/40 hover:text-white transition-colors"
-        >
-          <ArrowLeft size={20} />
-          <span className="font-bold tracking-widest text-sm">{t.forumBack}</span>
-        </button>
-
-        <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 sm:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <img 
-                src={selectedThread.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedThread.authorName)}&background=1c1528&color=fff`}
-                alt={selectedThread.authorName}
-                className="w-12 h-12 rounded-full border-2 border-[#3d2b4f]/50"
-              />
-              <div>
-                <div className="font-black text-white flex items-center gap-2">
-                  {selectedThread.authorName}
-                  {selectedThread.isEdited && <span className="text-[10px] text-white/40 font-normal">({t.edited || "edited"})</span>}
-                </div>
-                <div className="text-xs text-white/40 flex items-center gap-2">
-                  <Clock size={12} />
-                  <TimeAgo date={selectedThread.createdAt} lang={lang} />
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => exportContentToPDF({
-                  title: selectedThread.title,
-                  author: selectedThread.authorName,
-                  createdAt: selectedThread.createdAt,
-                  contentHtml: `<p style="white-space: pre-wrap;">${selectedThread.content}</p>`,
-                  mediaUrl: selectedThread.imageUrl,
-                  sectionName: lang === 'ru' ? 'Тема Форума' : 'Forum Thread',
-                  lang
-                })}
-                className="p-2 text-white/40 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all rounded-lg cursor-pointer"
-                title={lang === 'ru' ? 'Экспорт темы в PDF' : 'Export thread to PDF'}
-              >
-                <FileDown size={18} />
-              </button>
-
-              {(user?.uid === selectedThread.authorId || role === 'admin' || role === 'moderator') && (
-                <>
-                  {user?.uid === selectedThread.authorId && (
-                    <button 
-                      onClick={() => {
-                        setEditingThreadId(selectedThread.id);
-                        setEditThreadTitle(selectedThread.title);
-                        setEditThreadContent(selectedThread.content);
-                      }}
-                      className="p-2 text-white/40 hover:text-blue-400 transition-all rounded-lg hover:bg-blue-400/10"
-                    >
-                      <Pencil size={18} />
-                    </button>
-                  )}
-                  <button 
-                    onClick={() => setThreadToDelete(selectedThread.id)}
-                    className="p-2 text-white/40 hover:text-red-400 transition-all rounded-lg hover:bg-red-400/10"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          
-          {editingThreadId === selectedThread.id ? (
-            <div className="space-y-4">
-              <input
-                type="text"
-                value={editThreadTitle}
-                onChange={(e) => setEditThreadTitle(e.target.value)}
-                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] font-bold"
-              />
-              <textarea
-                value={editThreadContent}
-                onChange={(e) => setEditThreadContent(e.target.value)}
-                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[150px] resize-y"
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setEditingThreadId(null)}
-                  className="px-4 py-2 rounded-xl text-white/40 hover:text-white transition-colors text-sm font-bold"
-                >
-                  {(t as any).forumCancel || t.profileCancel}
-                </button>
-                <button
-                  onClick={handleUpdateThread}
-                  disabled={!editThreadTitle.trim() || !editThreadContent.trim() || isSubmitting}
-                  className="bg-[#ff4d4d] text-[#15101e] px-6 py-2 rounded-xl font-bold transition-colors disabled:opacity-50 text-sm"
-                >
-                  {isSubmitting ? '...' : ((t as any).forumSave || t.profileSave)}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">
-                {isAntiIPCCensorEnabled ? (
-                  selectedThread.title.replace(/кмм/gi, '🤡 Корпорация Смешных Людей (КММ)').replace(/ipc/gi, '🤡 Interastral Clown Corporation (IPC)').replace(/стелларон/gi, '🔮 Искрящаяся Грань').replace(/stellaron/gi, '🔮 Sparkling Toy')
-                ) : selectedThread.title}
-              </h2>
-              <p className="text-white/80 whitespace-pre-wrap leading-relaxed mb-6">
-                {isAntiIPCCensorEnabled ? (
-                  selectedThread.content.replace(/кмм/gi, '🤡 Корпорация Смешных Людей (КММ)').replace(/ipc/gi, '🤡 Interastral Clown Corporation (IPC)').replace(/стелларон/gi, '🔮 Искрящаяся Грань').replace(/stellaron/gi, '🔮 Sparkling Toy')
-                ) : selectedThread.content}
-              </p>
-              
-              {selectedThread.imageUrl && (
-                <div className="mb-6">
-                  <MediaViewer
-                    url={selectedThread.imageUrl}
-                    isProtected={protectedViewFeatureEnabled && (selectedThread.isProtected !== false)}
-                    title={selectedThread.title}
-                    maxHeight="max-h-[500px]"
-                    isCompact={false}
-                  />
-                </div>
-              )}
-              
-              <div className="flex items-center gap-1 bg-[#0d0b14]/50 p-1 rounded-xl border border-[#3d2b4f]/30 w-fit">
-                <button
-                  onClick={() => handleVote('thread', selectedThread, 'up')}
-                  disabled={!user}
-                  className={`p-1.5 rounded-lg transition-all ${selectedThread.upvotes?.includes(user?.uid || '') ? 'text-green-500 bg-green-500/10' : 'text-white/40 hover:text-green-500 hover:bg-green-500/5'}`}
-                >
-                  <ChevronUp size={20} />
-                </button>
-                <span className={`text-xs font-black px-2 min-w-[2rem] text-center ${((selectedThread.upvotes?.length || 0) - (selectedThread.downvotes?.length || 0)) > 0 ? 'text-green-500' : ((selectedThread.upvotes?.length || 0) - (selectedThread.downvotes?.length || 0)) < 0 ? 'text-red-500' : 'text-white/40'}`}>
-                  {(selectedThread.upvotes?.length || 0) - (selectedThread.downvotes?.length || 0)}
-                </span>
-                <button
-                  onClick={() => handleVote('thread', selectedThread, 'down')}
-                  disabled={!user}
-                  className={`p-1.5 rounded-lg transition-all ${selectedThread.downvotes?.includes(user?.uid || '') ? 'text-red-500 bg-red-500/10' : 'text-white/40 hover:text-red-500 hover:bg-red-500/5'}`}
-                >
-                  <ChevronDown size={20} />
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-2">
-            <MessageSquare size={20} className="text-[#ff4d4d]" />
-            {t.forumDiscussion} ({comments.length})
-          </h3>
-
-          {user ? (
-            <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-4 flex gap-4">
-              <img 
-                src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`}
-                alt={user.displayName}
-                className="w-10 h-10 rounded-full border border-[#3d2b4f]/50 hidden sm:block"
-              />
-              <div className="flex-1 flex flex-col gap-2">
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder={(t as any).forumWriteComment || "Write a comment..."}
-                  className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-3 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[80px] resize-none"
-                />
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => handleCreateComment()}
-                    disabled={!newComment.trim() || isSubmitting}
-                    className="bg-[#ff4d4d] text-[#15101e] px-6 py-2 rounded-xl font-bold uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isSubmitting ? <span className="animate-pulse">...</span> : <><Send size={16} /> {(t as any).forumSend || "Send"}</>}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-[#15101e]/50 border border-[#3d2b4f]/30 rounded-3xl p-6 text-center text-white/40">
-              {(t as any).forumLoginToComment || "Login to comment"}
-            </div>
-          )}
-
-          <div className="space-y-4 mt-8">
-            {topLevelComments.map(comment => (
-              <React.Fragment key={comment.id}>
-                {renderComment(comment)}
-                {getReplies(comment.id).map(reply => renderComment(reply, true))}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isCreating) {
-    return (
-      <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 sm:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-black text-white tracking-widest">
-            {t.forumNewThread}
-          </h2>
-          <button onClick={() => setIsCreating(false)} className="text-white/40 hover:text-white">
-            <ArrowLeft size={24} />
-          </button>
-        </div>
-        <div className="space-y-4">
-          <input
-            type="text"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder={t.forumThreadTitle}
-            className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#ff4d4d] font-bold"
-          />
-          <textarea
-            value={newContent}
-            onChange={(e) => setNewContent(e.target.value)}
-            placeholder={t.forumMessageContent}
-            className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-xl p-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] min-h-[160px] resize-y"
-          />
-
-          {/* Visual Attachments Block */}
-          <div className="bg-[#0d0b14]/40 border border-[#3d2b4f]/20 rounded-2xl p-4 space-y-4">
-            <div className="flex flex-wrap gap-4 items-center justify-between">
-              <span className="text-sm text-white/60 font-bold uppercase tracking-wider flex items-center gap-2">
-                <Camera size={16} className="text-[#ff4d4d]" />
-                {lang === 'ru' ? 'Прикрепить контент' : 'Attach Visual Content'}
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {/* File Upload Button */}
-                <input
-                  type="file"
-                  id="forum-photo-upload"
-                  className="hidden"
-                  accept="image/*,video/*"
-                  onChange={handleFileUpload}
-                  disabled={isUploading}
-                />
-                <label
-                  htmlFor="forum-photo-upload"
-                  className={`bg-[#15101e] border border-[#3d2b4f]/50 text-white hover:text-[#ff4d4d] hover:border-[#ff4d4d]/50 px-4 py-2 rounded-xl text-xs font-black cursor-pointer flex items-center gap-2 transition-all ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
-                >
-                  <Camera size={14} />
-                  {lang === 'ru' ? 'Загрузить видео/фото' : 'Upload Video/Photo'}
-                </label>
-
-                {/* Direct Video / Photo URL button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const url = prompt(lang === 'ru' ? 'Вставьте ссылку на YouTube, MP4 или Фото:' : 'Paste YouTube, MP4, or Photo URL:');
-                    if (url) setAttachedImage(url.trim());
-                  }}
-                  className="bg-[#15101e] border border-[#3d2b4f]/50 text-white hover:text-[#ff4d4d] hover:border-[#ff4d4d]/50 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all"
-                >
-                  <LinkIcon size={14} />
-                  {lang === 'ru' ? 'Ссылка' : 'URL Link'}
-                </button>
-
-                {/* Draw Doodle Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setIsDoodling(!isDoodling)}
-                  className="bg-[#15101e] border border-[#3d2b4f]/50 text-white hover:text-[#ff4d4d] hover:border-[#ff4d4d]/50 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all"
-                >
-                  <PaletteIcon size={14} />
-                  {lang === 'ru' ? 'Нарисовать' : 'Draw Doodle'}
-                </button>
-              </div>
-            </div>
-
-            {/* Doodle Canvas Interactive Drawer */}
-            {isDoodling && (
-              <div className="bg-[#15101e] border border-[#ff4d4d]/30 rounded-2xl p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                    <PaletteIcon size={16} className="text-[#ff4d4d]" />
-                    {lang === 'ru' ? 'Интерактивная рисовашка Ахи' : 'Aha Doodle Pad'}
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => setIsDoodling(false)}
-                    className="text-white/40 hover:text-white"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-4 items-center">
-                  <canvas
-                    ref={doodleCanvasRef}
-                    width={400}
-                    height={260}
-                    onMouseDown={startDoodling}
-                    onMouseMove={drawDoodle}
-                    onMouseUp={stopDoodling}
-                    onMouseLeave={stopDoodling}
-                    onTouchStart={startDoodling}
-                    onTouchMove={drawDoodle}
-                    onTouchEnd={stopDoodling}
-                    className="bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-xl cursor-crosshair touch-none w-full max-w-[400px] h-[260px] shadow-inner"
-                  />
-                  <div className="space-y-4 w-full md:w-auto">
-                    {/* Brush Colors */}
-                    <div>
-                      <span className="text-xs text-white/40 block mb-2 font-bold uppercase">{lang === 'ru' ? 'Цвет кисти' : 'Brush Color'}</span>
-                      <div className="flex flex-wrap gap-2">
-                        {['#ff4d4d', '#4da6ff', '#4dff88', '#ffff4d', '#ff4dff', '#ffffff', '#0d0b14'].map(color => (
-                          <button
-                            key={color}
-                            type="button"
-                            onClick={() => setDoodleColor(color)}
-                            className={`w-7 h-7 rounded-full border transition-all ${doodleColor === color ? 'scale-110 border-white ring-2 ring-[#ff4d4d]/40' : 'border-[#3d2b4f]/50'}`}
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Brush Size */}
-                    <div>
-                      <span className="text-xs text-white/40 block mb-1 font-bold uppercase">{lang === 'ru' ? 'Толщина' : 'Brush Size'} ({doodleBrushSize}px)</span>
-                      <input
-                        type="range"
-                        min="2"
-                        max="20"
-                        value={doodleBrushSize}
-                        onChange={(e) => setDoodleBrushSize(Number(e.target.value))}
-                        className="w-full accent-[#ff4d4d] bg-[#0d0b14] h-1.5 rounded-lg appearance-none cursor-pointer"
-                      />
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={clearDoodle}
-                        className="bg-black/40 border border-[#3d2b4f]/40 hover:bg-[#ff4d4d]/10 hover:border-[#ff4d4d]/30 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors w-full"
-                      >
-                        {lang === 'ru' ? 'Очистить' : 'Clear'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={saveDoodleAttachment}
-                        className="bg-[#ff4d4d] text-[#15101e] hover:bg-white text-xs font-black px-4 py-2 rounded-xl transition-all shadow-[0_0_15px_rgba(255,77,77,0.3)] w-full"
-                      >
-                        {lang === 'ru' ? 'Прикрепить' : 'Attach'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Attached Media Preview */}
-            {attachedImage && (
-              <div className="relative max-w-md bg-[#15101e] border border-[#3d2b4f]/60 rounded-2xl p-2 group">
-                <MediaViewer url={attachedImage} maxHeight="max-h-[220px]" />
-                <button
-                  type="button"
-                  onClick={() => setAttachedImage(null)}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors z-10"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-4 pt-4">
-            <button
-              onClick={() => setIsCreating(false)}
-              className="px-6 py-3 rounded-xl font-bold tracking-widest text-white/40 hover:text-white transition-colors"
-            >
-              {(t as any).forumCancel || t.profileCancel}
-            </button>
-            <button
-              onClick={handleCreateThread}
-              disabled={!newTitle.trim() || !newContent.trim() || isSubmitting || isUploading}
-              className="bg-[#ff4d4d] text-[#15101e] px-8 py-3 rounded-xl font-black tracking-widest hover:bg-white transition-colors disabled:opacity-50 shadow-[0_0_20px_rgba(255,77,77,0.3)]"
-            >
-              {isSubmitting ? '...' : ((t as any).forumCreate || t.profileSave)}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    return true;
+  });
 
   return (
-    <div className="space-y-6">
-      <AdsBlock lang={lang} />
+    <div className="space-y-6 max-w-4xl mx-auto">
       
-      {/* Consolidated Page Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4">
-          <Activity className="text-[#ff4d4d] animate-pulse" size={36} />
-          {lang === 'ru' ? 'Активности и Посты' : 'Activities & Posts'}
-        </h2>
-        {activeTab === 'posts' && user && !selectedThread && (
-          <button
-            onClick={() => {
-              setIsCreating(true);
-              addSecurityLog('INFO', 'User opened post creation box.');
-            }}
-            className="bg-[#ff4d4d] text-[#15101e] px-6 py-3 rounded-xl font-black tracking-widest hover:bg-white transition-all active:scale-95 shadow-[0_0_20px_rgba(255,77,77,0.3)] flex items-center gap-2 justify-center"
-          >
-            <Plus size={20} />
-            {(t as any).forumCreateThread || "Create Thread"}
-          </button>
-        )}
-      </div>
+      {/* Top Banner / Feed Header */}
+      <div className="bg-[#15101e] border border-[#3d2b4f]/40 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ff4d4d]/20 to-[#3d2b4f]/40 border border-[#ff4d4d]/40 flex items-center justify-center text-[#ff4d4d] shadow-lg">
+              <Activity size={26} className="animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                {lang === 'ru' ? 'Активности и Посты' : 'Activities & Posts'}
+                <span className="text-xs bg-[#ff4d4d]/20 text-[#ff4d4d] border border-[#ff4d4d]/30 px-2 py-0.5 rounded-full font-black uppercase">
+                  v6.0
+                </span>
+              </h2>
+              <p className="text-xs text-white/50">
+                {lang === 'ru' 
+                  ? 'Социальная лента Радости: делитесь историями, реакциями, теориями и мемами' 
+                  : 'Social Elation Feed: stories, reactions, lore theories, and community posts'}
+              </p>
+            </div>
+          </div>
 
-      {/* Sub-Tabs Selector */}
-      {!selectedThread && (
-        <div className="flex border-b border-[#3d2b4f]/30 gap-2 overflow-x-auto pb-px mb-6 scrollbar-none">
-          <button
-            onClick={() => setActiveTab('posts')}
-            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-black uppercase text-xs tracking-wider transition-all whitespace-nowrap ${activeTab === 'posts' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white'}`}
-          >
-            <MessageSquare size={14} />
-            {lang === 'ru' ? 'Лента Постов' : 'Posts Feed'}
-          </button>
-          <button
-            onClick={() => setActiveTab('security')}
-            className={`flex items-center gap-2 px-6 py-3 border-b-2 font-black uppercase text-xs tracking-wider transition-all whitespace-nowrap ${activeTab === 'security' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white'}`}
-          >
-            <Shield size={14} />
-            {lang === 'ru' ? 'Центр Безопасности' : 'Security Center'}
-          </button>
-        </div>
-      )}
-
-      {/* Tab Contents */}
-      {activeTab === 'posts' && (
-        <>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
+          {/* Search bar */}
+          <div className="relative min-w-[220px]">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={(t as any).forumSearch || "Search threads..."}
-              className="w-full bg-[#15101e] border border-[#3d2b4f]/50 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] transition-colors"
+              placeholder={lang === 'ru' ? 'Поиск по ленте...' : 'Search feed...'}
+              className="w-full bg-[#0d0b14] border border-[#3d2b4f]/50 rounded-2xl pl-10 pr-4 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#ff4d4d] transition-all"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs"
+              >
+                ✕
+              </button>
+            )}
           </div>
+        </div>
 
+        {/* Filter Navigation Tabs (Facebook-like) */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-4 border-t border-[#3d2b4f]/30 mt-4 scrollbar-none">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+              activeTab === 'all' 
+                ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
+                : 'text-white/60 hover:text-white hover:bg-[#251c35]'
+            }`}
+          >
+            <Sparkles size={14} />
+            <span>{lang === 'ru' ? 'Все посты' : 'Feed'}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('popular')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+              activeTab === 'popular' 
+                ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
+                : 'text-white/60 hover:text-white hover:bg-[#251c35]'
+            }`}
+          >
+            <Flame size={14} />
+            <span>{lang === 'ru' ? 'Популярное' : 'Trending'}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('memes')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+              activeTab === 'memes' 
+                ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
+                : 'text-white/60 hover:text-white hover:bg-[#251c35]'
+            }`}
+          >
+            <Laugh size={14} />
+            <span>{lang === 'ru' ? 'Мемы & Аха' : 'Memes'}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('theories')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+              activeTab === 'theories' 
+                ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
+                : 'text-white/60 hover:text-white hover:bg-[#251c35]'
+            }`}
+          >
+            <Lightbulb size={14} />
+            <span>{lang === 'ru' ? 'Теории' : 'Theories'}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('events')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+              activeTab === 'events' 
+                ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
+                : 'text-white/60 hover:text-white hover:bg-[#251c35]'
+            }`}
+          >
+            <Calendar size={14} />
+            <span>{lang === 'ru' ? 'Ивенты и Промо' : 'Events & Promo'}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 ml-auto cursor-pointer ${
+              activeTab === 'security' 
+                ? 'bg-purple-600 text-white shadow-lg' 
+                : 'text-white/40 hover:text-white hover:bg-[#251c35]'
+            }`}
+          >
+            <ShieldCheck size={14} className="text-emerald-400" />
+            <span>{lang === 'ru' ? 'Безопасность' : 'Security'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Stories / Activity Highlights Bar */}
+      {activeTab !== 'security' && activeTab !== 'events' && (
+        <StoriesBar
+          lang={lang}
+          events={events}
+          promoCodes={promoCodes}
+          handleCopy={handleCopy}
+          onSelectEvent={() => setActiveTab('events')}
+        />
+      )}
+
+      {/* Main Feed View */}
+      {activeTab !== 'security' && activeTab !== 'events' && (
+        <>
+          {/* Facebook-style Post Creator Widget */}
+          <FacebookPostCreator
+            lang={lang}
+            onSubmit={handleCreatePost}
+            isSubmitting={isSubmitting}
+          />
+
+          {/* Posts Feed */}
           <div className="space-y-4">
-            {filteredThreads.length === 0 ? (
-              <div className="text-center py-12 text-white/40 bg-[#15101e]/30 rounded-3xl border border-[#3d2b4f]/20">
-                {(t as any).forumNoThreads || "No threads found."}
+            {filteredPosts.length === 0 ? (
+              <div className="bg-[#15101e] border border-[#3d2b4f]/40 rounded-3xl p-10 text-center space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-[#ff4d4d]/10 text-[#ff4d4d] flex items-center justify-center mx-auto">
+                  <Activity size={28} />
+                </div>
+                <h3 className="text-base font-black text-white">
+                  {lang === 'ru' ? 'В этой категории пока нет постов' : 'No posts in this category yet'}
+                </h3>
+                <p className="text-xs text-white/50 max-w-sm mx-auto">
+                  {lang === 'ru' ? 'Будьте первым, кто опубликует запись в ленте Радости!' : 'Be the first to share an update on the feed!'}
+                </p>
               </div>
             ) : (
-              filteredThreads.map(thread => (
-                <motion.div
-                  key={thread.id}
-                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  whileHover={{ y: -4, scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 22 }}
-                  onClick={() => {
-                    setSelectedThread(thread);
-                    addSecurityLog('INFO', `Viewed thread: ${thread.title}`);
+              filteredPosts.map((post) => (
+                <FacebookPostCard
+                  key={post.id}
+                  post={post}
+                  comments={comments}
+                  lang={lang}
+                  role={role}
+                  isAntiIPCCensorEnabled={isAntiIPCCensorEnabled}
+                  protectedViewFeatureEnabled={protectedViewFeatureEnabled}
+                  onReact={handleReact}
+                  onAddComment={handleAddComment}
+                  onSummonAhaBot={handleSummonAhaBot}
+                  onDeletePost={(id) => setPostToDelete(id)}
+                  onEditPost={(p) => {
+                    setEditingPost(p);
+                    setEditTitle(p.title);
+                    setEditContent(p.content);
                   }}
-                  className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 sm:p-6 hover:border-[#ff4d4d]/50 hover:bg-[#251c35] hover:shadow-[0_10px_30px_rgba(255,77,77,0.12)] transition-all cursor-pointer group"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
-                    <h3 className="text-xl font-black text-white group-hover:text-[#ff4d4d] transition-colors line-clamp-2">
-                      {isAntiIPCCensorEnabled ? (
-                        thread.title.replace(/кмм/gi, '🤡 КММ').replace(/ipc/gi, '🤡 IPC').replace(/стелларон/gi, '🔮 Стелларон').replace(/stellaron/gi, '🔮 Stellaron')
-                      ) : thread.title}
-                    </h3>
-                    <div className="flex items-center gap-4 shrink-0">
-                      <div className="flex items-center gap-1.5 text-white/40 text-sm bg-[#0d0b14] px-3 py-1.5 rounded-lg">
-                        <MessageSquare size={14} />
-                        <span className="font-bold">{thread.commentCount || 0}</span>
-                      </div>
-                      {(user?.uid === thread.authorId || role === 'admin' || role === 'moderator') && (
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setThreadToDelete(thread.id);
-                          }}
-                          className="p-2 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <p className="text-white/40 text-sm line-clamp-2 mb-4">
-                    {isAntiIPCCensorEnabled ? (
-                      thread.content.replace(/кмм/gi, '🤡 КММ').replace(/ipc/gi, '🤡 IPC').replace(/стелларон/gi, '🔮 Стелларон').replace(/stellaron/gi, '🔮 Stellaron')
-                    ) : thread.content}
-                  </p>
-
-                  {thread.imageUrl && (
-                    <div className="mb-4 max-w-sm">
-                      <MediaViewer
-                        url={thread.imageUrl}
-                        isProtected={protectedViewFeatureEnabled && (thread.isProtected !== false)}
-                        title={thread.title}
-                        maxHeight="max-h-[220px]"
-                        isCompact={true}
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-3">
-                    <img 
-                      src={thread.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(thread.authorName)}&background=1c1528&color=fff`}
-                      alt={thread.authorName}
-                      className="w-6 h-6 rounded-full"
-                    />
-                    <span className="text-xs font-bold text-white/80">{thread.authorName}</span>
-                    <span className="text-xs text-white/40 flex items-center gap-1">
-                      <Clock size={10} />
-                      <TimeAgo date={thread.createdAt} lang={lang} />
-                    </span>
-                  </div>
-                </motion.div>
+                  onDeleteComment={(commentId, postId) => setCommentToDelete({ id: commentId, postId })}
+                  onEditComment={handleEditComment}
+                  onVoteComment={handleVoteComment}
+                  onOpenProfile={(uid, name) => onOpenChat(uid, name)}
+                  onOpenChat={onOpenChat}
+                />
               ))
             )}
           </div>
         </>
       )}
 
+      {/* Events & Promo Integrated View */}
+      {activeTab === 'events' && (
+        <div className="space-y-6">
+          <div className="bg-[#15101e] border border-[#3d2b4f]/40 rounded-3xl p-6">
+            <h3 className="text-lg font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Calendar className="text-[#ff4d4d]" size={20} />
+              {lang === 'ru' ? 'Хроника Событий и Ивентов' : 'Events & Banners Chronicle'}
+            </h3>
+            <ChronicleSection
+              lang={lang}
+              lowPerfMode={lowPerfMode}
+              loading={false}
+              events={events}
+              onEdit={onEditEvent}
+              onCreate={onCreateEvent}
+              role={role}
+            />
+          </div>
+
+          <div className="bg-[#15101e] border border-[#3d2b4f]/40 rounded-3xl p-6">
+            <h3 className="text-lg font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Ticket className="text-amber-400" size={20} />
+              {lang === 'ru' ? 'Активные Промокоды' : 'Active Promo Codes'}
+            </h3>
+            <PromoSection
+              lang={lang}
+              handleCopy={handleCopy || (() => {})}
+              promoCodes={promoCodes}
+              role={role}
+              onOpenEditor={() => {}}
+              onEdit={() => {}}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Security Console Tab */}
       {activeTab === 'security' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left side: status and settings */}
+            {/* Left: Security Controls */}
             <div className="lg:col-span-5 space-y-6">
-              {/* Security Status Card */}
-              <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-6 opacity-10 text-[#ff4d4d] group-hover:scale-110 transition-transform duration-300">
-                  <Shield size={120} />
+              <div className="bg-[#15101e] border border-[#3d2b4f]/40 rounded-3xl p-6 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-6 opacity-10 text-[#ff4d4d]">
+                  <Shield size={100} />
                 </div>
-                <h3 className="text-xl font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <ShieldCheck className="text-green-400" size={20} />
+                <h3 className="text-lg font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <ShieldCheck className="text-emerald-400" size={20} />
                   {lang === 'ru' ? 'Допуск Безопасности' : 'Security Clearance'}
                 </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/60 text-sm">{lang === 'ru' ? 'Уровень Допуска:' : 'Clearance Level:'}</span>
-                    <span className="bg-[#ff4d4d]/10 text-[#ff4d4d] border border-[#ff4d4d]/30 px-3 py-1 rounded-lg text-xs font-black uppercase">
+                <div className="space-y-3 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/60">{lang === 'ru' ? 'Уровень допуска:' : 'Clearance Level:'}</span>
+                    <span className="bg-[#ff4d4d]/10 text-[#ff4d4d] border border-[#ff4d4d]/30 px-2.5 py-0.5 rounded-md font-black uppercase">
                       {role === 'admin' ? 'LEVEL 5 (ADMIN)' : role === 'moderator' ? 'LEVEL 4 (MOD)' : 'LEVEL 2 (FOOL)'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/60 text-sm">{lang === 'ru' ? 'Верификация аккаунта:' : 'Account Verification:'}</span>
-                    <span className="text-green-400 text-xs font-bold flex items-center gap-1">
-                      <Check size={14} /> {lang === 'ru' ? 'Активна' : 'Verified'}
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/60">{lang === 'ru' ? 'Анти-XSS Санитайзер:' : 'Anti-XSS Sanitizer:'}</span>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <Check size={13} /> {lang === 'ru' ? 'Активен' : 'Active'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-white/60 text-sm">{lang === 'ru' ? 'Протокол защиты:' : 'Defense Protocol:'}</span>
-                    <span className="text-white/80 font-black text-xs">Fools-Guard v4.1.2</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-white/60">{lang === 'ru' ? 'SSRF & Хост фильтр:' : 'SSRF & Host Shield:'}</span>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <Check size={13} /> {lang === 'ru' ? 'Защищен' : 'Protected'}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Security Controls */}
-              <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-6 space-y-4">
-                <h3 className="text-md font-black text-white uppercase tracking-widest flex items-center gap-2">
-                  <Cpu size={18} className="text-[#ff4d4d]" />
-                  {lang === 'ru' ? 'Управление Протоколами' : 'Protocol Controls'}
+              {/* Protocol Switches */}
+              <div className="bg-[#15101e] border border-[#3d2b4f]/40 rounded-3xl p-6 space-y-4">
+                <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <Cpu size={16} className="text-[#ff4d4d]" />
+                  {lang === 'ru' ? 'Протоколы Безопасности' : 'Security Protocols'}
                 </h3>
 
-                {/* E2EE Chat Switch */}
-                <div className="p-4 bg-[#0d0b14]/50 rounded-2xl border border-[#3d2b4f]/20 flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="text-sm font-bold text-white flex items-center gap-1.5">
-                      <Key size={14} className="text-[#ff4d4d]" />
-                      {lang === 'ru' ? 'Сквозное Шифрование' : 'E2EE Encryption'}
+                {/* E2EE Switch */}
+                <div className="p-3.5 bg-[#0d0b14]/70 rounded-2xl border border-[#3d2b4f]/30 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Key size={13} className="text-[#ff4d4d]" />
+                      {lang === 'ru' ? 'E2EE Шифрование' : 'E2EE Chat Encryption'}
                     </div>
-                    <p className="text-xs text-white/40 leading-relaxed">
-                      {lang === 'ru' 
-                        ? 'Шифрует сообщения в чатах на стороне клиента перед отправкой в сеть.' 
-                        : 'Encrypts private chat messages client-side before sending to server.'}
+                    <p className="text-[11px] text-white/40">
+                      {lang === 'ru' ? 'Шифрует сообщения в чатах' : 'Client-side message encryption'}
                     </p>
                   </div>
                   <button
                     onClick={() => {
-                      setIsE2EEEnabled(!isE2EEEnabled);
-                      addSecurityLog(!isE2EEEnabled ? 'SUCCESS' : 'WARNING', !isE2EEEnabled ? 'E2EE Encryption Protocol armed.' : 'E2EE Encryption disarmed.');
+                      const next = !isE2EEEnabled;
+                      setIsE2EEEnabled(next);
+                      safeStorage.setItem('aha_e2ee_enabled', next ? 'true' : 'false');
+                      addSecurityLog(next ? 'SUCCESS' : 'WARNING', `E2EE Encryption ${next ? 'enabled' : 'disabled'}`);
                     }}
-                    className={`w-12 h-6 rounded-full p-1 transition-colors shrink-0 ${isE2EEEnabled ? 'bg-green-500' : 'bg-[#0d0b14] border border-[#3d2b4f]/50'}`}
+                    className={`w-11 h-6 rounded-full p-1 transition-colors ${isE2EEEnabled ? 'bg-emerald-500' : 'bg-[#0d0b14] border border-[#3d2b4f]'}`}
                   >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isE2EEEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isE2EEEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
                 </div>
 
-                {/* Anti-IPC Censor Switch */}
-                <div className="p-4 bg-[#0d0b14]/50 rounded-2xl border border-[#3d2b4f]/20 flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="text-sm font-bold text-white flex items-center gap-1.5">
-                      <ShieldAlert size={14} className="text-[#ff4d4d]" />
-                      {lang === 'ru' ? 'Цензура КММ / IPC' : 'Anti-IPC Fools-Guard'}
+                {/* Anti-IPC Filter */}
+                <div className="p-3.5 bg-[#0d0b14]/70 rounded-2xl border border-[#3d2b4f]/30 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <ShieldAlert size={13} className="text-[#ff4d4d]" />
+                      {lang === 'ru' ? 'Цензор КММ / IPC' : 'Anti-IPC Censor'}
                     </div>
-                    <p className="text-xs text-white/40 leading-relaxed">
-                      {lang === 'ru' 
-                        ? 'Автоматически заменяет упоминания КММ на смешные смайлики.' 
-                        : 'Filters out Interastral Peace Corporation references with clown emojis.'}
+                    <p className="text-[11px] text-white/40">
+                      {lang === 'ru' ? 'Заменяет КММ на клоунов' : 'Replaces IPC with clown emojis'}
                     </p>
                   </div>
                   <button
                     onClick={() => {
-                      setIsAntiIPCCensorEnabled(!isAntiIPCCensorEnabled);
-                      addSecurityLog(!isAntiIPCCensorEnabled ? 'SUCCESS' : 'WARNING', !isAntiIPCCensorEnabled ? 'Anti-IPC firewall filter activated.' : 'Anti-IPC firewall filter deactivated.');
+                      const next = !isAntiIPCCensorEnabled;
+                      setIsAntiIPCCensorEnabled(next);
+                      safeStorage.setItem('aha_anti_ipc_enabled', next ? 'true' : 'false');
+                      addSecurityLog(next ? 'SUCCESS' : 'WARNING', `Anti-IPC filter ${next ? 'activated' : 'deactivated'}`);
                     }}
-                    className={`w-12 h-6 rounded-full p-1 transition-colors shrink-0 ${isAntiIPCCensorEnabled ? 'bg-green-500' : 'bg-[#0d0b14] border border-[#3d2b4f]/50'}`}
+                    className={`w-11 h-6 rounded-full p-1 transition-colors ${isAntiIPCCensorEnabled ? 'bg-emerald-500' : 'bg-[#0d0b14] border border-[#3d2b4f]'}`}
                   >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isAntiIPCCensorEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isAntiIPCCensorEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Right side: Console Logs */}
+            {/* Right: Security Logs Console */}
             <div className="lg:col-span-7">
-              <div className="bg-[#0d0b14] border border-[#3d2b4f]/40 rounded-3xl p-5 font-mono h-[420px] flex flex-col shadow-2xl">
+              <div className="bg-[#0d0b14] border border-[#3d2b4f]/40 rounded-3xl p-5 font-mono h-[380px] flex flex-col shadow-2xl">
                 <div className="flex items-center justify-between border-b border-[#3d2b4f]/40 pb-3 mb-3 shrink-0">
                   <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-                    <span className="text-xs text-white/60 font-black tracking-widest uppercase">{lang === 'ru' ? 'КОНСОЛЬ БЕЗОПАСНОСТИ' : 'SECURITY CORE LOGS'}</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-xs text-white/70 font-black tracking-widest uppercase">
+                      {lang === 'ru' ? 'ЛОГИ БЕЗОПАСНОСТИ' : 'SECURITY CORE AUDIT'}
+                    </span>
                   </div>
                   <button
-                    onClick={() => setSecurityLogs([])}
-                    className="text-[10px] text-white/40 hover:text-white uppercase font-black"
+                    onClick={() => {
+                      setSecurityLogs([]);
+                      safeStorage.removeItem('aha_security_logs_feed');
+                    }}
+                    className="text-[10px] text-white/40 hover:text-white uppercase font-bold"
                   >
-                    [Clear Logs]
+                    [Clear]
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-2 text-xs pr-2 scrollbar-thin scrollbar-thumb-[#3d2b4f]">
-                  {securityLogs.length === 0 ? (
-                    <div className="text-white/20 text-center py-12 italic">{lang === 'ru' ? '[Лонг пуст... Все спокойно]' : '[Console empty]'}</div>
-                  ) : (
-                    securityLogs.map(log => (
-                      <div key={log.id} className="leading-relaxed break-all">
-                        <span className="text-white/30 mr-2">[{log.time}]</span>
-                        <span className={`font-black mr-2 ${log.type === 'ALERT' ? 'text-red-500' : log.type === 'WARNING' ? 'text-yellow-500' : log.type === 'SUCCESS' ? 'text-green-500' : 'text-blue-400'}`}>
-                          {log.type}
-                        </span>
-                        <span className="text-white/80">{log.msg}</span>
-                      </div>
-                    ))
-                  )}
+                <div className="flex-1 overflow-y-auto space-y-2 text-xs pr-1 scrollbar-thin scrollbar-thumb-[#3d2b4f]">
+                  {securityLogs.map(log => (
+                    <div key={log.id} className="leading-relaxed">
+                      <span className="text-white/30 mr-2">[{log.time}]</span>
+                      <span className={`font-black mr-2 ${
+                        log.type === 'ALERT' ? 'text-red-400' : 
+                        log.type === 'WARNING' ? 'text-yellow-400' : 
+                        log.type === 'SUCCESS' ? 'text-emerald-400' : 'text-blue-400'
+                      }`}>
+                        {log.type}
+                      </span>
+                      <span className="text-white/80">{log.msg}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1749,25 +880,92 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
         </div>
       )}
 
+      {/* Edit Post Modal */}
+      {editingPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-lg bg-[#15101e] border border-[#ff4d4d]/40 rounded-3xl p-6 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-white uppercase tracking-wider">
+                {lang === 'ru' ? 'Редактировать публикацию' : 'Edit Post'}
+              </h3>
+              <button onClick={() => setEditingPost(null)} className="text-white/40 hover:text-white">
+                ✕
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="Title"
+              className="w-full bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#ff4d4d]"
+            />
+
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              placeholder="Content"
+              className="w-full bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#ff4d4d] min-h-[140px]"
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditingPost(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white/40 hover:text-white"
+              >
+                {lang === 'ru' ? 'Отмена' : 'Cancel'}
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await updateDoc(doc(db, 'forum_threads', editingPost.id), {
+                      title: editTitle.trim(),
+                      content: editContent.trim(),
+                      isEdited: true
+                    });
+                    setThreads(prev => prev.map(t => t.id === editingPost.id ? { ...t, title: editTitle.trim(), content: editContent.trim(), isEdited: true } : t));
+                    setEditingPost(null);
+                    window.dispatchEvent(new CustomEvent('aha_toast', {
+                      detail: lang === 'ru' ? 'Публикация обновлена!' : 'Post updated!'
+                    }));
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+                className="px-5 py-2 bg-[#ff4d4d] text-[#15101e] font-black text-xs uppercase tracking-wider rounded-xl hover:bg-white transition-all"
+              >
+                {lang === 'ru' ? 'Сохранить' : 'Save'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Post Confirm */}
       <ConfirmModal
-        isOpen={!!threadToDelete}
-        onClose={() => setThreadToDelete(null)}
-        onConfirm={confirmDeleteThread}
-        title={(t as any).forumDeleteThreadTitle || "Delete Thread"}
-        message={(t as any).forumDeleteThreadMessage || t.forumDeleteThreadMsg}
-        confirmText={(t as any).forumDelete || "Delete"}
-        cancelText={(t as any).forumCancel || t.profileCancel}
+        isOpen={!!postToDelete}
+        onClose={() => setPostToDelete(null)}
+        onConfirm={confirmDeletePost}
+        title={lang === 'ru' ? 'Удалить публикацию?' : 'Delete Post?'}
+        message={lang === 'ru' ? 'Вы уверены, что хотите безвозвратно удалить этот пост?' : 'Are you sure you want to permanently delete this post?'}
+        confirmText={lang === 'ru' ? 'Удалить' : 'Delete'}
+        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
         isDestructive={true}
       />
 
+      {/* Delete Comment Confirm */}
       <ConfirmModal
         isOpen={!!commentToDelete}
         onClose={() => setCommentToDelete(null)}
         onConfirm={confirmDeleteComment}
-        title={(t as any).forumDeleteCommentTitle || "Delete Comment"}
-        message={(t as any).forumDeleteCommentMessage || t.forumDeleteCommentMsg}
-        confirmText={(t as any).forumDelete || "Delete"}
-        cancelText={(t as any).forumCancel || t.profileCancel}
+        title={lang === 'ru' ? 'Удалить комментарий?' : 'Delete Comment?'}
+        message={lang === 'ru' ? 'Вы уверены, что хотите удалить этот комментарий?' : 'Are you sure you want to delete this comment?'}
+        confirmText={lang === 'ru' ? 'Удалить' : 'Delete'}
+        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
         isDestructive={true}
       />
     </div>

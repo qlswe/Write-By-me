@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
-import { X, Save, Video, Camera, Link, Plus, Trash2 } from 'lucide-react';
+import { X, Save, Video, Camera, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,6 +10,9 @@ import { vercelFallback } from '../../utils/vercelFallback';
 import { generatePrefixedId } from '../../utils/idGenerator';
 import { MediaViewer, isVideoMedia, getYouTubeEmbedUrl } from '../ui/MediaViewer';
 import { uploadMediaFile, sanitizePayloadForFirestore } from '../../utils/mediaUploader';
+import { CustomSelect } from '../ui/CustomSelect';
+import { MarkdownEditorToolbar } from '../ui/MarkdownEditorToolbar';
+import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
 interface BlogEditorProps {
   post?: any;
@@ -18,8 +21,6 @@ interface BlogEditorProps {
 }
 
 const LANGUAGES = ['ru', 'en', 'by', 'de', 'fr', 'zh'];
-
-import { CustomSelect } from '../ui/CustomSelect';
 
 export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) => {
   const { user } = useAuth();
@@ -30,6 +31,8 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
   const [mediaUrlInput, setMediaUrlInput] = useState<string>('');
   const [showUrlInput, setShowUrlInput] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const [title, setTitle] = useState<Record<string, string>>(
     typeof post?.title === 'object' ? post.title : LANGUAGES.reduce((acc, l) => ({ ...acc, [l]: post?.title || '' }), {})
@@ -263,7 +266,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
                   onClick={() => setShowUrlInput(!showUrlInput)}
                   className="bg-[#251c35] border border-[#3d2b4f]/60 hover:border-[#ff4d4d]/50 text-white hover:text-[#ff4d4d] px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all"
                 >
-                  <Link size={14} />
+                  <LinkIcon size={14} />
                   {lang === 'ru' ? 'Ссылка (YouTube/MP4)' : 'Video/Photo URL'}
                 </button>
 
@@ -315,16 +318,69 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-4">
-              {t.contentLabel} <span className="text-[#ff4d4d]">[{currentLang.toUpperCase()}]</span>
-            </label>
-            <div className="relative group">
-              <textarea 
-                value={content[currentLang] || ''}
-                onChange={(e) => setContent(prev => ({ ...prev, [currentLang]: e.target.value }))}
-                className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-[2rem] px-6 py-6 text-white font-mono text-sm leading-relaxed focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[350px] placeholder:text-white/40"
-                placeholder={t.placeholderContent}
-              />
+            <div className="flex items-center justify-between ml-4">
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">
+                {t.contentLabel} <span className="text-[#ff4d4d]">[{currentLang.toUpperCase()}]</span>
+              </label>
+              <span className="text-[10px] text-white/40 font-mono">
+                {lang === 'ru' ? 'Поддерживается Markdown и HTML' : 'Markdown & HTML supported'}
+              </span>
+            </div>
+
+            {/* Markdown Toolbar */}
+            <MarkdownEditorToolbar
+              textareaRef={textareaRef}
+              content={content[currentLang] || ''}
+              onChange={(val) => setContent(prev => ({ ...prev, [currentLang]: val }))}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              lang={lang}
+            />
+
+            {/* Content Editor / Preview / Split */}
+            <div className="relative">
+              {viewMode === 'edit' && (
+                <textarea 
+                  ref={textareaRef}
+                  value={content[currentLang] || ''}
+                  onChange={(e) => setContent(prev => ({ ...prev, [currentLang]: e.target.value }))}
+                  className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-6 text-white font-mono text-sm leading-relaxed focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[350px] placeholder:text-white/40 custom-scrollbar"
+                  placeholder={t.placeholderContent || '# Заголовок\n\n**Жирный текст** и *курсив*.\n\n- Пункт 1\n- Пункт 2'}
+                />
+              )}
+
+              {viewMode === 'preview' && (
+                <div className="w-full bg-[#120c1b] border border-[#3d2b4f]/50 rounded-3xl p-6 min-h-[350px] max-h-[500px] overflow-y-auto custom-scrollbar">
+                  {content[currentLang] ? (
+                    <MarkdownRenderer content={content[currentLang]} />
+                  ) : (
+                    <p className="text-white/30 text-center py-16 italic text-sm">
+                      {lang === 'ru' ? 'Здесь появится оформленный текст...' : 'Formatted preview will appear here...'}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {viewMode === 'split' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <textarea 
+                    ref={textareaRef}
+                    value={content[currentLang] || ''}
+                    onChange={(e) => setContent(prev => ({ ...prev, [currentLang]: e.target.value }))}
+                    className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-5 py-5 text-white font-mono text-xs sm:text-sm leading-relaxed focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[350px] placeholder:text-white/40 custom-scrollbar"
+                    placeholder={t.placeholderContent}
+                  />
+                  <div className="w-full bg-[#120c1b] border border-[#3d2b4f]/50 rounded-3xl p-5 min-h-[350px] max-h-[500px] overflow-y-auto custom-scrollbar">
+                    {content[currentLang] ? (
+                      <MarkdownRenderer content={content[currentLang]} />
+                    ) : (
+                      <p className="text-white/30 text-center py-16 italic text-xs">
+                        {lang === 'ru' ? 'Здесь появится оформленный текст...' : 'Formatted preview will appear here...'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

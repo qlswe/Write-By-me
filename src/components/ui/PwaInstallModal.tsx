@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { Language } from '../../data/translations';
 import { usePWA } from '../../hooks/usePWA';
+import { CustomSelect } from './CustomSelect';
 
 interface PwaInstallModalProps {
   isOpen: boolean;
@@ -929,19 +930,20 @@ echo "Target URL: ${url}"
                     <label className="text-[10px] text-gray-300 font-bold uppercase tracking-wider block mb-1">
                       {loc('Целевой Формат / Платформа:', 'Target Platform / Format:', 'Мэтавы Формат:', 'Ziel-Plattform:', 'Format Cible:', '目标格式/平台：')}
                     </label>
-                    <select
+                    <CustomSelect
                       value={targetPlatform}
-                      onChange={(e) => setTargetPlatform(e.target.value as PcScriptPlatform)}
-                      className="w-full bg-[#18102a] border border-[#00f0ff]/40 rounded-xl px-3 py-2 text-xs text-cyan-300 font-bold focus:outline-none focus:border-[#ff4d4d] cursor-pointer"
-                    >
-                      <option value="windows-exe">Windows Native Executable Binary (.exe)</option>
-                      <option value="windows-ps">Windows PowerShell Installer (.ps1)</option>
-                      <option value="windows-bat">Windows Batch Launcher (.bat)</option>
-                      <option value="android-apk">Android Capacitor Gradle Build (.sh)</option>
-                      <option value="android-sh">Android Termux Mobile Shell (.sh)</option>
-                      <option value="linux">Linux Desktop (.sh / .desktop)</option>
-                      <option value="mac">macOS Desktop Command (.command)</option>
-                    </select>
+                      onChange={(val) => setTargetPlatform(val as PcScriptPlatform)}
+                      className="!px-3 !py-2 !rounded-xl !text-xs !bg-[#18102a] !border-[#00f0ff]/40 !text-cyan-300"
+                      options={[
+                        { value: "windows-exe", label: "Windows Native Executable Binary (.exe)" },
+                        { value: "windows-ps", label: "Windows PowerShell Installer (.ps1)" },
+                        { value: "windows-bat", label: "Windows Batch Launcher (.bat)" },
+                        { value: "android-apk", label: "Android Capacitor Gradle Build (.sh)" },
+                        { value: "android-sh", label: "Android Termux Mobile Shell (.sh)" },
+                        { value: "linux", label: "Linux Desktop (.sh / .desktop)" },
+                        { value: "mac", label: "macOS Desktop Command (.command)" }
+                      ]}
+                    />
                   </div>
 
                   {/* App Title */}

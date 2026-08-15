@@ -9,140 +9,14 @@ import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { KuruVideoPlayer } from '../ui/KuruVideoPlayer';
 import { safeStorage, setZeroTraceMode, isZeroTraceActive } from '../../utils/securityStorage';
+import { sanitizeContent, getThreatsBlockedCount } from '../../utils/sanitizer';
+import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
-// Global threat counter
-let globalThreatsBlocked = parseInt(safeStorage.getItem('aha_threats_blocked') || '0', 10);
+export { sanitizeContent, getThreatsBlockedCount };
 
-// 1. Core Sanitizer
-export const sanitizeContent = (dirty: string) => {
-  const isStrict = safeStorage.getItem('aha_strict_mode') === 'true';
-  const isCensored = safeStorage.getItem('aha_censor_mode') === 'true';
-  
-  // Basic bad word filter
-  let text = dirty;
-  if (isCensored) {
-    const badWords = ['fuck', 'shit', 'bitch', 'asshole', 'dick', 'cunt'];
-    const rx = new RegExp(`\\b(${badWords.join('|')})\\b`, 'gi');
-    text = text.replace(rx, '***');
-  }
-
-  // In strict mode, we strip out images, links, and code blocks to prevent ANY media/external links
-  const allowedTags = isStrict 
-    ? ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'span', 'div'] 
-    : ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre', 'img', 'video', 'source', 'iframe', 'span', 'div'];
-
-  const clean = DOMPurify.sanitize(text, {
-    ALLOWED_TAGS: allowedTags,
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class', 'className', 'controls', 'autoplay', 'loop', 'muted', 'poster', 'type', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'style'],
-  });
-
-  // Count removed items
-  if (DOMPurify.removed && DOMPurify.removed.length > 0) {
-    const removals = DOMPurify.removed.length;
-    setTimeout(() => {
-      globalThreatsBlocked += removals;
-      safeStorage.setItem('aha_threats_blocked', globalThreatsBlocked.toString());
-      
-      try {
-        const currentLogs = JSON.parse(safeStorage.getItem('aha_security_logs') || '[]');
-        const newLog = `[${new Date().toLocaleTimeString()}] Blocked ${removals} suspicious elements (XSS/Strict)`;
-        const newLogs = [newLog, ...currentLogs].slice(0, 20);
-        safeStorage.setItem('aha_security_logs', JSON.stringify(newLogs));
-      } catch(e) {}
-
-      window.dispatchEvent(new CustomEvent('aha_threat_blocked'));
-    }, 0);
-  }
-
-  return clean;
-};
-
-// 2. Safe HTML Component
+// 2. Safe HTML / Markdown Component
 export const SafeHtml: React.FC<{ html: string; className?: string }> = ({ html, className }) => {
-  const [fullscreenImg, setFullscreenImg] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rootsRef = useRef<Root[]>([]);
-  const cleanHtml = sanitizeContent(html);
-
-  useEffect(() => {
-    // Safely unmount old roots asynchronously after current render cycle
-    const oldRoots = rootsRef.current;
-    rootsRef.current = [];
-    oldRoots.forEach(r => {
-      setTimeout(() => {
-        try { r.unmount(); } catch (e) {}
-      }, 0);
-    });
-
-    if (!containerRef.current) return;
-
-    // Upgrade all <video> elements in the HTML to KuruVideoPlayer
-    const videoElements = Array.from(containerRef.current.querySelectorAll('video'));
-    videoElements.forEach(vid => {
-      const src = vid.getAttribute('src') || vid.querySelector('source')?.getAttribute('src');
-      if (src) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'my-4 w-full';
-        vid.parentNode?.replaceChild(wrapper, vid);
-
-        const root = createRoot(wrapper);
-        root.render(<KuruVideoPlayer src={src} isCompact={false} />);
-        rootsRef.current.push(root);
-      }
-    });
-
-    return () => {
-      const rootsToUnmount = rootsRef.current;
-      rootsRef.current = [];
-      rootsToUnmount.forEach(r => {
-        setTimeout(() => {
-          try { r.unmount(); } catch (e) {}
-        }, 0);
-      });
-    };
-  }, [cleanHtml]);
-
-  const handleClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).tagName === 'IMG') {
-      e.preventDefault();
-      e.stopPropagation();
-      setFullscreenImg((e.target as HTMLImageElement).src);
-    }
-  };
-
-  return (
-    <>
-      <div ref={containerRef} className={`safe-html ${className || ''}`.trim()} dangerouslySetInnerHTML={{ __html: cleanHtml }} onClick={handleClick} />
-      
-      {/* Fullscreen Image Modal for SafeHtml */}
-      {typeof document !== 'undefined' && document.body && createPortal(
-        <AnimatePresence>
-          {fullscreenImg && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4 relative"
-              onClick={(e) => { e.stopPropagation(); setFullscreenImg(null); }}
-            >
-              <button className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-white/20 text-white rounded-full transition-colors z-[100000]">
-                <X size={24} />
-              </button>
-              <motion.img
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0.9 }}
-                src={fullscreenImg}
-                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl z-[100000]"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
-    </>
-  );
+  return <MarkdownRenderer content={html} className={className} allowHtml={true} />;
 };
 
 // 3. Visual Badge & Control Panel
@@ -151,7 +25,7 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
   const [isOpen, setIsOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [globalHidden, setGlobalHidden] = useState(false);
-  const [threatsBlocked, setThreatsBlocked] = useState(globalThreatsBlocked);
+  const [threatsBlocked, setThreatsBlocked] = useState(getThreatsBlockedCount());
   const [isStrict, setIsStrict] = useState(safeStorage.getItem('aha_strict_mode') === 'true');
   const [isCensored, setIsCensored] = useState(safeStorage.getItem('aha_censor_mode') === 'true');
   const [zeroTrace, setZeroTrace] = useState(isZeroTraceActive());
@@ -171,7 +45,7 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
     } catch(e){}
 
     const handleThreat = () => {
-        setThreatsBlocked(globalThreatsBlocked);
+        setThreatsBlocked(getThreatsBlockedCount());
         try {
             setLogs(JSON.parse(safeStorage.getItem('aha_security_logs') || '[]'));
         } catch(e){}
@@ -474,7 +348,7 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
 
 export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' }) => {
   const { logout } = useAuth();
-  const [threatsBlocked, setThreatsBlocked] = useState(globalThreatsBlocked);
+  const [threatsBlocked, setThreatsBlocked] = useState(getThreatsBlockedCount());
   const [isStrict, setIsStrict] = useState(safeStorage.getItem('aha_strict_mode') === 'true');
   const [isCensored, setIsCensored] = useState(safeStorage.getItem('aha_censor_mode') === 'true');
   const [zeroTrace, setZeroTrace] = useState(isZeroTraceActive());
@@ -488,7 +362,7 @@ export const AhaSecurityConsole: React.FC<{ lang?: string }> = ({ lang = 'ru' })
     } catch(e){}
 
     const handleThreat = () => {
-      setThreatsBlocked(globalThreatsBlocked);
+      setThreatsBlocked(getThreatsBlockedCount());
       try {
         setLogs(JSON.parse(safeStorage.getItem('aha_security_logs') || '[]'));
       } catch(e){}

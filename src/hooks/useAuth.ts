@@ -3,6 +3,7 @@ import { auth, db, googleProvider } from '../firebase';
 import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { getDeviceId } from '../utils/deviceId';
+import { PresenceManager } from '../utils/presenceManager';
 
 // --- GLOBAL SINGLETON STATE ---
 let globalUser: User | null = null;
@@ -274,6 +275,9 @@ const initAuth = () => {
         globalLoading = false;
         notifySubscribers();
       }
+
+      // Initialize real-time presence and heartbeat
+      PresenceManager.init(user);
     } else {
       globalIsAdmin = false;
       globalRole = 'user';
@@ -282,20 +286,9 @@ const initAuth = () => {
       globalPhotoURL = null;
       globalLoading = false;
       notifySubscribers();
+      PresenceManager.cleanup();
     }
   });
-
-  // Last seen tracker - only runs ONCE globally, every 5 minutes
-  setInterval(async () => {
-    if (!globalUser) return;
-    try {
-      const now = new Date().toISOString();
-      await setDoc(doc(db, 'public_profiles', globalUser.uid), { lastSeen: now }, { merge: true });
-      await setDoc(doc(db, 'users', globalUser.uid), { lastSeen: now }, { merge: true });
-    } catch (e) {
-      console.error("Error updating last seen:", e);
-    }
-  }, 5 * 60 * 1000);
 };
 
 // Start initialization immediately

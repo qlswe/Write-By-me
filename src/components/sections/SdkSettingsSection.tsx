@@ -10,6 +10,7 @@ import { AhaSecurityConsole } from '../security/AhaSecurity';
 import { ACCENT_COLOR_PRESETS, applyPrimaryAccentColor } from '../../utils/theme';
 import { useFontSize } from '../../hooks/useFontSize';
 import { AntiAdblockBanner } from '../ui/AntiAdblockBanner';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface SdkSettingsSectionProps {
   lang: Language;
@@ -837,14 +838,15 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                   <>
                     <div className="space-y-2">
                       <label className="text-xs text-gray-400 font-bold uppercase tracking-widest">{t.adSettingsProvider || (lang === 'ru' ? "Провайдер" : "Provider")}</label>
-                      <select 
+                      <CustomSelect 
                         value={adSettings.provider}
-                        onChange={e => setAdSettings({ ...adSettings, provider: e.target.value })}
-                        className="w-full bg-[#15101e] border border-[#3d2b4f] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-yellow-500"
-                      >
-                        <option value="a-ads">A-Ads (Crypto/Global)</option>
-                        <option value="adsense">Google AdSense</option>
-                      </select>
+                        onChange={val => setAdSettings({ ...adSettings, provider: val })}
+                        className="w-full !bg-[#15101e] !border-[#3d2b4f] !rounded-xl !px-4 !py-2 !text-sm !text-white"
+                        options={[
+                          { value: 'a-ads', label: 'A-Ads (Crypto/Global)' },
+                          { value: 'adsense', label: 'Google AdSense' }
+                        ]}
+                      />
                       {adSettings.provider === 'a-ads' ? (
                         <p className="text-xs text-gray-500">
                           {lang === 'ru' ? 'API для мира/РФ: ' : 'API globally: '}

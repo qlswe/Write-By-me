@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw, Terminal, Smartphone, UserPlus } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, User as UserIcon, Bookmark, Trash2, Zap, ZapOff, Globe, Mail, Settings, Sparkles, RotateCw, Terminal, Smartphone, UserPlus, Bell } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { usePerfLogger } from '../../utils/logger';
@@ -13,6 +13,8 @@ import { TelegramButton } from '../ui/TelegramButton';
 import { IPv6Modal } from '../ui/IPv6Modal';
 import { AhaProtocolModal } from '../ui/AhaProtocolModal';
 import { AhaEmbeddedBrowserModal } from '../ui/AhaEmbeddedBrowserModal';
+import { NotificationDrawer } from '../notifications/NotificationDrawer';
+import { useNotifications } from '../../hooks/useNotifications';
 import { usePWA } from '../../hooks/usePWA';
 import { sdk } from '../../sdk';
 
@@ -63,6 +65,28 @@ export const Header: React.FC<HeaderProps> = ({
   const [ipv6ModalOpen, setIpv6ModalOpen] = useState(false);
   const [ahaProtocolModalOpen, setAhaProtocolModalOpen] = useState(false);
   const [embeddedBrowserOpen, setEmbeddedBrowserOpen] = useState(false);
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+
+  const {
+    notifications,
+    unreadCount: notifUnreadCount,
+    loading: notifLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearAll: clearAllNotifications
+  } = useNotifications();
+
+  const handleNavigateToPost = (postId: string, targetSection = 'forum') => {
+    setSection(targetSection);
+    setTimeout(() => {
+      const el = document.getElementById(`post-${postId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      window.dispatchEvent(new CustomEvent('aha_highlight_post', { detail: { postId } }));
+    }, 350);
+  };
   const { trackRender } = usePerfLogger('Header');
   trackRender();
 
@@ -271,6 +295,24 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
+            {/* Notification Shade Bell Button (Desktop) */}
+            <button
+              onClick={() => setNotificationDrawerOpen(true)}
+              className={`relative flex items-center justify-center p-2 rounded-xl border transition-all duration-300 active:scale-95 shadow-md cursor-pointer ${
+                notifUnreadCount > 0
+                  ? 'bg-[#ff4d4d]/10 border-[#ff4d4d]/50 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 shadow-[0_0_12px_rgba(255,77,77,0.2)]'
+                  : 'bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d]'
+              }`}
+              title={lang === 'ru' ? "Шторка уведомлений (Активность постов)" : "Notification Shade (Post Activity)"}
+            >
+              <Bell size={16} className={notifUnreadCount > 0 ? "text-[#ff4d4d] animate-bounce" : ""} />
+              {notifUnreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.2 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-black bg-[#ff4d4d] text-white shadow-[0_0_8px_rgba(255,77,77,0.8)] animate-pulse">
+                  {notifUnreadCount > 99 ? '99+' : notifUnreadCount}
+                </span>
+              )}
+            </button>
+
             <div className="hidden lg:block relative">
               {user ? (
                 <div className="relative">
@@ -367,6 +409,24 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Mobile Notification Shade Bell Button */}
+            <button
+              onClick={() => setNotificationDrawerOpen(true)}
+              className={`md:hidden relative p-2 rounded-xl border transition-all duration-300 active:scale-95 cursor-pointer shrink-0 ${
+                notifUnreadCount > 0
+                  ? 'bg-[#ff4d4d]/10 border-[#ff4d4d]/50 text-[#ff4d4d]'
+                  : 'bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d]'
+              }`}
+              title={lang === 'ru' ? "Шторка уведомлений" : "Notifications"}
+            >
+              <Bell size={20} className={notifUnreadCount > 0 ? "text-[#ff4d4d] animate-bounce" : ""} />
+              {notifUnreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 px-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[9px] font-black bg-[#ff4d4d] text-white shadow-[0_0_6px_rgba(255,77,77,0.8)] animate-pulse">
+                  {notifUnreadCount > 99 ? '99+' : notifUnreadCount}
+                </span>
+              )}
+            </button>
 
             <button 
               className="md:hidden p-2 text-gray-300 hover:text-[#ff4d4d] shrink-0"
@@ -588,6 +648,19 @@ export const Header: React.FC<HeaderProps> = ({
         isOpen={embeddedBrowserOpen}
         onClose={() => setEmbeddedBrowserOpen(false)}
         lang={lang}
+      />
+      <NotificationDrawer
+        isOpen={notificationDrawerOpen}
+        onClose={() => setNotificationDrawerOpen(false)}
+        notifications={notifications}
+        unreadCount={notifUnreadCount}
+        loading={notifLoading}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
+        onDeleteNotification={deleteNotification}
+        onClearAll={clearAllNotifications}
+        lang={lang}
+        onNavigateToPost={handleNavigateToPost}
       />
     </>
   );

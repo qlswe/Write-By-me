@@ -11,6 +11,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Language } from '../../data/translations';
 import { AuditLogItem } from '../../utils/auditLogger';
 import { printHtmlReport } from '../../utils/printReport';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface AdminAuditLogsProps {
   lang: Language;
@@ -417,16 +418,19 @@ export const AdminAuditLogs: React.FC<AdminAuditLogsProps> = ({ lang }) => {
           </div>
 
           {/* Time range picker */}
-          <select
-            value={timeRange}
-            onChange={(e: any) => setTimeRange(e.target.value)}
-            className="bg-[#0b0813] border border-[#3d2b4f]/60 rounded-xl px-3 py-2 text-xs font-bold text-gray-300 outline-none focus:border-[#a855f7]"
-          >
-            <option value="all">{lang === 'ru' ? 'За все время' : 'All time'}</option>
-            <option value="24h">{lang === 'ru' ? 'За 24 часа' : 'Last 24 hours'}</option>
-            <option value="7d">{lang === 'ru' ? 'За 7 дней' : 'Last 7 days'}</option>
-            <option value="30d">{lang === 'ru' ? 'За 30 дней' : 'Last 30 days'}</option>
-          </select>
+          <div className="w-36 sm:w-40">
+            <CustomSelect
+              value={timeRange}
+              onChange={(val: any) => setTimeRange(val)}
+              className="!bg-[#0b0813] !border-[#3d2b4f]/60 !rounded-xl !px-3 !py-2 !text-xs !font-bold !text-gray-300"
+              options={[
+                { value: 'all', label: lang === 'ru' ? 'За все время' : 'All time' },
+                { value: '24h', label: lang === 'ru' ? 'За 24 часа' : 'Last 24 hours' },
+                { value: '7d', label: lang === 'ru' ? 'За 7 дней' : 'Last 7 days' },
+                { value: '30d', label: lang === 'ru' ? 'За 30 дней' : 'Last 30 days' }
+              ]}
+            />
+          </div>
 
           {/* Export CSV */}
           <button
