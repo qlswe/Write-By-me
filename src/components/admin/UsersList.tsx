@@ -873,13 +873,13 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
               </div>
               <button
                 onClick={toggleMaintenanceMode}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
-                  maintenanceMode ? 'bg-red-500' : 'bg-[#0d0b14]'
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none cursor-pointer p-0.5 ${
+                  maintenanceMode ? 'bg-red-500' : 'bg-[#0d0b14] border border-[#3d2b4f]'
                 }`}
               >
                 <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                    maintenanceMode ? 'translate-x-6' : 'translate-x-1'
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                    maintenanceMode ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -926,7 +926,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
 
           <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-xl ${securityHidden ? 'bg-gray-500/20 text-gray-400' : 'bg-green-500/20 text-green-400'}`}>
+              <div className={`p-2.5 rounded-2xl shrink-0 flex items-center justify-center ${securityHidden ? 'bg-gray-500/20 text-gray-400' : 'bg-green-500/20 text-green-400'}`}>
                 <Shield size={20} />
               </div>
               <div>
@@ -940,13 +940,13 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
             </div>
             <button
               onClick={toggleSecurityHidden}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
-                securityHidden ? 'bg-red-500' : 'bg-[#0d0b14]'
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none cursor-pointer p-0.5 ${
+                securityHidden ? 'bg-red-500' : 'bg-[#0d0b14] border border-[#3d2b4f]'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  securityHidden ? 'translate-x-6' : 'translate-x-1'
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  securityHidden ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
             </button>
@@ -954,7 +954,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
 
           <div className="bg-[#15101e] border border-[#3d2b4f]/30 rounded-3xl p-5 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-xl ${protectedViewFeatureEnabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+              <div className={`p-2.5 rounded-2xl shrink-0 flex items-center justify-center ${protectedViewFeatureEnabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                 <Lock size={20} />
               </div>
               <div>
@@ -970,13 +970,13 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
             </div>
             <button
               onClick={toggleProtectedViewFeature}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
-                protectedViewFeatureEnabled ? 'bg-green-500' : 'bg-[#0d0b14]'
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none cursor-pointer p-0.5 ${
+                protectedViewFeatureEnabled ? 'bg-green-500' : 'bg-[#0d0b14] border border-[#3d2b4f]'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  protectedViewFeatureEnabled ? 'translate-x-6' : 'translate-x-1'
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  protectedViewFeatureEnabled ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
             </button>

@@ -7,6 +7,7 @@ import rehypeRaw from 'rehype-raw';
 import { Copy, Check, ExternalLink, X, Maximize2, Hash } from 'lucide-react';
 import { sanitizeContent } from '../../utils/sanitizer';
 import { KuruVideoPlayer } from './KuruVideoPlayer';
+import { LazyImage } from './LazyImage';
 
 interface MarkdownRendererProps {
   content: string;
@@ -314,23 +315,24 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               );
             },
 
-            // Images with zoom lightbox modal
+            // Images with zoom lightbox modal and blurry progressive loading
             img: ({ node, src, alt, ...props }) => {
               if (!src) return null;
               return (
                 <span className="block my-6 group/img relative rounded-2xl overflow-hidden border border-[#3d2b4f] bg-[#15101e]/60">
-                  <img
+                  <LazyImage
                     src={src}
                     alt={alt || 'Image'}
-                    loading="lazy"
                     onClick={() => setFullscreenImg(src)}
-                    className="w-full max-h-[550px] object-cover rounded-2xl cursor-zoom-in group-hover/img:scale-[1.01] transition-transform duration-300"
+                    showZoomCursor={true}
+                    className="w-full max-h-[550px] object-cover rounded-2xl group-hover/img:scale-[1.01] transition-transform duration-300"
+                    containerClassName="w-full"
                     {...props}
                   />
                   <button
                     type="button"
                     onClick={() => setFullscreenImg(src)}
-                    className="absolute bottom-3 right-3 p-2 bg-black/60 hover:bg-[#ff4d4d] text-white hover:text-[#15101e] rounded-xl backdrop-blur-md opacity-0 group-hover/img:opacity-100 transition-all cursor-pointer shadow-lg"
+                    className="absolute bottom-3 right-3 z-20 p-2 bg-black/60 hover:bg-[#ff4d4d] text-white hover:text-[#15101e] rounded-xl backdrop-blur-md opacity-0 group-hover/img:opacity-100 transition-all cursor-pointer shadow-lg"
                     title="Zoom image"
                   >
                     <Maximize2 size={16} />

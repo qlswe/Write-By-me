@@ -234,7 +234,6 @@ export const checkAdBlockerActive = async (forceRefresh: boolean = false): Promi
       const adEndpoints = [
         'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',
         'https://www.google-analytics.com/analytics.js',
-        'https://mc.yandex.ru/metrika/tag.js',
         'https://securepubads.g.doubleclick.net/tag/js/gpt.js'
       ];
 
@@ -264,8 +263,7 @@ export const checkAdBlockerActive = async (forceRefresh: boolean = false): Promi
   if (!adblockDetected && navigator.onLine) {
     try {
       const scriptUrls = [
-        'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js',
-        'https://mc.yandex.ru/metrika/tag.js'
+        'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'
       ];
 
       for (const url of scriptUrls) {

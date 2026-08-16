@@ -1132,16 +1132,14 @@ export class AhaSDK {
   };
 
   /**
-   * Generative AI module using Custom API
+   * Generative AI module using Custom Multi-Model API (No VPN Required)
    */
   public genai = {
-    generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = []) => {
+    generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = [], model: string = 'openai') => {
       const { defaultSystemPrompt } = await import('../constants/aiPrompt');
       const finalSystemPrompt = systemInstruction || defaultSystemPrompt;
 
-      // 1. Попытка вызвать собственный прокси-сервер /api/generate
-      // Это работает в РФ БЕЗ ВПН, так как запрос идет к нашему контейнеру на Cloud Run (который не заблокирован),
-      // а сам контейнер (в Европе) уже делает безопасный запрос к Google Gemini API!
+      // 1. Primary: Secure backend proxy /api/generate with global non-VPN neural engine
       try {
         const response = await fetch('/api/generate', {
           method: 'POST',
@@ -1152,7 +1150,8 @@ export class AhaSDK {
             prompt,
             lang,
             systemInstruction: finalSystemPrompt,
-            history
+            history,
+            model
           })
         });
 
@@ -1163,59 +1162,10 @@ export class AhaSDK {
           }
         }
       } catch (proxyError) {
-        console.warn('Backend proxy /api/generate error, falling back to direct API...', proxyError);
+        console.warn('Backend proxy /api/generate error, falling back to direct global neural API...', proxyError);
       }
 
-      // 2. Резервный вариант: Прямой запрос к Google Gemini SDK (если вдруг прокси недоступен)
-      try {
-        const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyAR9BUXDrXdzwYvFbihIKqNVicbFGZ6pVQ';
-        const ai = new GoogleGenAI({
-          apiKey,
-          httpOptions: {
-            headers: {
-              'User-Agent': 'aistudio-build'
-            }
-          }
-        });
-
-        const formattedHistory = history.map(h => ({
-          role: h.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: h.content }]
-        }));
-
-        const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-        let directText = "";
-        for (const modelName of modelsToTry) {
-          try {
-            const response = await ai.models.generateContent({
-              model: modelName,
-              contents: [
-                ...formattedHistory,
-                { role: 'user', parts: [{ text: prompt }] }
-              ],
-              config: {
-                systemInstruction: finalSystemPrompt,
-                temperature: 0.7,
-              }
-            });
-
-            if (response && response.text) {
-              directText = response.text.trim();
-              break;
-            }
-          } catch (modelErr) {
-            console.warn(`Direct model ${modelName} failed:`, modelErr);
-          }
-        }
-
-        if (directText) {
-          return directText;
-        }
-      } catch (geminiError) {
-        console.warn('Gemini API Error, trying Pollinations fallback...', geminiError);
-      }
-
-      // 3. Резервный вариант через Pollinations.ai (GET-запрос для обхода CORS)
+      // 2. Secondary: Direct client-side Pollinations AI text endpoint (Works 100% without VPN anywhere)
       try {
         let combinedPrompt = "";
         if (finalSystemPrompt) {
@@ -1230,14 +1180,16 @@ export class AhaSDK {
         }
         combinedPrompt += `User: ${prompt}\nAssistant:`;
 
-        const url = `https://text.pollinations.ai/${encodeURIComponent(combinedPrompt)}?model=openai&cache=false&seed=${Math.floor(Math.random() * 1000000)}`;
+        const chosenModel = model === 'deepseek' ? 'deepseek' : model === 'qwen' ? 'qwen-coder' : model === 'mistral' ? 'mistral' : 'openai';
+        const url = `https://text.pollinations.ai/${encodeURIComponent(combinedPrompt)}?model=${chosenModel}&cache=false&seed=${Math.floor(Math.random() * 1000000)}`;
         const response = await fetch(url);
         if (response.ok) {
           let text = await response.text();
           text = text
-            .replace(/\[reasoning_content\][\s\S]*?(?=\n\n|\n\[|$)/s, '')
-            .replace(/<thinking>[\s\S]*?<\/thinking>/s, '')
-            .replace(/Thinking step by step:[\s\S]*?(?=\n\n|\n$)/s, '')
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/\[reasoning_content\][\s\S]*?(?=\n\n|\n\[|$)/gi, '')
+            .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+            .replace(/Thinking step by step:[\s\S]*?(?=\n\n|\n$)/gi, '')
             .replace(/I'm stuck[\s\S]*?(?=\n\n|\n$)/gi, '')
             .replace(/Let's recall[\s\S]*?(?=\n\n|\n$)/gi, '')
             .trim();
@@ -1249,8 +1201,8 @@ export class AhaSDK {
         console.error('Pollinations API Error:', pollinationsError);
       }
 
-      // 4. Локальный оффлайн движок если всё остальное недоступно
-      AhaSDK.getInstance().logging.system('Переключение на локальный движок из-за ошибки API.');
+      // 3. Fallback to offline local engine
+      AhaSDK.getInstance().logging.system('Switching to local AI engine');
       return AhaSDK.getInstance().localAi.generate(prompt, lang);
     }
   };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { BookOpen, FileText, Calendar, ChevronRight, Sparkles } from 'lucide-react';
+import { BookOpen, FileText, Ticket, ChevronRight, Sparkles } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useContent } from '../../hooks/useContent';
 
@@ -10,11 +10,11 @@ interface HomeStatsWidgetProps {
 }
 
 export const HomeStatsWidget: React.FC<HomeStatsWidgetProps> = ({ lang, onNavigate }) => {
-  const { theories, blogPosts, events } = useContent();
+  const { theories, blogPosts, promoCodes } = useContent();
 
   const publishedTheoriesCount = (theories || []).filter((item: any) => item.published !== false).length;
   const publishedBlogCount = (blogPosts || []).filter((item: any) => item.published !== false).length;
-  const activeEventsCount = (events || []).filter((item: any) => item.active !== false).length;
+  const activePromoCount = (promoCodes || []).length;
 
   const titles = {
     ru: { header: 'Статистика Контента Сообщества', live: 'LIVE ДАННЫЕ' },
@@ -95,36 +95,36 @@ export const HomeStatsWidget: React.FC<HomeStatsWidgetProps> = ({ lang, onNaviga
       }
     },
     {
-      id: 'events',
-      section: 'chronicle',
-      count: activeEventsCount,
+      id: 'promo',
+      section: 'promo',
+      count: activePromoCount,
       title: {
-        ru: 'Активных событий',
-        en: 'Active Events',
-        by: 'Актыўных падзей',
-        de: 'Aktive Events',
-        fr: 'Événements actifs',
-        zh: '进行中活动'
+        ru: 'Активных промокодов',
+        en: 'Active Promo Codes',
+        by: 'Актыўных промакодаў',
+        de: 'Aktive Gutscheincodes',
+        fr: 'Codes promo actifs',
+        zh: '有效兑换码'
       },
       desc: {
-        ru: 'Хроника и эвенты',
-        en: 'Chronicle & events',
-        by: 'Хроніка і эвенты',
-        de: 'Chronik & Events',
-        fr: 'Chronique et événements',
-        zh: '编年史与活动'
+        ru: 'Нефрит и кредиты',
+        en: 'Jade & credits rewards',
+        by: 'Нэфрыт і крэдыты',
+        de: 'Jade & Credits Belohnungen',
+        fr: 'Jade stellaire et crédits',
+        zh: '星琼与信用点奖励'
       },
-      icon: Calendar,
+      icon: Ticket,
       color: '#a855f7',
       bgGlow: 'from-purple-500/20 to-transparent',
       borderColor: 'hover:border-purple-500/60',
       badge: {
-        ru: 'Ивенты',
-        en: 'Events',
-        by: 'Івенты',
-        de: 'Events',
-        fr: 'Événements',
-        zh: '活动'
+        ru: 'Промокоды',
+        en: 'Promo Codes',
+        by: 'Промакоды',
+        de: 'Promocodes',
+        fr: 'Codes promo',
+        zh: '兑换码'
       }
     }
   ];

@@ -2,6 +2,7 @@ import React from 'react';
 import { decryptImage } from '../../utils/encryption';
 import { Video, Image as ImageIcon, ShieldAlert, ShieldCheck, Download, Disc } from 'lucide-react';
 import { KuruVideoPlayer } from './KuruVideoPlayer';
+import { LazyImage } from './LazyImage';
 
 interface MediaViewerProps {
   url?: string;
@@ -117,16 +118,16 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
 
   return (
     <div className={`relative w-full rounded-2xl overflow-hidden border border-[#3d2b4f]/40 shadow-2xl bg-black/40 flex items-center justify-center ${className}`}>
-      <img
+      <LazyImage
         src={resolved}
         alt={title}
-        loading="lazy"
         className={`w-full ${maxHeight} object-contain rounded-xl mx-auto ${isProtected ? 'select-none pointer-events-none' : ''}`}
-        onContextMenu={isProtected ? (e) => e.preventDefault() : undefined}
-        onDragStart={isProtected ? (e) => e.preventDefault() : undefined}
+        containerClassName="w-full"
+        onContextMenu={isProtected ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+        onDragStart={isProtected ? (e: React.DragEvent) => e.preventDefault() : undefined}
       />
       {isProtected && (
-        <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-[#ff4d4d]/30 text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-1.5 select-none pointer-events-none">
+        <div className="absolute bottom-3 right-3 z-20 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-[#ff4d4d]/30 text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-1.5 select-none pointer-events-none">
           <ShieldAlert size={12} className="text-[#ff4d4d]" />
           <span>Защищенный просмотр</span>
         </div>

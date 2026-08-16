@@ -107,13 +107,26 @@ export const Header: React.FC<HeaderProps> = ({
 
   useEffect(() => {
     if (mobileMenuOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.touchAction = 'none';
+
+      return () => {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
+        window.scrollTo(0, scrollY);
+      };
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
   }, [mobileMenuOpen]);
 
   useEffect(() => {
@@ -298,16 +311,16 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Notification Shade Bell Button (Desktop) */}
             <button
               onClick={() => setNotificationDrawerOpen(true)}
-              className={`relative flex items-center justify-center p-2 rounded-xl border transition-all duration-300 active:scale-95 shadow-md cursor-pointer ${
+              className={`hidden md:flex relative items-center justify-center p-2 rounded-xl border transition-all duration-300 active:scale-95 shadow-md cursor-pointer ${
                 notifUnreadCount > 0
                   ? 'bg-[#ff4d4d]/10 border-[#ff4d4d]/50 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 shadow-[0_0_12px_rgba(255,77,77,0.2)]'
                   : 'bg-[#15101e] border-[#3d2b4f]/60 text-gray-300 hover:text-[#ff4d4d] hover:border-[#ff4d4d]'
               }`}
               title={lang === 'ru' ? "Шторка уведомлений (Активность постов)" : "Notification Shade (Post Activity)"}
             >
-              <Bell size={16} className={notifUnreadCount > 0 ? "text-[#ff4d4d] animate-bounce" : ""} />
+              <Bell size={16} className={notifUnreadCount > 0 ? "text-[#ff4d4d]" : ""} />
               {notifUnreadCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.2 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-black bg-[#ff4d4d] text-white shadow-[0_0_8px_rgba(255,77,77,0.8)] animate-pulse">
+                <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.2 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-black bg-[#ff4d4d] text-white shadow-[0_0_8px_rgba(255,77,77,0.8)]">
                   {notifUnreadCount > 99 ? '99+' : notifUnreadCount}
                 </span>
               )}
@@ -320,7 +333,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={() => setProfileOpen(!profileOpen)}
                     className="flex items-center gap-2 bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
                   >
-                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-5 h-5 rounded-xl object-cover" />
+                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-5 h-5 shrink-0 aspect-square rounded-full object-cover" />
                     <span className="max-w-[100px] truncate">{user.displayName}</span>
                   </button>
                   
@@ -334,7 +347,7 @@ export const Header: React.FC<HeaderProps> = ({
                       >
                         <div className="p-4 border-b border-[#3d2b4f] bg-[#15101e]">
                           <div className="flex items-center gap-3 mb-2">
-                            <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-10 h-10 rounded-xl border border-[#3d2b4f] object-cover" />
+                            <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-10 h-10 shrink-0 aspect-square rounded-full border border-[#3d2b4f] object-cover" />
                             <div>
                               <div className="font-bold text-white truncate">{user.displayName}</div>
                               <div className="text-xs text-gray-400 truncate">{user.email}</div>
@@ -420,9 +433,9 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
               title={lang === 'ru' ? "Шторка уведомлений" : "Notifications"}
             >
-              <Bell size={20} className={notifUnreadCount > 0 ? "text-[#ff4d4d] animate-bounce" : ""} />
+              <Bell size={20} className={notifUnreadCount > 0 ? "text-[#ff4d4d]" : ""} />
               {notifUnreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 px-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[9px] font-black bg-[#ff4d4d] text-white shadow-[0_0_6px_rgba(255,77,77,0.8)] animate-pulse">
+                <span className="absolute -top-1 -right-1 px-1 min-w-[16px] h-[16px] flex items-center justify-center rounded-full text-[9px] font-black bg-[#ff4d4d] text-white shadow-[0_0_6px_rgba(255,77,77,0.8)]">
                   {notifUnreadCount > 99 ? '99+' : notifUnreadCount}
                 </span>
               )}
@@ -559,7 +572,7 @@ export const Header: React.FC<HeaderProps> = ({
               {user ? (
                 <>
                   <div className="flex items-center gap-3 bg-[#251c35] p-3 rounded-xl border border-[#3d2b4f]">
-                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-12 h-12 rounded-xl border border-[#3d2b4f] object-cover" />
+                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-12 h-12 shrink-0 aspect-square rounded-full border border-[#3d2b4f] object-cover" />
                     <div>
                       <div className="text-white font-bold">{user.displayName}</div>
                       <div className="text-xs text-gray-400">{user.email}</div>

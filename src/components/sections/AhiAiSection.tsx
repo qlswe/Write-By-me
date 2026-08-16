@@ -277,11 +277,7 @@ export const AhiAiSection: React.FC<{
           },
           blog: {
             title: tAny.navBlog || 'Блог / Blog',
-            description: tAny.blogSubTitle || 'Официальные хроники, патчноуты и личные заметки администрации.'
-          },
-          chronicle: {
-            title: tAny.navChronicle || 'Хроника событий / Event Chronicle',
-            description: tAny.chronicleDesc || 'Расписание активностей, событий, баннеров и игрового календаря Honkai: Star Rail.'
+            description: tAny.blogSubTitle || 'Официальные новости, патчноуты и личные заметки администрации.'
           },
           promo: {
             title: tAny.navPromo || 'Промокоды / Promo Codes',

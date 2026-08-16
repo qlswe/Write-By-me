@@ -517,7 +517,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
             src={profile?.photoURL || comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=1c1528&color=fff&size=${lowPerfMode ? '32' : '64'}`}
             alt={comment.authorName}
             loading="lazy"
-            className={`w-11 h-11 rounded-2xl border-2 ${isPremiumUser ? 'border-amber-400/80 shadow-[0_0_12px_rgba(251,191,36,0.3)]' : 'border-[#3d2b4f]/50'} shrink-0 object-cover shadow-lg group-hover:border-[#ff4d4d] transition-all`}
+            className={`w-11 h-11 shrink-0 aspect-square rounded-2xl border-2 ${isPremiumUser ? 'border-amber-400/80 shadow-[0_0_12px_rgba(251,191,36,0.3)]' : 'border-[#3d2b4f]/50'} object-cover shadow-lg group-hover:border-[#ff4d4d] transition-all`}
           />
           {profile?.lastSeen && (Date.now() - new Date(profile.lastSeen).getTime() < 3 * 60 * 1000) && (
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#15101e] rounded-full shadow-lg" />

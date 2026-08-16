@@ -379,7 +379,7 @@ async function startServer() {
 
       // AdBlocker & Tracker Filter (if enabled)
       if (adBlock) {
-        rawText = rawText.replace(/<script[^>]*src=["']https?:\/\/(?:google-analytics|doubleclick|googletagservices|connect\.facebook|analytics\.tiktok|yandex\.ru\/metrika|mc\.yandex\.ru)[^"']*["'][^>]*><\/script>/gi, '<!-- [AHA Shield] Ad/Tracker Blocked -->');
+        rawText = rawText.replace(/<script[^>]*src=["']https?:\/\/(?:google-analytics|doubleclick|googletagservices|connect\.facebook|analytics\.tiktok)[^"']*["'][^>]*><\/script>/gi, '<!-- [AHA Shield] Ad/Tracker Blocked -->');
       }
 
       // Extract title if HTML
@@ -515,86 +515,116 @@ async function startServer() {
     }
   });
 
-  // API Route for proxying AI requests
+  // API Route for proxying AI requests without VPN requirement
   app.post("/api/generate", async (req, res) => {
     try {
-      const { prompt, lang = 'ru', systemInstruction, history = [] } = req.body;
+      const { prompt, lang = 'ru', systemInstruction, history = [], model = 'openai' } = req.body;
 
       if (!prompt) {
         return res.status(400).json({ error: "Prompt is required" });
       }
 
-      // Lazy-initialization inside handler
-      const apiKey = process.env.GEMINI_API_KEY;
-      let ai: GoogleGenAI | null = null;
-      if (apiKey) {
-        ai = new GoogleGenAI({
-          apiKey,
-          httpOptions: {
-            headers: {
-              'User-Agent': 'aistudio-build'
-            }
-          }
+      let responseText = "";
+
+      // 1. First Tier: High-speed global non-VPN neural models (OpenAI / DeepSeek / Qwen / Mistral)
+      // Works anywhere in the world including RU/CIS without VPN or regional blocks
+      const cleanSystem = systemInstruction || (lang === 'ru' 
+        ? 'Ты — Аха, Эон Радости из Honkai: Star Rail. Отвечай остроумно, с юмором, ярко, в стиле Масок Недотёп.' 
+        : 'You are Aha, the Aeon of Elation from Honkai: Star Rail. Be witty, fun, and lively in the spirit of Masked Fools.');
+
+      try {
+        let promptPayload = "";
+        if (cleanSystem) {
+          promptPayload += `[System]: ${cleanSystem}\n\n`;
+        }
+        if (history && Array.isArray(history) && history.length > 0) {
+          promptPayload += "Conversation History:\n";
+          history.forEach((h: { role: string; content: string }) => {
+            promptPayload += `${h.role === 'assistant' ? 'Aha' : 'User'}: ${h.content}\n`;
+          });
+          promptPayload += "\n";
+        }
+        promptPayload += `User: ${prompt}\nAha:`;
+
+        const chosenModel = model === 'deepseek' ? 'deepseek' : model === 'qwen' ? 'qwen-coder' : model === 'mistral' ? 'mistral' : 'openai';
+        const seed = Math.floor(Math.random() * 1000000);
+        const pollUrl = `https://text.pollinations.ai/${encodeURIComponent(promptPayload)}?model=${chosenModel}&seed=${seed}&json=false&cache=false`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+        const pollRes = await fetch(pollUrl, {
+          method: "GET",
+          headers: {
+            "Accept": "text/plain, application/json",
+            "User-Agent": "AhaApp/6.0 (Global; non-vpn-ai)"
+          },
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
+
+        if (pollRes.ok) {
+          let text = await pollRes.text();
+          // Clean reasoning artifacts from DeepSeek / Qwen
+          text = text
+            .replace(/<think>[\s\S]*?<\/think>/gi, '')
+            .replace(/\[reasoning_content\][\s\S]*?(?=\n\n|\n\[|$)/gi, '')
+            .replace(/Thinking step by step:[\s\S]*?(?=\n\n|\n$)/gi, '')
+            .replace(/^Aha:\s*/i, '')
+            .trim();
+
+          if (text && text.length > 1) {
+            responseText = text;
+          }
+        }
+      } catch (globalErr: any) {
+        console.warn("Global non-VPN neural engine attempt failed, trying fallback:", globalErr?.message || globalErr);
       }
 
-      const formattedHistory = history.map((h: { role: string; content: string }) => ({
-        role: h.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: h.content }]
-      }));
-
-      // Try multiple models in sequence to avoid 503/UNAVAILABLE errors
-      const modelsToTry = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-      let responseText = "";
-      let lastError: any = null;
-
-      if (ai) {
-        for (const modelName of modelsToTry) {
+      // 2. Second Tier: Fallback to Gemini if configured and global models failed or user chose gemini
+      if (!responseText) {
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (apiKey) {
           try {
-            console.log(`Attempting generation with model: ${modelName}`);
+            const ai = new GoogleGenAI({
+              apiKey,
+              httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+            });
+
+            const formattedHistory = history.map((h: { role: string; content: string }) => ({
+              role: h.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: h.content }]
+            }));
+
             const response = await ai.models.generateContent({
-              model: modelName,
+              model: 'gemini-2.5-flash',
               contents: [
                 ...formattedHistory,
                 { role: 'user', parts: [{ text: prompt }] }
               ],
               config: {
-                systemInstruction: systemInstruction,
+                systemInstruction: cleanSystem,
                 temperature: 0.7,
               }
             });
 
             if (response && response.text) {
-              responseText = response.text;
-              console.log(`Successfully generated content using model: ${modelName}`);
-              break;
+              responseText = response.text.trim();
             }
-          } catch (err: any) {
-            console.warn(`Model ${modelName} failed or was unavailable:`, err.message || err);
-            lastError = err;
+          } catch (gemErr: any) {
+            console.warn("Gemini model failed (VPN required for Google API in some regions):", gemErr?.message || gemErr);
           }
         }
       }
 
+      // 3. Third Tier: Guaranteed fallback joke/response if totally offline
       if (!responseText) {
-        // Fallback to Pollinations AI text endpoint if Gemini models are experiencing high demand (503)
-        try {
-          console.log("Gemini models unavailable, attempting Pollinations AI fallback...");
-          const pollinationsPrompt = encodeURIComponent(`${systemInstruction ? systemInstruction + '\n' : ''}${prompt}`);
-          const pollRes = await fetch(`https://text.pollinations.ai/${pollinationsPrompt}`);
-          if (pollRes.ok) {
-            responseText = await pollRes.text();
-          }
-        } catch (pollErr) {
-          console.warn("Pollinations fallback failed:", pollErr);
-        }
+        responseText = lang === 'ru'
+          ? '🎭 Аха смеётся в ответ! В крутках тебя ждёт легендарка, а КММ снова всё перепутала!'
+          : '🎭 Aha laughs back! A 5-star warp awaits you, and IPC is confused once again!';
       }
 
-      if (!responseText && lastError) {
-        throw lastError;
-      }
-
-      res.json({ text: responseText.trim() });
+      res.json({ text: responseText.trim(), model: model || 'openai' });
     } catch (error: any) {
       console.error("Server AI Generation Error:", error);
       res.status(500).json({ error: error.message || "Internal server error" });

@@ -47,61 +47,33 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
       {/* Decorative background element */}
       <div className="absolute -top-10 -left-10 w-32 h-32 bg-[#ff4d4d]/5 rounded-full blur-2xl group-hover:bg-[#ff4d4d]/10 transition-all" />
       
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="px-4 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20 self-start">
-              {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
-            </div>
-            <div className="px-3 py-1.5 rounded-full bg-[#251c35] text-white/70 text-[10px] font-bold tracking-wider border border-[#3d2b4f]/60 flex items-center gap-1.5 shadow-sm">
-              <Clock size={11} className="text-[#ff4d4d]" />
-              <span>{readTime} {t.minRead || (lang === 'ru' ? 'мин чтения' : 'min read')}</span>
-            </div>
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <div className="px-3.5 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20 whitespace-nowrap">
+            {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
           </div>
-          <div className="flex items-center gap-2 text-white/40 text-[10px] font-bold uppercase tracking-widest">
+          <div className="px-3 py-1.5 rounded-full bg-[#251c35] text-white/70 text-[10px] font-bold tracking-wider border border-[#3d2b4f]/60 flex items-center gap-1.5 shadow-sm whitespace-nowrap">
+            <Clock size={11} className="text-[#ff4d4d]" />
+            <span>{readTime} {t.minRead || (lang === 'ru' ? 'мин чтения' : 'min read')}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-white/40 text-[10px] font-bold uppercase tracking-widest ml-1">
             <Calendar size={10} />
             <TimeAgo date={post.createdAt} lang={lang} />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0 justify-end">
-          {isAdmin && (
-            <>
-              <button 
-                onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
-                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-transparent hover:border-blue-400/30"
-                title={t.editBtn}
-              >
-                <Edit size={16} />
-              </button>
-              <button 
-                onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
-                className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-400/30"
-                title={t.deleteBtn}
-              >
-                <Trash2 size={16} />
-              </button>
-            </>
-          )}
-          <button 
-            className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-white/40 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10 transition-all border border-transparent"
-            title={t.shareBtn}
-            onClick={(e) => {
-              e.stopPropagation();
-              const url = `${window.location.origin}${window.location.pathname}?post=${post.id}`;
-              navigator.clipboard.writeText(url);
-            }}
-          >
-            <Share2 size={16} />
-          </button>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onToggleFavorite(e); }}
-            className={`p-2.5 rounded-xl bg-[#3d2b4f]/30 transition-all border border-transparent ${isFavorite ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10'}`}
-            title={t.favoriteBtn}
-          >
-            <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
-          </button>
-        </div>
+        {/* Dedicated favorite Star button in header */}
+        <button 
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(e); }}
+          className={`p-2.5 rounded-2xl shrink-0 transition-all border ${
+            isFavorite 
+              ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30 shadow-[0_0_12px_rgba(250,204,21,0.2)]' 
+              : 'text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 hover:bg-yellow-400/10 border-[#3d2b4f]/40 bg-[#15101e]'
+          }`}
+          title={t.favoriteBtn}
+        >
+          <Star size={16} fill={isFavorite ? "currentColor" : "none"} />
+        </button>
       </div>
 
       <h3 className="text-xl sm:text-2xl font-black text-white mb-3 leading-tight tracking-tight group-hover:text-[#ff4d4d] transition-colors uppercase">
@@ -120,13 +92,44 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 mt-auto">
-        <div className="flex items-center justify-between">
+      {/* Card Footer with Read More + Action Icons */}
+      <div className="flex items-center justify-between gap-3 mt-auto pt-4 border-t border-[#3d2b4f]/30">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onClick(); }}
+          className="flex items-center gap-2 text-[#15101e] bg-[#ff4d4d] hover:bg-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-white/20 active:scale-95"
+        >
+          {t.readArticle || "Read More"} <ArrowRight size={14} />
+        </button>
+
+        <div className="flex items-center gap-1.5">
+          {isAdmin && (
+            <>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onEdit?.(e); }}
+                className="p-2 rounded-xl bg-[#251c35] text-white/50 hover:text-blue-400 hover:bg-blue-400/10 transition-all border border-[#3d2b4f]/50 hover:border-blue-400/30"
+                title={t.editBtn}
+              >
+                <Edit size={15} />
+              </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); onDelete?.(e); }}
+                className="p-2 rounded-xl bg-[#251c35] text-white/50 hover:text-red-400 hover:bg-red-400/10 transition-all border border-[#3d2b4f]/50 hover:border-red-400/30"
+                title={t.deleteBtn}
+              >
+                <Trash2 size={15} />
+              </button>
+            </>
+          )}
           <button 
-            onClick={(e) => { e.stopPropagation(); onClick(); }}
-            className="flex items-center gap-2 text-[#15101e] bg-[#ff4d4d] hover:bg-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-white/20 active:scale-95"
+            className="p-2 rounded-xl bg-[#251c35] text-white/50 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10 transition-all border border-[#3d2b4f]/50"
+            title={t.shareBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              const url = `${window.location.origin}${window.location.pathname}?post=${post.id}`;
+              navigator.clipboard.writeText(url);
+            }}
           >
-            {t.readArticle || "Read More"} <ArrowRight size={14} />
+            <Share2 size={15} />
           </button>
         </div>
       </div>

@@ -258,7 +258,7 @@ export const FacebookPostCreator: React.FC<FacebookPostCreatorProps> = ({
         <img
           src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`}
           alt={user.displayName || 'User'}
-          className="w-10 sm:w-11 h-10 sm:h-11 rounded-full border-2 border-[#3d2b4f]/60 shrink-0 object-cover mt-0.5"
+          className="w-10 sm:w-11 h-10 sm:h-11 shrink-0 aspect-square rounded-full border-2 border-[#3d2b4f]/60 object-cover mt-0.5"
         />
 
         <div className="flex-1 min-w-0">

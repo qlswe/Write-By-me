@@ -65,8 +65,10 @@ export function useStories() {
         id: doc.id
       } as UserStory));
 
-      // Filter out stories older than 24h
-      const activeStories = rawStories.filter(s => {
+      // Deduplicate by unique id and filter out stories older than 48h
+      const uniqueMap = new Map<string, UserStory>();
+      rawStories.forEach(s => {
+        if (!s.id) return;
         let createdMs = nowMs;
         if (s.createdAt) {
           if (typeof s.createdAt.toMillis === 'function') createdMs = s.createdAt.toMillis();
@@ -74,9 +76,14 @@ export function useStories() {
           else if (typeof s.createdAt === 'string') createdMs = new Date(s.createdAt).getTime();
           else if (s.createdAt.seconds) createdMs = s.createdAt.seconds * 1000;
         }
-        // 24 hours expiry (86400000 ms)
-        return (nowMs - createdMs) < 86400000 * 2; // generous 48h to avoid disappearing immediately
+        if ((nowMs - createdMs) < 86400000 * 2) {
+          if (!uniqueMap.has(s.id)) {
+            uniqueMap.set(s.id, s);
+          }
+        }
       });
+
+      const activeStories = Array.from(uniqueMap.values());
 
       // Sort newest first
       activeStories.sort((a, b) => {
@@ -137,7 +144,7 @@ export function useStories() {
       const docRef = await addDoc(collection(db, 'user_stories'), sanitized);
       const newStory = { ...sanitized, id: docRef.id } as UserStory;
 
-      setStories(prev => [newStory, ...prev]);
+      setStories(prev => [newStory, ...prev.filter(s => s.id !== newStory.id)]);
       return newStory;
     } catch (err) {
       console.error("Error creating story:", err);

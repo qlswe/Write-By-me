@@ -308,21 +308,21 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
 
       {/* Post Header (Facebook style) */}
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative shrink-0">
             <img
               src={post.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.authorName || 'User')}&background=1c1528&color=fff`}
               alt={post.authorName}
               onClick={() => onOpenProfile?.(post.authorId, post.authorName)}
-              className="w-11 sm:w-12 h-11 sm:h-12 rounded-full border-2 border-[#3d2b4f]/60 hover:border-[#ff4d4d] cursor-pointer object-cover transition-colors"
+              className="w-11 sm:w-12 h-11 sm:h-12 shrink-0 aspect-square rounded-full border-2 border-[#3d2b4f]/60 hover:border-[#ff4d4d] cursor-pointer object-cover transition-colors"
             />
           </div>
 
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <span 
                 onClick={() => onOpenProfile?.(post.authorId, post.authorName)}
-                className="font-black text-white text-sm sm:text-base hover:text-[#ff4d4d] cursor-pointer transition-colors"
+                className="font-black text-white text-sm sm:text-base hover:text-[#ff4d4d] cursor-pointer transition-colors truncate max-w-[200px] sm:max-w-none"
               >
                 {post.authorName}
               </span>
@@ -520,26 +520,26 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
         </div>
       </div>
 
-      {/* Main Interaction Action Buttons (Facebook Bar: Like, Comment, Share, Bookmark) */}
-      <div className="relative flex items-center justify-between gap-1 pt-1 pb-1">
+      {/* Main Interaction Action Buttons (Facebook Bar: Like, Comment, Bot, Share, Bookmark) */}
+      <div className="relative flex items-center justify-between gap-1 sm:gap-2 pt-1 pb-1">
         
         {/* Like / Reaction Button with Floating Reaction Picker */}
         <div 
-          className="relative flex-1"
+          className="relative flex-1 min-w-0"
           onMouseEnter={() => setShowReactionPicker(true)}
           onMouseLeave={() => setShowReactionPicker(false)}
         >
           <button
             type="button"
             onClick={() => handleReactionClick(userReaction?.emoji || '👍')}
-            className={`w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs sm:text-sm font-black transition-all ${
+            className={`w-full flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1.5 sm:px-2.5 rounded-xl text-xs sm:text-sm font-black transition-all ${
               userReaction 
                 ? `${userReaction.bg} ${userReaction.color}` 
-                : 'text-white/60 hover:text-white hover:bg-[#251c35]'
+                : 'text-white/70 hover:text-white hover:bg-[#251c35]'
             }`}
           >
-            <span className="text-base">{userReaction ? userReaction.emoji : '👍'}</span>
-            <span>{userReaction ? (lang === 'ru' ? userReaction.labelRu : userReaction.labelEn) : (lang === 'ru' ? 'Нравится' : 'Like')}</span>
+            <span className="text-sm sm:text-base shrink-0">{userReaction ? userReaction.emoji : '👍'}</span>
+            <span className="truncate">{userReaction ? (lang === 'ru' ? userReaction.labelRu : userReaction.labelEn) : (lang === 'ru' ? 'Нравится' : 'Like')}</span>
           </button>
 
           {/* Floating Animated Reaction Picker (Facebook popover) */}
@@ -577,10 +577,10 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
         <button
           type="button"
           onClick={() => setShowComments(!showComments)}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs sm:text-sm font-black text-white/60 hover:text-white hover:bg-[#251c35] transition-all ${showComments ? 'bg-[#251c35] text-white' : ''}`}
+          className={`flex-1 min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1.5 sm:px-2.5 rounded-xl text-xs sm:text-sm font-black text-white/70 hover:text-white hover:bg-[#251c35] transition-all ${showComments ? 'bg-[#251c35] text-white' : ''}`}
         >
-          <MessageSquare size={16} />
-          <span>{lang === 'ru' ? 'Комментировать' : 'Comment'}</span>
+          <MessageSquare size={15} className="shrink-0" />
+          <span className="truncate">{lang === 'ru' ? 'Коммент' : 'Comment'}</span>
         </button>
 
         {/* Aha Bot Summon Button */}
@@ -589,20 +589,20 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
           onClick={handleSummonBotClick}
           disabled={isSummoningBot}
           title={lang === 'ru' ? 'Призвать Аха-Бота для комментария/шутки' : 'Summon Aha Bot to comment'}
-          className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-fuchsia-600/20 to-purple-600/20 hover:from-fuchsia-600/35 hover:to-purple-600/35 border border-fuchsia-500/30 text-fuchsia-300 hover:text-white transition-all shadow-sm active:scale-95 disabled:opacity-60"
+          className="flex-1 min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1.5 sm:px-2.5 rounded-xl text-xs sm:text-sm font-black bg-gradient-to-r from-fuchsia-600/20 to-purple-600/20 hover:from-fuchsia-600/35 hover:to-purple-600/35 border border-fuchsia-500/30 text-fuchsia-300 hover:text-white transition-all shadow-sm active:scale-95 disabled:opacity-60"
         >
-          <Bot size={16} className={`text-fuchsia-400 ${isSummoningBot ? 'animate-spin' : 'animate-bounce'}`} />
-          <span className="hidden xs:inline">{isSummoningBot ? (lang === 'ru' ? 'Думает...' : 'Thinking...') : (lang === 'ru' ? 'Аха-Бот' : 'Aha Bot')}</span>
+          <Bot size={15} className={`text-fuchsia-400 shrink-0 ${isSummoningBot ? 'animate-spin' : ''}`} />
+          <span className="truncate">{isSummoningBot ? (lang === 'ru' ? 'Думает...' : 'Thinking...') : (lang === 'ru' ? 'Аха-Бот' : 'Aha Bot')}</span>
         </button>
 
         {/* Share Button */}
         <button
           type="button"
           onClick={handleShare}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs sm:text-sm font-black text-white/60 hover:text-white hover:bg-[#251c35] transition-all"
+          className="flex-1 min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-2 px-1.5 sm:px-2.5 rounded-xl text-xs sm:text-sm font-black text-white/70 hover:text-white hover:bg-[#251c35] transition-all"
         >
-          <Share2 size={16} />
-          <span className="hidden sm:inline">{lang === 'ru' ? 'Поделиться' : 'Share'}</span>
+          <Share2 size={15} className="shrink-0" />
+          <span className="truncate">{lang === 'ru' ? 'Поделиться' : 'Share'}</span>
         </button>
 
         {/* Bookmark Button */}
@@ -610,11 +610,11 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
           type="button"
           onClick={handleToggleSave}
           title={isSaved ? (lang === 'ru' ? 'В закладках' : 'Saved') : (lang === 'ru' ? 'Сохранить' : 'Save')}
-          className={`p-2 rounded-xl text-xs transition-all ${
-            isSaved ? 'text-amber-400 bg-amber-400/10' : 'text-white/40 hover:text-white hover:bg-[#251c35]'
+          className={`p-2 rounded-xl text-xs shrink-0 transition-all ${
+            isSaved ? 'text-amber-400 bg-amber-400/10' : 'text-white/50 hover:text-white hover:bg-[#251c35]'
           }`}
         >
-          <Bookmark size={17} className={isSaved ? 'fill-amber-400' : ''} />
+          <Bookmark size={16} className={isSaved ? 'fill-amber-400' : ''} />
         </button>
       </div>
 
@@ -628,7 +628,7 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
               <img
                 src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`}
                 alt={user.displayName || 'User'}
-                className="w-8 h-8 rounded-full border border-[#3d2b4f]/60 shrink-0 mt-1"
+                className="w-8 h-8 shrink-0 aspect-square rounded-full border border-[#3d2b4f]/60 mt-1 object-cover"
               />
               <div className="flex-1 min-w-0">
                 <div className="bg-[#0d0b14] border border-[#3d2b4f]/50 focus-within:border-[#ff4d4d] rounded-2xl p-2.5 flex items-center gap-2">
@@ -691,7 +691,7 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
                     src={comment.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName)}&background=1c1528&color=fff`}
                     alt={comment.authorName}
                     onClick={() => onOpenProfile?.(comment.authorId, comment.authorName)}
-                    className="w-8 h-8 rounded-full border border-[#3d2b4f]/60 cursor-pointer object-cover shrink-0 mt-0.5"
+                    className="w-8 h-8 shrink-0 aspect-square rounded-full border border-[#3d2b4f]/60 cursor-pointer object-cover mt-0.5"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="bg-[#0d0b14]/90 border border-[#3d2b4f]/30 rounded-2xl px-3.5 py-2.5 w-fit max-w-full">

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
+import { sdk } from '../../sdk';
 import { db } from '../../firebase';
 import { 
   collection, 
@@ -44,7 +45,6 @@ import {
   notifyPostReaction 
 } from '../../utils/notificationService';
 import { FacebookPostCard, PostData, CommentData } from '../feed/FacebookPostCard';
-import { ChronicleSection } from './ChronicleSection';
 import { PromoSection } from './PromoSection';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { safeStorage } from '../../utils/securityStorage';
@@ -78,7 +78,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
   // Feed State
   const [threads, setThreads] = useState<PostData[]>([]);
   const [comments, setComments] = useState<CommentData[]>([]);
-  const [activeTab, setActiveTab] = useState<'all' | 'popular' | 'memes' | 'theories' | 'events' | 'security'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'popular' | 'memes' | 'theories' | 'promo' | 'security'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -619,15 +619,15 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('events')}
+            onClick={() => setActiveTab('promo')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
-              activeTab === 'events' 
+              activeTab === 'promo' 
                 ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
                 : 'text-white/60 hover:text-white hover:bg-[#251c35]'
             }`}
           >
-            <Calendar size={14} />
-            <span>{lang === 'ru' ? 'Ивенты и Промо' : 'Events & Promo'}</span>
+            <Ticket size={14} />
+            <span>{lang === 'ru' ? 'Промокоды' : 'Promo Codes'}</span>
           </button>
 
           <button
@@ -645,18 +645,18 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
       </div>
 
       {/* Stories / Activity Highlights Bar */}
-      {activeTab !== 'security' && activeTab !== 'events' && (
+      {activeTab !== 'security' && activeTab !== 'promo' && (
         <StoriesBar
           lang={lang}
           events={events}
           promoCodes={promoCodes}
           handleCopy={handleCopy}
-          onSelectEvent={() => setActiveTab('events')}
+          onSelectEvent={() => setActiveTab('promo')}
         />
       )}
 
       {/* Main Feed View */}
-      {activeTab !== 'security' && activeTab !== 'events' && (
+      {activeTab !== 'security' && activeTab !== 'promo' && (
         <>
           {/* Facebook-style Post Creator Widget */}
           <FacebookPostCreator
@@ -710,25 +710,9 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
         </>
       )}
 
-      {/* Events & Promo Integrated View */}
-      {activeTab === 'events' && (
+      {/* Promo Integrated View */}
+      {activeTab === 'promo' && (
         <div className="space-y-6">
-          <div className="bg-[#15101e] border border-[#3d2b4f]/40 rounded-3xl p-6">
-            <h3 className="text-lg font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Calendar className="text-[#ff4d4d]" size={20} />
-              {lang === 'ru' ? 'Хроника Событий и Ивентов' : 'Events & Banners Chronicle'}
-            </h3>
-            <ChronicleSection
-              lang={lang}
-              lowPerfMode={lowPerfMode}
-              loading={false}
-              events={events}
-              onEdit={onEditEvent}
-              onCreate={onCreateEvent}
-              role={role}
-            />
-          </div>
-
           <div className="bg-[#15101e] border border-[#3d2b4f]/40 rounded-3xl p-6">
             <h3 className="text-lg font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
               <Ticket className="text-amber-400" size={20} />

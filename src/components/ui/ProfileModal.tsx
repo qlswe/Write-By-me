@@ -846,14 +846,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       <img 
                         src={photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} 
                         alt="Avatar" 
-                        className="w-38 h-38 sm:w-40 sm:h-40 rounded-[3rem] border-4 border-[#15101e] bg-[#251c35] object-cover shadow-2xl"
+                        className="w-38 h-38 sm:w-40 sm:h-40 shrink-0 aspect-square rounded-[3rem] border-4 border-[#15101e] bg-[#251c35] object-cover shadow-2xl"
                       />
                     </div>
                   ) : (
                     <img 
                       src={photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} 
                       alt="Avatar" 
-                      className="w-38 h-38 sm:w-40 sm:h-40 rounded-[3rem] border-[6px] border-[#251c35]/40 bg-[#251c35] object-cover shadow-2xl transition-transform group-hover:scale-105"
+                      className="w-38 h-38 sm:w-40 sm:h-40 shrink-0 aspect-square rounded-[3rem] border-[6px] border-[#251c35]/40 bg-[#251c35] object-cover shadow-2xl transition-transform group-hover:scale-105"
                     />
                   )}
 
@@ -1217,8 +1217,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                           <div
                             key={story.id}
                             className={`p-4 rounded-2xl border transition-all cursor-pointer relative group flex flex-col justify-between min-h-[140px] overflow-hidden ${
-                              story.bgGradient 
-                                ? `bg-gradient-to-br ${story.bgGradient} border-white/20 shadow-lg` 
+                              story.gradient 
+                                ? `bg-gradient-to-br ${story.gradient} border-white/20 shadow-lg` 
                                 : 'bg-[#1a1326] border-[#3d2b4f]/40 hover:border-[#ff4d4d]/50'
                             }`}
                             onClick={() => {
@@ -1249,11 +1249,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                               <div className="flex items-center gap-3">
                                 <span className="flex items-center gap-1 font-mono">
                                   <Eye size={12} className="text-cyan-400" />
-                                  {story.viewersCount || 0}
+                                  {story.views?.length || 0}
                                 </span>
                                 <span className="flex items-center gap-1 font-mono">
                                   <Flame size={12} className="text-amber-400" />
-                                  {story.likesCount || 0}
+                                  {story.likes?.length || 0}
                                 </span>
                               </div>
 
@@ -1576,11 +1576,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
             isOpen={isViewerOpen}
             onClose={() => setIsViewerOpen(false)}
             stories={stories}
-            initialStoryIndex={viewerIndex}
-            onLike={toggleLikeStory}
-            onDelete={deleteStory}
-            onView={markStoryViewed}
-            currentUserId={currentUser?.uid}
+            initialIndex={viewerIndex}
+            onLikeStory={toggleLikeStory}
+            onDeleteStory={deleteStory}
+            onMarkViewed={markStoryViewed}
             lang={lang}
           />
 
@@ -1588,11 +1587,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
           <CreateStoryModal
             isOpen={isCreateStoryOpen}
             onClose={() => setIsCreateStoryOpen(false)}
-            onCreateStory={createStory}
-            user={{
-              uid: currentUser?.uid || '',
-              displayName: currentUser?.displayName || 'User',
-              photoURL: currentPhoto || currentUser?.photoURL || null
+            onPublishStory={async (params) => {
+              await createStory(params);
             }}
             lang={lang}
           />

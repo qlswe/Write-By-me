@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Book, Globe, LayoutDashboard, Ticket, RefreshCw, ListOrdered, Sparkles, User, MessageSquare, Radio, ServerCrash, Edit, Save, X, Settings, Palette, Activity, Calendar, Shield, Target, BarChart2, Smartphone } from 'lucide-react';
 import { collection, addDoc, doc, onSnapshot, setDoc, getDoc, enableNetwork } from 'firebase/firestore';
@@ -41,6 +41,7 @@ import { UserData } from './hooks/useUsers';
 
 import { HomeStatsWidget } from './components/ui/HomeStatsWidget';
 import { QuickActionsMenu } from './components/ui/QuickActionsMenu';
+import { ScrollToTopBottom } from './components/ui/ScrollToTopBottom';
 import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
 import { BroadcastBanner } from './components/ui/BroadcastBanner';
 import { AhaSecurityBadge, SafeHtml } from './components/security/AhaSecurity';
@@ -61,7 +62,6 @@ const getMillis = (val: any): number => {
 // Direct imports for instant section switching without Suspense lag
 import { TheoriesSection } from './components/sections/TheoriesSection';
 import { BlogSection } from './components/sections/BlogSection';
-import { ChronicleSection } from './components/sections/ChronicleSection';
 import { PromoSection } from './components/sections/PromoSection';
 import { UsersList } from './components/admin/UsersList';
 import { ChatsList } from './components/chat/ChatsList';
@@ -72,7 +72,7 @@ import { SdkSettingsSection } from './components/sections/SdkSettingsSection';
 import { CanvasSection } from './components/sections/CanvasSection';
 import { TelemetrySection } from './components/sections/TelemetrySection';
 
-type Section = 'home' | 'theories' | 'blog' | 'chronicle' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry' | 'browser';
+type Section = 'home' | 'theories' | 'blog' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry' | 'browser';
 
 let hasPrintedStopWarning = false;
 
@@ -105,6 +105,44 @@ export default function App() {
     sdk.logging.action('Section Change', { section });
     logUserTelemetry(user?.uid, user?.email, user?.displayName || 'Guest', section);
   }, [section, user]);
+
+  // Section Reflow & CSS Layout Cache Purge Engine
+  useLayoutEffect(() => {
+    if (typeof document !== 'undefined') {
+      // 1. Force instant browser reflow
+      void document.documentElement.offsetHeight;
+      void document.body.offsetHeight;
+
+      // 2. Clean up any stale overflow or pointer event locks from previous views/transitions
+      document.body.style.removeProperty('overflow');
+      document.body.style.removeProperty('pointer-events');
+
+      // 3. Reset scroll position immediately to prevent layout drift
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+    }
+
+    // 4. Fire multi-stage resize and custom reflow events to trigger fresh layout calculations in all child grids & components
+    const triggerReflow = () => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new CustomEvent('aha_section_reflow', { detail: { section } }));
+      }
+    };
+
+    triggerReflow();
+    const rafId = requestAnimationFrame(() => {
+      triggerReflow();
+      if (typeof document !== 'undefined') {
+        void document.body.offsetHeight;
+      }
+    });
+    const timerId = setTimeout(triggerReflow, 50);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timerId);
+    };
+  }, [section]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [modalContent, setModalContent] = useState<{id?: string, title: string, content: string} | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -645,7 +683,6 @@ export default function App() {
     { id: 'canvas' as const, label: t.navCanvas || 'Aha Canvas', icon: Palette },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
-    { id: 'chronicle' as const, label: t.navChronicle || 'Хроника событий', icon: Calendar },
     { id: 'promo' as const, label: t.navPromo || 'Промокоды', icon: Ticket },
     { id: 'chats' as const, label: t.navChats, icon: MessageSquare },
     { id: 'users' as const, label: t.navUsers, icon: User },
@@ -961,6 +998,7 @@ export default function App() {
         <AnimatePresence mode="wait">
           <motion.div
             key={section}
+            className="section-container"
             initial={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: -20, scale: 0.98 }}
@@ -1170,17 +1208,6 @@ export default function App() {
                 />
               )}
 
-              {section === 'chronicle' && (
-                <ChronicleSection 
-                  lang={lang as Language} 
-                  lowPerfMode={lowPerfMode} 
-                  loading={isLoadingEvents}
-                  events={events}
-                  onEdit={setEditingEvent}
-                  onCreate={() => setIsCreatingEvent(true)}
-                  role={role}
-                />
-              )}
               {section === 'promo' && (
                 <PromoSection 
                   lang={lang as Language} 
@@ -1362,23 +1389,22 @@ export default function App() {
         lang={lang as Language} 
       />
 
-      {/* Floating Quick Actions Menu on Home Screen */}
+      {/* Floating Scroll to Top/Bottom & Quick Actions on Home Screen */}
       {section === 'home' && !mobileMenuOpen && (
-        <QuickActionsMenu
-          lang={lang as Language}
-          onCreateTheory={() => {
-            setSection('theories');
-            setIsCreatingTheory(true);
-          }}
-          onCreateBlog={() => {
-            setSection('blog');
-            setIsCreatingBlog(true);
-          }}
-          onCreateEvent={() => {
-            setSection('chronicle');
-            setIsCreatingEvent(true);
-          }}
-        />
+        <>
+          <ScrollToTopBottom lang={lang as Language} />
+          <QuickActionsMenu
+            lang={lang as Language}
+            onCreateTheory={() => {
+              setSection('theories');
+              setIsCreatingTheory(true);
+            }}
+            onCreateBlog={() => {
+              setSection('blog');
+              setIsCreatingBlog(true);
+            }}
+          />
+        </>
       )}
     </div>
   );

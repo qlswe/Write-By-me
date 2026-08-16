@@ -63,6 +63,31 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (isOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+
+      return () => {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
   // Filter items according to tab
   const filteredNotifications = notifications.filter((item) => {
     if (activeTab === 'all') return true;
@@ -119,7 +144,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-            className="fixed top-16 right-2 sm:right-6 md:right-8 w-[calc(100vw-1rem)] sm:w-[460px] max-h-[85vh] bg-[#15101e]/95 backdrop-blur-xl border border-[#3d2b4f] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] z-[999] flex flex-col overflow-hidden box-border"
+            className="fixed top-16 right-2 sm:right-6 md:right-8 w-[calc(100vw-1rem)] sm:w-[460px] max-h-[85vh] bg-[#15101e] border border-[#3d2b4f] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] z-[999] flex flex-col overflow-hidden box-border overscroll-contain touch-pan-y"
           >
             {/* Header */}
             <div className="p-4 sm:p-5 border-b border-[#251c35] flex items-center justify-between gap-3 bg-[#1c1528]/80">
@@ -246,7 +271,7 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
                           )}&background=1c1528&color=fff`
                         }
                         alt={item.actorName}
-                        className="w-10 h-10 rounded-full border border-[#3d2b4f]/80 object-cover"
+                        className="w-10 h-10 shrink-0 aspect-square rounded-full border border-[#3d2b4f]/80 object-cover"
                       />
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#15101e] border border-[#3d2b4f] flex items-center justify-center shadow">
                         {getActionIcon(item.type, item.reactionEmoji)}

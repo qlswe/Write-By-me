@@ -44,9 +44,22 @@ export const CreateStoryModal: React.FC<CreateStoryModalProps> = ({
     setIsUploading(true);
     try {
       if (file.type.startsWith('image/')) {
-        const compressed = await compressImageBase64(file);
-        setMediaUrl(compressed);
-        setStoryType('image');
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          try {
+            const raw = ev.target?.result as string;
+            const compressed = await compressImageBase64(raw);
+            setMediaUrl(compressed);
+            setStoryType('image');
+          } catch (err) {
+            console.error("Failed to compress image:", err);
+          } finally {
+            setIsUploading(false);
+          }
+        };
+        reader.onerror = () => setIsUploading(false);
+        reader.readAsDataURL(file);
+        return;
       } else {
         const uploadedUrl = await uploadMediaFile(file, user?.uid);
         if (uploadedUrl) {

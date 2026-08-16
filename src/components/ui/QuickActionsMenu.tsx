@@ -7,14 +7,12 @@ interface QuickActionsMenuProps {
   lang: Language;
   onCreateTheory: () => void;
   onCreateBlog: () => void;
-  onCreateEvent: () => void;
 }
 
 export const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
   lang,
   onCreateTheory,
-  onCreateBlog,
-  onCreateEvent
+  onCreateBlog
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,16 +47,6 @@ export const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
       icon: FileText,
       color: '#00f0ff',
       action: onCreateBlog
-    },
-    {
-      id: 'event',
-      titleRu: 'Запланировать ивент',
-      titleEn: 'Schedule Event',
-      descRu: 'Событие хроники или турнир',
-      descEn: 'Chronicle event or tournament',
-      icon: Calendar,
-      color: '#a855f7',
-      action: onCreateEvent
     }
   ];
 

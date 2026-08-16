@@ -79,9 +79,10 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({
   // Check if current user has active stories
   const myStories = stories.filter(s => s.authorId === user?.uid);
   const otherStories = stories.filter(s => s.authorId !== user?.uid);
+  const userActiveStory = myStories[0];
 
-  const handleOpenMyStory = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleOpenMyStory = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (myStories.length > 0) {
       const idx = stories.findIndex(s => s.id === myStories[0].id);
       setViewerStartIndex(idx >= 0 ? idx : 0);
@@ -106,10 +107,18 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({
         <motion.div
           whileHover={{ scale: 1.02, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => setCreateStoryModalOpen(true)}
+          onClick={myStories.length > 0 ? () => handleOpenMyStory() : () => setCreateStoryModalOpen(true)}
           className="min-w-[155px] sm:min-w-[170px] w-40 sm:w-44 h-52 sm:h-56 rounded-2xl bg-gradient-to-b from-[#281c3b] via-[#1d142b] to-[#120c1c] border border-[#ff4d4d]/40 p-3.5 flex flex-col justify-between shrink-0 cursor-pointer shadow-xl relative overflow-hidden group select-none transition-all hover:border-[#ff4d4d] hover:shadow-[0_0_22px_rgba(255,77,77,0.25)]"
         >
-          <div className="absolute -top-6 -right-6 w-24 h-24 bg-[#ff4d4d]/15 rounded-full blur-xl group-hover:bg-[#ff4d4d]/30 transition-all pointer-events-none" />
+          {/* Active story photo background on card 1 if user uploaded photo */}
+          {userActiveStory?.mediaUrl ? (
+            <div className="absolute inset-0 z-0">
+              <img src={userActiveStory.mediaUrl} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/50" />
+            </div>
+          ) : (
+            <div className="absolute -top-6 -right-6 w-24 h-24 bg-[#ff4d4d]/15 rounded-full blur-xl group-hover:bg-[#ff4d4d]/30 transition-all pointer-events-none" />
+          )}
           
           {/* Top Row: Avatar with Plus / Story Indicator */}
           <div className="relative z-10 flex items-center justify-between">
@@ -126,7 +135,7 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({
               <img
                 src={user?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || 'User')}&background=1c1528&color=fff`}
                 alt="My Avatar"
-                className={`w-10 h-10 rounded-full object-cover relative z-10 ${myStories.length > 0 ? 'border border-black' : 'border-2 border-[#ff4d4d]'}`}
+                className={`w-10 h-10 shrink-0 aspect-square rounded-full object-cover relative z-10 ${myStories.length > 0 ? 'border border-black' : 'border-2 border-[#ff4d4d]'}`}
               />
 
               {/* Plus Badge positioned with safe margins */}
@@ -151,10 +160,13 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({
           {/* Bottom Card Area */}
           <div className="relative z-10 space-y-1.5 bg-[#0e0917]/85 border border-[#3d2b4f]/60 group-hover:border-[#ff4d4d]/50 rounded-xl p-2.5 backdrop-blur-sm transition-colors">
             <div className="text-xs font-black text-white leading-snug line-clamp-2">
-              {myStories.length > 0 ? (lang === 'ru' ? '🔥 Ваша история активна' : '🔥 Story is active') : myVibe}
+              {myStories.length > 0 ? (userActiveStory?.text || (lang === 'ru' ? '🔥 Ваша история активна' : '🔥 Story is active')) : myVibe}
             </div>
             <div className="text-[10px] text-white/50 font-bold flex items-center justify-between">
-              <span className="flex items-center gap-1 text-[#ff4d4d]">
+              <span 
+                onClick={(e) => { e.stopPropagation(); setCreateStoryModalOpen(true); }}
+                className="flex items-center gap-1 text-[#ff4d4d] hover:underline cursor-pointer"
+              >
                 <Plus size={11} className="stroke-[3]" />
                 {lang === 'ru' ? 'Создать историю' : 'Create story'}
               </span>
@@ -162,9 +174,8 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({
           </div>
         </motion.div>
 
-        {/* Stories from other Community Members */}
-        {stories.map((story) => {
-          const isOwn = story.authorId === user?.uid;
+        {/* Stories from other Community Members (deduplicated without user story) */}
+        {otherStories.map((story) => {
           return (
             <motion.div
               key={story.id}
@@ -185,11 +196,11 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({
 
               {/* Author & Active Ring */}
               <div className="relative z-10 flex items-center justify-between">
-                <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-amber-400 via-[#ff4d4d] to-fuchsia-500 shadow-md">
+                <div className="relative shrink-0 p-0.5 rounded-full bg-gradient-to-tr from-amber-400 via-[#ff4d4d] to-fuchsia-500 shadow-md">
                   <img
                     src={story.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(story.authorName)}&background=1c1528&color=fff`}
                     alt={story.authorName}
-                    className="w-9 h-9 rounded-full object-cover border border-black/40"
+                    className="w-9 h-9 shrink-0 aspect-square rounded-full object-cover border border-black/40"
                   />
                 </div>
 
@@ -202,7 +213,7 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({
               {/* Story Content Snippet */}
               <div className="relative z-10 space-y-1 bg-black/60 border border-white/15 rounded-xl p-2.5 backdrop-blur-md">
                 <h4 className="text-[11px] font-black text-white truncate">
-                  {isOwn ? (lang === 'ru' ? 'Вы' : 'You') : story.authorName}
+                  {story.authorName}
                 </h4>
                 <p className="text-[10px] text-white/85 font-medium line-clamp-2 leading-tight">
                   {story.text || (lang === 'ru' ? '📷 Фото-история' : '📷 Photo story')}
@@ -294,7 +305,9 @@ export const StoriesBar: React.FC<StoriesBarProps> = ({
         isOpen={createStoryModalOpen}
         onClose={() => setCreateStoryModalOpen(false)}
         lang={lang}
-        onPublishStory={createStory}
+        onPublishStory={async (params) => {
+          await createStory(params);
+        }}
       />
 
       {/* Full-screen Story Viewer Modal */}

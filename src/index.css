@@ -110,6 +110,20 @@
     backdrop-filter: none !important;
     background-color: #251c35 !important;
   }
+  /* Section Containers Transition Optimization */
+  .section-container {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+
+  main > div {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
 }
 
 @layer components {

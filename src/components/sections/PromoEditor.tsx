@@ -309,20 +309,20 @@ export const PromoEditor: React.FC<PromoEditorProps> = ({ lang, role, onClose, i
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0">
+                <div className="flex items-center gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all translate-y-0 sm:translate-y-2 sm:group-hover:translate-y-0">
                   <button
                     onClick={() => startEdit(promo)}
-                    className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 transition-all border border-transparent hover:border-[#ff4d4d]/20"
+                    className="p-2 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-[#ff4d4d] hover:bg-[#ff4d4d]/10 transition-all border border-transparent hover:border-[#ff4d4d]/20"
                     title={t.editBtn}
                   >
-                    <Edit2 size={18} />
+                    <Edit2 size={16} />
                   </button>
                   <button
                     onClick={() => setPromoToDelete(promo.id)}
-                    className="p-2.5 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-500/20"
+                    className="p-2 rounded-xl bg-[#3d2b4f]/30 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all border border-transparent hover:border-red-500/20"
                     title={t.delete}
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={16} />
                   </button>
                   <button
                     onClick={() => {
