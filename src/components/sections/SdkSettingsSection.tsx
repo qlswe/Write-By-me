@@ -980,20 +980,24 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
             </div>
 
             {/* STANDALONE SDK SITE & DEVELOPER PORTAL GUIDE */}
-            <div className="p-6 bg-[#15101e] rounded-2xl border border-[#ff4d4d]/40 shadow-[0_0_20px_rgba(255,77,77,0.1)] space-y-5">
-              <div className="flex items-center justify-between border-b border-[#3d2b4f] pb-3">
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
-                    <Globe size={18} className="text-[#ff4d4d]" />
-                    {lang === 'ru' ? "Портал Разработчика и Отдельный Сайт SDK" : "SDK Standalone Site & Developer Portal"}
-                  </h3>
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    {lang === 'ru' 
-                      ? "Руководство по созданию отдельного домена/сайта, CDN встраиванию и экспорту библиотеки"
-                      : "Guide for creating a standalone domain/site, CDN embedding, and publishing as an NPM library"}
-                  </p>
+            <div className="p-4 sm:p-6 bg-[#15101e] rounded-2xl border border-[#ff4d4d]/40 shadow-[0_0_20px_rgba(255,77,77,0.1)] space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#3d2b4f] pb-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-[#ff4d4d]/15 border border-[#ff4d4d]/30 text-[#ff4d4d] shrink-0 mt-0.5 shadow-sm">
+                    <Globe className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white leading-tight">
+                      {lang === 'ru' ? "Портал Разработчика и Отдельный Сайт SDK" : "SDK Standalone Site & Developer Portal"}
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-gray-400 mt-1 leading-snug">
+                      {lang === 'ru' 
+                        ? "Руководство по созданию отдельного домена/сайта, CDN встраиванию и экспорту библиотеки"
+                        : "Guide for creating a standalone domain/site, CDN embedding, and publishing as an NPM library"}
+                    </p>
+                  </div>
                 </div>
-                <span className="bg-[#ff4d4d] text-[#15101e] px-2.5 py-1 rounded-lg text-[10px] font-black uppercase">
+                <span className="self-start sm:self-center bg-[#ff4d4d] text-[#15101e] px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0">
                   SDK v3.0 PRO
                 </span>
               </div>
@@ -1002,7 +1006,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="p-3.5 bg-[#1f172e] rounded-xl border border-[#3d2b4f] space-y-2">
                   <div className="flex items-center gap-2 font-black text-xs text-[#ff4d4d]">
-                    <span className="w-5 h-5 rounded-full bg-[#ff4d4d] text-[#15101e] text-[10px] flex items-center justify-center font-black">1</span>
+                    <span className="w-5 h-5 rounded-full bg-[#ff4d4d] text-[#15101e] text-[10px] flex items-center justify-center font-black shrink-0">1</span>
                     {lang === 'ru' ? "Создание репозитория" : "Repository Setup"}
                   </div>
                   <p className="text-[11px] text-gray-300 leading-snug">
@@ -1017,7 +1021,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
 
                 <div className="p-3.5 bg-[#1f172e] rounded-xl border border-[#3d2b4f] space-y-2">
                   <div className="flex items-center gap-2 font-black text-xs text-[#ff4d4d]">
-                    <span className="w-5 h-5 rounded-full bg-[#ff4d4d] text-[#15101e] text-[10px] flex items-center justify-center font-black">2</span>
+                    <span className="w-5 h-5 rounded-full bg-[#ff4d4d] text-[#15101e] text-[10px] flex items-center justify-center font-black shrink-0">2</span>
                     {lang === 'ru' ? "Публикация в NPM & CDN" : "NPM & CDN Publishing"}
                   </div>
                   <p className="text-[11px] text-gray-300 leading-snug">
@@ -1032,7 +1036,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
 
                 <div className="p-3.5 bg-[#1f172e] rounded-xl border border-[#3d2b4f] space-y-2">
                   <div className="flex items-center gap-2 font-black text-xs text-[#ff4d4d]">
-                    <span className="w-5 h-5 rounded-full bg-[#ff4d4d] text-[#15101e] text-[10px] flex items-center justify-center font-black">3</span>
+                    <span className="w-5 h-5 rounded-full bg-[#ff4d4d] text-[#15101e] text-[10px] flex items-center justify-center font-black shrink-0">3</span>
                     {lang === 'ru' ? "Хостинг Документации" : "Documentation Hosting"}
                   </div>
                   <p className="text-[11px] text-gray-300 leading-snug">
@@ -1050,7 +1054,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black uppercase text-gray-200 tracking-wider flex items-center gap-1.5">
-                    <Terminal size={14} className="text-[#ff4d4d]" />
+                    <Terminal size={15} className="text-[#ff4d4d] shrink-0" />
                     {lang === 'ru' ? "Готовые фрагменты кода интеграции" : "Integration Code Snippets"}
                   </h4>
                   <button
@@ -1074,7 +1078,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
               {/* Interactive API Playground */}
               <div className="pt-2 border-t border-[#3d2b4f] space-y-3">
                 <h4 className="text-xs font-black uppercase text-gray-200 tracking-wider flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-[#ff4d4d]" />
+                  <Sparkles size={15} className="text-[#ff4d4d] shrink-0" />
                   {lang === 'ru' ? "Интерактивная песочница функций SDK" : "Interactive SDK API Playground"}
                 </h4>
 
@@ -1135,7 +1139,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
               <div className="pt-3 border-t border-[#3d2b4f] space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black uppercase text-gray-200 tracking-wider flex items-center gap-1.5">
-                    <Shield size={14} className="text-[#ff4d4d]" />
+                    <Shield size={16} className="text-[#ff4d4d] shrink-0" />
                     {lang === 'ru' ? "Флаги фичей платформы & Плагины SDK" : "Platform Feature Flags & SDK Plugins"}
                   </h4>
                   <button
@@ -1177,8 +1181,8 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-3 bg-[#120d1c] p-4 rounded-xl border border-[#3d2b4f]">
                   <div className="flex-1 min-w-[200px]">
                     <div className="flex flex-wrap items-center gap-2">
-                      <BookOpen size={18} className="text-[#ff4d4d] shrink-0" />
-                      <h4 className="text-xs font-black uppercase text-white tracking-widest">
+                      <BookOpen size={20} className="text-[#ff4d4d] shrink-0" />
+                      <h4 className="text-xs sm:text-sm font-black uppercase text-white tracking-wider">
                         {lang === 'ru' ? "Автоматический Справочник SDK & Зависимостей" : "Automated SDK Reference & Dependencies"}
                       </h4>
                       <span className="text-[9px] font-bold uppercase bg-[#ff4d4d]/20 text-[#ff4d4d] px-2 py-0.5 rounded border border-[#ff4d4d]/30 shrink-0">
@@ -1204,9 +1208,9 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                           'success'
                         );
                       }}
-                      className="px-2.5 py-1.5 bg-[#251c35] hover:bg-[#3d2b4f] text-xs font-bold text-gray-200 hover:text-white rounded-lg border border-[#3d2b4f] transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                      className="px-3 py-1.5 bg-[#251c35] hover:bg-[#3d2b4f] text-xs font-bold text-gray-200 hover:text-white rounded-lg border border-[#3d2b4f] transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                     >
-                      <Code2 size={13} className="text-[#ff4d4d] shrink-0" />
+                      <Code2 size={16} className="text-[#ff4d4d] shrink-0" />
                       <span>{lang === 'ru' ? "Скопировать JSON" : "Copy JSON"}</span>
                     </button>
                   </div>
@@ -1223,7 +1227,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                         : 'bg-[#251c35] text-gray-400 hover:text-white border border-[#3d2b4f]'
                     }`}
                   >
-                    <PackageCheck size={14} className="shrink-0" />
+                    <PackageCheck size={16} className="shrink-0" />
                     <span>{lang === 'ru' ? "Реестр Зависимостей SDK" : "SDK Package Registry"} ({sdk.registry.getRegistryEntries().length})</span>
                   </button>
 
@@ -1236,7 +1240,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                         : 'bg-[#251c35] text-gray-400 hover:text-white border border-[#3d2b4f]'
                     }`}
                   >
-                    <Layers size={14} className="shrink-0" />
+                    <Layers size={16} className="shrink-0" />
                     <span>{lang === 'ru' ? "Обзор Зависимостей" : "Platform Overview"} ({sdk.reference.getPlatformDependencies().length})</span>
                   </button>
 
@@ -1249,7 +1253,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                         : 'bg-[#251c35] text-gray-400 hover:text-white border border-[#3d2b4f]'
                     }`}
                   >
-                    <Cpu size={14} className="shrink-0" />
+                    <Cpu size={16} className="shrink-0" />
                     <span>{lang === 'ru' ? "Модули & Методы SDK" : "SDK Modules & APIs"} ({sdk.reference.getSdkModules().length})</span>
                   </button>
 
@@ -1262,7 +1266,7 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                         : 'bg-[#251c35] text-gray-400 hover:text-white border border-[#3d2b4f]'
                     }`}
                   >
-                    <Code2 size={14} className="shrink-0" />
+                    <Code2 size={16} className="shrink-0" />
                     <span>{lang === 'ru' ? "Полный JSON Документ" : "Live JSON Schema"}</span>
                   </button>
                 </div>

@@ -338,7 +338,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
       {/* Floating Toggle Button Badge */}
       <button
         onClick={onToggle}
-        className={`fixed bottom-6 left-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full border shadow-2xl font-mono text-xs font-bold transition-all duration-300 ${
+        className={`fixed bottom-4 sm:bottom-6 left-4 sm:left-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full border shadow-2xl font-mono text-xs font-bold whitespace-nowrap select-none shrink-0 transition-all duration-300 ${
           isOpen
             ? 'bg-[#ff4d4d] text-white border-white/30 shadow-[0_0_20px_rgba(255,77,77,0.6)] scale-105'
             : 'bg-[#150e24]/90 backdrop-blur-md text-gray-200 border-[#3d2b4f] hover:border-[#ff4d4d] hover:shadow-[0_0_15px_rgba(255,77,77,0.4)]'

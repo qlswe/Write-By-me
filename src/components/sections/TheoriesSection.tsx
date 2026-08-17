@@ -21,6 +21,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { SafeHtml } from '../security/AhaSecurity';
 import { TheorySkeletonGrid } from '../ui/SkeletonLoaders';
 import { AhaProtocolDiagram } from '../ui/AhaProtocolDiagram';
+import { getLocalizedCategory } from '../../utils/categories';
 
 interface TheoriesSectionProps {
   lang: Language;
@@ -168,7 +169,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
 
               <div className="print-cover-body">
                 <div className="print-cover-badge">
-                  {(selectedTheory.category || 'General').toUpperCase()}
+                  {getLocalizedCategory(selectedTheory.category, lang).toUpperCase()}
                 </div>
                 <h1 className="print-cover-title">
                   {selectedTheory.title[lang] || selectedTheory.title['en']}
@@ -211,7 +212,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30 category-badge-print">
-                    {selectedTheory.category}
+                    {getLocalizedCategory(selectedTheory.category, lang)}
                   </span>
                   <div className="flex items-center gap-2 text-white/40 text-xs font-medium print:hidden">
                     <Clock size={12} />
@@ -249,7 +250,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                 <button 
                   onClick={() => exportContentToPDF({
                     title: selectedTheory.title[lang] || selectedTheory.title['en'],
-                    category: selectedTheory.category,
+                    category: getLocalizedCategory(selectedTheory.category, lang),
                     createdAt: selectedTheory.createdAt,
                     summary: selectedTheory.summary?.[lang] || selectedTheory.summary?.['en'],
                     contentHtml: selectedTheory.content[lang] || selectedTheory.content['en'],
@@ -329,7 +330,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
               onClose={() => setShowCiteModal(false)}
               title={selectedTheory.title[lang] || selectedTheory.title['en']}
               htmlContent={selectedTheory.content[lang] || selectedTheory.content['en']}
-              category={selectedTheory.category}
+              category={getLocalizedCategory(selectedTheory.category, lang)}
               createdAt={selectedTheory.createdAt}
               articleId={selectedTheory.id}
               lang={lang}

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { motion } from 'motion/react';
 import { X, Save, Video, Camera, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
@@ -43,6 +43,60 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
   const [content, setContent] = useState<Record<string, string>>(
     typeof post?.content === 'object' ? post.content : LANGUAGES.reduce((acc, l) => ({ ...acc, [l]: post?.content || '' }), {})
   );
+
+  // Undo / Redo history stacks per language
+  const [historyPast, setHistoryPast] = useState<Record<string, string[]>>({});
+  const [historyFuture, setHistoryFuture] = useState<Record<string, string[]>>({});
+
+  const handleContentChange = useCallback((newText: string, recordHistory: boolean = true) => {
+    const prevText = content[currentLang] || '';
+    if (newText === prevText) return;
+
+    if (recordHistory) {
+      setHistoryPast(prev => ({
+        ...prev,
+        [currentLang]: [...(prev[currentLang] || []), prevText].slice(-50)
+      }));
+      setHistoryFuture(prev => ({
+        ...prev,
+        [currentLang]: []
+      }));
+    }
+
+    setContent(prev => ({
+      ...prev,
+      [currentLang]: newText
+    }));
+  }, [content, currentLang]);
+
+  const handleUndo = useCallback(() => {
+    const past = historyPast[currentLang] || [];
+    if (past.length === 0) return;
+
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, past.length - 1);
+    const current = content[currentLang] || '';
+
+    setHistoryPast(prev => ({ ...prev, [currentLang]: newPast }));
+    setHistoryFuture(prev => ({ ...prev, [currentLang]: [current, ...(prev[currentLang] || [])] }));
+    setContent(prev => ({ ...prev, [currentLang]: previous }));
+  }, [historyPast, content, currentLang]);
+
+  const handleRedo = useCallback(() => {
+    const future = historyFuture[currentLang] || [];
+    if (future.length === 0) return;
+
+    const next = future[0];
+    const newFuture = future.slice(1);
+    const current = content[currentLang] || '';
+
+    setHistoryPast(prev => ({ ...prev, [currentLang]: [...(prev[currentLang] || []), current] }));
+    setHistoryFuture(prev => ({ ...prev, [currentLang]: newFuture }));
+    setContent(prev => ({ ...prev, [currentLang]: next }));
+  }, [historyFuture, content, currentLang]);
+
+  const canUndo = (historyPast[currentLang] || []).length > 0;
+  const canRedo = (historyFuture[currentLang] || []).length > 0;
   
   const [isSaving, setIsSaving] = useState(false);
 
@@ -331,10 +385,14 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
             <MarkdownEditorToolbar
               textareaRef={textareaRef}
               content={content[currentLang] || ''}
-              onChange={(val) => setContent(prev => ({ ...prev, [currentLang]: val }))}
+              onChange={handleContentChange}
               viewMode={viewMode}
               setViewMode={setViewMode}
               lang={lang}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              canUndo={canUndo}
+              canRedo={canRedo}
             />
 
             {/* Content Editor / Preview / Split */}
@@ -343,7 +401,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
                 <textarea 
                   ref={textareaRef}
                   value={content[currentLang] || ''}
-                  onChange={(e) => setContent(prev => ({ ...prev, [currentLang]: e.target.value }))}
+                  onChange={(e) => handleContentChange(e.target.value)}
                   className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-6 text-white font-mono text-sm leading-relaxed focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[350px] placeholder:text-white/40 custom-scrollbar"
                   placeholder={t.placeholderContent || '# Заголовок\n\n**Жирный текст** и *курсив*.\n\n- Пункт 1\n- Пункт 2'}
                 />
@@ -366,7 +424,7 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
                   <textarea 
                     ref={textareaRef}
                     value={content[currentLang] || ''}
-                    onChange={(e) => setContent(prev => ({ ...prev, [currentLang]: e.target.value }))}
+                    onChange={(e) => handleContentChange(e.target.value)}
                     className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-5 py-5 text-white font-mono text-xs sm:text-sm leading-relaxed focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[350px] placeholder:text-white/40 custom-scrollbar"
                     placeholder={t.placeholderContent}
                   />

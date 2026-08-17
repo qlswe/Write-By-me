@@ -908,7 +908,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                         className="flex items-center justify-center gap-1.5 px-4 py-2 bg-[#ff4d4d]/20 hover:bg-[#ff4d4d]/30 border border-[#ff4d4d]/40 text-[#ff4d4d] hover:text-white font-black text-[11px] uppercase tracking-wider rounded-xl shadow-sm transition-all active:scale-95"
                       >
                         <Plus size={14} className="stroke-[3]" />
-                        <span>{lang === 'ru' ? '+ Сториз' : '+ Story'}</span>
+                        <span>{lang === 'ru' ? 'Сториз' : 'Story'}</span>
                       </button>
                     </>
                   )}

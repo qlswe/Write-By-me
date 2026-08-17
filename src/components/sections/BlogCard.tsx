@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Star, Edit, Trash2, ArrowRight, Calendar, Share2, Clock } from 'lucide-react';
+import { Star, Edit, Trash2, ArrowRight, Calendar, Share2, Check, Clock } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { TimeAgo } from '../ui/TimeAgo';
 import { MediaViewer } from '../ui/MediaViewer';
 import { calculateReadTime } from '../../utils/time';
+import { getLocalizedCategory } from '../../utils/categories';
 
 interface BlogCardProps {
   post: any;
@@ -30,17 +31,49 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
 }) => {
   const t = translations[lang];
   const { user, isAdmin } = useAuth();
+  const [copied, setCopied] = useState(false);
   const readTime = calculateReadTime(post.content, post.summary, lang);
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}${window.location.pathname}?post=${post.id}`;
+    if (navigator.share) {
+      navigator.share({
+        title: post.title[lang] || post.title['en'],
+        text: post.summary[lang] || post.summary['en'],
+        url: url,
+      }).catch((err) => {
+        if (err.name !== 'AbortError') {
+          copyToClipboard(url);
+        }
+      });
+    } else {
+      copyToClipboard(url);
+    }
+  };
+
+  const copyToClipboard = (url: string) => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      // Fallback if clipboard fails
+    });
+  };
   
   return (
     <motion.div 
       layout
-      initial={{ opacity: 0, y: 30, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ y: -6, scale: 1.015 }}
+      initial={{ opacity: 0, y: 16, filter: 'blur(4px)' }}
+      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+      exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
+      whileHover={{ y: -4, scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.4, delay: index * 0.04, type: "spring", damping: 22, stiffness: 280 }}
+      transition={{ 
+        duration: 0.45, 
+        delay: Math.min(index * 0.05, 0.5), 
+        ease: [0.22, 1, 0.36, 1] 
+      }}
       onClick={onClick}
       className="group relative bg-[#15101e]/60 hover:bg-[#251c35] p-6 sm:p-8 rounded-3xl border border-[#3d2b4f]/40 hover:border-[#ff4d4d]/50 hover:shadow-[0_12px_40px_rgba(255,77,77,0.15)] transition-all cursor-pointer overflow-hidden"
     >
@@ -50,7 +83,7 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
       <div className="flex items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           <div className="px-3.5 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20 whitespace-nowrap">
-            {t[`filter${post.category.charAt(0).toUpperCase() + post.category.slice(1)}` as keyof typeof t] || post.category}
+            {getLocalizedCategory(post.category, lang)}
           </div>
           <div className="px-3 py-1.5 rounded-full bg-[#251c35] text-white/70 text-[10px] font-bold tracking-wider border border-[#3d2b4f]/60 flex items-center gap-1.5 shadow-sm whitespace-nowrap">
             <Clock size={11} className="text-[#ff4d4d]" />
@@ -121,15 +154,15 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
             </>
           )}
           <button 
-            className="p-2 rounded-xl bg-[#251c35] text-white/50 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10 transition-all border border-[#3d2b4f]/50"
-            title={t.shareBtn}
-            onClick={(e) => {
-              e.stopPropagation();
-              const url = `${window.location.origin}${window.location.pathname}?post=${post.id}`;
-              navigator.clipboard.writeText(url);
-            }}
+            className={`p-2 rounded-xl transition-all border ${
+              copied
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : 'bg-[#251c35] text-white/50 hover:text-[#ff4d4d] hover:border-[#ff4d4d]/30 hover:bg-[#ff4d4d]/10 border-[#3d2b4f]/50'
+            }`}
+            title={copied ? (lang === 'ru' ? 'Ссылка скопирована' : 'Link Copied') : t.shareBtn}
+            onClick={handleShare}
           >
-            <Share2 size={15} />
+            {copied ? <Check size={15} className="text-emerald-400" /> : <Share2 size={15} />}
           </button>
         </div>
       </div>

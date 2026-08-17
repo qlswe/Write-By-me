@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, createContext, useContext, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { Copy, Check, ExternalLink, X, Maximize2, Hash } from 'lucide-react';
+import { Copy, Check, ExternalLink, X, Maximize2, Hash, SlidersHorizontal, ChevronLeft, ChevronRight, WrapText } from 'lucide-react';
 import { sanitizeContent } from '../../utils/sanitizer';
 import { KuruVideoPlayer } from './KuruVideoPlayer';
 import { LazyImage } from './LazyImage';
@@ -14,6 +14,8 @@ interface MarkdownRendererProps {
   className?: string;
   allowHtml?: boolean;
 }
+
+const PreContext = createContext<boolean>(false);
 
 /**
  * Utility to extract clean plain text from Markdown or HTML content
@@ -46,69 +48,220 @@ export const extractPlainText = (raw: string): string => {
 };
 
 /**
- * Code Block subcomponent with syntax styling and copy functionality
+ * Code Block subcomponent for block-level code with syntax styling, copy functionality,
+ * and mobile-friendly horizontal scroll slider bar
  */
-const CodeBlock: React.FC<{
-  inline?: boolean;
-  className?: string;
+const CodeBlockWrapper: React.FC<{
   children?: React.ReactNode;
-}> = ({ inline, className, children }) => {
+  [key: string]: any;
+}> = ({ children, ...props }) => {
   const [copied, setCopied] = useState(false);
-  const match = /language-(\w+)/.exec(className || '');
-  const language = match ? match[1] : '';
-  const textContent = String(children).replace(/\n$/, '');
+  const [canScroll, setCanScroll] = useState(false);
+  const [scrollPercent, setScrollPercent] = useState(0);
+  const [isWordWrap, setIsWordWrap] = useState(false);
+  const preRef = useRef<HTMLPreElement>(null);
 
-  if (inline) {
-    return (
-      <code className="px-1.5 py-0.5 mx-0.5 rounded-lg bg-[#15101e] text-[#ff7a7a] font-mono text-xs sm:text-sm border border-[#3d2b4f]/60 font-semibold">
-        {children}
-      </code>
-    );
-  }
+  let language = '';
+  let textContent = '';
+
+  const extractCodeInfo = (node: any) => {
+    if (!node) return;
+    if (React.isValidElement(node)) {
+      const p = node.props as any;
+      if (p?.className) {
+        const match = /language-(\w+)/.exec(p.className);
+        if (match) language = match[1];
+      }
+      if (p?.children) {
+        extractCodeInfo(p.children);
+      }
+    } else if (Array.isArray(node)) {
+      node.forEach(extractCodeInfo);
+    } else if (typeof node === 'string') {
+      textContent += node;
+    } else if (typeof node === 'number') {
+      textContent += String(node);
+    }
+  };
+
+  extractCodeInfo(children);
+
+  const cleanText = textContent.replace(/\n$/, '');
+
+  const checkScrollability = useCallback(() => {
+    const el = preRef.current;
+    if (!el) return;
+    const scrollable = el.scrollWidth > el.clientWidth + 4;
+    setCanScroll(scrollable);
+    if (scrollable) {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll > 0) {
+        setScrollPercent(Math.min(100, Math.max(0, (el.scrollLeft / maxScroll) * 100)));
+      }
+    } else {
+      setScrollPercent(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkScrollability();
+
+    const el = preRef.current;
+    if (!el) return;
+
+    const ro = new ResizeObserver(() => {
+      checkScrollability();
+    });
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, [children, isWordWrap, checkScrollability]);
+
+  const handlePreScroll = () => {
+    const el = preRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll > 0) {
+      setScrollPercent(Math.min(100, Math.max(0, (el.scrollLeft / maxScroll) * 100)));
+    }
+  };
+
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Number(e.target.value);
+    setScrollPercent(val);
+    const el = preRef.current;
+    if (el) {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (maxScroll > 0) {
+        el.scrollLeft = (val / 100) * maxScroll;
+      }
+    }
+  };
+
+  const handleScrollStep = (dir: 'left' | 'right') => {
+    const el = preRef.current;
+    if (!el) return;
+    const step = Math.max(120, Math.round(el.clientWidth * 0.45));
+    el.scrollBy({ left: dir === 'left' ? -step : step, behavior: 'smooth' });
+  };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(textContent);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (cleanText) {
+      navigator.clipboard.writeText(cleanText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
-    <div className="relative my-5 rounded-2xl overflow-hidden bg-[#120c1b] border border-[#3d2b4f] shadow-2xl group">
+    <div className="relative my-5 rounded-2xl overflow-hidden bg-[#120c1b] border border-[#3d2b4f] shadow-2xl group not-prose">
       {/* Code Header Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#1b1227] border-b border-[#3d2b4f]/60">
+      <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-[#1b1227] border-b border-[#3d2b4f]/60 select-none">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
           <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
           <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
           {language && (
-            <span className="ml-2 text-[10px] font-mono font-bold uppercase tracking-wider text-white/50">
+            <span className="ml-2 text-[10px] font-mono font-bold uppercase tracking-wider text-white/60">
               {language}
             </span>
           )}
         </div>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-[#3d2b4f]/40 hover:bg-[#ff4d4d] text-white/70 hover:text-[#15101e] transition-all cursor-pointer"
-          title="Copy code"
-        >
-          {copied ? (
-            <>
-              <Check size={12} className="text-green-400 group-hover:text-[#15101e]" />
-              <span>Copied</span>
-            </>
-          ) : (
-            <>
-              <Copy size={12} />
-              <span>Copy</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-1.5">
+          {/* Toggle word wrap */}
+          <button
+            type="button"
+            onClick={() => setIsWordWrap(prev => !prev)}
+            className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border transition-all cursor-pointer ${
+              isWordWrap 
+                ? 'bg-[#ff4d4d]/20 text-[#ff4d4d] border-[#ff4d4d]/40 shadow-sm' 
+                : 'bg-[#3d2b4f]/40 hover:bg-[#3d2b4f]/70 text-white/70 border-transparent'
+            }`}
+            title={isWordWrap ? "Выключить перенос строк" : "Включить перенос строк"}
+          >
+            <WrapText size={12} className="shrink-0" />
+            <span className="hidden sm:inline">{isWordWrap ? "Wrap on" : "Wrap"}</span>
+          </button>
+
+          {/* Copy Button */}
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-[#3d2b4f]/40 hover:bg-[#ff4d4d] text-white/80 hover:text-[#15101e] transition-all cursor-pointer"
+            title="Скопировать код"
+          >
+            {copied ? (
+              <>
+                <Check size={12} className="text-green-400 group-hover:text-[#15101e]" />
+                <span>Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy size={12} />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Code Body */}
-      <pre className="p-4 sm:p-5 overflow-x-auto text-xs sm:text-sm font-mono leading-relaxed text-cyan-200 custom-scrollbar">
-        <code>{children}</code>
-      </pre>
+      <PreContext.Provider value={true}>
+        <pre 
+          ref={preRef}
+          onScroll={handlePreScroll}
+          className={`p-4 sm:p-5 text-xs sm:text-sm font-mono leading-relaxed text-cyan-200 custom-scrollbar-code m-0 bg-transparent border-0 select-text ${
+            isWordWrap ? 'whitespace-pre-wrap break-words overflow-x-hidden' : 'overflow-x-auto whitespace-pre'
+          }`}
+        >
+          {children}
+        </pre>
+      </PreContext.Provider>
+
+      {/* Mobile & Desktop Horizontal Code Slider / Controls */}
+      {canScroll && !isWordWrap && (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[#170f24] border-t border-[#3d2b4f]/70 select-none text-[11px]">
+          {/* Scroll Left Step Button */}
+          <button
+            type="button"
+            onClick={() => handleScrollStep('left')}
+            className="p-1.5 rounded-lg bg-[#251838] hover:bg-[#ff4d4d] text-white/80 hover:text-white transition-all active:scale-95 shrink-0 cursor-pointer shadow-sm"
+            title="Прокрутить код влево"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {/* Interactive Scroll Slider Bar */}
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <SlidersHorizontal size={13} className="text-[#ff4d4d] shrink-0" />
+            <div className="relative flex-1 flex items-center">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={Math.round(scrollPercent)}
+                onChange={handleSliderChange}
+                className="w-full h-2.5 bg-[#251838] rounded-full appearance-none cursor-ew-resize accent-[#ff4d4d] border border-[#3d2b4f]/80 focus:outline-none"
+                title="Ползунок прокрутки кода"
+              />
+            </div>
+            <span className="text-[10px] font-mono text-gray-400 shrink-0 font-bold w-9 text-right">
+              {Math.round(scrollPercent)}%
+            </span>
+          </div>
+
+          {/* Scroll Right Step Button */}
+          <button
+            type="button"
+            onClick={() => handleScrollStep('right')}
+            className="p-1.5 rounded-lg bg-[#251838] hover:bg-[#ff4d4d] text-white/80 hover:text-white transition-all active:scale-95 shrink-0 cursor-pointer shadow-sm"
+            title="Прокрутить код вправо"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -261,8 +414,28 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               </li>
             ),
 
-            // Code and syntax
-            code: CodeBlock as any,
+            // Preformatted code blocks
+            pre: CodeBlockWrapper,
+
+            // Code and syntax (safe inline code with no div/pre inside p)
+            code: ({ node, className, children, ...props }: any) => {
+              const isInsidePre = useContext(PreContext);
+              if (isInsidePre) {
+                return (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              }
+              return (
+                <code
+                  className="px-1.5 py-0.5 mx-0.5 rounded-lg bg-[#15101e] text-[#ff7a7a] font-mono text-xs sm:text-sm border border-[#3d2b4f]/60 font-semibold inline"
+                  {...props}
+                >
+                  {children}
+                </code>
+              );
+            },
 
             // Tables
             table: ({ node, children, ...props }) => (
@@ -350,9 +523,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             video: ({ node, src, ...props }: any) => {
               if (src) {
                 return (
-                  <div className="my-6">
+                  <span className="block my-6">
                     <KuruVideoPlayer src={src} isCompact={false} />
-                  </div>
+                  </span>
                 );
               }
               return <video controls className="w-full rounded-2xl my-6 bg-black" {...props} />;

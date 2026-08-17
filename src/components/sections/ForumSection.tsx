@@ -59,6 +59,8 @@ interface ForumSectionProps {
   handleCopy?: (text: string) => void;
   onEditEvent?: any;
   onCreateEvent?: any;
+  onEditPromo?: (promo: any) => void;
+  onCreatePromo?: () => void;
 }
 
 export const ForumSection: React.FC<ForumSectionProps> = ({
@@ -70,7 +72,9 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
   promoCodes = [],
   handleCopy,
   onEditEvent,
-  onCreateEvent
+  onCreateEvent,
+  onEditPromo,
+  onCreatePromo
 }) => {
   const { user } = useAuth();
   const t = translations[lang];
@@ -723,8 +727,8 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
               handleCopy={handleCopy || (() => {})}
               promoCodes={promoCodes}
               role={role}
-              onOpenEditor={() => {}}
-              onEdit={() => {}}
+              onOpenEditor={onCreatePromo}
+              onEdit={onEditPromo}
             />
           </div>
         </div>

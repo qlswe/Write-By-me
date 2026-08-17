@@ -4,6 +4,7 @@ import { Star, Share2, Check, Edit, Trash2, ArrowRight, Clock } from 'lucide-rea
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { calculateReadTime } from '../../utils/time';
+import { getLocalizedCategory } from '../../utils/categories';
 
 
 interface TheoryCardProps {
@@ -79,7 +80,7 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
       <div className="flex items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           <div className="px-3.5 py-1.5 rounded-full bg-[#ff4d4d]/10 text-[#ff4d4d] text-[10px] font-black uppercase tracking-widest border border-[#ff4d4d]/20 whitespace-nowrap">
-            {t[`filter${theory.category.charAt(0).toUpperCase() + theory.category.slice(1)}` as keyof typeof t] || theory.category}
+            {getLocalizedCategory(theory.category, lang)}
           </div>
           <div className="px-3 py-1.5 rounded-full bg-[#251c35] text-white/70 text-[10px] font-bold tracking-wider border border-[#3d2b4f]/60 flex items-center gap-1.5 shadow-sm whitespace-nowrap">
             <Clock size={11} className="text-[#ff4d4d]" />

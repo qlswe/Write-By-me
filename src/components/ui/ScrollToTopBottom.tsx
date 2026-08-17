@@ -15,13 +15,15 @@ export const ScrollToTopBottom: React.FC<ScrollToTopBottomProps> = ({ lang }) =>
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const totalHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+      const clientHeight = window.innerHeight || document.documentElement.clientHeight;
+      const scrollHeight = totalHeight - clientHeight;
       
       if (scrollHeight > 0) {
         const progress = Math.min(100, Math.max(0, (scrollTop / scrollHeight) * 100));
         setScrollProgress(progress);
-        setIsAtTop(scrollTop < 100);
-        setIsAtBottom(scrollHeight - scrollTop < 100);
+        setIsAtTop(scrollTop < 80);
+        setIsAtBottom(scrollHeight - scrollTop < 80);
       } else {
         setScrollProgress(0);
         setIsAtTop(true);
@@ -43,8 +45,9 @@ export const ScrollToTopBottom: React.FC<ScrollToTopBottomProps> = ({ lang }) =>
   };
 
   const scrollToBottom = () => {
+    const totalHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
     window.scrollTo({
-      top: document.documentElement.scrollHeight,
+      top: totalHeight,
       behavior: 'smooth'
     });
   };
@@ -71,7 +74,7 @@ export const ScrollToTopBottom: React.FC<ScrollToTopBottomProps> = ({ lang }) =>
   return (
     <div
       id="home-scroll-nav-group"
-      className="fixed bottom-[84px] right-6 z-30 flex flex-col items-center gap-1 p-1 bg-[#15101e]/90 backdrop-blur-md border border-[#3d2b4f] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.6)]"
+      className="fixed bottom-[74px] sm:bottom-[84px] right-4 sm:right-6 z-30 flex flex-col items-center gap-1 p-1 bg-[#15101e]/90 backdrop-blur-md border border-[#3d2b4f] rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.6)]"
       role="group"
       aria-label={lang === 'ru' ? 'Навигация по странице' : 'Page Scroll Navigation'}
     >

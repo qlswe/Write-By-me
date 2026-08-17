@@ -33,6 +33,7 @@ import { MediaViewer } from '../ui/MediaViewer';
 import { exportContentToPDF } from '../../utils/pdfExport';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 import { safeStorage } from '../../utils/securityStorage';
+import { getLocalizedCategory } from '../../utils/categories';
 
 export interface PostReactionMap {
   [emoji: string]: string[]; // emoji -> array of user uids
@@ -352,7 +353,7 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
                 <>
                   <span>•</span>
                   <span className="px-2 py-0.5 rounded-md bg-[#251c35] text-white/70 text-[10px] font-black uppercase tracking-wider">
-                    {post.category}
+                    {getLocalizedCategory(post.category, lang)}
                   </span>
                 </>
               )}

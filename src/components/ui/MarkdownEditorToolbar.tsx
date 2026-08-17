@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   Bold, 
   Italic, 
@@ -16,9 +16,11 @@ import {
   Columns,
   Minus,
   Sparkles,
-  HelpCircle
+  HelpCircle,
+  Undo2,
+  Redo2
 } from 'lucide-react';
-import { Language } from '../../data/translations';
+import { Language, translations } from '../../data/translations';
 
 interface MarkdownEditorToolbarProps {
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
@@ -29,6 +31,10 @@ interface MarkdownEditorToolbarProps {
   lang?: Language;
   showMediaInsert?: boolean;
   onInsertMedia?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 }
 
 export const MarkdownEditorToolbar: React.FC<MarkdownEditorToolbarProps> = ({
@@ -40,7 +46,49 @@ export const MarkdownEditorToolbar: React.FC<MarkdownEditorToolbarProps> = ({
   lang = 'ru',
   showMediaInsert,
   onInsertMedia,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }) => {
+  const t = translations[lang] || translations.ru;
+
+  // Keyboard shortcut listener for Ctrl+Z and Ctrl+Y on the textarea
+  useEffect(() => {
+    const textarea = textareaRef?.current;
+    if (!textarea) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          // Redo
+          if (onRedo && canRedo) {
+            e.preventDefault();
+            onRedo();
+          }
+        } else {
+          // Undo
+          if (onUndo && canUndo) {
+            e.preventDefault();
+            onUndo();
+          }
+        }
+      } else if (isCmdOrCtrl && e.key.toLowerCase() === 'y') {
+        // Redo
+        if (onRedo && canRedo) {
+          e.preventDefault();
+          onRedo();
+        }
+      }
+    };
+
+    textarea.addEventListener('keydown', handleKeyDown);
+    return () => textarea.removeEventListener('keydown', handleKeyDown);
+  }, [textareaRef, onUndo, onRedo, canUndo, canRedo]);
+
   const insertSyntax = (before: string, after: string = '', defaultText: string = '') => {
     const textarea = textareaRef?.current;
     if (!textarea) {
@@ -89,6 +137,30 @@ export const MarkdownEditorToolbar: React.FC<MarkdownEditorToolbarProps> = ({
     <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[#1A1528] rounded-2xl border border-[#3d2b4f]/60 mb-2">
       {/* Format Action Buttons */}
       <div className="flex flex-wrap items-center gap-1">
+        {/* Undo Button */}
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-[#ff4d4d]/20 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer flex items-center gap-1"
+          title={`${t.undoBtn || (isRu ? 'Отменить' : 'Undo')} (Ctrl+Z)`}
+        >
+          <Undo2 size={15} />
+        </button>
+
+        {/* Redo Button */}
+        <button
+          type="button"
+          onClick={onRedo}
+          disabled={!canRedo}
+          className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-[#ff4d4d]/20 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer flex items-center gap-1"
+          title={`${t.redoBtn || (isRu ? 'Повторить' : 'Redo')} (Ctrl+Y / Ctrl+Shift+Z)`}
+        >
+          <Redo2 size={15} />
+        </button>
+
+        <div className="w-[1px] h-5 bg-[#3d2b4f] mx-1" />
+
         {/* Bold */}
         <button
           type="button"

@@ -1142,6 +1142,8 @@ export default function App() {
                   handleCopy={handleCopy}
                   onEditEvent={setEditingEvent}
                   onCreateEvent={() => setIsCreatingEvent(true)}
+                  onEditPromo={setEditingPromo}
+                  onCreatePromo={() => setEditingPromo({} as any)}
                 />
               )}
 

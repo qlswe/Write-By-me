@@ -35,7 +35,9 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
 }
 
 export function applyPrimaryAccentColor(colorHex: string) {
-  const color = (colorHex || '#ff4d4d').trim().toLowerCase();
+  const cleanHex = (colorHex || '').replace('#', '').trim().toLowerCase();
+  const isValidHex = /^[0-9a-f]{3}$|^[0-9a-f]{6}$/.test(cleanHex);
+  const color = isValidHex ? `#${cleanHex}` : '#ff4d4d';
   const rgb = hexToRgb(color) || { r: 255, g: 77, b: 77 };
 
   try {

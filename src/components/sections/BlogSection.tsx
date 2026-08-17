@@ -20,6 +20,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { SafeHtml } from '../security/AhaSecurity';
 import { MediaViewer } from '../ui/MediaViewer';
 import { BlogSkeletonGrid } from '../ui/SkeletonLoaders';
+import { getLocalizedCategory } from '../../utils/categories';
 
 interface BlogSectionProps {
   lang: Language;
@@ -142,7 +143,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
 
               <div className="print-cover-body">
                 <div className="print-cover-badge">
-                  {(selectedPost.category || 'General').toUpperCase()}
+                  {getLocalizedCategory(selectedPost.category, lang).toUpperCase()}
                 </div>
                 <h1 className="print-cover-title">
                   {selectedPost.title[lang] || selectedPost.title['en']}
@@ -185,7 +186,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30 category-badge-print">
-                    {selectedPost.category}
+                    {getLocalizedCategory(selectedPost.category, lang)}
                   </span>
                   <div className="flex items-center gap-2 text-white/40 text-xs font-medium print:hidden">
                     <Clock size={12} />
@@ -223,7 +224,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                 <button 
                   onClick={() => exportContentToPDF({
                     title: selectedPost.title[lang] || selectedPost.title['en'],
-                    category: selectedPost.category,
+                    category: getLocalizedCategory(selectedPost.category, lang),
                     createdAt: selectedPost.createdAt,
                     summary: selectedPost.summary?.[lang] || selectedPost.summary?.['en'],
                     contentHtml: selectedPost.content[lang] || selectedPost.content['en'],
@@ -285,7 +286,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
               onClose={() => setShowCiteModal(false)}
               title={selectedPost.title[lang] || selectedPost.title['en']}
               htmlContent={selectedPost.content[lang] || selectedPost.content['en']}
-              category={selectedPost.category}
+              category={getLocalizedCategory(selectedPost.category, lang)}
               createdAt={selectedPost.createdAt}
               articleId={selectedPost.id}
               lang={lang}

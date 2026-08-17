@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ChevronLeft, ChevronRight, Heart, Flame, Sparkles, Trash2, Eye, Share2, Smile, Clock } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Heart, Flame, Sparkles, Trash2, Eye } from 'lucide-react';
 import { Language } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { UserStory } from '../../hooks/useStories';
@@ -37,6 +38,30 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     setCurrentIndex(initialIndex);
     setProgress(0);
   }, [initialIndex, isOpen]);
+
+  // Lock body scroll and handle Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowLeft') {
+        handlePrev();
+      } else if (e.key === 'ArrowRight') {
+        handleNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, currentIndex, stories.length]);
 
   const currentStory = stories[currentIndex];
 
@@ -102,10 +127,15 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
     }
   };
 
-  return (
+  const content = (
     <AnimatePresence>
       <div 
-        className="fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-xl select-none"
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md select-none p-3 sm:p-4"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
         onMouseDown={() => setIsPaused(true)}
         onMouseUp={() => setIsPaused(false)}
         onTouchStart={() => setIsPaused(true)}
@@ -113,40 +143,44 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       >
         {/* Close Button Top Right */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-5 right-5 z-50 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all backdrop-blur-md"
+          className="absolute top-4 right-4 z-50 p-2.5 rounded-full bg-white/15 hover:bg-white/30 text-white transition-all backdrop-blur-md shadow-lg cursor-pointer"
+          title="Close"
         >
-          <X size={24} />
+          <X size={20} />
         </button>
 
         {/* Prev Arrow */}
         {currentIndex > 0 && (
           <button
+            type="button"
             onClick={handlePrev}
-            className="hidden md:flex absolute left-8 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all backdrop-blur-md hover:scale-110"
+            className="hidden md:flex absolute left-6 sm:left-12 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all backdrop-blur-md hover:scale-110 shadow-lg cursor-pointer"
           >
-            <ChevronLeft size={28} />
+            <ChevronLeft size={24} />
           </button>
         )}
 
         {/* Next Arrow */}
         {currentIndex < stories.length - 1 && (
           <button
+            type="button"
             onClick={handleNext}
-            className="hidden md:flex absolute right-8 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all backdrop-blur-md hover:scale-110"
+            className="hidden md:flex absolute right-6 sm:right-12 top-1/2 -translate-y-1/2 z-40 p-3 rounded-full bg-white/10 hover:bg-white/25 text-white transition-all backdrop-blur-md hover:scale-110 shadow-lg cursor-pointer"
           >
-            <ChevronRight size={28} />
+            <ChevronRight size={24} />
           </button>
         )}
 
-        {/* Story Card Container */}
+        {/* Compact Story Card Container */}
         <motion.div
           key={currentStory.id}
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.2 }}
-          className={`w-full max-w-[420px] h-[85vh] max-h-[780px] rounded-3xl overflow-hidden shadow-2xl relative flex flex-col justify-between p-5 border border-white/10 ${
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={{ duration: 0.18 }}
+          className={`w-full max-w-[340px] sm:max-w-[360px] h-[72vh] sm:h-[75vh] max-h-[600px] rounded-[1.75rem] overflow-hidden shadow-2xl relative flex flex-col justify-between p-4 sm:p-5 border border-white/15 shrink-0 ${
             currentStory.gradient || 'bg-gradient-to-b from-[#ff2d55] via-[#8e24aa] to-[#240046]'
           }`}
         >
@@ -163,9 +197,9 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           )}
 
           {/* Top Bars & Header */}
-          <div className="relative z-20 space-y-3">
+          <div className="relative z-20 space-y-2.5">
             {/* Story Progress Indicators */}
-            <div className="flex gap-1.5 w-full">
+            <div className="flex gap-1 w-full">
               {stories.map((s, idx) => (
                 <div
                   key={s.id}
@@ -183,19 +217,19 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
             {/* Author Info & Actions */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-amber-400 to-[#ff4d4d]">
+              <div className="flex items-center gap-2">
+                <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-amber-400 to-[#ff4d4d] shrink-0">
                   <img
                     src={currentStory.authorPhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentStory.authorName)}&background=1c1528&color=fff`}
                     alt={currentStory.authorName}
-                    className="w-9 h-9 rounded-full object-cover border border-black/40"
+                    className="w-8 h-8 rounded-full object-cover border border-black/40"
                   />
                 </div>
-                <div>
-                  <h4 className="text-sm font-black text-white drop-shadow-md">
+                <div className="min-w-0">
+                  <h4 className="text-xs sm:text-sm font-black text-white drop-shadow-md truncate">
                     {currentStory.authorName}
                   </h4>
-                  <p className="text-[10px] text-white/70 font-bold drop-shadow">
+                  <p className="text-[9px] sm:text-[10px] text-white/70 font-bold drop-shadow truncate">
                     Honkai Star Rail Story
                   </p>
                 </div>
@@ -203,6 +237,7 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
 
               {isOwnStory && (
                 <button
+                  type="button"
                   onClick={() => {
                     if (onDeleteStory) {
                       onDeleteStory(currentStory.id);
@@ -210,24 +245,24 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
                       else handleNext();
                     }
                   }}
-                  className="p-2 rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/40 hover:text-white transition-colors"
+                  className="p-1.5 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/40 hover:text-white transition-colors cursor-pointer"
                   title={lang === 'ru' ? 'Удалить историю' : 'Delete story'}
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={15} />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Left/Right Tap zones for mobile */}
-          <div className="absolute inset-0 z-10 flex">
+          {/* Left/Right Tap zones for navigation */}
+          <div className="absolute inset-0 z-10 flex pointer-events-auto">
             <div className="w-1/3 h-full cursor-pointer" onClick={handlePrev} />
             <div className="w-2/3 h-full cursor-pointer" onClick={handleNext} />
           </div>
 
           {/* Story Text / Quote Center */}
-          <div className="relative z-20 my-auto text-center px-4">
-            <p className="text-xl sm:text-2xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] leading-relaxed break-words">
+          <div className="relative z-20 my-auto text-center px-3 pointer-events-none">
+            <p className="text-base sm:text-xl font-black text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] leading-relaxed break-words">
               {currentStory.text}
             </p>
           </div>
@@ -237,10 +272,10 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
             <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
               <motion.div
                 initial={{ scale: 0.4, opacity: 0, y: 30 }}
-                animate={{ scale: 2.2, opacity: 1, y: -40 }}
-                exit={{ opacity: 0, scale: 3 }}
+                animate={{ scale: 2, opacity: 1, y: -30 }}
+                exit={{ opacity: 0, scale: 2.5 }}
                 transition={{ duration: 0.8 }}
-                className="text-6xl drop-shadow-2xl"
+                className="text-5xl drop-shadow-2xl"
               >
                 {showReactionBurst}
               </motion.div>
@@ -248,37 +283,37 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
           )}
 
           {/* Footer Reaction Bar */}
-          <div className="relative z-20 flex items-center justify-between gap-2 pt-3 border-t border-white/10">
-            <div className="flex items-center gap-1.5 text-xs text-white/80 font-bold bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full">
-              <Eye size={13} className="text-white/70" />
+          <div className="relative z-20 flex items-center justify-between gap-2 pt-2.5 border-t border-white/15">
+            <div className="flex items-center gap-1 text-[11px] text-white/80 font-bold bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
+              <Eye size={12} className="text-white/70" />
               <span>{currentStory.views?.length || 1}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => handleSendReaction('❤️')}
-                className={`p-2.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md transition-all active:scale-125 ${
+                className={`p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md transition-all active:scale-125 cursor-pointer ${
                   isLiked ? 'text-red-400 bg-red-500/20' : 'text-white/80 hover:text-white'
                 }`}
               >
-                <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
+                <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
               </button>
 
               <button
                 type="button"
                 onClick={() => handleSendReaction('🔥')}
-                className="p-2.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-amber-400 hover:text-amber-300 transition-all active:scale-125"
+                className="p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-amber-400 hover:text-amber-300 transition-all active:scale-125 cursor-pointer"
               >
-                <Flame size={18} />
+                <Flame size={16} />
               </button>
 
               <button
                 type="button"
-                onClick={() => handleSendReaction('🎭')}
-                className="p-2.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-fuchsia-400 hover:text-fuchsia-300 transition-all active:scale-125"
+                onClick={() => handleSendReaction('✨')}
+                className="p-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-fuchsia-400 hover:text-fuchsia-300 transition-all active:scale-125 cursor-pointer"
               >
-                <Sparkles size={18} />
+                <Sparkles size={16} />
               </button>
             </div>
           </div>
@@ -286,4 +321,6 @@ export const StoryViewerModal: React.FC<StoryViewerModalProps> = ({
       </div>
     </AnimatePresence>
   );
+
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : null;
 };

@@ -400,7 +400,286 @@ export const theoriesData: Theory[] = [
       by: "<p>Яагуан - магутны персанаж, які з'явіўся ў версіі 4.0. Яе асноўны фокус - нанясенне вялізнага ўрону па плошчы і прабіцце ўразлівасці.</p><p><b>Рэліквіі:</b> Лепшы сэт рэліквій для яе - новы сэт з 4.0, які павялічвае ўрон ад прабіцця. У характарыстыках шукайце Эфект прабіцця, Хуткасць і Сілу атакі.</p><p><b>Каманды:</b> Ідэальныя напарнікі для Яагуан - Жуань Мэй і Першапраходзец (Гармонія), якія максімізуюць яе патэнцыял прабіцця.</p>",
       de: "<p>Yaoguang ist ein mächtiger Charakter, der in Version 4.0 eingeführt wurde. Ihr Hauptfokus liegt auf massivem AoE-Schaden und dem Brechen von Schwächen.</p><p><b>Relikte:</b> Das beste Relikt-Set für sie ist das neue 4.0-Set, das den Bruchschaden erhöht. Suchen Sie nach Brucheffekt, Geschwindigkeit und ANG in den Werten.</p><p><b>Teams:</b> Ideale Teamkollegen für Yaoguang sind Ruan Mei und Trailblazer (Harmonie), die ihr Bruchpotenzial maximieren.</p>",
       fr: "<p>Yaoguang est un personnage puissant introduit dans la version 4.0. Son objectif principal est d'infliger des dégâts de zone massifs et de briser les faiblesses.</p><p><b>Reliques :</b> Le meilleur set de reliques pour elle est le nouveau set de la 4.0 qui augmente les dégâts de rupture. Recherchez l'Effet de rupture, la Vitesse et l'ATQ dans les statistiques.</p><p><b>Équipes :</b> Les coéquipiers idéaux pour Yaoguang sont Ruan Mei et le Pionnier (Harmonie), qui maximisent son potentiel de rupture.</p>",
-      zh: "<p>摇光是4.0版本中引入的强大角色。她的主要特点是造成巨大的范围伤害和击破弱点。</p><p><b>遗器：</b> 最适合她的遗器套装是4.0新增的增加击破伤害的套装。在属性中寻找击破特攻、速度和攻击力。</p><p><b>配队：</b> 摇光的理想队友是阮·梅和开拓者（同谐），他们能最大化她的击破潜力。</p>"
+      zh: "<p>摇光是4.0版本中引入的强大角色。她的主要特点是造成巨大的范围伤害和击破弱点。</p><p><b>遗器：</b> 最适合她的遗器套装是4.0新增的增加击破伤害的套装。在属性中寻找击破特攻、速度和攻击力。</p><p><b>配队：</b> 摇光的理想队友是阮·梅和开拓者（同谐），他们能最大化 political 击破潜力。</p>"
+    }
+  },
+  {
+    id: 'theory-aha-radio-dsp',
+    category: 'infrastructure',
+    createdAt: '2026-04-15T15:30:00.000Z',
+    title: {
+      ru: "AHA Radio: Архитектура Web Audio API DSP, процедурный синтез винила и Sidechain-даккинг",
+      en: "AHA Radio: Web Audio API DSP Architecture, Procedural Vinyl Synthesis & Sidechain Ducking",
+      by: "AHA Radio: Архітэктура Web Audio API DSP, працэдурны сінтэз вінілу і Sidechain-дакінг",
+      de: "AHA Radio: Web Audio API DSP-Architektur, prozedurale Vinyl-Synthese und Sidechain-Ducking",
+      fr: "AHA Radio : Architecture DSP Web Audio API, synthèse procédurale de vinyle et Sidechain Ducking",
+      zh: "AHA Radio：Web Audio API DSP 架构、过程化黑胶合成与侧链闪避算法"
+    },
+    summary: {
+      ru: "Полный технический разбор радиостанции AHA: граф узлов Web Audio API, алгоритм процедурного синтеза винилового шума, система динамического сайдчейн-даккинга для голоса ведущего и 256-полосный FFT спектральный анализатор в реальном времени с кодом на TypeScript.",
+      en: "Complete technical breakdown of AHA Radio: Web Audio API node graph, procedural vinyl crackle synthesis algorithm, dynamic sidechain ducking engine for host commentary, and 256-band real-time FFT spectrum visualizer with TypeScript source code.",
+      by: "Поўны тэхнічны разбор радыёстанцыі AHA: граф вузлоў Web Audio API, алгарытм працэдурнага сінтэзу вінілавага трэску, дынамічны сайдчэйн-дакінг і 256-палосны FFT спектральны аналізатар.",
+      de: "Vollständige technische Analyse von AHA Radio: Web Audio API-Knotengraph, prozedurale Vinyl-Synthese, dynamisches Sidechain-Ducking für Moderatorenstimmen und 256-Band-Echtzeit-FFT-Spektrumanalysator.",
+      fr: "Analyse technique complète d'AHA Radio : graphe de nœuds Web Audio API, synthèse procédurale de craquement de vinyle, sidechain ducking dynamique pour la voix et analyseur de spectre FFT 256 bandes en temps réel.",
+      zh: "AHA Radio 完整技术解析：Web Audio API 节点图谱、过程化黑胶爆音合成算法、AI 主持人动态侧链闪避引擎以及 256 频段 FFT 实时频谱分析仪（附 TypeScript 源码）。"
+    },
+    content: {
+      ru: `<h3>1. Введение и архитектура аудио-пайплайна</h3>
+<p>Радиостанция <b>AHA Radio</b> представляет собой распределенный аудио-сервис реального времени, построенный на базе стандарта <code>Web Audio API (W3C)</code>. В отличие от стандартных аудиоплееров с тегом <code>&lt;audio&gt;</code>, в AHA Radio поток проходит через многоступенчатую цифровую сигнальную цепочку (DSP Pipeline), обеспечивающую аппаратное сведение, процедурную генерацию аналогового шума, компрессию динамического диапазона и спектральный анализ.</p>
+
+<h4>Граф узлов (Web Audio Graph Topology)</h4>
+<pre><code>[Stream Source] ----+
+                    |
+[Vinyl Synth] ------+---> [BiquadFilter] ---> [Compressor] ---> [Ducking Gain] ---> [Master Analyser (FFT)] ---> [Destination]
+                    |                                                ^
+[TTS Host Stream] --+------------------------------------------------+ (Sidechain Trigger)</code></pre>
+
+<h3>2. Инициализация и создание аудио-контекста</h3>
+<p>Для преодоления политик автовоспроизведения (Autoplay Policy) в современных браузерах (Chrome / Safari / WebKit) движок использует асинхронную разблокировку при первом пользовательском жесте:</p>
+<pre><code class="language-typescript">export class AhaRadioEngine {
+  private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private musicGain: GainNode | null = null;
+  private duckingGain: GainNode | null = null;
+  private analyserNode: AnalyserNode | null = null;
+  private vinylSource: AudioBufferSourceNode | null = null;
+
+  public async initAudio(): Promise<void> {
+    if (!this.ctx) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.ctx = new AudioContextClass({ latencyHint: 'interactive', sampleRate: 48000 });
+    }
+
+    if (this.ctx.state === 'suspended') {
+      await this.ctx.resume();
+    }
+
+    this.setupNodeGraph();
+  }
+}</code></pre>
+
+<h3>3. Алгоритм процедурного синтеза винилового шума и треска</h3>
+<p>Вместо циклического воспроизведения MP3-сэмпла, который увеличивает нагрузку на сеть и создает эффект репетитивности, AHA Radio генерирует бесконечный аналоговый виниловый шум математически: комбинацией розового шума (Pink Noise) и случайных импульсов Пуассона (Poisson Crackle Spikes):</p>
+<pre><code class="language-typescript">private createVinylBuffer(ctx: AudioContext, durationSeconds: number = 5): AudioBuffer {
+  const sampleRate = ctx.sampleRate;
+  const frameCount = sampleRate * durationSeconds;
+  const buffer = ctx.createBuffer(2, frameCount, sampleRate);
+
+  for (let channel = 0; channel < 2; channel++) {
+    const data = buffer.getChannelData(channel);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+
+    for (let i = 0; i < frameCount; i++) {
+      // Генератор белого шума
+      const white = Math.random() * 2 - 1;
+      
+      // Алгоритм Поля Келлетта для 3dB/октава спада (Pink Noise)
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      let pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+      b6 = white * 0.115926;
+      
+      // Эмуляция микротрещин винила (Poisson Distribution Spikes)
+      let crackle = 0;
+      if (Math.random() < 0.00035) {
+        crackle = (Math.random() > 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.4);
+      }
+
+      data[i] = (pink * 0.04) + (crackle * 0.45);
+    }
+  }
+  return buffer;
+}</code></pre>
+
+<h3>4. Система автоматического Sidechain Ducking</h3>
+<p>При выходе в эфир голосовых сообщений ведущего Ахи или трансляции срочных сводок Министерство Ахахи плавно приглушает музыкальный трек на <b>-14 dB</b> с экспоненциальной кривой затухания, возвращая громкость после завершения реплики:</p>
+<pre><code class="language-typescript">public triggerVoiceDucking(isActive: boolean): void {
+  if (!this.ctx || !this.duckingGain) return;
+  
+  const now = this.ctx.currentTime;
+  const targetGain = isActive ? 0.2 : 1.0; // -14dB при активации
+  const rampTime = isActive ? 0.25 : 0.65; // Быстрый спад (250ms), плавный подъем (650ms)
+
+  this.duckingGain.gain.cancelScheduledValues(now);
+  this.duckingGain.gain.setTargetAtTime(targetGain, now, rampTime / 3);
+}</code></pre>
+
+<h3>5. 256-полосный FFT спектральный анализатор</h3>
+<p>Визуализация частот вычисляется через <code>AnalyserNode</code> с быстрым преобразованием Фурье (Fast Fourier Transform), сглаживанием <code>smoothingTimeConstant = 0.85</code> и интерполяцией пиков на HTML5 Canvas:</p>
+<pre><code class="language-typescript">public renderSpectrum(canvas: HTMLCanvasElement): void {
+  if (!this.analyserNode) return;
+  
+  const ctx2d = canvas.getContext('2d');
+  const bufferLength = this.analyserNode.frequencyBinCount; // 256 корзин
+  const dataArray = new Uint8Array(bufferLength);
+  
+  const draw = () => {
+    requestAnimationFrame(draw);
+    this.analyserNode!.getByteFrequencyData(dataArray);
+    
+    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+    const barWidth = (canvas.width / bufferLength) * 2.5;
+    let x = 0;
+    
+    for (let i = 0; i < bufferLength; i++) {
+      const barHeight = (dataArray[i] / 255) * canvas.height;
+      
+      // Неоновый фирменный градиент Ахи
+      const gradient = ctx2d.createLinearGradient(0, canvas.height, 0, 0);
+      gradient.addColorStop(0, 'rgba(255, 77, 77, 0.2)');
+      gradient.addColorStop(1, 'rgba(255, 77, 77, 0.9)');
+      
+      ctx2d.fillStyle = gradient;
+      ctx2d.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+      x += barWidth + 1;
+    }
+  };
+  draw();
+}</code></pre>
+
+<h3>6. Отказоустойчивость и поддержка Web Workers</h3>
+<p>Движок снабжен автоматическим реконнектом с экспоненциальной задержкой (Exponential Backoff), защитой от буферного переполнения и поддержкой фонового воспроизведения через <code>MediaSession API</code> с кастомными метаданными о треках и обложках.</p>`,
+      en: `<h3>1. Introduction & Audio Pipeline Architecture</h3>
+<p><b>AHA Radio</b> is a high-performance, real-time distributed audio streaming service built on top of the <code>Web Audio API (W3C)</code> specification. Unlike standard web players using plain <code>&lt;audio&gt;</code> elements, AHA Radio routes sound through a multi-stage digital signal processing (DSP) graph featuring hardware mixing, procedural analog noise synthesis, dynamic range compression, and spectral analysis.</p>
+
+<h4>Web Audio Graph Topology</h4>
+<pre><code>[Stream Source] ----+
+                    |
+[Vinyl Synth] ------+---> [BiquadFilter] ---> [Compressor] ---> [Ducking Gain] ---> [Master Analyser (FFT)] ---> [Destination]
+                    |                                                ^
+[TTS Host Stream] --+------------------------------------------------+ (Sidechain Trigger)</code></pre>
+
+<h3>2. AudioContext Lifecycle & Autoplay Unlock</h3>
+<p>To comply with modern browser Autoplay Policies, the engine implements user-gesture state resumption:</p>
+<pre><code class="language-typescript">export class AhaRadioEngine {
+  private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private musicGain: GainNode | null = null;
+  private duckingGain: GainNode | null = null;
+  private analyserNode: AnalyserNode | null = null;
+  private vinylSource: AudioBufferSourceNode | null = null;
+
+  public async initAudio(): Promise<void> {
+    if (!this.ctx) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.ctx = new AudioContextClass({ latencyHint: 'interactive', sampleRate: 48000 });
+    }
+
+    if (this.ctx.state === 'suspended') {
+      await this.ctx.resume();
+    }
+
+    this.setupNodeGraph();
+  }
+}</code></pre>
+
+<h3>3. Procedural Vinyl Noise & Crackle Synthesis Algorithm</h3>
+<p>Rather than looping an MP3 sample that wastes bandwidth, AHA Radio synthesizes authentic lo-fi vinyl hiss and crackle mathematically using Paul Kellet's Pink Noise filter and Poisson spikes:</p>
+<pre><code class="language-typescript">private createVinylBuffer(ctx: AudioContext, durationSeconds: number = 5): AudioBuffer {
+  const sampleRate = ctx.sampleRate;
+  const frameCount = sampleRate * durationSeconds;
+  const buffer = ctx.createBuffer(2, frameCount, sampleRate);
+
+  for (let channel = 0; channel < 2; channel++) {
+    const data = buffer.getChannelData(channel);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+
+    for (let i = 0; i < frameCount; i++) {
+      const white = Math.random() * 2 - 1;
+      
+      // Paul Kellett's Filter for 3dB/octave falloff (Pink Noise)
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      let pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+      b6 = white * 0.115926;
+      
+      // Poisson Distribution Spikes for vinyl crackles
+      let crackle = 0;
+      if (Math.random() < 0.00035) {
+        crackle = (Math.random() > 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.4);
+      }
+
+      data[i] = (pink * 0.04) + (crackle * 0.45);
+    }
+  }
+  return buffer;
+}</code></pre>
+
+<h3>4. Automatic Voice Sidechain Ducking Engine</h3>
+<p>When the AI host or live announcements broadcast, background music smoothly attenuates by <b>-14 dB</b> with parametric curves:</p>
+<pre><code class="language-typescript">public triggerVoiceDucking(isActive: boolean): void {
+  if (!this.ctx || !this.duckingGain) return;
+  
+  const now = this.ctx.currentTime;
+  const targetGain = isActive ? 0.2 : 1.0; // -14dB attenuation
+  const rampTime = isActive ? 0.25 : 0.65; // 250ms attack, 650ms release
+
+  this.duckingGain.gain.cancelScheduledValues(now);
+  this.duckingGain.gain.setTargetAtTime(targetGain, now, rampTime / 3);
+}</code></pre>
+
+<h3>5. 256-Band Real-Time FFT Spectrum Visualizer</h3>
+<p>Frequency visualizer rendered to high-DPI Canvas using Fast Fourier Transform with exponential decay smoothing:</p>
+<pre><code class="language-typescript">public renderSpectrum(canvas: HTMLCanvasElement): void {
+  if (!this.analyserNode) return;
+  
+  const ctx2d = canvas.getContext('2d');
+  const bufferLength = this.analyserNode.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+  
+  const draw = () => {
+    requestAnimationFrame(draw);
+    this.analyserNode!.getByteFrequencyData(dataArray);
+    
+    ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+    const barWidth = (canvas.width / bufferLength) * 2.5;
+    let x = 0;
+    
+    for (let i = 0; i < bufferLength; i++) {
+      const barHeight = (dataArray[i] / 255) * canvas.height;
+      const gradient = ctx2d.createLinearGradient(0, canvas.height, 0, 0);
+      gradient.addColorStop(0, 'rgba(255, 77, 77, 0.2)');
+      gradient.addColorStop(1, 'rgba(255, 77, 77, 0.9)');
+      
+      ctx2d.fillStyle = gradient;
+      ctx2d.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+      x += barWidth + 1;
+    }
+  };
+  draw();
+}</code></pre>`,
+      by: `<h3>1. Уводзіны і архітэктура аўдыё-пайплайна</h3>
+<p>Радыёстанцыя <b>AHA Radio</b> працуе на базе <code>Web Audio API (W3C)</code>. Паток праходзіць праз лічбавы ланцуг DSP: апаратнае звядзенне, працэдурны сінтэз аналагавага шуму і спектральны аналіз.</p>
+<h4>Граф вузлоў (Web Audio Graph Topology)</h4>
+<pre><code>[Крыніца стрыму] ----> [Фільтр Biquad] ---> [Кампрэсар] ---> [Ducking Gain] ---> [Спектральны аналізатар] ---> [Выхад]</code></pre>
+<h3>2. Працэдурны сінтэз вінілу</h3>
+<p>Дзвіжок генеруе бясконцы вінілавы шум матэматычна без спампоўвання лішніх сэмплаў праз спалучэнне ружовага шуму і імпульсаў Пуасона.</p>`,
+      de: `<h3>1. Einführung & Audio-Pipeline-Architektur</h3>
+<p><b>AHA Radio</b> basiert auf dem <code>Web Audio API (W3C)</code> Standard. Der Datenstrom durchläuft eine mehrstufige DSP-Kette mit Hardware-Mixing, prozeduraler Rauschsynthese und Spektralanalyse.</p>
+<h4>Knotengraph (Web Audio Graph Topology)</h4>
+<pre><code>[Stream-Quelle] ----> [Biquad-Filter] ---> [Kompressor] ---> [Ducking Gain] ---> [FFT-Analysator] ---> [Audio-Ausgabe]</code></pre>
+<h3>2. Prozedurale Vinyl-Synthese</h3>
+<p>Mathematische Erzeugung von Lo-Fi-Vinylknistern über Pink-Noise-Filterung und Poisson-Spikes direkt im Browser-AudioBuffer.</p>`,
+      fr: `<h3>1. Introduction et architecture DSP</h3>
+<p><b>AHA Radio</b> est un service audio temps réel propulsé par la <code>Web Audio API (W3C)</code>. Le signal traverse une chaîne DSP complète avec synthèse analogique procédurale et analyse spectrale FFT.</p>
+<h4>Graphe de traitement Web Audio</h4>
+<pre><code>[Source du flux] ----> [Filtre Biquad] ---> [Compresseur] ---> [Ducking Gain] ---> [Analyseur FFT] ---> [Sortie]</code></pre>
+<h3>2. Synthèse procédurale de vinyle</h3>
+<p>Génération mathématique de craquements et de souffle vinyle sans charger de fichiers externes grâce au filtrage de bruit rose et à la distribution de Poisson.</p>`,
+      zh: `<h3>1. 简介与音频处理管线架构</h3>
+<p><b>AHA Radio</b> 是基于 <code>Web Audio API (W3C)</code> 构建的高性能实时音频广播系统。音频信号通过多级数字信号处理（DSP）节点图谱，实现硬件混音、过程化黑胶噪音合成、动态范围压缩与 256 频段实时频谱分析。</p>
+<h4>Web Audio 节点拓扑结构</h4>
+<pre><code>[音频流源] ----> [Biquad 双二阶滤波器] ---> [动态压缩器] ---> [侧链闪避增益] ---> [FFT 频谱分析器] ---> [音频输出终端]</code></pre>
+<h3>2. 过程化黑胶爆音与噪音合成算法</h3>
+<p>无需加载静态 MP3 样本即可在浏览器内存中实时利用泊松分布（Poisson Spikes）和粉红噪音（Pink Noise）算法合成逼真的黑胶质感。</p>`
     }
   }
 ];

@@ -400,14 +400,60 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
+# Ensure package.json exists in the current directory
+if [ ! -f "package.json" ]; then
+    echo "[INFO] Initializing package.json for Capacitor workspace..."
+    cat <<EOF > package.json
+{
+  "name": "${cleanName.toLowerCase()}-apk-wrapper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android APK wrapper for ${name}",
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  }
+}
+EOF
+fi
+
+# Ensure web directory dist exists with placeholder if building from URL
+mkdir -p dist
+if [ ! -f "dist/index.html" ]; then
+    cat <<EOF > dist/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>$APP_NAME</title>
+    <style>
+      body { margin: 0; background: #0d0b14; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+      .loader { text-align: center; }
+      h2 { color: #ff4d4d; margin-bottom: 8px; }
+      p { color: #aaa; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="loader">
+        <h2>$APP_NAME</h2>
+        <p>Connecting to application...</p>
+    </div>
+    <script>
+      // Fallback redirect to online cloud app instance
+      window.location.replace("$APP_URL");
+    </script>
+</body>
+</html>
+EOF
+fi
+
 # Initialize Capacitor Android Project
 echo "[1/4] Installing Capacitor CLI and Android Platform..."
-npm install @capacitor/core @capacitor/cli @capacitor/android
+npm install --save @capacitor/core @capacitor/android @capacitor/cli
 
-echo "[2/4] Initializing Capacitor Project..."
-npx cap init "$APP_NAME" "$APP_ID" --web-dir "dist" || true
-
-# Configure capacitor.config.json
+echo "[2/4] Configuring Capacitor Project..."
 cat <<EOF > capacitor.config.json
 {
   "appId": "$APP_ID",
@@ -426,20 +472,53 @@ cat <<EOF > capacitor.config.json
 EOF
 
 echo "[3/4] Adding Android Native Project & Syncing..."
-npx cap add android || true
+if [ ! -d "android" ]; then
+    npx cap add android
+fi
 npx cap sync android
 
-echo "[4/4] Building APK Binary with Gradle..."
+echo "[4/4] Configuring JDK & Building APK Binary with Gradle..."
 if [ -f "./android/gradlew" ]; then
     cd android
+
+    GRADLE_PROP="gradle.properties"
+    if [ ! -f "$GRADLE_PROP" ]; then
+        touch "$GRADLE_PROP"
+    fi
+
+    # Check for Android Studio bundled JBR (JDK 17/21) on Windows
+    if [ -d "/c/Program Files/Android/Android Studio/jbr" ] && ! grep -q "org.gradle.java.home" "$GRADLE_PROP"; then
+        echo "org.gradle.java.home=C:/Program Files/Android/Android Studio/jbr" >> "$GRADLE_PROP"
+    elif [ -d "C:/Program Files/Android/Android Studio/jbr" ] && ! grep -q "org.gradle.java.home" "$GRADLE_PROP"; then
+        echo "org.gradle.java.home=C:/Program Files/Android/Android Studio/jbr" >> "$GRADLE_PROP"
+    fi
+
+    # Auto-configure local.properties if Android SDK is in default user directory
+    LOCAL_PROP="local.properties"
+    if [ ! -f "$LOCAL_PROP" ]; then
+        if [ -n "$LOCALAPPDATA" ] && [ -d "$LOCALAPPDATA/Android/Sdk" ]; then
+            SDK_WIN_PATH=$(echo "$LOCALAPPDATA/Android/Sdk" | sed 's/\\/\//g')
+            echo "sdk.dir=$SDK_WIN_PATH" > "$LOCAL_PROP"
+        elif [ -n "$USERPROFILE" ] && [ -d "$USERPROFILE/AppData/Local/Android/Sdk" ]; then
+            SDK_WIN_PATH=$(echo "$USERPROFILE/AppData/Local/Android/Sdk" | sed 's/\\/\//g')
+            echo "sdk.dir=$SDK_WIN_PATH" > "$LOCAL_PROP"
+        elif [ -n "$HOME" ] && [ -d "$HOME/AppData/Local/Android/Sdk" ]; then
+            SDK_WIN_PATH="C:/Users/$(whoami)/AppData/Local/Android/Sdk"
+            echo "sdk.dir=$SDK_WIN_PATH" > "$LOCAL_PROP"
+        elif [ -d "$HOME/Android/Sdk" ]; then
+            echo "sdk.dir=$HOME/Android/Sdk" > "$LOCAL_PROP"
+        fi
+    fi
+
     chmod +x gradlew
-    ./gradlew assembleDebug
+    ./gradlew assembleDebug || ./gradlew assemble
+    cd ..
     echo "========================================================"
     echo "[SUCCESS] Android APK built successfully!"
     echo "APK Location: android/app/build/outputs/apk/debug/app-debug.apk"
     echo "========================================================"
 else
-    echo "[INFO] Project created. Open Android Studio or run 'npx cap open android' to finish building."
+    echo "[INFO] Project ready. Open in Android Studio or run 'npx cap open android' to build the release APK."
 fi
 `
         };
