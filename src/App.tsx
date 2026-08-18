@@ -21,6 +21,7 @@ import { applyPrimaryAccentColor } from './utils/theme';
 import { initPageVisibilityOptimizer } from './utils/performanceOptimizer';
 import { applyFontSizeToDocument } from './hooks/useFontSize';
 import { safeStorage } from './utils/securityStorage';
+import { sanitizeFeedback, sanitizePlainText } from './utils/sanitizer';
 
 // Components
 import { Header } from './components/layout/Header';
@@ -701,12 +702,19 @@ export default function App() {
     if (!feedbackText.trim()) return;
     
     try {
+      // Global sanitization of feedback content
+      const sanitized = sanitizeFeedback({
+        type: feedbackType,
+        feedbackText: feedbackText,
+        image: feedbackImage
+      });
+
       const logsString = logger.getLogsString();
       
-      const subject = encodeURIComponent(`Feedback (${feedbackType})`);
+      const subject = encodeURIComponent(`Feedback (${sanitized.type})`);
       const body = encodeURIComponent(
-        `Type: ${feedbackType}\n\n` +
-        `Message:\n${feedbackText}\n\n` +
+        `Type: ${sanitized.type}\n\n` +
+        `Message:\n${sanitized.feedbackText}\n\n` +
         `[Please attach the downloaded crashlog.txt file to this email if applicable]`
       );
       
@@ -999,10 +1007,10 @@ export default function App() {
           <motion.div
             key={section}
             className="section-container"
-            initial={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: 20, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={lowPerfMode ? { opacity: 1, y: 0 } : { opacity: 0, y: -20, scale: 0.98 }}
-            transition={lowPerfMode ? { duration: 0 } : { duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+            initial={lowPerfMode ? { opacity: 1 } : { opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={lowPerfMode ? { opacity: 1 } : { opacity: 0, y: -15 }}
+            transition={lowPerfMode ? { duration: 0 } : { duration: 0.25, ease: 'easeOut' }}
           >
             <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(255,77,77,0.3)]"></div></div>}>
               {section === 'home' && (
@@ -1391,22 +1399,24 @@ export default function App() {
         lang={lang as Language} 
       />
 
-      {/* Floating Scroll to Top/Bottom & Quick Actions on Home Screen */}
+      {/* Floating Scroll to Top/Bottom Navigation Widget (Everywhere) */}
+      {!mobileMenuOpen && (
+        <ScrollToTopBottom lang={lang as Language} />
+      )}
+
+      {/* Quick Actions on Home Screen */}
       {section === 'home' && !mobileMenuOpen && (
-        <>
-          <ScrollToTopBottom lang={lang as Language} />
-          <QuickActionsMenu
-            lang={lang as Language}
-            onCreateTheory={() => {
-              setSection('theories');
-              setIsCreatingTheory(true);
-            }}
-            onCreateBlog={() => {
-              setSection('blog');
-              setIsCreatingBlog(true);
-            }}
-          />
-        </>
+        <QuickActionsMenu
+          lang={lang as Language}
+          onCreateTheory={() => {
+            setSection('theories');
+            setIsCreatingTheory(true);
+          }}
+          onCreateBlog={() => {
+            setSection('blog');
+            setIsCreatingBlog(true);
+          }}
+        />
       )}
     </div>
   );

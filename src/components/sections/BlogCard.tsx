@@ -7,6 +7,7 @@ import { TimeAgo } from '../ui/TimeAgo';
 import { MediaViewer } from '../ui/MediaViewer';
 import { calculateReadTime } from '../../utils/time';
 import { getLocalizedCategory } from '../../utils/categories';
+import { sanitizeBeforeRender } from '../../utils/sanitizer';
 
 interface BlogCardProps {
   post: any;
@@ -110,18 +111,18 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
       </div>
 
       <h3 className="text-xl sm:text-2xl font-black text-white mb-3 leading-tight tracking-tight group-hover:text-[#ff4d4d] transition-colors uppercase">
-        {post.title[lang] || post.title['en']}
+        {sanitizeBeforeRender(post.title?.[lang] || post.title?.['en'] || '')}
       </h3>
       
       {post.mediaUrl && (
         <div className="mb-4 overflow-hidden rounded-2xl">
-          <MediaViewer url={post.mediaUrl} maxHeight="max-h-[220px]" title={post.title[lang] || 'Blog Media'} isCompact={true} />
+          <MediaViewer url={post.mediaUrl} maxHeight="max-h-[220px]" title={sanitizeBeforeRender(post.title?.[lang] || 'Blog Media')} isCompact={true} />
         </div>
       )}
 
-      <div className="relative mb-6 group-hover:text-white/80 transition-colors">
-        <p className="text-white/40 text-xs sm:text-sm line-clamp-3 font-medium leading-relaxed">
-          {post.summary[lang] || post.summary['en']}
+      <div className="relative mb-6 text-gray-300 group-hover:text-white transition-colors">
+        <p className="text-xs sm:text-sm line-clamp-3 font-normal leading-relaxed text-gray-300">
+          {sanitizeBeforeRender(post.summary?.[lang] || post.summary?.['en'] || '')}
         </p>
       </div>
 

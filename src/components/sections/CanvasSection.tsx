@@ -1,155 +1,139 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, useAnimation, useMotionValue, AnimatePresence } from 'framer-motion';
-import { Palette, LogIn, Maximize, RefreshCw, Users, Info, Eraser, Move, PenTool, Save, User as UserIcon, Undo2, Redo2, Mail, Lock, ShieldAlert, PaintBucket, Slash, Square, Grid, Download, LayoutGrid, FolderOpen, Trash2, Plus, Bookmark, X, FlipHorizontal, FlipVertical, Pipette, Circle, CircleDot, BoxSelect, RotateCw, SunMedium } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Palette,
+  Maximize,
+  RefreshCw,
+  Info,
+  Eraser,
+  Move,
+  PenTool,
+  Save,
+  Undo2,
+  Redo2,
+  Mail,
+  Lock,
+  ShieldAlert,
+  PaintBucket,
+  Slash,
+  Square,
+  Grid,
+  Download,
+  LayoutGrid,
+  FolderOpen,
+  Trash2,
+  Plus,
+  Bookmark,
+  X,
+  FlipHorizontal,
+  FlipVertical,
+  Pipette,
+  Circle,
+  CircleDot,
+  BoxSelect,
+  RotateCw,
+  SunMedium,
+  Moon,
+  Sparkles,
+  Grid2X2,
+  Repeat,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Upload,
+  Copy,
+  FileCode2,
+  Keyboard,
+  Eye,
+  Sliders,
+  Check,
+  CheckCircle2
+} from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useCanvas } from '../../hooks/useCanvas';
 import { translations, Language } from '../../data/translations';
 import { GoogleLoginButton } from '../ui/GoogleLoginButton';
 import { ConfirmModal } from '../ui/ConfirmModal';
-import { doc, getDoc, setDoc, collection, addDoc, serverTimestamp, onSnapshot, query, where, deleteDoc, orderBy } from 'firebase/firestore';
+import { doc, setDoc, collection, addDoc, serverTimestamp, onSnapshot, query, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { encryptImage } from '../../utils/encryption';
-
-
-const COLORS = [
-  '#000000', '#ffffff', '#ff4d4d', '#4dff4d', '#4d4dff', 
-  '#ffff4d', '#ff4dff', '#4dffff', '#ff8800', '#8c1aff',
-  '#00cc66', '#808080'
-];
+import { vercelFallback } from '../../utils/vercelFallback';
+import { CANVAS_PALETTES } from '../../data/canvasPalettes';
+import { TEMPLATES } from '../../data/canvasTemplates';
+import {
+  StrokeAction,
+  getLinePixels,
+  getRectPixels,
+  getRectFilledPixels,
+  getCirclePixels,
+  getSprayPixels,
+  invertHex,
+  toGrayscaleHex,
+  adjustBrightnessHex,
+  shiftCanvasPixels,
+  generateCanvasSVG,
+  hexToRgb,
+  rgbToHex
+} from '../../utils/canvasUtils';
+import { CanvasHotkeysModal } from '../canvas/CanvasHotkeysModal';
+import { CanvasImportModal } from '../canvas/CanvasImportModal';
 
 type CanvasMode = 'global' | 'personal';
-type Tool = 'draw' | 'eraser' | 'bucket' | 'line' | 'rect' | 'rect_filled' | 'circle' | 'circle_filled' | 'picker' | 'move';
-
-type StrokeAction = {
-  pixelId: string;
-  oldColor: string | null;
-  newColor: string | null;
-};
-
-const TEMPLATES: Record<string, { name: string; nameRu: string; pixels: Record<string, string> }> = {
-  heart: {
-    name: 'Heart',
-    nameRu: 'Сердечко',
-    pixels: {
-      "3,1": "#ff4d4d", "4,1": "#ff4d4d", "7,1": "#ff4d4d", "8,1": "#ff4d4d",
-      "2,2": "#ff4d4d", "3,2": "#ff4d4d", "4,2": "#ff4d4d", "5,2": "#ff4d4d", "6,2": "#ff4d4d", "7,2": "#ff4d4d", "8,2": "#ff4d4d", "9,2": "#ff4d4d",
-      "1,3": "#ff4d4d", "2,3": "#ff4d4d", "3,3": "#ff4d4d", "4,3": "#ff4d4d", "5,3": "#ff4d4d", "6,3": "#ff4d4d", "7,3": "#ff4d4d", "8,3": "#ff4d4d", "9,3": "#ff4d4d", "10,3": "#ff4d4d",
-      "1,4": "#ff4d4d", "2,4": "#ff4d4d", "3,4": "#ff4d4d", "4,4": "#ff4d4d", "5,4": "#ff4d4d", "6,4": "#ff4d4d", "7,4": "#ff4d4d", "8,4": "#ff4d4d", "9,4": "#ff4d4d", "10,4": "#ff4d4d",
-      "2,5": "#ff4d4d", "3,5": "#ff4d4d", "4,5": "#ff4d4d", "5,5": "#ff4d4d", "6,5": "#ff4d4d", "7,5": "#ff4d4d", "8,5": "#ff4d4d", "9,5": "#ff4d4d",
-      "3,6": "#ff4d4d", "4,6": "#ff4d4d", "5,6": "#ff4d4d", "6,6": "#ff4d4d", "7,6": "#ff4d4d", "8,6": "#ff4d4d",
-      "4,7": "#ff4d4d", "5,7": "#ff4d4d", "6,7": "#ff4d4d", "7,7": "#ff4d4d",
-      "5,8": "#ff4d4d", "6,8": "#ff4d4d"
-    }
-  },
-  smiley: {
-    name: 'Smiley',
-    nameRu: 'Смайлик',
-    pixels: {
-      "3,1": "#ffff4d", "4,1": "#ffff4d", "5,1": "#ffff4d", "6,1": "#ffff4d", "7,1": "#ffff4d", "8,1": "#ffff4d",
-      "2,2": "#ffff4d", "9,2": "#ffff4d", "3,3": "#000000", "8,3": "#000000",
-      "1,3": "#ffff4d", "10,3": "#ffff4d", "1,4": "#ffff4d", "10,4": "#ffff4d",
-      "1,5": "#ffff4d", "10,5": "#ffff4d", "1,6": "#ffff4d", "10,6": "#ffff4d", "3,7": "#000000", "8,7": "#000000",
-      "4,8": "#000000", "5,8": "#000000", "6,8": "#000000", "7,8": "#000000"
-    }
-  },
-  sword: {
-    name: 'Sword',
-    nameRu: 'Меч',
-    pixels: {
-      "9,1": "#ffffff", "9,2": "#ffffff", "8,2": "#808080", "10,2": "#808080",
-      "8,3": "#ffffff", "9,3": "#ffffff", "10,3": "#ffffff",
-      "7,4": "#808080", "8,4": "#ffffff", "9,4": "#ffffff", "10,4": "#ffffff", "11,4": "#808080",
-      "6,5": "#808080", "7,5": "#ffffff", "8,5": "#ffffff", "9,5": "#ffffff", "10,5": "#ffffff", "11,5": "#808080",
-      "5,6": "#808080", "6,6": "#ffffff", "7,6": "#ffffff", "8,6": "#ffffff", "9,6": "#ffffff",
-      "4,7": "#808080", "5,7": "#ffffff", "6,7": "#ffffff", "7,7": "#ffffff",
-      "3,8": "#808080", "4,8": "#ffffff", "5,8": "#ffffff",
-      "2,9": "#8c1aff", "3,9": "#8c1aff", "4,9": "#808080",
-      "1,10": "#ff8800", "2,10": "#8c1aff"
-    }
-  },
-  star: {
-    name: 'Star',
-    nameRu: 'Звезда',
-    pixels: {
-      "5,1": "#ffff4d", "4,2": "#ffff4d", "5,2": "#ffff4d", "6,2": "#ffff4d",
-      "1,3": "#ffff4d", "2,3": "#ffff4d", "3,3": "#ffff4d", "4,3": "#ffff4d", "5,3": "#ffff4d", "6,3": "#ffff4d", "7,3": "#ffff4d", "8,3": "#ffff4d", "9,3": "#ffff4d",
-      "2,4": "#ffff4d", "3,4": "#ffff4d", "4,4": "#ffff4d", "5,4": "#ffff4d", "6,4": "#ffff4d", "7,4": "#ffff4d", "8,4": "#ffff4d",
-      "3,5": "#ffff4d", "4,5": "#ffff4d", "5,5": "#ffff4d", "6,5": "#ffff4d", "7,5": "#ffff4d",
-      "2,6": "#ffff4d", "3,6": "#ffff4d", "4,6": "#ffff4d", "5,6": "#ffff4d", "6,6": "#ffff4d", "7,6": "#ffff4d", "8,6": "#ffff4d",
-      "1,7": "#ffff4d", "5,7": "#ffff4d", "9,7": "#ffff4d"
-    }
-  },
-  crown: {
-    name: 'Crown',
-    nameRu: 'Корона',
-    pixels: {
-      "2,2": "#ffff4d", "10,2": "#ffff4d",
-      "3,3": "#ffff4d", "9,3": "#ffff4d",
-      "2,4": "#ffff4d", "6,4": "#ffff4d", "10,4": "#ffff4d",
-      "3,5": "#ffff4d", "5,5": "#ffff4d", "6,5": "#ffff4d", "7,5": "#ffff4d", "9,5": "#ffff4d",
-      "2,6": "#ffff4d", "3,6": "#ffff4d", "4,6": "#ffff4d", "5,6": "#ffff4d", "6,6": "#ffff4d", "7,6": "#ffff4d", "8,6": "#ffff4d", "9,6": "#ffff4d", "10,6": "#ffff4d",
-      "2,7": "#ffff4d", "3,7": "#ffff4d", "4,7": "#ffff4d", "5,7": "#ffff4d", "6,7": "#ffff4d", "7,7": "#ffff4d", "8,7": "#ffff4d", "9,7": "#ffff4d", "10,7": "#ffff4d",
-      "3,8": "#ff8800", "4,8": "#ff8800", "5,8": "#ff8800", "6,8": "#ff8800", "7,8": "#ff8800", "8,8": "#ff8800", "9,8": "#ff8800"
-    }
-  },
-  cat: {
-    name: 'Kitten',
-    nameRu: 'Котик',
-    pixels: {
-      "3,2": "#ffffff", "9,2": "#ffffff",
-      "2,3": "#ffffff", "3,3": "#ffffff", "4,3": "#ffffff", "8,3": "#ffffff", "9,3": "#ffffff", "10,3": "#ffffff",
-      "1,4": "#ffffff", "2,4": "#ffffff", "3,4": "#ffffff", "4,4": "#ffffff", "5,4": "#ffffff", "6,4": "#ffffff", "7,4": "#ffffff", "8,4": "#ffffff", "9,4": "#ffffff", "10,4": "#ffffff", "11,4": "#ffffff",
-      "1,5": "#ffffff", "3,5": "#000000", "9,5": "#000000", "11,5": "#ffffff",
-      "1,6": "#ffffff", "6,6": "#ff4dff", "11,6": "#ffffff",
-      "2,7": "#ffffff", "3,7": "#ffffff", "4,7": "#ffffff", "5,7": "#ffffff", "6,7": "#ffffff", "7,7": "#ffffff", "8,7": "#ffffff", "9,7": "#ffffff", "10,7": "#ffffff",
-      "3,8": "#ffffff", "4,8": "#ffffff", "5,8": "#ffffff", "6,8": "#ffffff", "7,8": "#ffffff", "8,8": "#ffffff", "9,8": "#ffffff",
-      "4,9": "#ffffff", "5,9": "#ffffff", "7,9": "#ffffff", "8,9": "#ffffff"
-    }
-  },
-  potion: {
-    name: 'Potion',
-    nameRu: 'Зелье',
-    pixels: {
-      "5,1": "#ff8800", "6,1": "#ff8800",
-      "5,2": "#ff8800", "6,2": "#ff8800",
-      "4,3": "#ffffff", "5,3": "#ffffff", "6,3": "#ffffff", "7,3": "#ffffff",
-      "4,4": "#ffffff", "5,4": "#ffffff", "6,4": "#ffffff", "7,4": "#ffffff",
-      "3,5": "#ffffff", "4,5": "#8c1aff", "5,5": "#8c1aff", "6,5": "#8c1aff", "7,5": "#8c1aff", "8,5": "#ffffff",
-      "2,6": "#ffffff", "3,6": "#8c1aff", "4,6": "#8c1aff", "5,6": "#8c1aff", "6,6": "#8c1aff", "7,6": "#8c1aff", "8,6": "#8c1aff", "9,6": "#ffffff",
-      "2,7": "#ffffff", "3,7": "#8c1aff", "4,7": "#8c1aff", "5,7": "#ffff4d", "6,7": "#ffff4d", "7,7": "#8c1aff", "8,7": "#8c1aff", "9,7": "#ffffff",
-      "2,8": "#ffffff", "3,8": "#8c1aff", "4,8": "#8c1aff", "5,8": "#8c1aff", "6,8": "#8c1aff", "7,8": "#8c1aff", "8,8": "#8c1aff", "9,8": "#ffffff",
-      "3,9": "#ffffff", "4,9": "#ffffff", "5,9": "#ffffff", "6,9": "#ffffff", "7,9": "#ffffff", "8,9": "#ffffff"
-    }
-  }
-};
+type Tool =
+  | 'draw'
+  | 'eraser'
+  | 'bucket'
+  | 'spray'
+  | 'dither'
+  | 'replace_color'
+  | 'line'
+  | 'rect'
+  | 'rect_filled'
+  | 'circle'
+  | 'circle_filled'
+  | 'picker'
+  | 'move';
 
 export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
-  const loc = (ru: string, en: string, by: string, de: string, fr: string, zh: string) => {
+  const loc = (ru: string, en: string, by?: string, de?: string, fr?: string, zh?: string) => {
     switch (lang) {
       case 'en': return en;
-      case 'by': return by;
-      case 'de': return de;
-      case 'fr': return fr;
-      case 'zh': return zh;
+      case 'by': return by || ru;
+      case 'de': return de || en;
+      case 'fr': return fr || en;
+      case 'zh': return zh || en;
       default: return ru;
     }
   };
 
-  const { user, loginWithGoogle, isVerified } = useAuth();
+  const { user, isVerified } = useAuth();
   const innerRef = useRef<HTMLDivElement>(null);
   const zoomContainerRef = useRef<HTMLDivElement>(null);
-  
+  const jsonFileInputRef = useRef<HTMLInputElement>(null);
+
   const [mode, setMode] = useState<CanvasMode>('personal');
   const [personalSize, setPersonalSize] = useState<number>(32);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [previewPixels, setPreviewPixels] = useState<Record<string, string>>({});
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
 
-  // Use unique ID for personal canvas based on size so layouts are saved independently
+  // Palette & Colors
+  const [currentPaletteId, setCurrentPaletteId] = useState<string>('cyber');
+  const activePalette = useMemo(() => {
+    return CANVAS_PALETTES.find(p => p.id === currentPaletteId) || CANVAS_PALETTES[0];
+  }, [currentPaletteId]);
+
+  const [selectedColor, setSelectedColor] = useState<string>(activePalette.colors[2] || '#ff4d4d');
+  const [customHexInput, setCustomHexInput] = useState<string>('#ff4d4d');
+  const [recentColors, setRecentColors] = useState<string[]>(['#ff4d4d', '#4dffff', '#ffff4d', '#ffffff', '#000000']);
+
   const canvasId = mode === 'global' ? 'canvas' : `canvas_personal/${user?.uid}_${personalSize}`;
-  // For global we pass 0 which means infinite in our hook
-  const { pixels, loading, drawPixel, erasePixel, drawPixelsBatch, clearCanvas, size } = useCanvas(mode === 'global' ? 0 : personalSize, canvasId); 
-  
+  const { pixels, loading, drawPixel, erasePixel, drawPixelsBatch, clearCanvas, size } = useCanvas(
+    mode === 'global' ? 0 : personalSize,
+    canvasId
+  );
+
   const MAX_PIXELS = 100;
   const [pixelsLeft, setPixelsLeft] = useState(() => {
     try {
@@ -161,19 +145,16 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
           return parsed.left;
         }
       }
-    } catch(e) {}
+    } catch (e) {}
     return MAX_PIXELS;
   });
 
   useEffect(() => {
     const currentHourId = Math.floor(Date.now() / 3600000);
-    localStorage.setItem('aha_canvas_limit', JSON.stringify({
-      hour: currentHourId,
-      left: pixelsLeft
-    }));
+    localStorage.setItem('aha_canvas_limit', JSON.stringify({ hour: currentHourId, left: pixelsLeft }));
   }, [pixelsLeft]);
-  
-  const [selectedColor, setSelectedColor] = useState<string>(COLORS[2]);
+
+  // Tools & Canvas State
   const [tool, setTool] = useState<Tool>('draw');
   const [scale, setScale] = useState(1);
   const [symmetryMode, setSymmetryMode] = useState<'none' | 'horizontal' | 'vertical' | 'radial'>('none');
@@ -181,35 +162,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [lastDrawn, setLastDrawn] = useState<string | null>(null);
 
+  // Undo/Redo Stacks
   const [undoStack, setUndoStack] = useState<StrokeAction[][]>([]);
   const [redoStack, setRedoStack] = useState<StrokeAction[][]>([]);
   const currentStrokeRef = useRef<StrokeAction[]>([]);
 
-  useEffect(() => {
-    setUndoStack([]);
-    setRedoStack([]);
-    setPreviewPixels({});
-  }, [canvasId]);
-
-  useEffect(() => {
-    const container = zoomContainerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      // Prevent default browser scrolling
-      e.preventDefault();
-      setScale(s => Math.min(Math.max(0.5, s - e.deltaY * 0.001), 3));
-    };
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => {
-      container.removeEventListener('wheel', handleWheel);
-    };
-  }, [mode, loading]);
-
-  const t = translations[lang] as any;
-
-  // States for publishing canvas to forum threads with custom caption
+  // Modals state
+  const [isHotkeysModalOpen, setIsHotkeysModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [publishTitle, setPublishTitle] = useState('');
   const [publishCaption, setPublishCaption] = useState('');
@@ -217,7 +177,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [publishIsProtected, setPublishIsProtected] = useState<boolean>(true);
   const [protectedViewFeatureEnabled, setProtectedViewFeatureEnabled] = useState<boolean>(true);
 
-  // States for canvas drafts (sketches/черновики)
+  // Drafts State
   const [drafts, setDrafts] = useState<any[]>([]);
   const [draftName, setDraftName] = useState('');
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -232,18 +192,136 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false);
   const [showPublishClearConfirm, setShowPublishClearConfirm] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (isPublishModalOpen || selectedDraftForSaves !== null) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isPublishModalOpen, selectedDraftForSaves]);
+  const [showExportMenu, setShowExportMenu] = useState<boolean>(false);
 
-  // Subscribe to user drafts in real-time
+  const isGlobal = mode === 'global';
+  const PIXEL_CSS_SIZE = 20;
+
+  // Add color to recent colors strip
+  const trackRecentColor = (col: string) => {
+    if (!col || col === 'eraser' || !col.startsWith('#')) return;
+    setRecentColors(prev => {
+      const filtered = prev.filter(c => c.toLowerCase() !== col.toLowerCase());
+      return [col, ...filtered].slice(0, 10);
+    });
+  };
+
+  const handleSelectColor = (col: string) => {
+    setSelectedColor(col);
+    setCustomHexInput(col);
+    trackRecentColor(col);
+    if (tool === 'move' || tool === 'eraser') setTool('draw');
+  };
+
+  useEffect(() => {
+    setUndoStack([]);
+    setRedoStack([]);
+    setPreviewPixels({});
+  }, [canvasId]);
+
+  // Zoom with Wheel
+  useEffect(() => {
+    const container = zoomContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setScale(s => Math.min(Math.max(0.5, s - e.deltaY * 0.001), 3.5));
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [mode, loading]);
+
+  // Keyboard Shortcuts Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea') return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case 'b':
+        case 'p':
+          setTool('draw');
+          break;
+        case 'e':
+          setTool('eraser');
+          break;
+        case 'g':
+          setTool('bucket');
+          break;
+        case 's':
+          if (!e.ctrlKey && !e.metaKey) setTool('spray');
+          break;
+        case 'd':
+          setTool('dither');
+          break;
+        case 'i':
+          setTool('picker');
+          break;
+        case 'k':
+          setTool('replace_color');
+          break;
+        case 'l':
+          setTool('line');
+          break;
+        case 'r':
+          setTool('rect');
+          break;
+        case 'c':
+          setTool('circle');
+          break;
+        case 'm':
+        case ' ':
+          setTool(t => (t === 'move' ? 'draw' : 'move'));
+          break;
+        case 'arrowup':
+          if (mode === 'personal') {
+            e.preventDefault();
+            handleShiftPixels(0, -1);
+          }
+          break;
+        case 'arrowdown':
+          if (mode === 'personal') {
+            e.preventDefault();
+            handleShiftPixels(0, 1);
+          }
+          break;
+        case 'arrowleft':
+          if (mode === 'personal') {
+            e.preventDefault();
+            handleShiftPixels(-1, 0);
+          }
+          break;
+        case 'arrowright':
+          if (mode === 'personal') {
+            e.preventDefault();
+            handleShiftPixels(1, 0);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoStack, redoStack, pixels, mode, personalSize]);
+
+  // Drafts real-time fetch
   useEffect(() => {
     if (!user) {
       setDrafts([]);
@@ -251,165 +329,35 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       return;
     }
     setLoadingDrafts(true);
-    const q = query(
-      collection(db, 'canvas_drafts'),
-      where('userId', '==', user.uid)
+    const q = query(collection(db, 'canvas_drafts'), where('userId', '==', user.uid));
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        list.sort((a: any, b: any) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        setDrafts(list);
+        setLoadingDrafts(false);
+      },
+      err => {
+        console.error('Drafts subscribe error:', err);
+        setLoadingDrafts(false);
+      }
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      list.sort((a: any, b: any) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      });
-      setDrafts(list);
-      setLoadingDrafts(false);
-    }, (err) => {
-      console.error("Drafts subscribe error:", err);
-      setLoadingDrafts(false);
-    });
     return () => unsubscribe();
   }, [user]);
 
-  const handleSaveDraft = async () => {
-    if (!user) return;
-    if (Object.keys(pixels).length === 0) {
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Нельзя сохранить пустой холст!', 'Cannot save empty canvas!', 'Нельга захаваць пусты палатно!', 'Kann keine leere Leinwand speichern!', 'Impossible de sauvegarder une toile vide !', '无法保存空白画布！') }));
-      return;
-    }
-    
-    setIsSavingDraft(true);
-    const nameToUse = draftName.trim() || `${loc('Черновик', 'Draft', 'Чарнавік', 'Entwurf', 'Brouillon', '草稿')} #${drafts.length + 1}`;
-    
-    const initialSave = {
-      id: 'save_' + Date.now(),
-      pixels: pixels,
-      size: personalSize,
-      createdAt: new Date().toISOString()
-    };
-    
-    try {
-      await addDoc(collection(db, 'canvas_drafts'), {
-        userId: user.uid,
-        name: nameToUse,
-        pixels: pixels,
-        size: personalSize,
-        createdAt: new Date().toISOString(),
-        saves: [initialSave]
-      });
-      setDraftName('');
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Эскиз успешно сохранен в черновики!', 'Sketch saved to drafts!', 'Эскіз паспяхова захаваны ў чарнавікі!', 'Skizze in Entwürfen gespeichert!', 'Esquisse enregistrée dans les brouillons !', '草稿已成功保存！') }));
-    } catch (e) {
-      console.error("Error saving draft:", e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Ошибка сохранения черновика', 'Error saving draft', 'Памылка захавання чарнавіка', 'Fehler beim Speichern des Entwurfs', 'Erreur lors de l\'enregistrement du brouillon', '保存草稿时出错') }));
-    } finally {
-      setIsSavingDraft(false);
-    }
-  };
-
-  const handleLoadDraft = (draft: any) => {
-    setDraftToLoad(draft);
-  };
-
-  const executeLoadDraft = async () => {
-    if (!user || !draftToLoad) return;
-    const draft = draftToLoad;
-    setDraftToLoad(null);
-    try {
-      // First update personal size so canvasId matches
-      if (draft.size && draft.size !== personalSize) {
-        setPersonalSize(draft.size);
-      }
-      
-      const targetCanvasId = `canvas_personal/${user.uid}_${draft.size || personalSize}`;
-      const targetDocId = targetCanvasId.replace(/\//g, '_');
-      const docRef = doc(db, 'canvases', targetDocId);
-      
-      await setDoc(docRef, {
-        pixels: draft.pixels || {}
-      });
-      
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Черновик успешно загружен!', 'Draft loaded successfully!', 'Чарнавік паспяхова загружаны!', 'Entwurf erfolgreich geladen!', 'Brouillon chargé avec succès !', '草稿已成功加载！') }));
-    } catch (e) {
-      console.error("Error loading draft:", e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Ошибка загрузки черновика', 'Error loading draft', 'Памылка загрузкі чарнавіка', 'Fehler beim Laden des Entwurfs', 'Erreur lors du chargement du brouillon', '加载草稿失败') }));
-    }
-  };
-
-  const handleDeleteDraft = (draft: any) => {
-    setDraftToDelete(draft);
-  };
-
-  const executeDeleteDraft = async () => {
-    if (!draftToDelete) return;
-    const draftId = draftToDelete.id;
-    setDraftToDelete(null);
-    try {
-      await deleteDoc(doc(db, 'canvas_drafts', draftId));
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Черновик удален', 'Draft deleted', 'Чарнавік выдалены', 'Entwurf gelöscht', 'Brouillon supprimé', '草稿已删除') }));
-    } catch (e) {
-      console.error("Error deleting draft:", e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Ошибка удаления', 'Error deleting', 'Памылка выдалення', 'Fehler beim Löschen', 'Erreur de suppression', '删除失败') }));
-    }
-  };
-
-  const executeLoadSave = async () => {
-    if (!user || !saveToLoad) return;
-    const save = saveToLoad;
-    setSaveToLoad(null);
-    setSelectedDraftForSaves(null);
-    try {
-      if (save.size && save.size !== personalSize) {
-        setPersonalSize(save.size);
-      }
-      const targetCanvasId = `canvas_personal/${user.uid}_${save.size || personalSize}`;
-      const targetDocId = targetCanvasId.replace(/\//g, '_');
-      await setDoc(doc(db, 'canvases', targetDocId), {
-        pixels: save.pixels || {}
-      });
-      window.dispatchEvent(new CustomEvent('aha_toast', { 
-        detail: loc('Версия успешно загружена!', 'Version loaded successfully!', 'Версія паспяхова загружана!', 'Version erfolgreich geladen!', 'Version chargée avec succès !', '版本加载成功！') 
-      }));
-    } catch (e) {
-      console.error(e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { 
-        detail: loc('Ошибка загрузки версии', 'Error loading version', 'Памылка загрузкі версіі', 'Fehler beim Laden der Version', 'Erreur lors du chargement de la version', '加载版本失败') 
-      }));
-    }
-  };
-
-  const executeDeleteSave = async () => {
-    if (!saveToDelete) return;
-    const { saveId, draftId, savesList } = saveToDelete;
-    setSaveToDelete(null);
-    try {
-      const updatedSaves = savesList.filter((s: any) => s.id !== saveId);
-      await setDoc(doc(db, 'canvas_drafts', draftId), {
-        saves: updatedSaves
-      }, { merge: true });
-      window.dispatchEvent(new CustomEvent('aha_toast', { 
-        detail: loc('Сохранение удалено!', 'Save deleted!', 'Захаванне выдалена!', 'Speicherung gelöscht!', 'Sauvegarde supprimée !', '存档已删除！') 
-      }));
-    } catch (e) {
-      console.error(e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { 
-        detail: lang === 'ru' ? 'Ошибка удаления сохранения' : 'Error deleting save' 
-      }));
-    }
-  };
-
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+    const unsub = onSnapshot(doc(db, 'settings', 'general'), docSnap => {
       if (docSnap.exists()) {
         setProtectedViewFeatureEnabled(docSnap.data().protectedViewFeatureEnabled !== false);
       }
     });
     return () => unsub();
   }, []);
-
 
   const lastTouchDistRef = useRef<number | null>(null);
   const [lastMoveCoords, setLastMoveCoords] = useState<{ x: number; y: number } | null>(null);
@@ -419,93 +367,28 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     const rect = innerRef.current.getBoundingClientRect();
     const rawX = clientX - rect.left;
     const rawY = clientY - rect.top;
-    
-    const cellWidth = isGlobal ? (20 * scale) : (rect.width / size);
-    const cellHeight = isGlobal ? (20 * scale) : (rect.height / size);
-    
+
+    const cellWidth = isGlobal ? 20 * scale : rect.width / size;
+    const cellHeight = isGlobal ? 20 * scale : rect.height / size;
+
     const x = Math.floor(rawX / cellWidth);
     const y = Math.floor(rawY / cellHeight);
     return { x, y };
   };
 
-  const getLinePixels = (x0: number, y0: number, x1: number, y1: number): [number, number][] => {
-    const coords: [number, number][] = [];
-    const dx = Math.abs(x1 - x0);
-    const dy = Math.abs(y1 - y0);
-    const sx = (x0 < x1) ? 1 : -1;
-    const sy = (y0 < y1) ? 1 : -1;
-    let err = dx - dy;
-    
-    while (true) {
-      coords.push([x0, y0]);
-      if (x0 === x1 && y0 === y1) break;
-      const e2 = 2 * err;
-      if (e2 > -dy) {
-        err -= dy;
-        x0 += sx;
-      }
-      if (e2 < dx) {
-        err += dx;
-        y0 += sy;
-      }
+  // Canvas content manipulations
+  const handleShiftPixels = async (dx: number, dy: number) => {
+    if (mode === 'global') return;
+    const { updates, strokeActions } = shiftCanvasPixels(pixels, size, dx, dy, false);
+    if (Object.keys(updates).length > 0) {
+      await drawPixelsBatch(updates);
+      setUndoStack(prev => [...prev, strokeActions]);
+      setRedoStack([]);
     }
-    return coords;
   };
-
-  const getRectPixels = (x0: number, y0: number, x1: number, y1: number): [number, number][] => {
-    const coords: [number, number][] = [];
-    const minX = Math.min(x0, x1);
-    const maxX = Math.max(x0, x1);
-    const minY = Math.min(y0, y1);
-    const maxY = Math.max(y0, y1);
-    
-    for (let x = minX; x <= maxX; x++) {
-      coords.push([x, minY]);
-      coords.push([x, maxY]);
-    }
-    for (let y = minY + 1; y < maxY; y++) {
-      coords.push([minX, y]);
-      coords.push([maxX, y]);
-    }
-    return coords;
-  };
-
-  const getRectFilledPixels = (x0: number, y0: number, x1: number, y1: number): [number, number][] => {
-    const coords: [number, number][] = [];
-    const minX = Math.min(x0, x1);
-    const maxX = Math.max(x0, x1);
-    const minY = Math.min(y0, y1);
-    const maxY = Math.max(y0, y1);
-    for (let x = minX; x <= maxX; x++) {
-      for (let y = minY; y <= maxY; y++) {
-        coords.push([x, y]);
-      }
-    }
-    return coords;
-  };
-
-  const getCirclePixels = (x0: number, y0: number, x1: number, y1: number, filled = false): [number, number][] => {
-    const coords: [number, number][] = [];
-    const r = Math.round(Math.hypot(x1 - x0, y1 - y0));
-    if (r === 0) return [[x0, y0]];
-    const r2 = r * r;
-    const inner2 = Math.max(0, (r - 0.7) * (r - 0.7));
-    const outer2 = (r + 0.7) * (r + 0.7);
-
-    for (let dx = -r; dx <= r; dx++) {
-      for (let dy = -r; dy <= r; dy++) {
-        const d2 = dx * dx + dy * dy;
-        if (filled ? d2 <= outer2 : (d2 >= inner2 && d2 <= outer2)) {
-          coords.push([x0 + dx, y0 + dy]);
-        }
-      }
-    }
-    return coords;
-  };
-
 
   const handleFlipHorizontal = async () => {
-    if (mode === "global") return;
+    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
     for (let y = 0; y < size; y++) {
@@ -526,12 +409,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
       setRedoStack([]);
-      window.dispatchEvent(new CustomEvent("aha_toast", { detail: loc("Отражено по горизонтали!", "Flipped horizontally!", "Адлюстравана па гарызанталі!", "Horizontal gespiegelt!", "Retourné horizontalement !", "水平翻转！") }));
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Отражено по горизонтали!', 'Flipped horizontally!') })
+      );
     }
   };
 
   const handleFlipVertical = async () => {
-    if (mode === "global") return;
+    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
     for (let x = 0; x < size; x++) {
@@ -552,12 +437,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
       setRedoStack([]);
-      window.dispatchEvent(new CustomEvent("aha_toast", { detail: loc("Отражено по вертикали!", "Flipped vertically!", "Адлюстравана па вертыкалі!", "Vertikal gespiegelt!", "Retourné verticalement !", "垂直翻转！") }));
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Отражено по вертикали!', 'Flipped vertically!') })
+      );
     }
   };
 
   const handleRotate90 = async () => {
-    if (mode === "global") return;
+    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
     for (let y = 0; y < size; y++) {
@@ -577,23 +464,16 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
       setRedoStack([]);
-      window.dispatchEvent(new CustomEvent("aha_toast", { detail: loc("Повернуто на 90°!", "Rotated 90°!", "Павернута на 90°!", "Um 90° gedreht!", "Tourné de 90° !", "旋转 90°！") }));
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Повернуто на 90°!', 'Rotated 90°!') })
+      );
     }
   };
 
   const handleInvertColors = async () => {
-    if (mode === "global") return;
+    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
-    const invertHex = (hex: string | null) => {
-      if (!hex || hex === "eraser") return null;
-      let c = hex.replace("#", "");
-      if (c.length === 3) c = c.split("").map(x => x + x).join("");
-      const num = parseInt(c, 16);
-      if (isNaN(num)) return hex;
-      const inv = (0xFFFFFF ^ num).toString(16).padStart(6, "0");
-      return "#" + inv;
-    };
 
     Object.keys(pixels).forEach(key => {
       const oldColor = pixels[key]?.color;
@@ -610,47 +490,122 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
       setRedoStack([]);
-      window.dispatchEvent(new CustomEvent("aha_toast", { detail: loc("Цвета инвертированы!", "Colors inverted!", "Колеры інвертаваныя!", "Farben invertiert!", "Couleurs inversées !", "颜色已反转！") }));
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Цвета инвертированы!', 'Colors inverted!') })
+      );
+    }
+  };
+
+  const handleGrayscale = async () => {
+    if (mode === 'global') return;
+    const updates: Record<string, string | null> = {};
+    const strokeActions: StrokeAction[] = [];
+
+    Object.keys(pixels).forEach(key => {
+      const oldColor = pixels[key]?.color;
+      if (oldColor) {
+        const gray = toGrayscaleHex(oldColor);
+        if (gray && gray !== oldColor) {
+          updates[key] = gray;
+          strokeActions.push({ pixelId: key, oldColor, newColor: gray });
+        }
+      }
+    });
+
+    if (Object.keys(updates).length > 0) {
+      await drawPixelsBatch(updates);
+      setUndoStack(prev => [...prev, strokeActions]);
+      setRedoStack([]);
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Холст переведен в Ч/Б!', 'Converted to grayscale!') })
+      );
+    }
+  };
+
+  const handleAdjustBrightness = async (factor: number) => {
+    if (mode === 'global') return;
+    const updates: Record<string, string | null> = {};
+    const strokeActions: StrokeAction[] = [];
+
+    Object.keys(pixels).forEach(key => {
+      const oldColor = pixels[key]?.color;
+      if (oldColor) {
+        const adjusted = adjustBrightnessHex(oldColor, factor);
+        if (adjusted && adjusted !== oldColor) {
+          updates[key] = adjusted;
+          strokeActions.push({ pixelId: key, oldColor, newColor: adjusted });
+        }
+      }
+    });
+
+    if (Object.keys(updates).length > 0) {
+      await drawPixelsBatch(updates);
+      setUndoStack(prev => [...prev, strokeActions]);
+      setRedoStack([]);
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', {
+          detail: factor > 1 ? loc('Осветлено на +15%!', 'Brightened +15%!') : loc('Затемнено на -15%!', 'Darkened -15%!')
+        })
+      );
+    }
+  };
+
+  const handleReplaceColorGlobal = async (targetColor: string | null, newColor: string | null) => {
+    if (!targetColor || targetColor === newColor) return;
+    const updates: Record<string, string | null> = {};
+    const strokeActions: StrokeAction[] = [];
+
+    Object.keys(pixels).forEach(key => {
+      const curr = pixels[key]?.color || null;
+      if (curr && curr.toLowerCase() === targetColor.toLowerCase()) {
+        updates[key] = newColor;
+        strokeActions.push({ pixelId: key, oldColor: curr, newColor });
+      }
+    });
+
+    if (Object.keys(updates).length > 0) {
+      await drawPixelsBatch(updates);
+      setUndoStack(prev => [...prev, strokeActions]);
+      setRedoStack([]);
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', {
+          detail: loc(`Заменено ${Object.keys(updates).length} пикселей!`, `Replaced ${Object.keys(updates).length} pixels!`)
+        })
+      );
     }
   };
 
   const floodFill = async (startX: number, startY: number, fillHexColor: string) => {
-    if (!user) return;
-    if (!isVerified) {
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Только верифицированные пользователи могут рисовать!", "Only verified users can paint!", "Толькі верыфікаваныя карыстальнікі могуць маляваць!", "Nur verifizierte Benutzer können malen!", "Seuls les utilisateurs vérifiés peuvent peindre !", "只有通过验证的用户才能绘画！") }));
-      return;
-    }
+    if (!user || !isVerified) return;
     const currentSize = isGlobal ? 500 : size;
     if (startX < 0 || startX >= currentSize || startY < 0 || startY >= currentSize) return;
-    
+
     const targetColor = pixels[`${startX},${startY}`]?.color || null;
     const realFillColor = fillHexColor === 'eraser' ? null : fillHexColor;
     if (targetColor === realFillColor) return;
-    
-    const maxFlood = 1500; // slightly larger allowance for beautiful fillings
+
+    const maxFlood = 2000;
     const queue: [number, number][] = [[startX, startY]];
     const visited = new Set<string>();
     const strokeActions: StrokeAction[] = [];
     const updates: Record<string, string | null> = {};
 
     const getPixelColorLocal = (key: string): string | null => {
-      if (key in updates) {
-        return updates[key];
-      }
+      if (key in updates) return updates[key];
       return pixels[key]?.color || null;
     };
-    
+
     while (queue.length > 0 && strokeActions.length < maxFlood) {
       const [cx, cy] = queue.shift()!;
       const key = `${cx},${cy}`;
       if (visited.has(key)) continue;
       visited.add(key);
-      
+
       const currColor = getPixelColorLocal(key);
       if (currColor === targetColor) {
         strokeActions.push({ pixelId: key, oldColor: pixels[key]?.color || null, newColor: realFillColor });
         updates[key] = realFillColor;
-        
+
         const neighbors = [
           [cx + 1, cy],
           [cx - 1, cy],
@@ -667,7 +622,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         }
       }
     }
-    
+
     if (strokeActions.length > 0) {
       await drawPixelsBatch(updates);
       setUndoStack(prev => [...prev, strokeActions]);
@@ -677,8 +632,8 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   const getSymmetricCoordinates = (cx: number, cy: number): { x: number; y: number }[] => {
     const coords = [{ x: cx, y: cy }];
-    if (isGlobal) return coords; // Symmetry only in personal canvas
-    
+    if (isGlobal) return coords;
+
     if (symmetryMode === 'horizontal') {
       coords.push({ x: size - 1 - cx, y: cy });
     } else if (symmetryMode === 'vertical') {
@@ -714,36 +669,50 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const paintPixelsGroup = (cx: number, cy: number) => {
-    if (!user || tool === 'move') return;
-    if (!isVerified) return;
-    
+    if (!user || tool === 'move' || !isVerified) return;
+
     const key = `${cx},${cy}`;
     if (lastDrawn === key) return;
     setLastDrawn(key);
 
-    const symmetricCenters = getSymmetricCoordinates(cx, cy);
-    const offsets = getBrushOffsets(brushSize);
-    
-    const targetCoords: { x: number; y: number }[] = [];
-    symmetricCenters.forEach(center => {
+    let baseTargetCoords: { x: number; y: number }[] = [];
+
+    if (tool === 'spray') {
+      const sprayed = getSprayPixels(cx, cy, brushSize + 1, 3 + brushSize);
+      baseTargetCoords = sprayed.map(([x, y]) => ({ x, y }));
+    } else if (tool === 'dither') {
+      const offsets = getBrushOffsets(brushSize);
       offsets.forEach(offset => {
-        const tx = center.x + offset.dx;
-        const ty = center.y + offset.dy;
-        if (!isOutOfBounds(tx, ty)) {
-          if (!targetCoords.some(c => c.x === tx && c.y === ty)) {
-            targetCoords.push({ x: tx, y: ty });
-          }
+        const tx = cx + offset.dx;
+        const ty = cy + offset.dy;
+        if ((tx + ty) % 2 === 0) {
+          baseTargetCoords.push({ x: tx, y: ty });
+        }
+      });
+    } else {
+      const offsets = getBrushOffsets(brushSize);
+      offsets.forEach(offset => {
+        baseTargetCoords.push({ x: cx + offset.dx, y: cy + offset.dy });
+      });
+    }
+
+    const symmetricCenters: { x: number; y: number }[] = [];
+    baseTargetCoords.forEach(baseCoord => {
+      const syms = getSymmetricCoordinates(baseCoord.x, baseCoord.y);
+      syms.forEach(s => {
+        if (!isOutOfBounds(s.x, s.y) && !symmetricCenters.some(c => c.x === s.x && c.y === s.y)) {
+          symmetricCenters.push(s);
         }
       });
     });
 
     const updates: Record<string, string | null> = {};
-    
-    targetCoords.forEach(({ x, y }) => {
+
+    symmetricCenters.forEach(({ x, y }) => {
       const pixelId = `${x},${y}`;
       const existing = pixels[pixelId];
       const oldColor = existing ? existing.color : null;
-      
+
       if (tool === 'eraser' || selectedColor === 'eraser') {
         if (!existing) return;
         if (!currentStrokeRef.current.find(s => s.pixelId === pixelId)) {
@@ -753,7 +722,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
       } else {
         if (existing && existing.color === selectedColor) return;
         if (mode === 'global' && pixelsLeft <= 0) {
-          window.dispatchEvent(new CustomEvent('aha_toast', { detail: "Достигнут часовой лимит пикселей!" }));
+          window.dispatchEvent(new CustomEvent('aha_toast', { detail: 'Достигнут часовой лимит пикселей!' }));
           return;
         }
         if (!currentStrokeRef.current.find(s => s.pixelId === pixelId)) {
@@ -772,7 +741,11 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const handlePointerDown = (clientX: number, clientY: number) => {
     if (tool === 'move' || !user) return;
     if (!isVerified) {
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Только верифицированные пользователи могут рисовать!", "Only verified users can paint!", "Толькі верыфікаваныя карыстальнікі могуць маляваць!", "Nur verifizierte Benutzer können malen!", "Seuls les utilisateurs vérifiés peuvent peindre !", "只有通过验证的用户才能绘画！") }));
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', {
+          detail: loc('Только верифицированные пользователи могут рисовать!', 'Only verified users can paint!')
+        })
+      );
       return;
     }
     const coords = getGridCoords(clientX, clientY);
@@ -782,11 +755,20 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     if (tool === 'picker') {
       const clickedPixel = pixels[`${x},${y}`];
       if (clickedPixel && clickedPixel.color) {
-        setSelectedColor(clickedPixel.color);
+        handleSelectColor(clickedPixel.color);
         setTool('draw');
-        window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc(`Пипетка: выбран цвет ${clickedPixel.color}`, `Eyedropper: selected ${clickedPixel.color}`, `Піпетка: абраны колер ${clickedPixel.color}`, `Pipette: Farbe ${clickedPixel.color} ausgewählt`, `Pipette : couleur sélectionnée ${clickedPixel.color}`, `吸管：已选择颜色 ${clickedPixel.color}`) }));
-      } else {
-        window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Пиксель пуст', 'Pixel is empty', 'Піксель пусты', 'Pixel ist leer', 'Le pixel est vide', '像素为空') }));
+        window.dispatchEvent(
+          new CustomEvent('aha_toast', { detail: loc(`Пипетка: ${clickedPixel.color}`, `Picked: ${clickedPixel.color}`) })
+        );
+      }
+      setIsDrawing(false);
+      return;
+    }
+
+    if (tool === 'replace_color') {
+      const clickedPixel = pixels[`${x},${y}`];
+      if (clickedPixel && clickedPixel.color) {
+        handleReplaceColorGlobal(clickedPixel.color, selectedColor === 'eraser' ? null : selectedColor);
       }
       setIsDrawing(false);
       return;
@@ -809,7 +791,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const handlePointerMove = (clientX: number, clientY: number) => {
-    if (!isDrawing || tool === 'move' || tool === 'picker' || !user) return;
+    if (!isDrawing || tool === 'move' || tool === 'picker' || tool === 'replace_color' || !user) return;
     const coords = getGridCoords(clientX, clientY);
     if (!coords) return;
     const { x, y } = coords;
@@ -832,12 +814,12 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         });
         setPreviewPixels(previewMap);
       }
-    } else if (tool === 'draw' || tool === 'eraser') {
+    } else if (['draw', 'eraser', 'spray', 'dither'].includes(tool)) {
       paintPixelsGroup(x, y);
     }
   };
 
-  const handlePointerUp = (clientX?: number, clientY?: number) => {
+  const handlePointerUp = () => {
     if (!isDrawing) return;
     setIsDrawing(false);
     setLastDrawn(null);
@@ -845,7 +827,12 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     const targetX = lastMoveCoords?.x ?? startPoint?.x;
     const targetY = lastMoveCoords?.y ?? startPoint?.y;
 
-    if (['line', 'rect', 'rect_filled', 'circle', 'circle_filled'].includes(tool) && startPoint && targetX !== undefined && targetY !== undefined) {
+    if (
+      ['line', 'rect', 'rect_filled', 'circle', 'circle_filled'].includes(tool) &&
+      startPoint &&
+      targetX !== undefined &&
+      targetY !== undefined
+    ) {
       let pPixels: [number, number][] = [];
       if (tool === 'line') pPixels = getLinePixels(startPoint.x, startPoint.y, targetX, targetY);
       else if (tool === 'rect') pPixels = getRectPixels(startPoint.x, startPoint.y, targetX, targetY);
@@ -892,7 +879,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     const lastAction = undoStack[undoStack.length - 1];
     setUndoStack(prev => prev.slice(0, -1));
     setRedoStack(prev => [...prev, lastAction]);
-    
+
     const updates: Record<string, string | null> = {};
     lastAction.forEach(action => {
       updates[action.pixelId] = action.oldColor;
@@ -905,7 +892,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     const nextAction = redoStack[redoStack.length - 1];
     setRedoStack(prev => prev.slice(0, -1));
     setUndoStack(prev => [...prev, nextAction]);
-    
+
     const updates: Record<string, string | null> = {};
     nextAction.forEach(action => {
       updates[action.pixelId] = action.newColor;
@@ -913,20 +900,19 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     drawPixelsBatch(updates);
   };
 
-  const generateCanvasBase64 = (): string | null => {
-    const exportSize = 512;
+  // Image & File Export handlers
+  const generateCanvasBase64 = (exportDim = 512): string | null => {
     const canvas = document.createElement('canvas');
-    canvas.width = exportSize;
-    canvas.height = exportSize;
+    canvas.width = exportDim;
+    canvas.height = exportDim;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // Fill background with theme dark base
     ctx.fillStyle = '#15101e';
-    ctx.fillRect(0, 0, exportSize, exportSize);
+    ctx.fillRect(0, 0, exportDim, exportDim);
 
     const resolution = isGlobal ? 50 : size;
-    const cellPixelSize = exportSize / resolution;
+    const cellPixelSize = exportDim / resolution;
 
     if (isGlobal) {
       const keys = Object.keys(pixels);
@@ -940,13 +926,13 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         if (y > maxY) maxY = y;
       });
 
-      const width = (maxX - minX) + 1;
-      const height = (maxY - minY) + 1;
+      const width = maxX - minX + 1;
+      const height = maxY - minY + 1;
       const maxDim = Math.max(width, height, 10);
       const startX = minX - Math.floor((maxDim - width) / 2);
       const startY = minY - Math.floor((maxDim - height) / 2);
 
-      const cellGlobalSize = exportSize / maxDim;
+      const cellGlobalSize = exportDim / maxDim;
       for (let y = 0; y < maxDim; y++) {
         for (let x = 0; x < maxDim; x++) {
           const p = pixels[`${startX + x},${startY + y}`];
@@ -971,13 +957,257 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     return canvas.toDataURL('image/png');
   };
 
+  const handleExportPNG = (exportDim = 512) => {
+    if (Object.keys(pixels).length === 0) {
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Холст пуст!', 'Canvas is empty!') }));
+      return;
+    }
+    const dataUrl = generateCanvasBase64(exportDim);
+    if (!dataUrl) return;
+    const link = document.createElement('a');
+    link.download = `pixel_art_${exportDim}px_${Date.now()}.png`;
+    link.href = dataUrl;
+    link.click();
+    setShowExportMenu(false);
+  };
+
+  const handleExportSVG = () => {
+    if (Object.keys(pixels).length === 0) {
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Холст пуст!', 'Canvas is empty!') }));
+      return;
+    }
+    const svgStr = generateCanvasSVG(pixels, size);
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `pixel_art_${size}x${size}_${Date.now()}.svg`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  const handleExportJSON = () => {
+    if (Object.keys(pixels).length === 0) {
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Холст пуст!', 'Canvas is empty!') }));
+      return;
+    }
+    const exportData = {
+      version: 1,
+      size: personalSize,
+      mode,
+      pixels,
+      exportedAt: new Date().toISOString()
+    };
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `canvas_sketch_${Date.now()}.json`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  const handleImportJSONFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async event => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (parsed && parsed.pixels) {
+          if (parsed.size && parsed.size !== personalSize) {
+            setPersonalSize(parsed.size);
+          }
+          const updates: Record<string, string | null> = {};
+          Object.entries(parsed.pixels).forEach(([key, val]: [string, any]) => {
+            const col = typeof val === 'string' ? val : val?.color;
+            if (col) updates[key] = col;
+          });
+          await drawPixelsBatch(updates);
+          window.dispatchEvent(
+            new CustomEvent('aha_toast', { detail: loc('Скетч JSON успешно импортирован!', 'JSON sketch imported!') })
+          );
+        }
+      } catch (err) {
+        window.dispatchEvent(
+          new CustomEvent('aha_toast', { detail: loc('Ошибка чтения JSON файла', 'Invalid JSON file') })
+        );
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleCopyToClipboard = async () => {
+    if (Object.keys(pixels).length === 0) {
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Холст пуст!', 'Canvas is empty!') }));
+      return;
+    }
+    try {
+      const dataUrl = generateCanvasBase64(512);
+      if (!dataUrl) throw new Error('No base64');
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      if (navigator.clipboard && navigator.clipboard.write) {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        window.dispatchEvent(
+          new CustomEvent('aha_toast', {
+            detail: loc('Изображение скопировано в буфер обмена!', 'Image copied to clipboard!')
+          })
+        );
+      }
+    } catch (e) {
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', {
+          detail: loc('Не удалось скопировать изображение', 'Failed to copy to clipboard')
+        })
+      );
+    }
+    setShowExportMenu(false);
+  };
+
+  // Draft operations
+  const handleSaveDraft = async () => {
+    if (!user) return;
+    if (Object.keys(pixels).length === 0) {
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Нельзя сохранить пустой холст!', 'Cannot save empty canvas!') })
+      );
+      return;
+    }
+
+    setIsSavingDraft(true);
+    const nameToUse = draftName.trim() || `${loc('Черновик', 'Draft')} #${drafts.length + 1}`;
+
+    const initialSave = {
+      id: 'save_' + Date.now(),
+      pixels,
+      size: personalSize,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await addDoc(collection(db, 'canvas_drafts'), {
+        userId: user.uid,
+        name: nameToUse,
+        pixels,
+        size: personalSize,
+        createdAt: new Date().toISOString(),
+        saves: [initialSave]
+      });
+      setDraftName('');
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Эскиз успешно сохранен в черновики!', 'Sketch saved to drafts!') })
+      );
+    } catch (e) {
+      console.error('Error saving draft:', e);
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Ошибка сохранения черновика', 'Error saving draft') })
+      );
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const executeLoadDraft = async () => {
+    if (!user || !draftToLoad) return;
+    const draft = draftToLoad;
+    setDraftToLoad(null);
+    try {
+      if (draft.size && draft.size !== personalSize) {
+        setPersonalSize(draft.size);
+      }
+      const targetCanvasId = `canvas_personal/${user.uid}_${draft.size || personalSize}`;
+      const targetDocId = targetCanvasId.replace(/\//g, '_');
+      const docRef = doc(db, 'canvases', targetDocId);
+
+      await setDoc(docRef, { pixels: draft.pixels || {} });
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Черновик успешно загружен!', 'Draft loaded successfully!') })
+      );
+    } catch (e) {
+      console.error('Error loading draft:', e);
+    }
+  };
+
+  const executeDeleteDraft = async () => {
+    if (!draftToDelete) return;
+    const draftId = draftToDelete.id;
+    setDraftToDelete(null);
+    try {
+      await deleteDoc(doc(db, 'canvas_drafts', draftId));
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Черновик удален', 'Draft deleted') }));
+    } catch (e) {
+      console.error('Error deleting draft:', e);
+    }
+  };
+
+  const executeLoadSave = async () => {
+    if (!user || !saveToLoad) return;
+    const save = saveToLoad;
+    setSaveToLoad(null);
+    setSelectedDraftForSaves(null);
+    try {
+      if (save.size && save.size !== personalSize) {
+        setPersonalSize(save.size);
+      }
+      const targetCanvasId = `canvas_personal/${user.uid}_${save.size || personalSize}`;
+      const targetDocId = targetCanvasId.replace(/\//g, '_');
+      await setDoc(doc(db, 'canvases', targetDocId), { pixels: save.pixels || {} });
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Версия успешно загружена!', 'Version loaded successfully!') })
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const executeDeleteSave = async () => {
+    if (!saveToDelete) return;
+    const { saveId, draftId, savesList } = saveToDelete;
+    setSaveToDelete(null);
+    try {
+      const updatedSaves = savesList.filter((s: any) => s.id !== saveId);
+      await setDoc(doc(db, 'canvas_drafts', draftId), { saves: updatedSaves }, { merge: true });
+      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Сохранение удалено!', 'Save deleted!') }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const executeLoadTemplate = async () => {
+    if (!user || !templateToLoad) return;
+    const templateKey = templateToLoad;
+    setTemplateToLoad(null);
+    const template = TEMPLATES[templateKey];
+    if (!template) return;
+
+    try {
+      const docRef = doc(db, 'canvases', canvasId.replace(/\//g, '_'));
+      const templatePixels: Record<string, any> = {};
+      Object.entries(template.pixels).forEach(([key, color]) => {
+        templatePixels[key] = { color, userId: user.uid, updatedAt: Date.now() };
+      });
+      await setDoc(docRef, { pixels: templatePixels });
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Шаблон успешно загружен!', 'Template successfully loaded!') })
+      );
+    } catch (e) {
+      console.error('Error loading template:', e);
+    }
+  };
+
   const handlePublish = () => {
     if (!user) return;
     if (Object.keys(pixels).length === 0) {
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Нельзя выкладывать пустой холст!", "Cannot publish empty canvas!", "Нельга выкладваць пусты палатно!", "Kann keine leere Leinwand veröffentlichen!", "Impossible de publier une toile vide !", "无法发布空白画布！") }));
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Нельзя выкладывать пустой холст!', 'Cannot publish empty canvas!') })
+      );
       return;
     }
-    // Open the publish modal to let user edit title and caption
     setPublishTitle('');
     setPublishCaption('');
     setPublishIsProtected(true);
@@ -988,19 +1218,13 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
     if (!user || !publishTitle.trim()) return;
     setIsPublishing(true);
     try {
-      // 1. Compile current pixels into a standard Base64 image
-      const canvasBase64 = generateCanvasBase64();
-      if (!canvasBase64) {
-        throw new Error("Could not compile canvas pixels to image");
-      }
+      const canvasBase64 = generateCanvasBase64(512);
+      if (!canvasBase64) throw new Error('Could not compile canvas pixels');
 
-      // 2. Encrypt the compiled image string for ultra-safe database storage
       const encryptedImage = encryptImage(canvasBase64);
-
-      // 3. Prepare thread data targeting forum_threads (Activities feed!)
       const threadData = {
         title: publishTitle.trim(),
-        content: publishCaption.trim() || loc('Рисунок с холста (пиксели)', 'Canvas pixel art drawing', 'Малюнак з палатна (пікселі)', 'Pixel-Art-Zeichnung von der Leinwand', 'Dessin Pixel Art de la toile', '画布像素画'),
+        content: publishCaption.trim() || loc('Рисунок с холста (пиксели)', 'Canvas pixel art drawing'),
         authorId: user.uid,
         authorName: user.displayName || 'Anonymous',
         authorPhoto: user.photoURL || '',
@@ -1012,13 +1236,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         isProtected: protectedViewFeatureEnabled ? publishIsProtected : false
       };
 
-      // 4. Save thread to Firestore
       const threadRef = await addDoc(collection(db, 'forum_threads'), threadData);
-      
-      // Add default bot comment
+
       await addDoc(collection(db, 'forum_comments'), {
         threadId: threadRef.id,
-        content: loc('Добро пожаловать в обсуждение этого рисунка!', 'Welcome to the discussion of this pixel art artwork!', 'Сардэчна запрашаем у абмеркаванне гэтага малюнка!', 'Willkommen zur Diskussion dieses Pixel-Art-Kunstwerks!', 'Bienvenue dans la discussion de ce dessin pixel art !', '欢迎参与这幅像素画作品的讨论！'),
+        content: loc(
+          'Добро пожаловать в обсуждение этого рисунка!',
+          'Welcome to the discussion of this pixel art artwork!'
+        ),
         authorId: 'system-bot',
         authorName: 'Aha Bot',
         authorPhoto: 'https://ui-avatars.com/api/?name=Aha+Bot&background=ff4d4d&color=15101e',
@@ -1028,7 +1253,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         isBot: true
       });
 
-      const { vercelFallback } = await import('../../utils/vercelFallback');
       if (vercelFallback.isAvailable()) {
         try {
           const payload = { ...threadData, id: threadRef.id };
@@ -1036,28 +1260,64 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         } catch (e) {}
       }
 
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Рисунок успешно опубликован в Активность!', 'Drawing successfully published to Activities!', 'Малюнак паспяхова апублікаваны ў Актыўнасць!', 'Zeichnung erfolgreich in Aktivitäten veröffentlicht!', 'Dessin publié avec succès dans Activités !', '画作已成功发布至动态！') }));
+      window.dispatchEvent(
+        new CustomEvent('aha_toast', { detail: loc('Рисунок успешно опубликован!', 'Drawing published!') })
+      );
       setIsPublishModalOpen(false);
-      
-      // Auto-prompt to clear canvas
       setShowPublishClearConfirm(true);
     } catch (e) {
       console.error(e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc('Ошибка публикации', 'Error publishing artwork', 'Памылка публікацыі', 'Fehler beim Veröffentlichen', 'Erreur de publication', '发布失败') }));
     } finally {
       setIsPublishing(false);
     }
   };
+
+  // Import image pixel handler
+  const handleImportImagePixels = async (importedPixels: Record<string, string>, targetSz: number) => {
+    if (!user) return;
+    if (targetSz !== personalSize) {
+      setPersonalSize(targetSz);
+    }
+    const targetCanvasId = `canvas_personal/${user.uid}_${targetSz}`;
+    const targetDocId = targetCanvasId.replace(/\//g, '_');
+    const docRef = doc(db, 'canvases', targetDocId);
+
+    const formattedPayload: Record<string, any> = {};
+    Object.entries(importedPixels).forEach(([key, col]) => {
+      formattedPayload[key] = {
+        color: col,
+        userId: user.uid,
+        updatedAt: Date.now()
+      };
+    });
+
+    await setDoc(docRef, { pixels: formattedPayload });
+    window.dispatchEvent(
+      new CustomEvent('aha_toast', { detail: loc('Картинка успешно импортирована!', 'Image successfully imported!') })
+    );
+  };
+
+  // Stats calculation
+  const totalPixelsCount = size * size;
+  const activePixelsCount = Object.keys(pixels).length;
+  const fillPercentage = totalPixelsCount > 0 ? Math.round((activePixelsCount / totalPixelsCount) * 100) : 0;
+  const uniqueColorsCount = useMemo(() => {
+    const set = new Set<string>();
+    Object.values(pixels).forEach(p => {
+      if (p?.color) set.add(p.color.toLowerCase());
+    });
+    return set.size;
+  }, [pixels]);
 
   if (!user) {
     return (
       <div className="bg-[#15101e]/80 border border-[#3d2b4f]/60 rounded-3xl p-6 sm:p-10 text-center max-w-xl mx-auto my-12 backdrop-blur-md shadow-2xl">
         <Lock className="mx-auto text-[#ff4d4d]/70 mb-4" size={40} />
         <h4 className="text-xl font-black text-white uppercase tracking-wider mb-2">
-          {loc('Авторизация', 'Authorization', 'Аўтарызацыя', 'Autorisierung', 'Autorisation', '身份验证')}
+          {loc('Авторизация', 'Authorization')}
         </h4>
         <p className="text-gray-300 mb-6 font-bold uppercase tracking-wider text-xs max-w-sm mx-auto leading-relaxed">
-          {t.canvasLoginPrompt || loc('Для доступа к Canvas и совместному рисованию необходимо войти в аккаунт.', 'Log in to draw on the shared canvas.', 'Для доступу да Canvas і сумеснага малявання неабходна ўвайсці ў уліковы запіс.', 'Melden Sie sich an, um auf der gemeinsamen Leinwand zu zeichnen.', 'Connectez-vous pour dessiner sur la toile partagée.', '登录即可在共享画布上进行创作。')}
+          {loc('Для доступа к Canvas и рисованию необходимо войти в аккаунт.', 'Log in to draw on the canvas.')}
         </p>
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-center w-full max-w-md mx-auto">
           <GoogleLoginButton lang={lang} className="w-full sm:w-auto" size="md" />
@@ -1066,144 +1326,14 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#3d2b4f]/50 border border-[#3d2b4f] text-white rounded-2xl font-black uppercase tracking-wider text-xs hover:bg-[#ff4d4d] hover:text-[#15101e] hover:border-[#ff4d4d] transition-all active:scale-95 shadow-xl cursor-pointer"
           >
             <Mail size={16} />
-            {loc('Зарегистрироваться через почту', 'Register via email', 'Зарэгістравацца праз пошту', 'Per E-Mail registrieren', 'S\'inscrire par e-mail', '通过邮箱注册')}
+            {loc('Зарегистрироваться через почту', 'Register via email')}
           </button>
         </div>
       </div>
     );
   }
 
-  const isGlobal = mode === 'global';
-  const PIXEL_CSS_SIZE = 20;
-
-  const loadTemplate = (templateKey: string) => {
-    setTemplateToLoad(templateKey);
-  };
-
-  const executeLoadTemplate = async () => {
-    if (!user || !templateToLoad) return;
-    const templateKey = templateToLoad;
-    setTemplateToLoad(null);
-    const template = TEMPLATES[templateKey];
-    if (!template) return;
-    
-    try {
-      const docRef = doc(db, 'canvases', canvasId.replace(/\//g, '_'));
-      const templatePixels: Record<string, any> = {};
-      Object.entries(template.pixels).forEach(([key, color]) => {
-        templatePixels[key] = {
-          color,
-          userId: user.uid,
-          updatedAt: Date.now()
-        };
-      });
-      await setDoc(docRef, { pixels: templatePixels });
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Шаблон успешно загружен!", "Template successfully loaded!", "Шаблон паспяхова загружаны!", "Vorlage erfolgreich geladen!", "Modèle chargé avec succès !", "模板加载成功！") }));
-    } catch (e) {
-      console.error("Error loading template:", e);
-      window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Ошибка загрузки шаблона", "Error loading template", "Памылка загрузкі шаблону", "Fehler beim Laden der Vorlage", "Erreur lors du chargement du modèle", "加载模板出错") }));
-    }
-  };
-
-  const handleExportPNG = () => {
-    const exportSize = 512;
-    const canvas = document.createElement('canvas');
-    canvas.width = exportSize;
-    canvas.height = exportSize;
-                    {mode === 'personal' && (
-                      <>
-                        <div className="w-px h-5 bg-[#3d2b4f] mx-1" />
-                        <button
-                          onClick={handleFlipHorizontal}
-                          className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
-                          title={loc('Отразить по горизонтали', 'Flip Horizontally', 'Адлюстраваць па гарызанталі', 'Horizontal spiegeln', 'Retourner horizontalement', '水平翻转')}
-                        >
-                          <FlipHorizontal size={18} />
-                        </button>
-                        <button
-                          onClick={handleFlipVertical}
-                          className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
-                          title={loc('Отразить по вертикали', 'Flip Vertically', 'Адлюстраваць па вертыкалі', 'Vertikal spiegeln', 'Retourner verticalement', '垂直翻转')}
-                        >
-                          <FlipVertical size={18} />
-                        </button>
-                        <button
-                          onClick={handleRotate90}
-                          className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
-                          title={loc('Повернуть на 90°', 'Rotate 90°', 'Павярнуць на 90°', 'Um 90° drehen', 'Tourner de 90°', '旋转 90°')}
-                        >
-                          <RotateCw size={18} />
-                        </button>
-                        <button
-                          onClick={handleInvertColors}
-                          className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
-                          title={loc('Инвертировать цвета', 'Invert Colors', 'Інвертаваць колеры', 'Farben invertieren', 'Inverser les couleurs', '反转颜色')}
-                        >
-                          <SunMedium size={18} />
-                        </button>
-                      </>
-                    )}
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Fill background with theme dark base
-    ctx.fillStyle = '#15101e';
-    ctx.fillRect(0, 0, exportSize, exportSize);
-
-    const resolution = isGlobal ? 50 : size;
-    const cellPixelSize = exportSize / resolution;
-
-    if (isGlobal) {
-      // Find bounding box of drawn pixels in global canvas to export neatly
-      const keys = Object.keys(pixels);
-      if (keys.length === 0) {
-        window.dispatchEvent(new CustomEvent('aha_toast', { detail: loc("Холст пуст!", "Canvas is empty!", "Палатно пустое!", "Leinwand ist leer!", "La canvas est vide !", "画布为空！") }));
-        return;
-      }
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      keys.forEach(k => {
-        const [x, y] = k.split(',').map(Number);
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      });
-
-      const width = (maxX - minX) + 1;
-      const height = (maxY - minY) + 1;
-      const maxDim = Math.max(width, height, 10);
-      const startX = minX - Math.floor((maxDim - width) / 2);
-      const startY = minY - Math.floor((maxDim - height) / 2);
-
-      const cellGlobalSize = exportSize / maxDim;
-      for (let y = 0; y < maxDim; y++) {
-        for (let x = 0; x < maxDim; x++) {
-          const p = pixels[`${startX + x},${startY + y}`];
-          if (p) {
-            ctx.fillStyle = p.color;
-            ctx.fillRect(x * cellGlobalSize, y * cellGlobalSize, cellGlobalSize, cellGlobalSize);
-          }
-        }
-      }
-    } else {
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          const p = pixels[`${x},${y}`];
-          if (p) {
-            ctx.fillStyle = p.color;
-            ctx.fillRect(x * cellPixelSize, y * cellPixelSize, cellPixelSize, cellPixelSize);
-          }
-        }
-      }
-    }
-
-    const dataUrl = canvas.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = `pixel_art_${mode}_${Date.now()}.png`;
-    link.href = dataUrl;
-    link.click();
-  };
-
+  // Pre-generate cells for grid
   const cells = [];
   if (!isGlobal) {
     for (let y = 0; y < size; y++) {
@@ -1225,599 +1355,900 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header & Mode Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-2xl sm:text-3xl font-black text-[#ff4d4d] uppercase flex items-center gap-3 tracking-widest leading-none">
-            <Palette className="w-8 h-8" />
-            {(() => {
-              if (mode === 'global') {
-                return t.canvasTitle || "Global Canvas";
-              }
-              switch (lang) {
-                case 'ru': return 'Личный Холст';
-                case 'by': return 'Асабісты Холст';
-                case 'de': return 'Persönliche Leinwand';
-                case 'fr': return 'Toile Personnelle';
-                case 'zh': return '个人画板';
-                default: return 'Personal Canvas';
-              }
-            })()}
-          </h2>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-[#ff4d4d]/10 border border-[#ff4d4d]/30 text-[#ff4d4d] rounded-2xl">
+            <Palette className="w-7 h-7" />
+          </div>
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider flex items-center gap-2">
+              {mode === 'global' ? loc('Глобальный Холст', 'Global Canvas') : loc('Личный Холст', 'Personal Canvas')}
+            </h2>
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">
+              {mode === 'global'
+                ? loc('Совместное полотно в реальном времени', 'Live real-time collaborative canvas')
+                : loc('Пиксель-арт студия со слоями, фильтрами и экспортом', 'Pixel art studio with filters, tools & export')}
+            </p>
+          </div>
+        </div>
+
+        {/* Top Action Buttons: Mode Switch + Shortcuts + Import */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex bg-[#15101e] p-1 rounded-2xl border border-[#3d2b4f]/60 shadow-lg">
+            <button
+              onClick={() => setMode('personal')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                mode === 'personal' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {loc('Личный', 'Personal')}
+            </button>
+            <button
+              onClick={() => setMode('global')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                mode === 'global' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {loc('Глобальный', 'Global')}
+            </button>
+          </div>
+
+          <button
+            onClick={() => setIsHotkeysModalOpen(true)}
+            className="p-2 bg-[#251c35] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-300 hover:text-white rounded-xl transition-all shadow-md"
+            title={loc('Горячие клавиши (Шпаргалка)', 'Hotkeys Cheat-Sheet')}
+          >
+            <Keyboard size={18} />
+          </button>
+
+          {mode === 'personal' && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#251c35] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-200 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md"
+              title={loc('Импорт картинки в пиксели', 'Import Image to Pixels')}
+            >
+              <Upload size={14} className="text-[#ff4d4d]" />
+              <span className="hidden sm:inline">{loc('Импорт', 'Import')}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="bg-[#15101e] rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl border border-[#3d2b4f] relative overflow-hidden">
+      {/* Main Canvas Workspace Container */}
+      <div className="bg-[#15101e] rounded-3xl p-4 sm:p-6 shadow-2xl border border-[#3d2b4f] relative overflow-hidden">
         {user && !isVerified && (
-          <div className="absolute inset-x-0 top-0 bg-[#ff4d4d]/10 border-b border-[#ff4d4d]/30 text-[#ff4d4d] px-4 py-3 z-30 text-center flex items-center justify-center gap-2 backdrop-blur-md">
+          <div className="absolute inset-x-0 top-0 bg-[#ff4d4d]/10 border-b border-[#ff4d4d]/30 text-[#ff4d4d] px-4 py-2.5 z-30 text-center flex items-center justify-center gap-2 backdrop-blur-md">
             <ShieldAlert size={16} />
             <span className="text-xs font-bold uppercase tracking-wider">
-              {lang === 'ru' 
-                ? 'Режим просмотра: Требуется верификация аккаунта для рисования' 
-                : 'Read-only mode: Account verification required to draw'}
+              {loc('Режим просмотра: Верифицируйте аккаунт для рисования', 'Read-only mode: Verification required to paint')}
             </span>
           </div>
         )}
+
         {loading && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#15101e]/80 backdrop-blur-sm">
-             <div className="w-10 h-10 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-10 h-10 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row gap-8 items-start">
-          
-           <div className="flex-1 w-full max-w-[600px] mx-auto md:mx-0">
-             {/* Redesigned interactive toolbar */}
-             <div className="mb-4 flex flex-col gap-3 bg-[#251c35] p-3 rounded-2xl border border-[#3d2b4f]">
-               <div className="flex flex-wrap items-center justify-between gap-3">
-                 <div className="flex flex-wrap items-center gap-1 bg-[#15101e] p-1 rounded-xl border border-[#3d2b4f]/50">
-                   <button
-                     onClick={() => setTool('draw')}
-                     className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'draw' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                     title={lang === 'ru' ? 'Карандаш' : 'Pencil'}
-                   >
-                     <PenTool size={18} />
-                   </button>
-                   <button
-                     onClick={() => setTool('eraser')}
-                     className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'eraser' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                     title={lang === 'ru' ? 'Ластик' : 'Eraser'}
-                   >
-                     <Eraser size={18} />
-                   </button>
-                   <button
-                     onClick={() => setTool('bucket')}
-                     className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'bucket' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                     title={lang === 'ru' ? 'Заливка' : 'Flood Fill'}
-                   >
-                     <PaintBucket size={18} />
-                   </button>
-                   <button
-                     onClick={() => setTool('line')}
-                     className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'line' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                     title={lang === 'ru' ? 'Линия' : 'Line Tool'}
-                   >
-                     <Slash size={18} />
-                   </button>
-                    <button
-                      onClick={() => setTool('rect')}
-                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'rect' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                      title={lang === 'ru' ? 'Прямоугольник (контур)' : 'Rectangle Contour'}
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          {/* Left Column: Toolbar + Stage Canvas */}
+          <div className="flex-1 w-full max-w-[650px] mx-auto lg:mx-0">
+            {/* Primary Interactive Toolbar */}
+            <div className="mb-4 flex flex-col gap-2.5 bg-[#251c35] p-3 rounded-2xl border border-[#3d2b4f]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {/* Main Drawing Tools Group */}
+                <div className="flex flex-wrap items-center gap-1 bg-[#15101e] p-1 rounded-xl border border-[#3d2b4f]/50">
+                  <button
+                    onClick={() => setTool('draw')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'draw' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Карандаш (B / P)', 'Pencil (B / P)')}
+                  >
+                    <PenTool size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('eraser')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'eraser' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Ластик (E)', 'Eraser (E)')}
+                  >
+                    <Eraser size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('bucket')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'bucket' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Заливка (G)', 'Flood Fill (G)')}
+                  >
+                    <PaintBucket size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('spray')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'spray' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Распылитель / Неон спрей (S)', 'Spray / Neon Particles (S)')}
+                  >
+                    <Sparkles size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('dither')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'dither' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Дизеринг / Шахматная штриховка (D)', 'Dither / Checkerboard Shading (D)')}
+                  >
+                    <Grid2X2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('replace_color')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'replace_color' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Замена цвета во всем холсте (K)', 'Global Color Replacer (K)')}
+                  >
+                    <Repeat size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('picker')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'picker' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Пипетка (I)', 'Eyedropper (I)')}
+                  >
+                    <Pipette size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('move')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'move' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Перемещение / Панорама (M / Пробел)', 'Move / Pan (M / Space)')}
+                  >
+                    <Move size={16} />
+                  </button>
+                </div>
+
+                {/* Shape Tools Group */}
+                <div className="flex items-center gap-1 bg-[#15101e] p-1 rounded-xl border border-[#3d2b4f]/50">
+                  <button
+                    onClick={() => setTool('line')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'line' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Линия (L)', 'Line Tool (L)')}
+                  >
+                    <Slash size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('rect')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'rect' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Прямоугольник (R)', 'Rectangle Contour (R)')}
+                  >
+                    <Square size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('rect_filled')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'rect_filled' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Заполненный прямоугольник', 'Filled Rectangle')}
+                  >
+                    <BoxSelect size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('circle')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'circle' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Окружность (C)', 'Circle Contour (C)')}
+                  >
+                    <Circle size={16} />
+                  </button>
+                  <button
+                    onClick={() => setTool('circle_filled')}
+                    className={`p-2 rounded-lg transition-all shrink-0 ${
+                      tool === 'circle_filled' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Заполненный круг', 'Filled Circle')}
+                  >
+                    <CircleDot size={16} />
+                  </button>
+                </div>
+
+                {/* History & View Controls */}
+                <div className="flex items-center gap-1 bg-[#15101e] p-1 rounded-xl border border-[#3d2b4f]/50">
+                  <button
+                    onClick={undo}
+                    disabled={undoStack.length === 0}
+                    className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40 disabled:opacity-30 disabled:hover:bg-transparent"
+                    title={loc('Отменить (Ctrl+Z)', 'Undo (Ctrl+Z)')}
+                  >
+                    <Undo2 size={16} />
+                  </button>
+                  <button
+                    onClick={redo}
+                    disabled={redoStack.length === 0}
+                    className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40 disabled:opacity-30 disabled:hover:bg-transparent"
+                    title={loc('Повторить (Ctrl+Y)', 'Redo (Ctrl+Y)')}
+                  >
+                    <Redo2 size={16} />
+                  </button>
+                  <div className="w-px h-5 bg-[#3d2b4f] mx-0.5" />
+                  <button
+                    onClick={() => setShowGrid(!showGrid)}
+                    className={`p-2 rounded-lg transition-all ${
+                      showGrid ? 'text-[#ff4d4d] bg-[#ff4d4d]/10' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'
+                    }`}
+                    title={loc('Переключить сетку', 'Toggle Grid')}
+                  >
+                    <Grid size={16} />
+                  </button>
+                  <button
+                    onClick={() => setScale(1)}
+                    className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40 text-[10px] font-mono font-bold"
+                    title={loc('Сбросить масштаб 100%', 'Reset 100% Zoom')}
+                  >
+                    {Math.round(scale * 100)}%
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-bar: Size, Symmetry, Brush, Canvas Shift & Filters */}
+              {mode === 'personal' && (
+                <div className="flex flex-col gap-2 pt-2 border-t border-[#3d2b4f]/30">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    {/* Size Selector */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        {loc('РАЗМЕР:', 'SIZE:')}
+                      </span>
+                      <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
+                        {[16, 24, 32, 48, 64].map(sz => (
+                          <button
+                            key={sz}
+                            onClick={() => setPersonalSize(sz)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${
+                              personalSize === sz ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'
+                            }`}
+                          >
+                            {sz}x{sz}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Brush Size */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        {loc('КИСТЬ:', 'BRUSH:')}
+                      </span>
+                      <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
+                        {[1, 2, 3].map(sz => (
+                          <button
+                            key={sz}
+                            onClick={() => setBrushSize(sz)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${
+                              brushSize === sz ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'
+                            }`}
+                          >
+                            {sz}px
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Symmetry */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        {loc('СИММЕТРИЯ:', 'SYMMETRY:')}
+                      </span>
+                      <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
+                        {[
+                          { mode: 'none', label: loc('ВЫКЛ', 'OFF'), icon: null },
+                          { mode: 'horizontal', label: loc('ГОР', 'HOR'), icon: <FlipHorizontal size={10} /> },
+                          { mode: 'vertical', label: loc('ВЕР', 'VER'), icon: <FlipVertical size={10} /> },
+                          { mode: 'radial', label: loc('РАД', 'RAD'), icon: <RefreshCw size={10} /> }
+                        ].map(sym => (
+                          <button
+                            key={sym.mode}
+                            onClick={() => setSymmetryMode(sym.mode as any)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-black flex items-center gap-1 transition-all ${
+                              symmetryMode === sym.mode ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'
+                            }`}
+                          >
+                            {sym.icon}
+                            {sym.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Transformation & Pixel Shift Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#3d2b4f]/20">
+                    <div className="flex items-center gap-1 bg-[#15101e] p-1 rounded-lg border border-[#3d2b4f]/50">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 px-1">
+                        {loc('СДВИГ:', 'SHIFT:')}
+                      </span>
+                      <button
+                        onClick={() => handleShiftPixels(0, -1)}
+                        className="p-1 rounded hover:bg-[#3d2b4f]/40 text-gray-300 hover:text-white transition-all"
+                        title={loc('Сдвинуть вверх', 'Shift Up')}
+                      >
+                        <ArrowUp size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleShiftPixels(0, 1)}
+                        className="p-1 rounded hover:bg-[#3d2b4f]/40 text-gray-300 hover:text-white transition-all"
+                        title={loc('Сдвинуть вниз', 'Shift Down')}
+                      >
+                        <ArrowDown size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleShiftPixels(-1, 0)}
+                        className="p-1 rounded hover:bg-[#3d2b4f]/40 text-gray-300 hover:text-white transition-all"
+                        title={loc('Сдвинуть влево', 'Shift Left')}
+                      >
+                        <ArrowLeft size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleShiftPixels(1, 0)}
+                        className="p-1 rounded hover:bg-[#3d2b4f]/40 text-gray-300 hover:text-white transition-all"
+                        title={loc('Сдвинуть вправо', 'Shift Right')}
+                      >
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
+
+                    {/* Quick Filters */}
+                    <div className="flex items-center gap-1 bg-[#15101e] p-1 rounded-lg border border-[#3d2b4f]/50">
+                      <button
+                        onClick={handleFlipHorizontal}
+                        className="p-1.5 rounded hover:bg-[#3d2b4f]/40 text-gray-300 hover:text-white transition-all"
+                        title={loc('Отразить по горизонтали', 'Flip Horizontally')}
+                      >
+                        <FlipHorizontal size={14} />
+                      </button>
+                      <button
+                        onClick={handleFlipVertical}
+                        className="p-1.5 rounded hover:bg-[#3d2b4f]/40 text-gray-300 hover:text-white transition-all"
+                        title={loc('Отразить по вертикали', 'Flip Vertically')}
+                      >
+                        <FlipVertical size={14} />
+                      </button>
+                      <button
+                        onClick={handleRotate90}
+                        className="p-1.5 rounded hover:bg-[#3d2b4f]/40 text-gray-300 hover:text-white transition-all"
+                        title={loc('Повернуть на 90°', 'Rotate 90°')}
+                      >
+                        <RotateCw size={14} />
+                      </button>
+                      <button
+                        onClick={handleInvertColors}
+                        className="p-1.5 rounded hover:bg-[#3d2b4f]/40 text-gray-300 hover:text-white transition-all"
+                        title={loc('Инвертировать цвета', 'Invert Colors')}
+                      >
+                        <SunMedium size={14} />
+                      </button>
+                      <button
+                        onClick={handleGrayscale}
+                        className="p-1.5 rounded hover:bg-[#3d2b4f]/40 text-gray-300 hover:text-white transition-all"
+                        title={loc('Оттенки серого (Ч/Б)', 'Grayscale')}
+                      >
+                        <Moon size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleAdjustBrightness(1.15)}
+                        className="px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-300 hover:text-white hover:bg-[#3d2b4f]/40 transition-all"
+                        title={loc('Осветлить (+15%)', 'Brighten (+15%)')}
+                      >
+                        +15%
+                      </button>
+                      <button
+                        onClick={() => handleAdjustBrightness(0.85)}
+                        className="px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-300 hover:text-white hover:bg-[#3d2b4f]/40 transition-all"
+                        title={loc('Затемнить (-15%)', 'Darken (-15%)')}
+                      >
+                        -15%
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Stage Canvas Viewport */}
+            <div
+              ref={zoomContainerRef}
+              className="aspect-square bg-[#0d0b14] rounded-2xl overflow-hidden border-2 border-[#3d2b4f] shadow-inner relative flex items-center justify-center p-2"
+            >
+              <motion.div
+                className={`w-full h-full relative ${
+                  tool === 'move' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'
+                } select-none touch-none`}
+                drag={tool === 'move'}
+                dragConstraints={isGlobal ? undefined : { left: -300, right: 300, top: -300, bottom: 300 }}
+                style={{ scale }}
+                onTouchMove={e => {
+                  if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const touch1 = e.touches[0];
+                    const touch2 = e.touches[1];
+                    const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+
+                    if (lastTouchDistRef.current === null) {
+                      lastTouchDistRef.current = dist;
+                    } else {
+                      const delta = dist - lastTouchDistRef.current;
+                      setScale(s => Math.min(Math.max(0.5, s + delta * 0.01), 3.5));
+                      lastTouchDistRef.current = dist;
+                    }
+                  }
+                }}
+                onTouchEnd={() => {
+                  lastTouchDistRef.current = null;
+                }}
+              >
+                {isGlobal ? (
+                  <div
+                    ref={innerRef}
+                    className="w-[10000px] h-[10000px] border border-[#3d2b4f]/50 bg-[#15101e] shadow-2xl relative select-none touch-none absolute top-1/2 left-1/2 -mt-[5000px] -ml-[5000px]"
+                    onPointerDown={e => {
+                      if (e.pointerType === 'mouse' && e.buttons !== 1) return;
+                      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                      handlePointerDown(e.clientX, e.clientY);
+                    }}
+                    onPointerMove={e => {
+                      handlePointerMove(e.clientX, e.clientY);
+                    }}
+                    onPointerUp={e => {
+                      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+                      handlePointerUp();
+                    }}
+                    onPointerLeave={() => handlePointerUp()}
+                    style={{
+                      backgroundImage: showGrid
+                        ? `linear-gradient(to right, rgba(61,43,79,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(61,43,79,0.3) 1px, transparent 1px)`
+                        : 'none',
+                      backgroundSize: `${PIXEL_CSS_SIZE}px ${PIXEL_CSS_SIZE}px`
+                    }}
+                  >
+                    {Object.keys(pixels).map(key => {
+                      const p = pixels[key];
+                      if (!p) return null;
+                      const [xx, yy] = key.split(',').map(Number);
+                      const previewColor = previewPixels[key];
+                      return (
+                        <div
+                          key={key}
+                          style={{
+                            position: 'absolute',
+                            left: xx * PIXEL_CSS_SIZE,
+                            top: yy * PIXEL_CSS_SIZE,
+                            width: PIXEL_CSS_SIZE,
+                            height: PIXEL_CSS_SIZE,
+                            backgroundColor: previewColor || p.color
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div
+                    className="w-full h-full border border-[#3d2b4f]/50 bg-[#15101e] shadow-2xl relative select-none touch-none"
+                    ref={innerRef}
+                    onPointerDown={e => {
+                      if (e.pointerType === 'mouse' && e.buttons !== 1) return;
+                      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                      handlePointerDown(e.clientX, e.clientY);
+                    }}
+                    onPointerMove={e => {
+                      handlePointerMove(e.clientX, e.clientY);
+                    }}
+                    onPointerUp={e => {
+                      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+                      handlePointerUp();
+                    }}
+                    onPointerLeave={() => handlePointerUp()}
+                  >
+                    <div
+                      className="w-full h-full grid pointer-events-none"
+                      style={{
+                        gridTemplateColumns: `repeat(${size}, 1fr)`,
+                        gridTemplateRows: `repeat(${size}, 1fr)`
+                      }}
                     >
-                      <Square size={18} />
+                      {cells}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+
+              {/* Mini Radar Preview */}
+              {mode === 'personal' && (
+                <div className="absolute bottom-3 right-3 bg-[#15101e]/90 border border-[#ff4d4d]/30 backdrop-blur-md rounded-2xl p-2 shadow-xl pointer-events-none select-none z-10 flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#ff4d4d] animate-pulse" />
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/50">RADAR</span>
+                  </div>
+                  <div className="w-14 h-14 bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-lg overflow-hidden relative">
+                    <div
+                      className="grid w-full h-full"
+                      style={{
+                        gridTemplateColumns: `repeat(${size}, 1fr)`,
+                        gridTemplateRows: `repeat(${size}, 1fr)`
+                      }}
+                    >
+                      {Object.keys(pixels).length === 0 ? (
+                        <div className="absolute inset-0 flex items-center justify-center text-[7px] text-white/20 font-mono uppercase">
+                          EMPTY
+                        </div>
+                      ) : (
+                        Array.from({ length: size * size }).map((_, idx) => {
+                          const x = idx % size;
+                          const y = Math.floor(idx / size);
+                          const pixel = pixels[`${x},${y}`];
+                          return (
+                            <div
+                              key={idx}
+                              style={{ backgroundColor: pixel?.color || '#15101e' }}
+                              className="w-full h-full"
+                            />
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Canvas Live Stats Bar */}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-[#251c35]/80 rounded-xl border border-[#3d2b4f]/60 text-[11px] text-gray-300 font-mono">
+              <div className="flex items-center gap-3">
+                <span>
+                  {loc('Заполнено:', 'Filled:')}{' '}
+                  <strong className="text-[#ff4d4d]">{activePixelsCount}</strong> / {totalPixelsCount} px ({fillPercentage}%)
+                </span>
+                <span>
+                  {loc('Цветов:', 'Colors:')} <strong className="text-purple-400">{uniqueColorsCount}</strong>
+                </span>
+              </div>
+              <div className="text-gray-400">
+                {mode === 'global' ? (
+                  <span>
+                    {loc('Лимит:', 'Limit:')} <strong className="text-[#ff4d4d]">{pixelsLeft}</strong>/{MAX_PIXELS}
+                  </span>
+                ) : (
+                  <span>
+                    {size}x{size} • {Math.round(scale * 100)}% zoom
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Colors, Templates, Drafts, Actions */}
+          <div className="w-full lg:w-72 shrink-0 flex flex-col gap-4">
+            {/* Color Palette Panel */}
+            <div className="bg-[#251c35] rounded-2xl p-4 border border-[#3d2b4f] space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest flex items-center gap-1.5">
+                  <Palette size={14} className="text-[#ff4d4d]" />
+                  {loc('Палитры', 'Palettes')}
+                </h3>
+
+                {/* Palette Switcher Dropdown */}
+                <select
+                  value={currentPaletteId}
+                  onChange={e => setCurrentPaletteId(e.target.value)}
+                  className="bg-[#15101e] border border-[#3d2b4f] text-[10px] font-bold text-white rounded-lg px-2 py-1 outline-none cursor-pointer focus:border-[#ff4d4d]"
+                >
+                  {CANVAS_PALETTES.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {lang === 'ru' ? p.nameRu : p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Palette Color Grid */}
+              <div className="grid grid-cols-6 gap-2">
+                {activePalette.colors.map(color => (
+                  <button
+                    key={color}
+                    onClick={() => handleSelectColor(color)}
+                    className={`w-9 h-9 rounded-xl transition-all border-2 ${
+                      selectedColor.toLowerCase() === color.toLowerCase() && tool !== 'eraser'
+                        ? 'scale-110 border-white shadow-lg shadow-white/30'
+                        : 'border-transparent hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    aria-label={`Select color ${color}`}
+                  />
+                ))}
+
+                {/* Eraser button */}
+                <button
+                  onClick={() => {
+                    setSelectedColor('eraser');
+                    setTool('eraser');
+                  }}
+                  className={`w-9 h-9 rounded-xl transition-all border-2 flex items-center justify-center bg-[#15101e] ${
+                    tool === 'eraser'
+                      ? 'scale-110 border-white shadow-lg shadow-white/30'
+                      : 'border-[#3d2b4f] hover:scale-105 hover:border-[#ff4d4d]'
+                  }`}
+                  title={loc('Ластик', 'Eraser')}
+                >
+                  <Eraser size={16} className={tool === 'eraser' ? 'text-white' : 'text-gray-400'} />
+                </button>
+              </div>
+
+              {/* Custom HEX Input & Native Color Picker */}
+              <div className="pt-2 border-t border-[#3d2b4f]/40 space-y-2">
+                <div className="flex items-center gap-2">
+                  <label
+                    className="w-8 h-8 rounded-lg border border-white/20 flex items-center justify-center cursor-pointer relative overflow-hidden shrink-0 shadow-inner"
+                    style={{ backgroundColor: selectedColor !== 'eraser' ? selectedColor : '#15101e' }}
+                  >
+                    <input
+                      type="color"
+                      value={selectedColor !== 'eraser' ? selectedColor : '#ff4d4d'}
+                      onChange={e => handleSelectColor(e.target.value)}
+                      className="absolute opacity-0 w-16 h-16 cursor-pointer"
+                    />
+                  </label>
+                  <input
+                    type="text"
+                    value={customHexInput}
+                    onChange={e => {
+                      setCustomHexInput(e.target.value);
+                      if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                        setSelectedColor(e.target.value);
+                        trackRecentColor(e.target.value);
+                      }
+                    }}
+                    placeholder="#ff4d4d"
+                    maxLength={7}
+                    className="flex-1 bg-[#15101e] border border-[#3d2b4f] rounded-lg px-2 py-1.5 text-xs font-mono text-white outline-none focus:border-[#ff4d4d]"
+                  />
+                </div>
+
+                {/* Recent Colors Strip */}
+                {recentColors.length > 0 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar">
+                    <span className="text-[8px] font-black uppercase text-gray-500 shrink-0">REC:</span>
+                    {recentColors.map((col, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSelectColor(col)}
+                        style={{ backgroundColor: col }}
+                        className="w-5 h-5 rounded-md shrink-0 border border-white/10 hover:scale-110 transition-transform"
+                        title={col}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Templates Selector */}
+            {mode === 'personal' && (
+              <div className="bg-[#251c35] rounded-2xl p-4 border border-[#3d2b4f] space-y-2.5">
+                <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest flex items-center gap-1.5">
+                  <LayoutGrid size={14} className="text-[#ff4d4d]" />
+                  {loc('Шаблоны (Пиксель-Арт)', 'Templates')}
+                </h3>
+                <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto custom-scrollbar pr-1">
+                  {Object.entries(TEMPLATES).map(([key, val]) => (
+                    <button
+                      key={key}
+                      onClick={() => setTemplateToLoad(key)}
+                      className="px-2 py-1.5 bg-[#15101e] hover:bg-[#ff4d4d]/10 hover:border-[#ff4d4d]/40 border border-[#3d2b4f]/60 rounded-xl text-[10px] font-bold text-gray-300 hover:text-white transition-all text-left truncate flex items-center gap-1.5"
+                    >
+                      <Sparkles size={10} className="text-[#ff4d4d] shrink-0" />
+                      <span className="truncate">{lang === 'ru' ? val.nameRu : val.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions: Export, Publish, Clear */}
+            <div className="bg-[#251c35] rounded-2xl p-4 border border-[#3d2b4f] space-y-2">
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="w-full flex items-center justify-center h-10 gap-2 bg-[#ff4d4d]/10 border border-[#ff4d4d]/30 text-[#ff4d4d] hover:text-white hover:bg-[#ff4d4d] rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md"
+                >
+                  <Download size={14} className="shrink-0" />
+                  {loc('ЭКСПОРТ & СКАЧАТЬ', 'EXPORT & DOWNLOAD')}
+                </button>
+
+                {showExportMenu && (
+                  <div className="mt-1.5 bg-[#15101e] border border-[#3d2b4f] rounded-2xl p-2 shadow-2xl space-y-1 z-20">
+                    <button
+                      onClick={() => handleExportPNG(512)}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-gray-200 hover:text-white hover:bg-[#ff4d4d]/20 rounded-xl flex items-center justify-between"
+                    >
+                      <span>{loc('Скачать PNG (512px)', 'Download PNG (512px)')}</span>
+                      <span className="text-[9px] text-gray-500 font-mono">PNG</span>
                     </button>
                     <button
-                      onClick={() => setTool('rect_filled')}
-                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'rect_filled' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                      title={lang === 'ru' ? 'Заполненный прямоугольник' : 'Filled Rectangle'}
+                      onClick={() => handleExportPNG(1024)}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-gray-200 hover:text-white hover:bg-[#ff4d4d]/20 rounded-xl flex items-center justify-between"
                     >
-                      <BoxSelect size={18} />
+                      <span>{loc('Скачать HD PNG (1024px)', 'Download HD PNG (1024px)')}</span>
+                      <span className="text-[9px] text-gray-500 font-mono">HQ</span>
                     </button>
                     <button
-                      onClick={() => setTool('circle')}
-                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'circle' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                      title={lang === 'ru' ? 'Окружность (контур)' : 'Circle Contour'}
+                      onClick={handleExportSVG}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-gray-200 hover:text-white hover:bg-[#ff4d4d]/20 rounded-xl flex items-center justify-between"
                     >
-                      <Circle size={18} />
+                      <span>{loc('Скачать векторный SVG', 'Download Vector SVG')}</span>
+                      <span className="text-[9px] text-[#ff4d4d] font-mono">SVG</span>
                     </button>
                     <button
-                      onClick={() => setTool('circle_filled')}
-                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'circle_filled' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                      title={lang === 'ru' ? 'Заполненный круг' : 'Filled Circle'}
+                      onClick={handleCopyToClipboard}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-gray-200 hover:text-white hover:bg-[#ff4d4d]/20 rounded-xl flex items-center justify-between"
                     >
-                      <CircleDot size={18} />
+                      <span>{loc('Скопировать в буфер', 'Copy to Clipboard')}</span>
+                      <Copy size={12} className="text-gray-400" />
                     </button>
                     <button
-                      onClick={() => setTool('picker')}
-                      className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'picker' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                      title={lang === 'ru' ? 'Пипетка' : 'Eyedropper'}
+                      onClick={handleExportJSON}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-gray-200 hover:text-white hover:bg-[#ff4d4d]/20 rounded-xl flex items-center justify-between"
                     >
-                      <Pipette size={18} />
+                      <span>{loc('Сохранить JSON файл', 'Export JSON file')}</span>
+                      <FileCode2 size={12} className="text-purple-400" />
                     </button>
-                   <button
-                     onClick={() => setTool('move')}
-                     className={`p-2 rounded-lg transition-all shrink-0 ${tool === 'move' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                     title={lang === 'ru' ? 'Перемещение' : 'Move/Pan Tool'}
-                   >
-                     <Move size={18} />
-                   </button>
-                 </div>
+                    <label className="w-full text-left px-3 py-2 text-xs font-bold text-gray-200 hover:text-white hover:bg-[#ff4d4d]/20 rounded-xl flex items-center justify-between cursor-pointer">
+                      <span>{loc('Импортировать JSON', 'Import JSON file')}</span>
+                      <Upload size={12} className="text-blue-400" />
+                      <input
+                        ref={jsonFileInputRef}
+                        type="file"
+                        accept=".json,application/json"
+                        onChange={handleImportJSONFile}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
 
-                 <div className="flex items-center gap-1 bg-[#15101e] p-1 rounded-xl border border-[#3d2b4f]/50">
-                   <button
-                     onClick={undo}
-                     disabled={undoStack.length === 0}
-                     className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40 disabled:opacity-30 disabled:hover:bg-transparent"
-                     title="Undo"
-                   >
-                     <Undo2 size={18} />
-                   </button>
-                   <button
-                     onClick={redo}
-                     disabled={redoStack.length === 0}
-                     className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40 disabled:opacity-30 disabled:hover:bg-transparent"
-                     title="Redo"
-                   >
-                     <Redo2 size={18} />
-                   </button>
-                   <div className="w-px h-5 bg-[#3d2b4f] mx-1" />
-                   <button
-                     onClick={() => setShowGrid(!showGrid)}
-                     className={`p-2 rounded-lg transition-all ${showGrid ? 'text-[#ff4d4d] bg-[#ff4d4d]/10' : 'text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40'}`}
-                     title={lang === 'ru' ? 'Сетка' : 'Toggle Grid'}
-                   >
-                     <Grid size={18} />
-                   </button>
-                   <button
-                     onClick={handleExportPNG}
-                     className="p-2 rounded-lg transition-all text-gray-400 hover:text-white hover:bg-[#3d2b4f]/40"
-                     title={lang === 'ru' ? 'Скачать PNG' : 'Export PNG'}
-                   >
-                     <Download size={18} />
-                   </button>
-                 </div>
-               </div>
+              {mode === 'personal' && (
+                <>
+                  <button
+                    onClick={handlePublish}
+                    className="w-full flex items-center justify-center h-10 gap-2 bg-[#ff4d4d] text-[#15101e] rounded-xl text-xs font-black uppercase tracking-wider hover:bg-[#ff7a7a] transition-all active:scale-95 shadow-[0_0_15px_rgba(255,77,77,0.3)]"
+                  >
+                    <Save size={14} className="shrink-0" />
+                    {loc('ОПУБЛИКОВАТЬ В ЛЕНТУ', 'PUBLISH TO ACTIVITIES')}
+                  </button>
 
-               {/* Dynamic sub-tool row for personal settings */}
-               {mode === 'personal' && (
-                 <div className="flex flex-col gap-3 pt-2 border-t border-[#3d2b4f]/30">
-                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                     <div className="flex items-center gap-2">
-                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                         {lang === 'ru' ? 'РАЗМЕР:' : 'SIZE:'}
-                       </span>
-                       <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
-                         {[16, 32, 64].map(sz => (
-                           <button
-                             key={sz}
-                             onClick={() => setPersonalSize(sz)}
-                             className={`px-2 py-1 rounded text-[10px] font-black transition-all ${personalSize === sz ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
-                           >
-                             {sz}x{sz}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
+                  <button
+                    onClick={() => setShowClearConfirm(true)}
+                    className="w-full flex items-center justify-center h-9 gap-1.5 bg-red-600/10 text-red-400 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-red-600 transition-all active:scale-95 border border-red-500/20"
+                  >
+                    <Eraser size={14} className="shrink-0" />
+                    {loc('ОЧИСТИТЬ ХОЛСТ', 'CLEAR CANVAS')}
+                  </button>
+                </>
+              )}
+            </div>
 
-                     <div className="flex items-center gap-2">
-                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                         {lang === 'ru' ? 'ШАБЛОНЫ:' : 'TEMPLATES:'}
-                       </span>
-                       <div className="flex flex-wrap gap-1 bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
-                         {Object.entries(TEMPLATES).map(([key, val]) => (
-                           <button
-                             key={key}
-                             onClick={() => loadTemplate(key)}
-                             className="px-2 py-0.5 rounded text-[10px] font-bold text-gray-300 hover:text-white hover:bg-[#3d2b4f]/50 flex items-center gap-1 uppercase tracking-tight"
-                           >
-                             <LayoutGrid size={10} className="text-[#ff4d4d]" />
-                             {lang === 'ru' ? val.nameRu : val.name}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-                   </div>
+            {/* Drafts & Sketches Section */}
+            {mode === 'personal' && (
+              <div className="bg-[#251c35] rounded-2xl p-4 border border-[#3d2b4f] space-y-3">
+                <h3 className="text-xs font-black text-gray-300 uppercase tracking-widest flex items-center gap-1.5">
+                  <Bookmark size={14} className="text-[#ff4d4d]" />
+                  {loc('Черновики и Эскизы', 'Drafts & Sketches')}
+                </h3>
 
-                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[#3d2b4f]/20">
-                     <div className="flex items-center gap-2">
-                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                         {lang === 'ru' ? 'КИСТЬ:' : 'BRUSH:'}
-                       </span>
-                       <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
-                         {[1, 2, 3].map(sz => (
-                           <button
-                             key={sz}
-                             onClick={() => setBrushSize(sz)}
-                             className={`px-2.5 py-1 rounded text-[10px] font-black transition-all ${brushSize === sz ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
-                           >
-                             {sz}px
-                           </button>
-                         ))}
-                       </div>
-                     </div>
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    value={draftName}
+                    onChange={e => setDraftName(e.target.value)}
+                    placeholder={loc('Имя черновика...', 'Draft name...')}
+                    className="w-full bg-[#15101e] border border-[#3d2b4f]/60 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all font-sans"
+                    maxLength={40}
+                  />
+                  <button
+                    onClick={handleSaveDraft}
+                    disabled={isSavingDraft}
+                    className="w-full flex items-center justify-center h-8 gap-1 bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSavingDraft ? (
+                      <div className="w-3.5 h-3.5 border-2 border-purple-300 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Plus size={12} />
+                        {loc('СОХРАНИТЬ ЭСКИЗ', 'SAVE SKETCH')}
+                      </>
+                    )}
+                  </button>
+                </div>
 
-                     <div className="flex items-center gap-2">
-                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                         {lang === 'ru' ? 'СИММЕТРИЯ:' : 'SYMMETRY:'}
-                       </span>
-                       <div className="flex bg-[#15101e] p-0.5 rounded-lg border border-[#3d2b4f]/50">
-                         {[
-                           { mode: 'none', label: lang === 'ru' ? 'ВЫКЛ' : 'OFF', icon: null },
-                           { mode: 'horizontal', label: lang === 'ru' ? 'ГОР' : 'HOR', icon: <FlipHorizontal size={10} /> },
-                           { mode: 'vertical', label: lang === 'ru' ? 'ВЕР' : 'VER', icon: <FlipVertical size={10} /> },
-                           { mode: 'radial', label: lang === 'ru' ? 'РАД' : 'RAD', icon: <RefreshCw size={10} /> }
-                         ].map(sym => (
-                           <button
-                             key={sym.mode}
-                             onClick={() => setSymmetryMode(sym.mode as any)}
-                             className={`px-2.5 py-1 rounded text-[10px] font-black flex items-center gap-1 transition-all ${symmetryMode === sym.mode ? 'bg-[#ff4d4d] text-[#15101e]' : 'text-gray-400 hover:text-white'}`}
-                           >
-                             {sym.icon}
-                             {sym.label}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-               )}
-             </div>
-
-             {/* Draggable container wrapper */}
-             <div ref={zoomContainerRef} className="aspect-square bg-[#0d0b14] rounded-xl overflow-hidden border-2 border-[#3d2b4f] shadow-inner relative flex items-center justify-center p-2">
-               <motion.div 
-                 className={`w-full h-full relative ${tool === 'move' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'} select-none touch-none`}
-                 drag={tool === 'move'}
-                 dragConstraints={isGlobal ? undefined : { left: -300, right: 300, top: -300, bottom: 300 }}
-                 style={{ scale }}
-                 onTouchMove={(e) => {
-                   if (e.touches.length === 2) {
-                     e.preventDefault();
-                     // Basic pinch zoom implementation
-                     const touch1 = e.touches[0];
-                     const touch2 = e.touches[1];
-                     const dist = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
-                     
-                     if (lastTouchDistRef.current === null) {
-                       lastTouchDistRef.current = dist;
-                     } else {
-                       const delta = dist - lastTouchDistRef.current;
-                       setScale(s => Math.min(Math.max(0.5, s + delta * 0.01), 3));
-                       lastTouchDistRef.current = dist;
-                     }
-                   }
-                 }}
-                 onTouchEnd={() => {
-                   lastTouchDistRef.current = null;
-                 }}
-               >
-                 {isGlobal ? (
-                     <div 
-                         ref={innerRef}
-                         className="w-[10000px] h-[10000px] border border-[#3d2b4f]/50 bg-[#15101e] shadow-2xl relative select-none touch-none absolute top-1/2 left-1/2 -mt-[5000px] -ml-[5000px]"
-                         onPointerDown={(e) => { 
-                           if (e.pointerType === 'mouse' && e.buttons !== 1) return;
-                           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-                           handlePointerDown(e.clientX, e.clientY); 
-                         }}
-                         onPointerMove={(e) => { 
-                           handlePointerMove(e.clientX, e.clientY); 
-                         }}
-                         onPointerUp={(e) => {
-                           (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-                           handlePointerUp(e.clientX, e.clientY);
-                         }}
-                         onPointerLeave={() => handlePointerUp()}
-                         style={{
-                             backgroundImage: showGrid ? `linear-gradient(to right, rgba(61,43,79,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(61,43,79,0.3) 1px, transparent 1px)` : 'none',
-                             backgroundSize: `${PIXEL_CSS_SIZE}px ${PIXEL_CSS_SIZE}px`
-                         }}
-                     >
-                         {Object.keys(pixels).map(key => {
-                             const p = pixels[key];
-                             if (!p) return null;
-                             const [xx, yy] = key.split(',').map(Number);
-                             const previewColor = previewPixels[key];
-                             return (
-                                 <div 
-                                     key={key}
-                                     style={{
-                                         position: 'absolute',
-                                         left: xx * PIXEL_CSS_SIZE,
-                                         top: yy * PIXEL_CSS_SIZE,
-                                         width: PIXEL_CSS_SIZE,
-                                         height: PIXEL_CSS_SIZE,
-                                         backgroundColor: previewColor || p.color
-                                     }}
-                                 />
-                             );
-                         })}
-                     </div>
-                 ) : (
-                     <div className="w-full h-full border border-[#3d2b4f]/50 bg-[#15101e] shadow-2xl relative select-none touch-none"
-                         ref={innerRef}
-                         onPointerDown={(e) => { 
-                           if (e.pointerType === 'mouse' && e.buttons !== 1) return;
-                           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-                           handlePointerDown(e.clientX, e.clientY); 
-                         }}
-                         onPointerMove={(e) => { 
-                           handlePointerMove(e.clientX, e.clientY); 
-                         }}
-                         onPointerUp={(e) => {
-                           (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-                           handlePointerUp(e.clientX, e.clientY);
-                         }}
-                         onPointerLeave={() => handlePointerUp()}>
-                     <div 
-                         className="w-full h-full grid pointer-events-none"
-                         style={{ 
-                         gridTemplateColumns: `repeat(${size}, 1fr)`,
-                         gridTemplateRows: `repeat(${size}, 1fr)`
-                         }}
-                     >
-                         {cells}
-                     </div>
-                     </div>
-                 )}
-               </motion.div>
-
-               {/* Radar Live Mini Preview Overlay */}
-               {mode === 'personal' && (
-                 <div className="absolute bottom-3 right-3 bg-[#15101e]/90 border border-[#ff4d4d]/30 backdrop-blur-md rounded-2xl p-2 shadow-xl shadow-black/60 pointer-events-none select-none z-10 flex flex-col items-center gap-1 hover:opacity-10 transition-opacity">
-                   <div className="flex items-center gap-1">
-                     <span className="w-1.5 h-1.5 rounded-full bg-[#ff4d4d] animate-pulse" />
-                     <span className="text-[8px] font-black uppercase tracking-widest text-white/50">RADAR</span>
-                   </div>
-                   <div className="w-16 h-16 bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-lg overflow-hidden relative">
-                     <div 
-                       className="grid w-full h-full"
-                       style={{ 
-                         gridTemplateColumns: `repeat(${size}, 1fr)`,
-                         gridTemplateRows: `repeat(${size}, 1fr)`
-                       }}
-                     >
-                       {Object.keys(pixels).length === 0 ? (
-                         <div className="absolute inset-0 flex items-center justify-center text-[7px] text-white/20 font-mono uppercase tracking-tighter">EMPTY</div>
-                       ) : (
-                         Array.from({ length: size * size }).map((_, idx) => {
-                           const x = idx % size;
-                           const y = Math.floor(idx / size);
-                           const pixelId = `${x},${y}`;
-                           const pixel = pixels[pixelId];
-                           return (
-                             <div
-                               key={idx}
-                               style={{ backgroundColor: pixel?.color || '#15101e' }}
-                               className="w-full h-full"
-                             />
-                           );
-                         })
-                       )}
-                     </div>
-                   </div>
-                 </div>
-               )}
-             </div>
-             
-             <div className="mt-4 flex items-start gap-3 bg-[#251c35] p-3 rounded-xl border border-[#3d2b4f]">
-               <Info size={20} className="text-[#ff4d4d] shrink-0 mt-0.5" />
-               <p className="text-xs text-gray-400">
-                 {mode === 'global' 
-                   ? t.canvasDesc || "This is a real-time collaborative canvas. Any changes you make are instantly visible to everyone globally!"
-                   : t.canvasPersonalDesc || "This is your personal canvas. You can draw here and publish a snapshot to your profile."}
-                 {t.canvasMoveToolText || " Use the Move tool (or mouse wheel) to zoom and pan."}
-               </p>
-             </div>
-           </div>
-
-           <div className="w-full md:w-64 shrink-0 flex flex-col gap-6">
-             <div className="bg-[#251c35] rounded-2xl p-4 sm:p-6 border border-[#3d2b4f]">
-               <h3 className="text-sm font-black text-gray-300 uppercase tracking-widest mb-4 flex items-center gap-2">
-                 <Palette size={16} />
-                 {t.canvasColors || "Colors"}
-               </h3>
-               <div className="flex flex-wrap gap-3">
-                 {COLORS.map(color => (
-                   <button
-                     key={color}
-                     onClick={() => { setSelectedColor(color); if (tool === 'move' || tool === 'eraser') setTool('draw'); }}
-                     className={`shrink-0 w-10 h-10 rounded-xl transition-all border-2 ${
-                       selectedColor === color && tool !== 'move' && tool !== 'eraser'
-                         ? 'scale-110 border-white shadow-lg shadow-white/20' 
-                         : 'border-transparent hover:scale-105'
-                     }`}
-                     style={{ backgroundColor: color }}
-                     aria-label={`Select color ${color}`}
-                   />
-                 ))}
-                 
-                 <label
-                   className={`shrink-0 w-10 h-10 rounded-xl transition-all border-2 flex items-center justify-center cursor-pointer relative overflow-hidden ${
-                     selectedColor !== 'eraser' && !COLORS.includes(selectedColor) && tool !== 'move'
-                       ? 'scale-110 border-white shadow-lg shadow-white/20' 
-                       : 'border-transparent hover:scale-105'
-                   }`}
-                   style={{
-                     background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)'
-                   }}
-                   title={t.canvasCustomColor || "Custom Color"}
-                 >
-                   <input
-                     type="color"
-                     value={selectedColor !== 'eraser' && !COLORS.includes(selectedColor) ? selectedColor : '#ff0000'}
-                     onChange={(e) => { setSelectedColor(e.target.value); if (tool === 'move' || tool === 'eraser') setTool('draw'); }}
-                     className="absolute opacity-0 w-20 h-20 cursor-pointer"
-                   />
-                 </label>
-                 
-                 <button
-                   onClick={() => { setSelectedColor('eraser'); setTool('eraser'); }}
-                   className={`shrink-0 w-10 h-10 rounded-xl transition-all border-2 flex items-center justify-center bg-[#15101e] ${
-                     tool === 'eraser'
-                       ? 'scale-110 border-white shadow-lg shadow-white/20' 
-                       : 'border-[#3d2b4f] hover:scale-105 hover:border-[#ff4d4d]'
-                   }`}
-                   title={t.canvasEraser || "Eraser"}
-                   aria-label="Eraser"
-                 >
-                   <Eraser size={20} className={tool === 'eraser' ? 'text-white' : 'text-gray-400'} />
-                 </button>
-               </div>
-             </div>
-
-             <div className="bg-[#251c35] rounded-2xl p-4 sm:p-6 border border-[#3d2b4f] space-y-4">
-               <div>
-                 <h3 className="text-sm font-black text-gray-300 uppercase tracking-widest mb-3">
-                   {t.canvasYourColor || "Selected"}
-                 </h3>
-                 <div className="flex items-center gap-3">
-                   <div 
-                     className="w-12 h-12 shrink-0 rounded-xl shadow-inner border border-white/20 flex flex-col items-center justify-center animate-pulse"
-                     style={{ backgroundColor: tool === 'eraser' ? '#15101e' : selectedColor }}
-                   >
-                     {tool === 'eraser' && <Eraser size={24} className="text-gray-400" />}
-                   </div>
-                   <div className="flex-1 min-w-0 bg-[#15101e] px-3 py-2.5 rounded-lg border border-[#3d2b4f] flex items-center">
-                     <span className="text-xs font-mono text-gray-400 truncate">
-                       {tool === 'eraser' ? t.canvasEraser || "ERASER" : selectedColor.toUpperCase()}
-                     </span>
-                   </div>
-                 </div>
-               </div>
-
-               {mode === 'personal' && (
-                 <div className="pt-4 border-t border-[#3d2b4f]/30 flex flex-col gap-2">
-                   <button
-                     onClick={handlePublish}
-                     className="w-full flex items-center justify-center h-10 gap-2 bg-[#ff4d4d] text-[#15101e] rounded-xl text-xs font-black uppercase tracking-wider hover:bg-[#ff7a7a] transition-all active:scale-95 shadow-[0_0_15px_rgba(255,77,77,0.3)]"
-                   >
-                     <Save size={14} className="shrink-0" />
-                     {t.canvasPublish || "ОПУБЛИКОВАТЬ"}
-                   </button>
-
-
-                   <button
-                     onClick={() => {
-                       if (true) { setShowClearConfirm(true); } else {
-                         clearCanvas();
-                       }
-                     }}
-                     className="w-full flex items-center justify-center h-10 gap-2 bg-red-600/10 text-red-500 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-red-600 transition-all active:scale-95 border border-red-500/20"
-                     title={t.canvasClear || "Clear Canvas"}
-                   >
-                     <Eraser size={14} className="shrink-0" />
-                     {t.canvasClear || "ОЧИСТИТЬ"}
-                   </button>
-                 </div>
-               )}
-             </div>
-
-             {/* Drafts Section */}
-             {mode === 'personal' && (
-               <div className="bg-[#251c35] rounded-2xl p-4 sm:p-6 border border-[#3d2b4f] space-y-4 animate-fadeIn">
-                 <h3 className="text-sm font-black text-gray-300 uppercase tracking-widest flex items-center gap-2">
-                   <Bookmark size={16} className="text-[#ff4d4d]" />
-                   {lang === 'ru' ? 'Черновики' : 'Drafts & Sketches'}
-                 </h3>
-                 
-                 {/* Create Draft Form */}
-                 <div className="space-y-2">
-                   <input
-                     type="text"
-                     value={draftName}
-                     onChange={(e) => setDraftName(e.target.value)}
-                     placeholder={lang === 'ru' ? 'Имя черновика...' : 'Draft name...'}
-                     className="w-full bg-[#15101e] border border-[#3d2b4f]/60 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all font-sans"
-                     maxLength={40}
-                   />
-                   <button
-                     onClick={handleSaveDraft}
-                     disabled={isSavingDraft}
-                     className="w-full flex items-center justify-center h-9 gap-1.5 bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-purple-600 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
-                   >
-                     {isSavingDraft ? (
-                       <div className="w-4 h-4 border-2 border-purple-300 border-t-transparent rounded-full animate-spin" />
-                     ) : (
-                       <>
-                         <Plus size={14} />
-                         {lang === 'ru' ? 'СОХРАНИТЬ ЭСКИЗ' : 'SAVE SKETCH'}
-                       </>
-                     )}
-                   </button>
-                 </div>
-
-                 {/* List of drafts */}
-                 <div className="pt-2 border-t border-[#3d2b4f]/30 space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                   {loadingDrafts ? (
-                     <div className="text-center py-4 text-white/40 text-xs">
-                       <div className="w-4 h-4 border-2 border-[#ff4d4d] border-t-transparent rounded-full animate-spin mx-auto mb-1" />
-                       {lang === 'ru' ? 'Загрузка...' : 'Loading...'}
-                     </div>
-                   ) : drafts.length === 0 ? (
-                     <div className="text-center py-4 text-white/30 text-xs italic leading-tight">
-                       {lang === 'ru' 
-                         ? 'Нет сохраненных эскизов. Нарисуйте что-то и сохраните!' 
-                         : 'No saved drafts yet. Draw something and save!'}
-                     </div>
-                   ) : (
-                     drafts.map((d) => (
-                       <div 
-                         key={d.id} 
-                         className="bg-[#15101e] border border-[#3d2b4f]/40 hover:border-[#ff4d4d]/40 transition-all p-2 rounded-xl flex items-center justify-between gap-2"
-                       >
-                         <div className="min-w-0 flex-1">
-                           <p className="text-xs font-bold text-gray-200 truncate" title={d.name}>
-                             {d.name}
-                           </p>
-                           <p className="text-[9px] text-gray-500 font-mono">
-                             {d.size ? `${d.size}x${d.size}` : '32x32'} • {new Date(d.createdAt).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}
-                           </p>
-                         </div>
-                         <div className="flex items-center gap-1 shrink-0">
-                           <button
-                             onClick={() => handleLoadDraft(d)}
-                             className="p-1.5 bg-[#ff4d4d]/10 hover:bg-[#ff4d4d]/20 text-[#ff4d4d] rounded-lg transition-all"
-                             title={lang === 'ru' ? 'Загрузить на холст' : 'Load onto canvas'}
-                           >
-                             <FolderOpen size={12} />
-                           </button>
-                           <button
-                             onClick={() => setSelectedDraftForSaves(d)}
-                             className="p-1.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 rounded-lg transition-all"
-                             title={lang === 'ru' ? 'История сохранений (раз в 72ч)' : 'Save history (every 72h)'}
-                           >
-                             <Bookmark size={12} />
-                           </button>
-                           <button
-                             onClick={() => handleDeleteDraft(d)}
-                             className="p-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg transition-all"
-                             title={lang === 'ru' ? 'Удалить' : 'Delete'}
-                           >
-                             <Trash2 size={12} />
-                           </button>
-                         </div>
-                       </div>
-                     ))
-                   )}
-                 </div>
-               </div>
-             )}
-           </div>
-
+                <div className="pt-2 border-t border-[#3d2b4f]/30 space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                  {loadingDrafts ? (
+                    <div className="text-center py-3 text-white/40 text-xs">
+                      <div className="w-4 h-4 border-2 border-[#ff4d4d] border-t-transparent rounded-full animate-spin mx-auto mb-1" />
+                      {loc('Загрузка...', 'Loading...')}
+                    </div>
+                  ) : drafts.length === 0 ? (
+                    <div className="text-center py-3 text-white/30 text-xs italic">
+                      {loc('Нет сохраненных эскизов', 'No saved drafts yet')}
+                    </div>
+                  ) : (
+                    drafts.map(d => (
+                      <div
+                        key={d.id}
+                        className="bg-[#15101e] border border-[#3d2b4f]/40 hover:border-[#ff4d4d]/40 transition-all p-2 rounded-xl flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-gray-200 truncate" title={d.name}>
+                            {d.name}
+                          </p>
+                          <p className="text-[9px] text-gray-500 font-mono">
+                            {d.size ? `${d.size}x${d.size}` : '32x32'} •{' '}
+                            {new Date(d.createdAt).toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-US')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => setDraftToLoad(d)}
+                            className="p-1.5 bg-[#ff4d4d]/10 hover:bg-[#ff4d4d]/20 text-[#ff4d4d] rounded-lg transition-all"
+                            title={loc('Загрузить', 'Load')}
+                          >
+                            <FolderOpen size={12} />
+                          </button>
+                          <button
+                            onClick={() => setSelectedDraftForSaves(d)}
+                            className="p-1.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 rounded-lg transition-all"
+                            title={loc('Версии', 'Versions')}
+                          >
+                            <Bookmark size={12} />
+                          </button>
+                          <button
+                            onClick={() => setDraftToDelete(d)}
+                            className="p-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg transition-all"
+                            title={loc('Удалить', 'Delete')}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Center-fixed Publish Post to Activity Modal */}
       <AnimatePresence>
         {isPublishModalOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
@@ -1831,49 +2262,50 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
               </button>
 
               <h3 className="text-2xl font-black text-[#ff4d4d] uppercase tracking-wider mb-2">
-                {lang === 'ru' ? 'Опубликовать в Активность' : 'Publish to Activity'}
+                {loc('Опубликовать в Активность', 'Publish to Activity')}
               </h3>
               <p className="text-white/60 text-xs font-black uppercase tracking-widest mb-6 leading-relaxed">
-                {lang === 'ru' ? 'Ваш рисунок появится в ленте активностей и постов!' : 'Your drawing will appear in the main activity and posts feed!'}
+                {loc('Ваш рисунок появится в ленте активностей и постов!', 'Your drawing will appear in the main activities feed!')}
               </p>
               <div className="space-y-4 mb-8">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
-                    {lang === 'ru' ? 'Название рисунка / поста' : 'Drawing Title / Post Subject'}
+                    {loc('Название рисунка / поста', 'Drawing Title')}
                   </label>
                   <input
                     type="text"
                     value={publishTitle}
-                    onChange={(e) => setPublishTitle(e.target.value)}
-                    placeholder={lang === 'ru' ? 'Например: Моё пиксель-арт сердечко...' : 'e.g., My Pixel Art Heart...'}
-                    className="w-full bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all font-sans text-white"
+                    onChange={e => setPublishTitle(e.target.value)}
+                    placeholder={loc('Например: Моё пиксель-арт сердечко...', 'e.g. My Pixel Art Heart...')}
+                    className="w-full bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all font-sans"
                     maxLength={100}
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">
-                    {lang === 'ru' ? 'Подпись / Описание' : 'Caption / Description'}
+                    {loc('Подпись / Описание', 'Caption / Description')}
                   </label>
                   <textarea
                     value={publishCaption}
-                    onChange={(e) => setPublishCaption(e.target.value)}
-                    placeholder={lang === 'ru' ? 'Опишите ваш рисунок или оставьте комментарий...' : 'Write something about your drawing...'}
-                    className="w-full h-28 bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all resize-none font-sans text-white"
+                    onChange={e => setPublishCaption(e.target.value)}
+                    placeholder={loc('Опишите ваш рисунок...', 'Describe your drawing...')}
+                    className="w-full h-28 bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#ff4d4d] transition-all resize-none font-sans"
                     maxLength={500}
                   />
                 </div>
-                
+
                 {protectedViewFeatureEnabled && (
                   <div className="bg-[#1e172a] border border-[#3d2b4f]/60 rounded-2xl px-5 py-3.5 flex items-center justify-between">
                     <div className="flex-1 pr-4">
                       <label className="block text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] mb-1">
-                        {lang === 'ru' ? 'Защищенный просмотр' : 'Protected View'}
+                        {loc('Защищенный просмотр', 'Protected View')}
                       </label>
                       <p className="text-white/50 text-[10px] leading-tight">
-                        {lang === 'ru' 
-                          ? 'Запретить скачивание, правый клик и сохранение вашего рисунка другими пользователями.' 
-                          : 'Prevent downloading, right-click, and saving of your drawing by other users.'}
+                        {loc(
+                          'Запретить прямое скачивание и копирование рисунка другими пользователями.',
+                          'Prevent downloading and saving of your artwork by others.'
+                        )}
                       </p>
                     </div>
                     <button
@@ -1897,22 +2329,22 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                   type="button"
                   onClick={() => setIsPublishModalOpen(false)}
                   disabled={isPublishing}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-white/50 hover:text-white px-5 py-3.5 hover:bg-white/5 border border-[#3d2b4f]/30 rounded-2xl transition-all cursor-pointer font-black uppercase tracking-widest text-[10px]"
+                  className="flex-1 inline-flex items-center justify-center text-xs text-white/50 hover:text-white px-5 py-3.5 hover:bg-white/5 border border-[#3d2b4f]/30 rounded-2xl transition-all font-black uppercase tracking-widest text-[10px]"
                 >
-                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                  {loc('Отмена', 'Cancel')}
                 </button>
                 <button
                   type="button"
                   onClick={handleConfirmPublish}
                   disabled={isPublishing || !publishTitle.trim()}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-6 py-3.5 bg-[#ff4d4d] text-[#15101e] font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-[#ff7a7a] transition-all disabled:opacity-50 active:scale-95 shadow-lg cursor-pointer"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-6 py-3.5 bg-[#ff4d4d] text-[#15101e] font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-[#ff7a7a] transition-all disabled:opacity-50 active:scale-95 shadow-lg"
                 >
                   {isPublishing ? (
                     <div className="w-4 h-4 border-2 border-[#15101e] border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
                       <Save size={16} />
-                      {lang === 'ru' ? 'Опубликовать' : 'Publish'}
+                      {loc('Опубликовать', 'Publish')}
                     </>
                   )}
                 </button>
@@ -1930,52 +2362,40 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
           const now = Date.now();
           const hasRecentSave = savesList.some((s: any) => {
             const saveTime = new Date(s.createdAt).getTime();
-            return (now - saveTime) < (72 * 60 * 60 * 1000); // 72 hours
+            return now - saveTime < 72 * 60 * 60 * 1000;
           });
 
           const handleCreateCopy = async () => {
             if (Object.keys(pixels).length === 0) {
-              window.dispatchEvent(new CustomEvent('aha_toast', { detail: lang === 'ru' ? "Нельзя сохранить пустой холст!" : "Cannot save empty canvas!" }));
+              window.dispatchEvent(
+                new CustomEvent('aha_toast', { detail: loc('Нельзя сохранить пустой холст!', 'Cannot save empty canvas!') })
+              );
               return;
             }
             if (hasRecentSave) {
-              window.dispatchEvent(new CustomEvent('aha_toast', { 
-                detail: lang === 'ru' 
-                  ? 'Копия делается только раз в 72 часа!' 
-                  : 'A copy can only be made once every 72 hours!' 
-              }));
+              window.dispatchEvent(
+                new CustomEvent('aha_toast', {
+                  detail: loc('Копия делается только раз в 72 часа!', 'A copy can only be made once every 72 hours!')
+                })
+              );
               return;
             }
 
             try {
               const newSave = {
                 id: 'save_' + Date.now(),
-                pixels: pixels,
+                pixels,
                 size: personalSize,
                 createdAt: new Date().toISOString()
               };
               const updatedSaves = [...savesList, newSave];
-              await setDoc(doc(db, 'canvas_drafts', currentDraft.id), {
-                saves: updatedSaves
-              }, { merge: true });
-
-              window.dispatchEvent(new CustomEvent('aha_toast', { 
-                detail: lang === 'ru' ? 'Новое сохранение эскиза создано!' : 'New sketch save created!' 
-              }));
+              await setDoc(doc(db, 'canvas_drafts', currentDraft.id), { saves: updatedSaves }, { merge: true });
+              window.dispatchEvent(
+                new CustomEvent('aha_toast', { detail: loc('Новое сохранение создано!', 'New save created!') })
+              );
             } catch (e) {
               console.error(e);
-              window.dispatchEvent(new CustomEvent('aha_toast', { 
-                detail: lang === 'ru' ? 'Ошибка при создании копии' : 'Error creating copy' 
-              }));
             }
-          };
-
-          const handleLoadSave = (save: any) => {
-            setSaveToLoad(save);
-          };
-
-          const handleDeleteSave = (saveId: string) => {
-            setSaveToDelete({ saveId, draftId: currentDraft.id, savesList });
           };
 
           return (
@@ -2000,46 +2420,48 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
                 <h3 className="text-xl font-black text-[#ff4d4d] uppercase mb-1 flex items-center gap-2">
                   <Bookmark className="w-5 h-5" />
-                  {lang === 'ru' ? 'Сохранения эскиза' : 'Sketch Saves'}
+                  {loc('Сохранения эскиза', 'Sketch Saves')}
                 </h3>
-                <p className="text-xs text-gray-400 mb-4 font-semibold truncate">
-                  {currentDraft.name}
-                </p>
+                <p className="text-xs text-gray-400 mb-4 font-semibold truncate">{currentDraft.name}</p>
 
                 <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1 mb-6">
                   {savesList.length === 0 ? (
                     <p className="text-center py-6 text-xs text-gray-500 italic">
-                      {lang === 'ru' ? 'Нет сохраненных копий.' : 'No saved copies yet.'}
+                      {loc('Нет сохраненных копий.', 'No saved copies yet.')}
                     </p>
                   ) : (
-                    savesList.map((s: any, idx: number) => {
-                      return (
-                        <div key={s.id || idx} className="bg-[#15101e] border border-[#3d2b4f]/60 p-3 rounded-xl flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-bold text-gray-200">
-                              {lang === 'ru' ? `Копия #${idx + 1}` : `Copy #${idx + 1}`}
-                            </p>
-                            <p className="text-[10px] text-gray-500 font-mono">
-                              {s.size ? `${s.size}x${s.size}` : '32x32'} • {new Date(s.createdAt).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US')}
-                            </p>
-                          </div>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => handleLoadSave(s)}
-                              className="px-2.5 py-1.5 bg-[#ff4d4d]/10 hover:bg-[#ff4d4d]/20 text-[#ff4d4d] rounded-lg text-[10px] font-bold uppercase transition-all"
-                            >
-                              {lang === 'ru' ? 'Загрузить' : 'Load'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSave(s.id)}
-                              className="p-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg transition-all"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
+                    savesList.map((s: any, idx: number) => (
+                      <div
+                        key={s.id || idx}
+                        className="bg-[#15101e] border border-[#3d2b4f]/60 p-3 rounded-xl flex items-center justify-between gap-3"
+                      >
+                        <div>
+                          <p className="text-xs font-bold text-gray-200">
+                            {loc(`Копия #${idx + 1}`, `Copy #${idx + 1}`)}
+                          </p>
+                          <p className="text-[10px] text-gray-500 font-mono">
+                            {s.size ? `${s.size}x${s.size}` : '32x32'} •{' '}
+                            {new Date(s.createdAt).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US')}
+                          </p>
                         </div>
-                      );
-                    })
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => setSaveToLoad(s)}
+                            className="px-2.5 py-1.5 bg-[#ff4d4d]/10 hover:bg-[#ff4d4d]/20 text-[#ff4d4d] rounded-lg text-[10px] font-bold uppercase transition-all"
+                          >
+                            {loc('Загрузить', 'Load')}
+                          </button>
+                          <button
+                            onClick={() =>
+                              setSaveToDelete({ saveId: s.id, draftId: currentDraft.id, savesList })
+                            }
+                            className="p-1.5 bg-red-600/10 hover:bg-red-600/20 text-red-400 rounded-lg transition-all"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
 
@@ -2050,15 +2472,8 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                     className="w-full flex items-center justify-center py-2.5 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-950/40 disabled:text-gray-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:cursor-not-allowed"
                   >
                     <Plus size={14} className="mr-1.5" />
-                    {lang === 'ru' ? 'Сделать копию (1 раз в 72ч)' : 'Make Copy (1 per 72h)'}
+                    {loc('Сделать копию (1 раз в 72ч)', 'Make Copy (1 per 72h)')}
                   </button>
-                  {hasRecentSave && (
-                    <p className="text-[10px] text-[#ff4d4d] text-center mt-2 font-medium">
-                      {lang === 'ru' 
-                        ? 'Копию можно делать только раз в 72 часа' 
-                        : 'You can only make a copy once every 72 hours'}
-                    </p>
-                  )}
                 </div>
               </motion.div>
             </motion.div>
@@ -2066,24 +2481,54 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         })()}
       </AnimatePresence>
 
+      {/* External Components: Hotkeys & Import Modals */}
+      <CanvasHotkeysModal
+        isOpen={isHotkeysModalOpen}
+        onClose={() => setIsHotkeysModalOpen(false)}
+        lang={lang}
+      />
+
+      <CanvasImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={handleImportImagePixels}
+        lang={lang}
+        currentSize={personalSize}
+      />
+
+      {/* Confirmation Dialogs */}
       <ConfirmModal
         isOpen={draftToLoad !== null}
         onClose={() => setDraftToLoad(null)}
         onConfirm={executeLoadDraft}
-        title={lang === 'ru' ? 'Загрузить черновик?' : 'Load draft?'}
-        message={draftToLoad ? (lang === 'ru' ? `Вы действительно хотите загрузить черновик "${draftToLoad.name}"? Текущий холст будет перезаписан.` : `Are you sure you want to load draft "${draftToLoad.name}"? This will overwrite your current canvas.`) : ''}
-        confirmText={lang === 'ru' ? 'Загрузить' : 'Load'}
-        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        title={loc('Загрузить черновик?', 'Load draft?')}
+        message={
+          draftToLoad
+            ? loc(
+                `Вы действительно хотите загрузить черновик "${draftToLoad.name}"? Текущий холст будет перезаписан.`,
+                `Are you sure you want to load draft "${draftToLoad.name}"? Current canvas will be overwritten.`
+              )
+            : ''
+        }
+        confirmText={loc('Загрузить', 'Load')}
+        cancelText={loc('Отмена', 'Cancel')}
       />
 
       <ConfirmModal
         isOpen={draftToDelete !== null}
         onClose={() => setDraftToDelete(null)}
         onConfirm={executeDeleteDraft}
-        title={lang === 'ru' ? 'Удалить черновик?' : 'Delete draft?'}
-        message={draftToDelete ? (lang === 'ru' ? `Вы действительно хотите безвозвратно удалить черновик "${draftToDelete.name}"?` : `Are you sure you want to permanently delete draft "${draftToDelete.name}"?`) : ''}
-        confirmText={lang === 'ru' ? 'Удалить' : 'Delete'}
-        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        title={loc('Удалить черновик?', 'Delete draft?')}
+        message={
+          draftToDelete
+            ? loc(
+                `Вы действительно хотите безвозвратно удалить черновик "${draftToDelete.name}"?`,
+                `Are you sure you want to permanently delete draft "${draftToDelete.name}"?`
+              )
+            : ''
+        }
+        confirmText={loc('Удалить', 'Delete')}
+        cancelText={loc('Отмена', 'Cancel')}
         isDestructive={true}
       />
 
@@ -2091,20 +2536,26 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         isOpen={saveToLoad !== null}
         onClose={() => setSaveToLoad(null)}
         onConfirm={executeLoadSave}
-        title={lang === 'ru' ? 'Загрузить версию?' : 'Load version?'}
-        message={lang === 'ru' ? 'Загрузить эту версию? Текущий холст будет перезаписан.' : 'Load this version? Current canvas will be overwritten.'}
-        confirmText={lang === 'ru' ? 'Загрузить' : 'Load'}
-        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        title={loc('Загрузить версию?', 'Load version?')}
+        message={loc(
+          'Загрузить эту версию? Текущий холст будет перезаписан.',
+          'Load this version? Current canvas will be overwritten.'
+        )}
+        confirmText={loc('Загрузить', 'Load')}
+        cancelText={loc('Отмена', 'Cancel')}
       />
 
       <ConfirmModal
         isOpen={saveToDelete !== null}
         onClose={() => setSaveToDelete(null)}
         onConfirm={executeDeleteSave}
-        title={lang === 'ru' ? 'Удалить это сохранение?' : 'Delete this save?'}
-        message={lang === 'ru' ? 'Вы действительно хотите безвозвратно удалить эту копию сохранения?' : 'Are you sure you want to permanently delete this saved copy?'}
-        confirmText={lang === 'ru' ? 'Удалить' : 'Delete'}
-        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        title={loc('Удалить это сохранение?', 'Delete this save?')}
+        message={loc(
+          'Вы действительно хотите удалить эту копию сохранения?',
+          'Are you sure you want to delete this saved copy?'
+        )}
+        confirmText={loc('Удалить', 'Delete')}
+        cancelText={loc('Отмена', 'Cancel')}
         isDestructive={true}
       />
 
@@ -2112,10 +2563,17 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         isOpen={templateToLoad !== null}
         onClose={() => setTemplateToLoad(null)}
         onConfirm={executeLoadTemplate}
-        title={lang === 'ru' ? 'Загрузить шаблон?' : 'Load template?'}
-        message={templateToLoad ? (lang === 'ru' ? `Загрузка шаблона "${TEMPLATES[templateToLoad]?.nameRu || templateToLoad}" очистит ваш текущий холст. Продолжить?` : `Loading the template "${TEMPLATES[templateToLoad]?.name || templateToLoad}" will clear your current canvas. Continue?`) : ''}
-        confirmText={lang === 'ru' ? 'Загрузить' : 'Load'}
-        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        title={loc('Загрузить шаблон?', 'Load template?')}
+        message={
+          templateToLoad
+            ? loc(
+                `Загрузка шаблона "${TEMPLATES[templateToLoad]?.nameRu || templateToLoad}" очистит текущий холст. Продолжить?`,
+                `Loading template "${TEMPLATES[templateToLoad]?.name || templateToLoad}" will clear current canvas. Continue?`
+              )
+            : ''
+        }
+        confirmText={loc('Загрузить', 'Load')}
+        cancelText={loc('Отмена', 'Cancel')}
       />
 
       <ConfirmModal
@@ -2125,10 +2583,10 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
           setShowClearConfirm(false);
           await clearCanvas();
         }}
-        title={lang === 'ru' ? 'Очистить холст?' : 'Clear canvas?'}
-        message={t.canvasClearConfirm || (lang === 'ru' ? 'Вы действительно хотите очистить персональный холст?' : 'Are you sure you want to clear your personal canvas?')}
-        confirmText={lang === 'ru' ? 'Очистить' : 'Clear'}
-        cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
+        title={loc('Очистить холст?', 'Clear canvas?')}
+        message={loc('Вы действительно хотите полностью очистить холст?', 'Are you sure you want to clear the canvas?')}
+        confirmText={loc('Очистить', 'Clear')}
+        cancelText={loc('Отмена', 'Cancel')}
         isDestructive={true}
       />
 
@@ -2139,10 +2597,13 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
           setShowPublishClearConfirm(false);
           await clearCanvas();
         }}
-        title={lang === 'ru' ? 'Очистить холст после публикации?' : 'Clear canvas after publishing?'}
-        message={lang === 'ru' ? 'Хотите ли вы очистить свой холст теперь, когда рисунок опубликован?' : 'Would you like to clear your canvas now that your drawing is published?'}
-        confirmText={lang === 'ru' ? 'Очистить' : 'Clear'}
-        cancelText={lang === 'ru' ? 'Оставить' : 'Keep'}
+        title={loc('Очистить холст после публикации?', 'Clear canvas after publishing?')}
+        message={loc(
+          'Хотите ли вы очистить холст теперь, когда рисунок опубликован?',
+          'Would you like to clear your canvas now that your drawing is published?'
+        )}
+        confirmText={loc('Очистить', 'Clear')}
+        cancelText={loc('Оставить', 'Keep')}
       />
     </div>
   );

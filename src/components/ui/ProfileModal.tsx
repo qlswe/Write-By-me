@@ -17,6 +17,7 @@ import { MediaViewer } from './MediaViewer';
 import { useStories } from '../../hooks/useStories';
 import { CreateStoryModal } from '../feed/CreateStoryModal';
 import { StoryViewerModal } from '../feed/StoryViewerModal';
+import { ModalPortal } from './ModalPortal';
 
 interface ProfileModalProps {
   isOpen: boolean;

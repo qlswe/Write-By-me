@@ -24,7 +24,8 @@ import {
   Eye,
   CornerDownRight,
   Pin,
-  Bot
+  Bot,
+  Maximize2
 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
@@ -93,6 +94,7 @@ interface FacebookPostCardProps {
   onVoteComment?: (comment: CommentData, type: 'up' | 'down') => void;
   onOpenProfile?: (uid: string, name: string) => void;
   onOpenChat?: (uid: string, name: string) => void;
+  onOpenFullPost?: (post: PostData) => void;
 }
 
 const REACTION_TYPES = [
@@ -121,7 +123,8 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
   onEditComment,
   onVoteComment,
   onOpenProfile,
-  onOpenChat
+  onOpenChat,
+  onOpenFullPost
 }) => {
   const { user } = useAuth();
   const t = translations[lang];
@@ -366,94 +369,124 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
           </div>
         </div>
 
-        {/* 3-Dots Dropdown Menu */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 text-white/40 hover:text-white rounded-xl hover:bg-[#251c35] transition-all"
-          >
-            <MoreHorizontal size={20} />
-          </button>
+        {/* Top Header Actions (Expand Fullscreen & 3-Dots Dropdown Menu) */}
+        <div className="flex items-center gap-1 shrink-0">
+          {onOpenFullPost && (
+            <button
+              type="button"
+              onClick={() => onOpenFullPost(post)}
+              className="p-2 text-white/40 hover:text-white hover:bg-[#251c35] rounded-xl transition-all"
+              title={lang === 'ru' ? 'Открыть пост полностью' : 'Open full post'}
+            >
+              <Maximize2 size={17} />
+            </button>
+          )}
 
-          {menuOpen && (
-            <div className="absolute right-0 top-10 w-52 bg-[#0d0b14] border border-[#3d2b4f] rounded-2xl shadow-2xl p-1.5 z-30 space-y-1">
-              <button
-                onClick={() => {
-                  handleShare();
-                  setMenuOpen(false);
-                }}
-                className="w-full text-left px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-[#251c35] rounded-xl flex items-center gap-2.5 transition-colors"
-              >
-                <Share2 size={14} className="text-blue-400" />
-                {lang === 'ru' ? 'Скопировать ссылку' : 'Copy post link'}
-              </button>
+          {/* 3-Dots Dropdown Menu */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-2 text-white/40 hover:text-white rounded-xl hover:bg-[#251c35] transition-all"
+            >
+              <MoreHorizontal size={20} />
+            </button>
 
-              <button
-                onClick={() => {
-                  handleToggleSave();
-                  setMenuOpen(false);
-                }}
-                className="w-full text-left px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-[#251c35] rounded-xl flex items-center gap-2.5 transition-colors"
-              >
-                <Bookmark size={14} className={isSaved ? 'text-amber-400 fill-amber-400' : 'text-amber-400'} />
-                {isSaved 
-                  ? (lang === 'ru' ? 'Удалить из закладок' : 'Remove from saved') 
-                  : (lang === 'ru' ? 'Сохранить в закладки' : 'Save to bookmarks')}
-              </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-10 w-52 bg-[#0d0b14] border border-[#3d2b4f] rounded-2xl shadow-2xl p-1.5 z-30 space-y-1">
+                {onOpenFullPost && (
+                  <button
+                    onClick={() => {
+                      onOpenFullPost(post);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-[#251c35] rounded-xl flex items-center gap-2.5 transition-colors"
+                  >
+                    <Maximize2 size={14} className="text-[#ff4d4d]" />
+                    {lang === 'ru' ? 'Открыть полностью' : 'Open full post'}
+                  </button>
+                )}
 
-              <button
-                onClick={() => {
-                  exportContentToPDF({
-                    title: post.title || 'Пост Ахи',
-                    author: post.authorName,
-                    createdAt: post.createdAt,
-                    contentHtml: `<p style="white-space: pre-wrap;">${post.content}</p>`,
-                    mediaUrl: post.imageUrl,
-                    sectionName: lang === 'ru' ? 'Публикация' : 'Post',
-                    lang
-                  });
-                  setMenuOpen(false);
-                }}
-                className="w-full text-left px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-[#251c35] rounded-xl flex items-center gap-2.5 transition-colors"
-              >
-                <FileDown size={14} className="text-emerald-400" />
-                {lang === 'ru' ? 'Экспорт в PDF' : 'Export to PDF'}
-              </button>
-
-              {isAuthor && onEditPost && (
                 <button
                   onClick={() => {
-                    onEditPost(post);
+                    handleShare();
                     setMenuOpen(false);
                   }}
                   className="w-full text-left px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-[#251c35] rounded-xl flex items-center gap-2.5 transition-colors"
                 >
-                  <Pencil size={14} className="text-sky-400" />
-                  {lang === 'ru' ? 'Редактировать' : 'Edit Post'}
+                  <Share2 size={14} className="text-blue-400" />
+                  {lang === 'ru' ? 'Скопировать ссылку' : 'Copy post link'}
                 </button>
-              )}
 
-              {(isAuthor || canModerate) && onDeletePost && (
                 <button
                   onClick={() => {
-                    onDeletePost(post.id);
+                    handleToggleSave();
                     setMenuOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl flex items-center gap-2.5 transition-colors"
+                  className="w-full text-left px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-[#251c35] rounded-xl flex items-center gap-2.5 transition-colors"
                 >
-                  <Trash2 size={14} />
-                  {lang === 'ru' ? 'Удалить пост' : 'Delete Post'}
+                  <Bookmark size={14} className={isSaved ? 'text-amber-400 fill-amber-400' : 'text-amber-400'} />
+                  {isSaved 
+                    ? (lang === 'ru' ? 'Удалить из закладок' : 'Remove from saved') 
+                    : (lang === 'ru' ? 'Сохранить в закладки' : 'Save to bookmarks')}
                 </button>
-              )}
-            </div>
-          )}
+
+                <button
+                  onClick={() => {
+                    exportContentToPDF({
+                      title: post.title || 'Пост Ахи',
+                      author: post.authorName,
+                      createdAt: post.createdAt,
+                      contentHtml: `<p style="white-space: pre-wrap;">${post.content}</p>`,
+                      mediaUrl: post.imageUrl,
+                      sectionName: lang === 'ru' ? 'Публикация' : 'Post',
+                      lang
+                    });
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-[#251c35] rounded-xl flex items-center gap-2.5 transition-colors"
+                >
+                  <FileDown size={14} className="text-emerald-400" />
+                  {lang === 'ru' ? 'Экспорт в PDF' : 'Export to PDF'}
+                </button>
+
+                {isAuthor && onEditPost && (
+                  <button
+                    onClick={() => {
+                      onEditPost(post);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-[#251c35] rounded-xl flex items-center gap-2.5 transition-colors"
+                  >
+                    <Pencil size={14} className="text-sky-400" />
+                    {lang === 'ru' ? 'Редактировать' : 'Edit Post'}
+                  </button>
+                )}
+
+                {(isAuthor || canModerate) && onDeletePost && (
+                  <button
+                    onClick={() => {
+                      onDeletePost(post.id);
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl flex items-center gap-2.5 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                    {lang === 'ru' ? 'Удалить пост' : 'Delete Post'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Post Title (if present and distinct from short text) */}
       {displayTitle && displayTitle !== displayContent && (
-        <h3 className="text-lg sm:text-xl font-black text-white tracking-tight mb-2">
+        <h3 
+          onClick={() => onOpenFullPost?.(post)}
+          className={`text-lg sm:text-xl font-black text-white tracking-tight mb-2 ${onOpenFullPost ? 'cursor-pointer hover:text-[#ff4d4d] transition-colors' : ''}`}
+        >
           {displayTitle}
         </h3>
       )}
@@ -463,7 +496,7 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
         <MarkdownRenderer content={renderedContent} />
         {isContentLong && (
           <button
-            onClick={() => setIsExpandedText(!isExpandedText)}
+            onClick={() => onOpenFullPost ? onOpenFullPost(post) : setIsExpandedText(!isExpandedText)}
             className="text-[#ff4d4d] font-bold text-xs hover:underline mt-1 block"
           >
             {isExpandedText ? (lang === 'ru' ? 'Свернуть' : 'Show less') : (lang === 'ru' ? 'Показать полностью...' : 'See more...')}
@@ -473,13 +506,24 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
 
       {/* Post Media Attachments (Images, YouTube, Videos) */}
       {post.imageUrl && (
-        <div className="mb-4 rounded-2xl overflow-hidden bg-[#0d0b14] border border-[#3d2b4f]/40">
+        <div 
+          onClick={() => onOpenFullPost?.(post)}
+          className={`mb-4 rounded-2xl overflow-hidden bg-[#0d0b14] border border-[#3d2b4f]/40 relative group/media ${onOpenFullPost ? 'cursor-pointer' : ''}`}
+        >
           <MediaViewer
             url={post.imageUrl}
             isProtected={protectedViewFeatureEnabled && post.isProtected !== false}
             title={post.title}
-            maxHeight="max-h-[460px]"
+            maxHeight="max-h-[500px]"
           />
+          {onOpenFullPost && (
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/media:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
+              <div className="bg-[#15101e]/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-[#ff4d4d]/50 text-white text-xs font-bold flex items-center gap-2 shadow-2xl scale-95 group-hover/media:scale-100 transition-transform">
+                <Maximize2 size={16} className="text-[#ff4d4d]" />
+                <span>{lang === 'ru' ? 'Нажмите, чтобы открыть полностью' : 'Click to view full post'}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

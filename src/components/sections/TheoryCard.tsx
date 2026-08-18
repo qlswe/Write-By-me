@@ -106,8 +106,8 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
         {theory.title[lang] || theory.title['en']}
       </h3>
       
-      <div className="relative mb-6 group-hover:text-white/80 transition-colors">
-        <p className="text-white/40 text-xs sm:text-sm line-clamp-3 font-medium leading-relaxed">
+      <div className="relative mb-6 text-gray-300 group-hover:text-white transition-colors">
+        <p className="text-xs sm:text-sm line-clamp-3 font-normal leading-relaxed text-gray-300">
           {theory.summary[lang] || theory.summary['en']}
         </p>
       </div>

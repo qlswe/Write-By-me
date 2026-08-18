@@ -215,7 +215,7 @@ export const PromoSection: React.FC<PromoSectionProps> = ({ lang, handleCopy, pr
             </div>
             {t.navPromo}
           </h2>
-          <p className="text-[#ff4d4d]/60 font-medium tracking-wide uppercase text-xs mt-2 ml-1">
+          <p className="text-gray-300 font-semibold tracking-wide uppercase text-xs mt-2 ml-1">
             {t.promoCodesSubtitle}
           </p>
         </motion.div>

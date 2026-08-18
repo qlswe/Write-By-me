@@ -19,6 +19,7 @@ import { useLimits } from '../../hooks/useLimits';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { generatePrefixedId } from '../../utils/idGenerator';
 import { dbQueryCore } from '../../utils/dbQueryCore';
+import { sanitizeComment, sanitizePlainText } from '../../utils/sanitizer';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Comment {
@@ -187,7 +188,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
     setIsSubmitting(true);
     incrementUsage('comments_daily');
     try {
-      const payload = {
+      const rawPayload = {
         targetId,
         parentId: parentId || null,
         authorUid: user.uid,
@@ -199,6 +200,8 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
         isEdited: false,
         createdAt: new Date().toISOString()
       };
+
+      const payload = sanitizeComment(rawPayload);
 
       if (vercelFallback.isAvailable()) {
         const commentId = generatePrefixedId('comment') + '_' + user.uid;
@@ -252,8 +255,9 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({ targetId, lang
   const handleUpdate = async (commentId: string) => {
     if (!editContent.trim()) return;
     try {
+      const cleaned = sanitizePlainText(editContent.trim(), 2000);
       await updateDoc(doc(db, 'comments', commentId), {
-        content: editContent.trim(),
+        content: cleaned,
         isEdited: true
       });
       setEditingCommentId(null);

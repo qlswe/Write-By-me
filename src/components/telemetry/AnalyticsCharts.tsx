@@ -575,6 +575,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                           fontSize: '12px',
                           color: '#fff'
                         }}
+                        itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                       />
                       <Legend wrapperStyle={{ paddingTop: '15px', fontSize: '11px' }} />
                       <Area
@@ -621,6 +623,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                           fontSize: '12px',
                           color: '#fff'
                         }}
+                        itemStyle={{ color: '#00f0ff', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                       />
                       <Legend wrapperStyle={{ paddingTop: '15px', fontSize: '11px' }} />
                       <Area
@@ -645,6 +649,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                           fontSize: '12px',
                           color: '#fff'
                         }}
+                        itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                       />
                       <Legend wrapperStyle={{ paddingTop: '15px', fontSize: '11px' }} />
                       <Bar
@@ -673,6 +679,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                           fontSize: '12px',
                           color: '#fff'
                         }}
+                        itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                       />
                       <Legend wrapperStyle={{ paddingTop: '15px', fontSize: '11px' }} />
                       <Line
@@ -725,6 +733,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                           fontSize: '12px',
                           color: '#fff'
                         }}
+                        itemStyle={{ color: '#a855f7', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                       />
                       <Bar dataKey="events" name={lang === 'ru' ? 'События' : 'Events'} fill="#a855f7" radius={[4, 4, 0, 0]} />
                     </BarChart>
@@ -773,6 +783,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                             fontSize: '12px',
                             color: '#fff'
                           }}
+                          itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
+                          labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                         />
                         <Legend wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
                       </PieChart>
@@ -830,6 +842,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                           fontSize: '12px',
                           color: '#fff'
                         }}
+                        itemStyle={{ color: '#00f0ff', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                       />
                       <Bar dataKey="events" name={lang === 'ru' ? 'События' : 'Visits'} radius={[0, 8, 8, 0]}>
                         {analytics.featureRanking.map((entry, index) => (
@@ -917,6 +931,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                           fontSize: '12px',
                           color: '#fff'
                         }}
+                        itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                       />
                       <Legend wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
                     </PieChart>
@@ -966,6 +982,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                           fontSize: '12px',
                           color: '#fff'
                         }}
+                        itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                       />
                       <Legend wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
                     </PieChart>
@@ -1010,6 +1028,8 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                         fontSize: '12px',
                         color: '#fff'
                       }}
+                      itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
+                      labelStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                     />
                     <Bar dataKey="value" name={lang === 'ru' ? 'Пользователи' : 'Users'} fill="#10b981" radius={[6, 6, 0, 0]} />
                   </BarChart>

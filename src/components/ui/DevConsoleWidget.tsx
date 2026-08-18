@@ -10,7 +10,7 @@ import {
 import { logger } from '../../utils/logger';
 import { useAuth } from '../../hooks/useAuth';
 import { auth, db } from '../../firebase';
-import { getDeviceId } from '../../utils/deviceId';
+import { getDeviceId, getDeviceDiagnostics, rotateDeviceId } from '../../utils/deviceId';
 import { doc, getDoc, disableNetwork, enableNetwork } from 'firebase/firestore';
 import { AhaQueryMonitor } from '../monitoring/AhaQueryMonitor';
 import { purgeNonAdminDataAndResetPlatform, purgeTelemetryOnly } from '../../utils/platformReset';
@@ -748,12 +748,88 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                         {isFirestoreNetworkOnline ? '🟢 ОНЛАЙН (enableNetwork)' : '🔴 ОФФЛАЙН (disableNetwork)'}
                       </span>
                     </div>
-                    <div className="flex justify-between py-1 border-b border-[#3d2b4f]/40">
-                      <span className="text-gray-400">ID Устройства (AHI):</span>
-                      <span className="text-cyan-300 font-mono truncate max-w-[180px]">
-                        {getDeviceId()}
-                      </span>
-                    </div>
+
+                    {/* Anti-Collision Device Vault Card */}
+                    {(() => {
+                      const diag = getDeviceDiagnostics();
+                      return (
+                        <div className="mt-3 p-3.5 bg-[#0d0718] border border-cyan-500/30 rounded-xl space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-black text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                              <Shield size={14} className="text-cyan-400" />
+                              Профиль устройства (Anti-Collision v3.0)
+                            </span>
+                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono border border-cyan-500/40">
+                              {diag.entropySource}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-gray-400 text-[11px]">ID Устройства:</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-cyan-300 font-mono text-[10px] break-all max-w-[200px] truncate" title={diag.deviceId}>
+                                  {diag.deviceId}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(diag.deviceId);
+                                    logger.info('Copied deviceId to clipboard', null, 'DevConsole');
+                                  }}
+                                  className="p-1 rounded bg-[#251c35] text-cyan-400 hover:text-white"
+                                  title="Скопировать Device ID"
+                                >
+                                  <Copy size={11} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newId = rotateDeviceId();
+                                    logger.info('Rotated Device ID with new 128-bit CSPRNG entropy', { newId }, 'DevConsole');
+                                  }}
+                                  className="p-1 rounded bg-[#251c35] text-amber-400 hover:text-white"
+                                  title="Перегенерировать (Rotate Device ID)"
+                                >
+                                  <RefreshCw size={11} />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between text-[11px] text-gray-400">
+                              <span>Аппаратный хэш:</span>
+                              <span className="text-purple-300 font-mono text-[10px]">{diag.fingerprint}</span>
+                            </div>
+
+                            <div className="flex justify-between text-[11px] text-gray-400">
+                              <span>GPU Renderer:</span>
+                              <span className="text-gray-300 font-mono text-[10px] max-w-[180px] truncate" title={diag.gpuRenderer}>
+                                {diag.gpuRenderer}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between text-[11px] text-gray-400">
+                              <span>Canvas Subpixel Hash:</span>
+                              <span className="text-emerald-300 font-mono text-[10px]">{diag.canvasHash}</span>
+                            </div>
+
+                            <div className="flex justify-between text-[11px] text-gray-400">
+                              <span>CPU / RAM / Экран:</span>
+                              <span className="text-gray-300 text-[10px]">
+                                {diag.cpuCores} cores | {diag.memoryGB} | {diag.screenResolution.split(' ')[0]}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between text-[11px] text-gray-400">
+                              <span>Хранилища:</span>
+                              <span className="text-emerald-400 font-mono text-[10px]">
+                                localStorage + session + cookie + IndexedDB
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Network Controller Toggle Box */}
                     <div className="mt-3 p-3 bg-[#110820] border border-[#3d2b4f] rounded-xl space-y-2">

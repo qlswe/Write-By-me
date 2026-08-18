@@ -28,6 +28,7 @@ import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadMediaFile, compressImageBase64 } from '../../utils/mediaUploader';
 import { MediaViewer } from '../ui/MediaViewer';
+import { sanitizePlainText } from '../../utils/sanitizer';
 
 interface FacebookPostCreatorProps {
   lang: Language;
@@ -215,11 +216,16 @@ export const FacebookPostCreator: React.FC<FacebookPostCreatorProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() && !title.trim() && !attachedMedia) return;
+    const rawContent = content.trim();
+    const rawTitle = title.trim();
+    if (!rawContent && !rawTitle && !attachedMedia) return;
+
+    const safeTitle = sanitizePlainText(rawTitle || rawContent.slice(0, 50), 120);
+    const safeContent = sanitizePlainText(rawContent, 5000);
     
     await onSubmit({
-      title: title.trim() || content.trim().slice(0, 50),
-      content: content.trim(),
+      title: safeTitle,
+      content: safeContent,
       imageUrl: attachedMedia || undefined,
       feeling: selectedFeeling || undefined,
       category: selectedCategory,

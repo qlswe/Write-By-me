@@ -306,7 +306,7 @@ export const BlogSection: React.FC<BlogSectionProps> = ({
                   <Newspaper className="text-[#ff4d4d]" size={32} />
                   {t.navBlog}
                 </h2>
-                <p className="text-[#ff4d4d]/60 font-medium tracking-wide text-xs">
+                <p className="text-gray-300 font-medium tracking-wide text-xs">
                   {t.blogSubTitle}
                 </p>
               </div>

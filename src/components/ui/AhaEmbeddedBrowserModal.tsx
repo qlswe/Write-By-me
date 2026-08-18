@@ -58,6 +58,7 @@ import {
   BookmarkItem,
   HistoryItem
 } from '../../utils/ahaBrowser';
+import { isSafeUrl } from '../../utils/sanitizer';
 import { Language } from '../../data/translations';
 import { CustomSelect } from './CustomSelect';
 
@@ -75,10 +76,11 @@ const SEARCH_ENGINES = [
   { id: 'aha', name: 'AHA Protocol Search', searchUrl: '/#theories?q=' }
 ];
 
-// Helper to safely prepare HTML for Iframe rendering with absolute Base URL
+// Helper to safely prepare HTML for Iframe rendering with absolute Base URL and Security Sandbox
 function getIframeSrcDoc(html: string, baseUrl: string): string {
   if (!html) return '';
-  const baseTag = `<base href="${baseUrl}">`;
+  const baseTag = baseUrl && (baseUrl.startsWith('http://') || baseUrl.startsWith('https://')) ? `<base href="${baseUrl}">` : '';
+  const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; object-src 'none';">`;
   const suppressCorsScript = `<script>
     window.addEventListener('error', function(e) { 
       if (e.message && (e.message.includes('CORS') || e.message.includes('XMLHttpRequest') || e.message.includes('Failed to fetch'))) { 
@@ -86,6 +88,12 @@ function getIframeSrcDoc(html: string, baseUrl: string): string {
         e.preventDefault(); 
       } 
     }, true);
+
+    // Prevent untrusted child scripts from attempting top-frame takeover
+    try {
+      Object.defineProperty(window, 'top', { get: function() { return window.self; } });
+      Object.defineProperty(window, 'parent', { get: function() { return window.self; } });
+    } catch(e) {}
 
     document.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll('a').forEach(function(a) {
@@ -98,6 +106,12 @@ function getIframeSrcDoc(html: string, baseUrl: string): string {
     document.addEventListener('click', function(e) {
       var a = e.target && e.target.closest ? e.target.closest('a') : null;
       if (a) {
+        var href = a.getAttribute('href') || '';
+        if (href.toLowerCase().indexOf('javascript:') === 0 || href.toLowerCase().indexOf('vbscript:') === 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
         if (a.getAttribute('target') === '_blank') {
           a.setAttribute('target', '_self');
         }
@@ -106,7 +120,9 @@ function getIframeSrcDoc(html: string, baseUrl: string): string {
 
     var longPressTimer = null;
     function triggerContextMenu(e, href) {
-      if (!href) return;
+      if (!href || typeof href !== 'string') return;
+      var trimmed = href.toLowerCase().trim();
+      if (trimmed.indexOf('javascript:') === 0 || trimmed.indexOf('vbscript:') === 0) return;
       try {
         var resolvedUrl = new URL(href, document.baseURI || window.location.href).href;
         window.parent.postMessage({
@@ -156,11 +172,11 @@ function getIframeSrcDoc(html: string, baseUrl: string): string {
   </script>`;
   
   if (html.toLowerCase().includes('<head>')) {
-    return html.replace(/<head>/i, `<head>${baseTag}${suppressCorsScript}`);
+    return html.replace(/<head>/i, `<head>${cspMeta}${baseTag}${suppressCorsScript}`);
   } else if (html.toLowerCase().includes('<html')) {
-    return html.replace(/(<html[^>]*>)/i, `$1<head>${baseTag}${suppressCorsScript}</head>`);
+    return html.replace(/(<html[^>]*>)/i, `$1<head>${cspMeta}${baseTag}${suppressCorsScript}</head>`);
   }
-  return `<!DOCTYPE html><html><head>${baseTag}${suppressCorsScript}<meta charset="utf-8"><style>body{margin:0;padding:0;font-family:sans-serif;}</style></head><body>${html}</body></html>`;
+  return `<!DOCTYPE html><html><head>${cspMeta}${baseTag}${suppressCorsScript}<meta charset="utf-8"><style>body{margin:0;padding:0;font-family:sans-serif;}</style></head><body>${html}</body></html>`;
 }
 
 export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = ({ isOpen, onClose, lang }) => {
@@ -218,7 +234,7 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
   };
 
   const handleOpenContextMenu = (url: string, x?: number, y?: number) => {
-    if (!url) return;
+    if (!url || !isSafeUrl(url)) return;
     setContextMenu({
       isOpen: true,
       url,
@@ -229,9 +245,11 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'AHA_BROWSER_LONG_PRESS') {
+      if (event.data && typeof event.data === 'object' && event.data.type === 'AHA_BROWSER_LONG_PRESS') {
         const { url, clientX, clientY } = event.data;
-        handleOpenContextMenu(url, clientX, clientY);
+        if (typeof url === 'string' && isSafeUrl(url)) {
+          handleOpenContextMenu(url, typeof clientX === 'number' ? clientX : undefined, typeof clientY === 'number' ? clientY : undefined);
+        }
       }
     };
     window.addEventListener('message', handleMessage);
@@ -621,6 +639,13 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
     let formatted = urlToNavigate.trim();
     if (!formatted) return;
 
+    // Block dangerous pseudo-protocols explicitly
+    const lower = formatted.toLowerCase();
+    if (lower.startsWith('javascript:') || lower.startsWith('vbscript:') || lower.startsWith('data:text/html')) {
+      showContextToast(isRu ? 'Опасный протокол заблокирован политикой безопасности' : 'Dangerous protocol blocked by security policy');
+      return;
+    }
+
     const isUrlPattern = /^https?:\/\//i.test(formatted) || 
                          /^[a-zA-Z0-9\-_]+\.[a-zA-Z]{2,}(:\d+)?(\/.*)?$/i.test(formatted) ||
                          formatted.startsWith('/') || 
@@ -631,6 +656,11 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
       formatted = `${engineObj.searchUrl}${encodeURIComponent(formatted)}`;
     } else if (!formatted.startsWith('http://') && !formatted.startsWith('https://') && !formatted.startsWith('/')) {
       formatted = `https://${formatted}`;
+    }
+
+    if (!isSafeUrl(formatted)) {
+      showContextToast(isRu ? 'Недопустимый или небезопасный URL' : 'Invalid or unsafe URL');
+      return;
     }
 
     setInputUrl(formatted);

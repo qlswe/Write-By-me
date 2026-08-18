@@ -37,6 +37,7 @@ import {
 } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { ModalPortal } from '../ui/ModalPortal';
 import { StoriesBar } from '../feed/StoriesBar';
 import { FacebookPostCreator } from '../feed/FacebookPostCreator';
 import { 
@@ -45,6 +46,7 @@ import {
   notifyPostReaction 
 } from '../../utils/notificationService';
 import { FacebookPostCard, PostData, CommentData } from '../feed/FacebookPostCard';
+import { PostDetailModal } from '../feed/PostDetailModal';
 import { PromoSection } from './PromoSection';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { safeStorage } from '../../utils/securityStorage';
@@ -92,6 +94,34 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
   const [editContent, setEditContent] = useState('');
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const [commentToDelete, setCommentToDelete] = useState<{ id: string; postId: string } | null>(null);
+
+  // Full Post View State
+  const [activeDetailPostId, setActiveDetailPostId] = useState<string | null>(null);
+
+  // Listen for hash navigation & custom open post events
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#post-')) {
+        const id = hash.replace('#post-', '');
+        if (id) setActiveDetailPostId(id);
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+
+    const handleOpenPostEvent = (e: any) => {
+      if (e.detail?.postId) {
+        setActiveDetailPostId(e.detail.postId);
+      }
+    };
+    window.addEventListener('aha_open_post', handleOpenPostEvent);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHash);
+      window.removeEventListener('aha_open_post', handleOpenPostEvent);
+    };
+  }, []);
 
   // Security Console State
   const [isE2EEEnabled, setIsE2EEEnabled] = useState(() => safeStorage.getItem('aha_e2ee_enabled') === 'true');
@@ -707,6 +737,7 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
                   onVoteComment={handleVoteComment}
                   onOpenProfile={(uid, name) => onOpenChat(uid, name)}
                   onOpenChat={onOpenChat}
+                  onOpenFullPost={(p) => setActiveDetailPostId(p.id)}
                 />
               ))
             )}
@@ -870,67 +901,69 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
 
       {/* Edit Post Modal */}
       {editingPost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-lg bg-[#15101e] border border-[#ff4d4d]/40 rounded-3xl p-6 shadow-2xl space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-black text-white uppercase tracking-wider">
-                {lang === 'ru' ? 'Редактировать публикацию' : 'Edit Post'}
-              </h3>
-              <button onClick={() => setEditingPost(null)} className="text-white/40 hover:text-white">
-                ✕
-              </button>
-            </div>
+        <ModalPortal>
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-lg bg-[#15101e] border border-[#ff4d4d]/40 rounded-3xl p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-black text-white uppercase tracking-wider">
+                  {lang === 'ru' ? 'Редактировать публикацию' : 'Edit Post'}
+                </h3>
+                <button onClick={() => setEditingPost(null)} className="text-white/40 hover:text-white">
+                  ✕
+                </button>
+              </div>
 
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              placeholder="Title"
-              className="w-full bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#ff4d4d]"
-            />
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Title"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#ff4d4d]"
+              />
 
-            <textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              placeholder="Content"
-              className="w-full bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#ff4d4d] min-h-[140px]"
-            />
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                placeholder="Content"
+                className="w-full bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#ff4d4d] min-h-[140px]"
+              />
 
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setEditingPost(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white/40 hover:text-white"
-              >
-                {lang === 'ru' ? 'Отмена' : 'Cancel'}
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await updateDoc(doc(db, 'forum_threads', editingPost.id), {
-                      title: editTitle.trim(),
-                      content: editContent.trim(),
-                      isEdited: true
-                    });
-                    setThreads(prev => prev.map(t => t.id === editingPost.id ? { ...t, title: editTitle.trim(), content: editContent.trim(), isEdited: true } : t));
-                    setEditingPost(null);
-                    window.dispatchEvent(new CustomEvent('aha_toast', {
-                      detail: lang === 'ru' ? 'Публикация обновлена!' : 'Post updated!'
-                    }));
-                  } catch (err) {
-                    console.error(err);
-                  }
-                }}
-                className="px-5 py-2 bg-[#ff4d4d] text-[#15101e] font-black text-xs uppercase tracking-wider rounded-xl hover:bg-white transition-all"
-              >
-                {lang === 'ru' ? 'Сохранить' : 'Save'}
-              </button>
-            </div>
-          </motion.div>
-        </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setEditingPost(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white/40 hover:text-white"
+                >
+                  {lang === 'ru' ? 'Отмена' : 'Cancel'}
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await updateDoc(doc(db, 'forum_threads', editingPost.id), {
+                        title: editTitle.trim(),
+                        content: editContent.trim(),
+                        isEdited: true
+                      });
+                      setThreads(prev => prev.map(t => t.id === editingPost.id ? { ...t, title: editTitle.trim(), content: editContent.trim(), isEdited: true } : t));
+                      setEditingPost(null);
+                      window.dispatchEvent(new CustomEvent('aha_toast', {
+                        detail: lang === 'ru' ? 'Публикация обновлена!' : 'Post updated!'
+                      }));
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  }}
+                  className="px-5 py-2 bg-[#ff4d4d] text-[#15101e] font-black text-xs uppercase tracking-wider rounded-xl hover:bg-white transition-all"
+                >
+                  {lang === 'ru' ? 'Сохранить' : 'Save'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </ModalPortal>
       )}
 
       {/* Delete Post Confirm */}
@@ -956,6 +989,55 @@ export const ForumSection: React.FC<ForumSectionProps> = ({
         cancelText={lang === 'ru' ? 'Отмена' : 'Cancel'}
         isDestructive={true}
       />
+
+      {/* Full Screen Post Detail Modal */}
+      {activeDetailPostId && (() => {
+        const activePost = threads.find(t => t.id === activeDetailPostId);
+        if (!activePost) return null;
+        
+        const currentIndex = filteredPosts.findIndex(p => p.id === activePost.id);
+        const hasPrev = currentIndex > 0;
+        const hasNext = currentIndex >= 0 && currentIndex < filteredPosts.length - 1;
+
+        return (
+          <PostDetailModal
+            post={activePost}
+            comments={comments}
+            lang={lang}
+            role={role}
+            isAntiIPCCensorEnabled={isAntiIPCCensorEnabled}
+            protectedViewFeatureEnabled={protectedViewFeatureEnabled}
+            onClose={() => {
+              setActiveDetailPostId(null);
+              if (window.location.hash.startsWith('#post-')) {
+                history.pushState(null, '', window.location.pathname + window.location.search);
+              }
+            }}
+            onPrevPost={hasPrev ? () => setActiveDetailPostId(filteredPosts[currentIndex - 1].id) : undefined}
+            onNextPost={hasNext ? () => setActiveDetailPostId(filteredPosts[currentIndex + 1].id) : undefined}
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+            onReact={handleReact}
+            onAddComment={handleAddComment}
+            onSummonAhaBot={handleSummonAhaBot}
+            onDeletePost={(id) => {
+              setActiveDetailPostId(null);
+              setPostToDelete(id);
+            }}
+            onEditPost={(p) => {
+              setActiveDetailPostId(null);
+              setEditingPost(p);
+              setEditTitle(p.title);
+              setEditContent(p.content);
+            }}
+            onDeleteComment={(commentId, postId) => setCommentToDelete({ id: commentId, postId })}
+            onEditComment={handleEditComment}
+            onVoteComment={handleVoteComment}
+            onOpenProfile={(uid, name) => onOpenChat(uid, name)}
+            onOpenChat={onOpenChat}
+          />
+        );
+      })()}
     </div>
   );
 };

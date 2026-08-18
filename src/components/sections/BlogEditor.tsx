@@ -13,6 +13,7 @@ import { uploadMediaFile, sanitizePayloadForFirestore } from '../../utils/mediaU
 import { CustomSelect } from '../ui/CustomSelect';
 import { MarkdownEditorToolbar } from '../ui/MarkdownEditorToolbar';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
+import { sanitizeBlogPost } from '../../utils/sanitizer';
 
 interface BlogEditorProps {
   post?: any;
@@ -162,7 +163,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
         updatedAt: new Date().toISOString()
       };
 
-      const postData = await sanitizePayloadForFirestore(rawPostData);
+      // Strip dangerous characters and sanitize blog post fields
+      const cleanedPost = sanitizeBlogPost(rawPostData);
+      const postData = await sanitizePayloadForFirestore(cleanedPost);
 
       let createdDocId = '';
       if (post?.id) {

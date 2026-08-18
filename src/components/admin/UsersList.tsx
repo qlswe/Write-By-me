@@ -8,6 +8,7 @@ import { doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { CachedAvatar } from '../ui/CachedAvatar';
 import { logTelemetryEvent } from '../../utils/telemetry';
+import { auditDeviceDuplicates, isDeviceIdValid } from '../../utils/deviceId';
 
 interface UsersListProps {
   lang: Language;
@@ -27,15 +28,17 @@ const RoleSelector: React.FC<{
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
+    if (!isOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        onClose();
+      }
     };
-  }, [isOpen]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   const roles = [
     { value: 'user', label: t.roleUser },
@@ -49,46 +52,59 @@ const RoleSelector: React.FC<{
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={onToggle}
-        className="bg-[#3d2b4f]/30 border border-[#3d2b4f]/50 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl px-4 py-3 outline-none focus:border-[#ff4d4d] transition-all cursor-pointer flex items-center gap-2 shadow-lg hover:bg-[#3d2b4f]/50"
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className={`bg-[#3d2b4f]/30 border ${
+          isOpen ? 'border-[#ff4d4d] bg-[#3d2b4f]/60' : 'border-[#3d2b4f]/50'
+        } text-white text-[10px] font-black uppercase tracking-widest rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 outline-none focus:border-[#ff4d4d] transition-all cursor-pointer flex items-center gap-2 shadow-lg hover:bg-[#3d2b4f]/50 shrink-0`}
       >
-        {currentRole.label}
-        <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span>{currentRole.label}</span>
+        <ChevronDown size={12} className={`transition-transform duration-200 ${isOpen ? 'rotate-180 text-[#ff4d4d]' : 'text-gray-400'}`} />
       </button>
       
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-[#15101e] border border-[#3d2b4f] rounded-3xl overflow-hidden w-full max-w-[280px] shadow-[0_0_50px_rgba(0,0,0,0.5)]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="px-4 py-4 border-b border-[#3d2b4f]/50 bg-[#0d0b14]/50">
-                <h4 className="text-white font-black text-center tracking-widest text-xs uppercase">{t.selectRole || "Select role"}</h4>
-              </div>
-              <div className="flex flex-col p-2 gap-1">
-                {roles.map((role) => (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 top-full mt-2 w-48 bg-[#181124] border border-[#3d2b4f] rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.7)] z-50 p-1.5 backdrop-blur-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-3 py-1.5 border-b border-[#3d2b4f]/40 mb-1">
+              <h4 className="text-gray-400 font-bold text-[9px] uppercase tracking-wider">
+                {t.selectRole || "Выберите роль"}
+              </h4>
+            </div>
+            <div className="flex flex-col gap-1">
+              {roles.map((role) => {
+                const isSelected = user.role === role.value;
+                return (
                   <button
                     key={role.value}
-                    onClick={() => {
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       updateUserRole(user.uid, role.value as any);
                       onClose();
                     }}
-                    className={`w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors rounded-xl ${
-                      user.role === role.value 
-                        ? 'bg-[#ff4d4d] text-[#15101e]' 
-                        : 'text-white hover:bg-[#3d2b4f]/50'
+                    className={`w-full text-left px-3 py-2 text-[11px] font-black uppercase tracking-wider transition-all rounded-xl flex items-center justify-between cursor-pointer ${
+                      isSelected 
+                        ? 'bg-[#ff4d4d] text-[#15101e] font-black shadow-md' 
+                        : 'text-gray-200 hover:text-white hover:bg-[#251c35]'
                     }`}
                   >
-                    {role.label}
+                    <span>{role.label}</span>
+                    {isSelected && <Check size={12} className="text-[#15101e] stroke-[3]" />}
                   </button>
-                ))}
-              </div>
-            </motion.div>
-          </div>
+                );
+              })}
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -113,7 +129,9 @@ const UserListItem = React.memo(({
   currentUserId,
   blockedDeviceIds = [],
   blockDeviceId,
-  unblockDeviceId
+  unblockDeviceId,
+  deviceDuplicatesMap = {},
+  onFilterByDeviceId
 }: { 
   user: UserData, 
   isAdmin: boolean, 
@@ -132,13 +150,16 @@ const UserListItem = React.memo(({
   currentUserId?: string,
   blockedDeviceIds?: string[],
   blockDeviceId?: (id: string) => void,
-  unblockDeviceId?: (id: string) => void
+  unblockDeviceId?: (id: string) => void,
+  deviceDuplicatesMap?: Record<string, number>,
+  onFilterByDeviceId?: (devId: string) => void
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmAvatar, setConfirmAvatar] = useState(false);
   const [copiedDevice, setCopiedDevice] = useState(false);
 
   const isDeviceBlocked = user.deviceId ? blockedDeviceIds.includes(user.deviceId) : false;
+  const duplicateDeviceCount = (user.deviceId && deviceDuplicatesMap?.[user.deviceId]) || 0;
 
   return (
     <motion.div
@@ -200,6 +221,20 @@ const UserListItem = React.memo(({
                   {copiedDevice ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
                 </button>
               </div>
+            )}
+            {isAdmin && duplicateDeviceCount > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (user.deviceId) onFilterByDeviceId?.(user.deviceId);
+                }}
+                className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] px-2 py-0.5 rounded-lg border border-amber-500/40 font-mono flex items-center gap-1 transition-all cursor-pointer"
+                title={lang === 'ru' ? 'Нажмите для фильтрации всех аккаунтов с этим устройством' : 'Click to filter accounts sharing this device ID'}
+              >
+                <AlertTriangle size={10} className="text-amber-400" />
+                <span>{lang === 'ru' ? `Дубликат (${duplicateDeviceCount} акк.)` : `Duplicate (${duplicateDeviceCount} accs)`}</span>
+              </button>
             )}
           </div>
         </div>
@@ -578,12 +613,17 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
     }
   };
 
+  const deviceAudit = React.useMemo(() => {
+    return auditDeviceDuplicates(users.map(u => u.deviceId));
+  }, [users]);
+
   const filteredUsers = React.useMemo(() => {
     if (!searchQuery.trim()) return users;
     const query = searchQuery.toLowerCase();
     return users.filter(user => 
       user.displayName?.toLowerCase().includes(query) || 
-      user.email?.toLowerCase().includes(query)
+      user.email?.toLowerCase().includes(query) ||
+      user.deviceId?.toLowerCase().includes(query)
     );
   }, [users, searchQuery]);
 
@@ -720,6 +760,48 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
                 </div>
               </div>
             )}
+
+            {/* Anti-Collision & Duplicate Devices Audit */}
+            <div className="pt-3 border-t border-[#3d2b4f]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-gray-400">
+                  {lang === 'ru' ? 'Аудит уникальности устройств:' : 'Device Uniqueness Audit:'}
+                </span>
+                <span className="font-mono text-cyan-300 font-bold">
+                  {deviceAudit.uniqueCount} {lang === 'ru' ? 'уник.' : 'unique'} / {deviceAudit.total} {lang === 'ru' ? 'всего' : 'total'}
+                </span>
+                {deviceAudit.duplicateCount > 0 ? (
+                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-1 font-mono">
+                    <AlertTriangle size={11} />
+                    {deviceAudit.duplicateCount} {lang === 'ru' ? 'дубликатов' : 'duplicates'}
+                  </span>
+                ) : (
+                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-1 font-mono">
+                    <Check size={11} />
+                    {lang === 'ru' ? '100% уникальность (коллизий нет)' : '100% unique (zero collisions)'}
+                  </span>
+                )}
+              </div>
+
+              {Object.keys(deviceAudit.duplicateMap).length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider font-mono">
+                    {lang === 'ru' ? 'Связанные группы:' : 'Clustered IDs:'}
+                  </span>
+                  {Object.entries(deviceAudit.duplicateMap).slice(0, 3).map(([dupId, count]) => (
+                    <button
+                      key={dupId}
+                      type="button"
+                      onClick={() => setSearchQuery(dupId)}
+                      className="bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg text-[10px] font-mono transition-colors cursor-pointer"
+                      title={lang === 'ru' ? 'Показать все аккаунты с этим ID устройства' : 'Show all accounts with this device ID'}
+                    >
+                      {dupId.slice(0, 14)}... ({count} {lang === 'ru' ? 'акк.' : 'accs'})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Realtime Broadcast Notification Studio (Instant Site-wide Alerts) */}
@@ -1046,6 +1128,8 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
               blockedDeviceIds={blockedDeviceIds}
               blockDeviceId={blockDeviceId}
               unblockDeviceId={unblockDeviceId}
+              deviceDuplicatesMap={deviceAudit.duplicateMap}
+              onFilterByDeviceId={(devId) => setSearchQuery(devId)}
             />
           ))
         )}

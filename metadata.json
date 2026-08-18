@@ -1,6 +1,6 @@
 {
   "name": "Министерство Ахахи",
   "description": "Министерство Ахахи - база знаний, блог, промокоды, сообщество и продвинутая экосистема с поддержкой ИИ.",
-  "requestFramePermissions": ["microphone"],
+  "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

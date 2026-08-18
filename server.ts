@@ -10,8 +10,14 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
 
-  // AHA Protocol v6 (Adaptive Hyper-Acceleration IPv6) Global Middleware
+  // Global Security & AHA Protocol v6 Middleware
   app.use((req, res, next) => {
+    // Security Hardening Headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
     // Stamp AHA Protocol v6 Headers & User-Agent onto all network traffic
     res.setHeader('X-AHA-Protocol-Version', '6.0-HYPER-IPv6');
     res.setHeader('X-AHA-User-Agent', 'AhaBrowser/6.0.4 (AHA-OS 6.0; Dual-Stack IPv6; AHA-Protocol-v6)');
@@ -131,16 +137,30 @@ async function startServer() {
     });
   });
 
-  // SSRF Protection Helper Function
+  // SSRF Protection Helper Function with comprehensive range checking
   function isPrivateHost(hostname: string): boolean {
-    const cleanHost = hostname.toLowerCase().trim();
+    const cleanHost = hostname.toLowerCase().trim().replace(/^\[|\]$/g, '');
     if (
       cleanHost === 'localhost' ||
+      cleanHost === '0.0.0.0' ||
       cleanHost === '127.0.0.1' ||
+      cleanHost.startsWith('127.') ||
       cleanHost === '::1' ||
+      cleanHost === '::' ||
+      cleanHost.startsWith('::ffff:127.') ||
       cleanHost.startsWith('10.') ||
       cleanHost.startsWith('192.168.') ||
-      cleanHost.startsWith('169.254.') ||
+      cleanHost.startsWith('169.254.') || // Link-local & Cloud Metadata (AWS/GCP/Azure)
+      cleanHost.startsWith('100.64.') ||  // Carrier-grade NAT
+      cleanHost.startsWith('fe80:') ||    // IPv6 Link-Local
+      cleanHost.startsWith('fc00:') ||    // IPv6 Unique Local Address
+      cleanHost.startsWith('fd00:') ||    // IPv6 Unique Local Address
+      cleanHost === 'metadata.google.internal' ||
+      cleanHost === 'instance-data' ||
+      cleanHost.endsWith('.local') ||
+      cleanHost.endsWith('.internal') ||
+      cleanHost.endsWith('.lan') ||
+      cleanHost.endsWith('.corp') ||
       /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(cleanHost)
     ) {
       return true;
