@@ -805,8 +805,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   };
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/80">
+    <ModalPortal>
+      <AnimatePresence>
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center px-4 bg-black/80 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1596,5 +1597,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
         </motion.div>
       </div>
     </AnimatePresence>
+    </ModalPortal>
   );
 };

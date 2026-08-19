@@ -13,6 +13,7 @@ import {
   Rewind,
   AlertCircle
 } from 'lucide-react';
+import { getPrimaryAccentColor, hexToRgb } from '../../utils/theme';
 
 interface KuruVideoPlayerProps {
   src: string;
@@ -68,21 +69,59 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
   const [hoverPos, setHoverPos] = useState<number>(0);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
 
+  // Synchronize player colors with site-wide accent color from admin panel
+  const [accentColor, setAccentColor] = useState<string>(() => getPrimaryAccentColor());
+
+  useEffect(() => {
+    const syncAccent = (e?: any) => {
+      if (e?.detail?.color) {
+        setAccentColor(e.detail.color);
+      } else {
+        setAccentColor(getPrimaryAccentColor());
+      }
+    };
+
+    syncAccent();
+    window.addEventListener('aha_accent_color_change', syncAccent);
+    window.addEventListener('storage', syncAccent);
+    return () => {
+      window.removeEventListener('aha_accent_color_change', syncAccent);
+      window.removeEventListener('storage', syncAccent);
+    };
+  }, []);
+
+  const rgb = hexToRgb(accentColor) || { r: 255, g: 77, b: 77 };
+  const rgbStr = `${rgb.r}, ${rgb.g}, ${rgb.b}`;
+  const borderGlow = `rgba(${rgbStr}, 0.6)`;
+  const glow = `rgba(${rgbStr}, 0.45)`;
+  const bgPill = `rgba(${rgbStr}, 0.2)`;
+
+  const [proxyStep, setProxyStep] = useState<number>(0);
+
   useEffect(() => {
     setActiveSrc(src);
     setIsProxied(false);
+    setProxyStep(0);
     setHasError(false);
   }, [src]);
 
   const handleVideoError = () => {
-    if (!isProxied && src && src.startsWith('http') && !src.includes('corsproxy.io') && !src.startsWith('blob:') && !src.startsWith('data:')) {
-      console.warn('Direct video stream error, retrying through automatic CORS proxy...', src);
-      setIsProxied(true);
-      setActiveSrc(`https://corsproxy.io/?${encodeURIComponent(src)}`);
-    } else {
-      setHasError(true);
-      if (onError) onError();
+    // If direct stream fails, attempt proxy fallback via backend media-proxy or public corsproxy
+    if (src && src.startsWith('http') && !src.startsWith('blob:') && !src.startsWith('data:')) {
+      if (proxyStep === 0 && !src.includes('/api/media-proxy')) {
+        setProxyStep(1);
+        setIsProxied(true);
+        setActiveSrc(`/api/media-proxy?url=${encodeURIComponent(src)}`);
+        return;
+      } else if (proxyStep === 1 && !src.includes('corsproxy.io')) {
+        setProxyStep(2);
+        setIsProxied(true);
+        setActiveSrc(`https://corsproxy.io/?${encodeURIComponent(src)}`);
+        return;
+      }
     }
+    setHasError(true);
+    if (onError) onError();
   };
 
   const hideControlsTimer = useRef<NodeJS.Timeout | null>(null);
@@ -232,15 +271,28 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
         <AlertCircle size={36} className="text-red-400 animate-pulse" />
         <p className="text-sm font-semibold text-red-200">Не удалось воспроизвести видеофайл</p>
         <p className="text-xs text-gray-400 max-w-xs break-all">{src}</p>
-        <button
-          onClick={() => {
-            setHasError(false);
-            if (onError) onError();
-          }}
-          className="mt-2 px-4 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 rounded-xl text-xs font-bold transition-all"
-        >
-          Повторить попытку
-        </button>
+        <div className="flex items-center gap-2 mt-2">
+          <button
+            onClick={() => {
+              setHasError(false);
+              setIsProxied(false);
+              setActiveSrc(src);
+            }}
+            className="px-4 py-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 rounded-xl text-xs font-bold transition-all cursor-pointer"
+          >
+            Повторить попытку
+          </button>
+          {src && src.startsWith('http') && (
+            <a
+              href={src}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl text-xs font-bold transition-all"
+            >
+              Открыть файл
+            </a>
+          )}
+        </div>
       </div>
     );
   }
@@ -255,20 +307,33 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
       onMouseLeave={() => isPlaying && setShowControls(false)}
       onKeyDown={handleKeyDown}
       tabIndex={0}
-      className={`relative w-full bg-black group select-none outline-none overflow-hidden ${
+      className={`relative w-full bg-black group select-none outline-none overflow-hidden transition-shadow duration-700 ${
         isFullscreen
           ? 'fixed inset-0 w-screen h-screen z-[99999] rounded-none border-none flex items-center justify-center'
           : 'rounded-2xl border border-[#3d2b4f]/60 shadow-2xl'
       } ${className}`}
+      style={!isFullscreen ? { boxShadow: `0 10px 40px -10px ${glow}, 0 0 20px -5px ${bgPill}` } : undefined}
     >
+      {/* Dynamic Ambient Backlight Glow behind player */}
+      {!isFullscreen && (
+        <div
+          style={{
+            background: `radial-gradient(ellipse 95% 75% at 50% 50%, ${glow} 0%, transparent 80%)`,
+          }}
+          className="absolute -inset-4 sm:-inset-6 pointer-events-none blur-3xl opacity-50 transition-all duration-700 -z-10"
+        />
+      )}
+
       {/* Video Element */}
       <video
         ref={videoRef}
         src={activeSrc}
         playsInline
+        webkit-playsinline="true"
+        x5-playsinline="true"
+        x5-video-player-type="h5"
         autoPlay={autoPlay}
         preload="auto"
-        crossOrigin="anonymous"
         className={`bg-black block cursor-pointer ${
           isFullscreen
             ? 'w-full h-full object-contain'
@@ -305,7 +370,9 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
           }
         }}
         onWaiting={() => setIsBuffering(true)}
-        onPlaying={() => setIsBuffering(false)}
+        onPlaying={() => {
+          setIsBuffering(false);
+        }}
         onEnded={() => {
           setIsPlaying(false);
           setShowControls(true);
@@ -313,19 +380,36 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
         onError={handleVideoError}
       />
 
-      {/* Top Kuru Video Disc Badge */}
+      {/* Top Kuru Video Disc Badge (Adapts to site accent color from admin) */}
       {(!isCompact || isFullscreen) && (
         <div className={`absolute top-2 left-2 sm:top-3 sm:left-3 pointer-events-none transition-opacity duration-300 z-30 ${showControls || !isPlaying ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="bg-black/80 backdrop-blur-md px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border border-red-500/40 text-[10px] sm:text-xs font-black uppercase tracking-wider text-red-400 flex items-center gap-1.5 sm:gap-2 shadow-lg">
+          <div 
+            style={{
+              borderColor: borderGlow,
+              boxShadow: `0 0 20px ${bgPill}`
+            }}
+            className="bg-black/85 backdrop-blur-md px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-lg transition-all duration-500"
+          >
             <Disc
               size={13}
-              className={`text-red-400 sm:w-[15px] sm:h-[15px] ${isPlaying ? 'animate-[spin_2.5s_linear_infinite]' : ''}`}
+              style={{ color: accentColor }}
+              className={`sm:w-[15px] sm:h-[15px] transition-colors duration-500 ${isPlaying ? 'animate-[spin_2.5s_linear_infinite]' : ''}`}
             />
-            <span className="bg-gradient-to-r from-red-400 via-purple-300 to-pink-400 bg-clip-text text-transparent">
+            <span 
+              style={{ 
+                backgroundImage: `linear-gradient(135deg, ${accentColor}, #ffffff)`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+              className="font-black"
+            >
               Kuru Video
             </span>
             {isPlaying && (
-              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500 animate-ping" />
+              <span 
+                style={{ backgroundColor: accentColor }}
+                className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full animate-ping transition-colors duration-500" 
+              />
             )}
           </div>
         </div>
@@ -334,22 +418,42 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
       {/* Buffering Indicator */}
       {isBuffering && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center gap-2 pointer-events-none z-20">
-          <RotateCw size={32} className="text-red-500 animate-[spin_1s_linear_infinite] sm:w-9 sm:h-9" />
-          <span className="text-[10px] sm:text-[11px] font-bold text-red-200 tracking-widest uppercase bg-black/80 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-red-500/30">
+          <RotateCw 
+            size={32} 
+            style={{ color: accentColor }} 
+            className="animate-[spin_1s_linear_infinite] sm:w-9 sm:h-9 transition-colors duration-500" 
+          />
+          <span 
+            style={{ 
+              borderColor: borderGlow,
+              color: accentColor,
+              backgroundColor: 'rgba(0, 0, 0, 0.85)'
+            }}
+            className="text-[10px] sm:text-[11px] font-bold tracking-widest uppercase px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border transition-all duration-500"
+          >
             Загрузка...
           </span>
         </div>
       )}
 
-      {/* Center Big Play/Pause Button */}
+      {/* Center Big Play/Pause Button (Adaptive Color & Glow matching Site Theme) */}
       {!isCompact && (!isPlaying || showControls) && !isBuffering && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
           <button
             onClick={togglePlay}
-            className="pointer-events-auto p-2.5 sm:p-4 rounded-full bg-red-600/90 hover:bg-red-500 text-white shadow-2xl hover:scale-110 active:scale-95 transition-all border border-red-400/50 backdrop-blur-md cursor-pointer"
+            style={{
+              backgroundColor: `${accentColor}E6`,
+              borderColor: borderGlow,
+              boxShadow: `0 0 35px ${glow}, 0 0 15px ${accentColor}`
+            }}
+            className="pointer-events-auto p-3 sm:p-4 rounded-full text-white shadow-2xl hover:scale-110 active:scale-95 transition-all border backdrop-blur-md cursor-pointer duration-500"
             title={isPlaying ? 'Пауза' : 'Воспроизвести'}
           >
-            {isPlaying ? <Pause size={22} className="sm:w-7 sm:h-7" /> : <Play size={22} className="ml-0.5 sm:ml-1 sm:w-7 sm:h-7" />}
+            {isPlaying ? (
+              <Pause size={24} className="sm:w-7 sm:h-7" />
+            ) : (
+              <Play size={24} className="ml-0.5 sm:ml-1 sm:w-7 sm:h-7 fill-white" />
+            )}
           </button>
         </div>
       )}
@@ -370,7 +474,11 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
             className="pointer-events-auto p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-black/80 hover:bg-black border border-white/20 text-white shadow-lg backdrop-blur-md hover:scale-105 active:scale-95 transition-all"
             title={isMuted ? 'Включить звук' : 'Выключить звук'}
           >
-            {isMuted || volume === 0 ? <VolumeX size={16} className="text-red-400 sm:w-4 sm:h-4" /> : <Volume2 size={16} className="sm:w-4 sm:h-4" />}
+            {isMuted || volume === 0 ? (
+              <VolumeX size={16} style={{ color: accentColor }} className="sm:w-4 sm:h-4 transition-colors duration-500" />
+            ) : (
+              <Volume2 size={16} className="sm:w-4 sm:h-4" />
+            )}
           </button>
 
           {/* Fullscreen button */}
@@ -394,7 +502,7 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
             showControls || !isPlaying ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
         >
-          {/* Progress Bar */}
+          {/* Progress Bar (Adaptive Scrubber & Glow with Site Accent) */}
           <div
             ref={progressBarRef}
             onClick={handleProgressClick}
@@ -404,8 +512,8 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
           >
             {hoverTime !== null && (
               <div
-                style={{ left: `${hoverPos}px` }}
-                className="absolute bottom-6 -translate-x-1/2 bg-black/90 text-white text-[10px] sm:text-[11px] font-mono px-1.5 py-0.5 rounded border border-red-500/40 pointer-events-none shadow-md z-40"
+                style={{ left: `${hoverPos}px`, borderColor: borderGlow }}
+                className="absolute bottom-6 -translate-x-1/2 bg-black/95 text-white text-[10px] sm:text-[11px] font-mono px-1.5 py-0.5 rounded border pointer-events-none shadow-md z-40 transition-colors duration-500"
               >
                 {formatTime(hoverTime)}
               </div>
@@ -417,13 +525,21 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
             />
 
             <div
-              style={{ width: `${progressPct}%` }}
-              className="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 rounded-full transition-all shadow-[0_0_12px_rgba(239,68,68,0.9)]"
+              style={{ 
+                width: `${progressPct}%`,
+                background: `linear-gradient(to right, ${accentColor}, #a855f7)`,
+                boxShadow: `0 0 14px ${glow}`
+              }}
+              className="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-300"
             />
 
             <div
-              style={{ left: `${progressPct}%` }}
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white border-2 border-red-500 rounded-full opacity-0 group-hover/progress:opacity-100 shadow-lg transition-opacity"
+              style={{ 
+                left: `${progressPct}%`,
+                borderColor: accentColor,
+                boxShadow: `0 0 10px ${accentColor}`
+              }}
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white border-2 rounded-full opacity-0 group-hover/progress:opacity-100 shadow-lg transition-opacity duration-300"
             />
           </div>
 
@@ -432,7 +548,8 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
             <div className="flex items-center gap-1 sm:gap-2.5 min-w-0">
               <button
                 onClick={togglePlay}
-                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl text-white hover:text-red-400 transition-colors shrink-0"
+                style={{ color: 'white' }}
+                className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl text-white transition-colors shrink-0"
                 title={isPlaying ? 'Пауза' : 'Воспроизвести'}
               >
                 {isPlaying ? <Pause size={18} className="sm:w-5 sm:h-5" /> : <Play size={18} className="sm:w-5 sm:h-5" />}
@@ -460,7 +577,11 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
                   className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg sm:rounded-xl text-gray-300 hover:text-white transition-colors"
                   title={isMuted ? 'Включить звук' : 'Выключить звук'}
                 >
-                  {isMuted || volume === 0 ? <VolumeX size={18} className="text-red-400 sm:w-5 sm:h-5" /> : <Volume2 size={18} className="sm:w-5 sm:h-5" />}
+                  {isMuted || volume === 0 ? (
+                    <VolumeX size={18} style={{ color: accentColor }} className="sm:w-5 sm:h-5 transition-colors duration-500" />
+                  ) : (
+                    <Volume2 size={18} className="sm:w-5 sm:h-5" />
+                  )}
                 </button>
                 <input
                   type="range"
@@ -469,7 +590,8 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
                   step="0.05"
                   value={isMuted ? 0 : volume}
                   onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                  className="w-12 xs:w-16 sm:w-20 md:w-24 h-1.5 accent-red-500 bg-white/20 rounded-lg cursor-pointer shrink-0"
+                  style={{ accentColor: accentColor }}
+                  className="w-12 xs:w-16 sm:w-20 md:w-24 h-1.5 bg-white/20 rounded-lg cursor-pointer shrink-0 transition-colors duration-500"
                 />
               </div>
 
@@ -489,13 +611,14 @@ export const KuruVideoPlayer: React.FC<KuruVideoPlayerProps> = ({
                 </button>
 
                 {showSpeedMenu && (
-                  <div className="absolute bottom-10 right-0 bg-black/90 backdrop-blur-md border border-[#3d2b4f] rounded-xl p-1 shadow-2xl flex flex-col gap-0.5 z-50 text-xs w-24">
+                  <div className="absolute bottom-10 right-0 bg-black/95 backdrop-blur-md border border-[#3d2b4f] rounded-xl p-1 shadow-2xl flex flex-col gap-0.5 z-50 text-xs w-24">
                     {[0.5, 0.75, 1, 1.25, 1.5, 2].map((spd) => (
                       <button
                         key={spd}
                         onClick={() => changeSpeed(spd)}
+                        style={playbackSpeed === spd ? { backgroundColor: bgPill, color: accentColor } : undefined}
                         className={`px-2 py-1 text-left rounded-lg transition-colors ${
-                          playbackSpeed === spd ? 'bg-red-500/30 text-red-400 font-bold' : 'hover:bg-white/10 text-gray-300'
+                          playbackSpeed === spd ? 'font-bold' : 'hover:bg-white/10 text-gray-300'
                         }`}
                       >
                         {spd === 1 ? '1x Обычная' : `${spd}x`}

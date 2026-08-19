@@ -61,6 +61,7 @@ import {
 import { isSafeUrl } from '../../utils/sanitizer';
 import { Language } from '../../data/translations';
 import { CustomSelect } from './CustomSelect';
+import { ModalPortal } from './ModalPortal';
 
 interface AhaEmbeddedBrowserModalProps {
   isOpen: boolean;
@@ -775,18 +776,19 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
   );
 
   return (
-    <AnimatePresence>
-      <div className={`fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md overflow-hidden ${isFullscreen ? 'p-0' : 'p-2 sm:p-3'}`}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.97, y: 8 }}
-          className={`relative bg-[#0c0816] flex flex-col overflow-hidden transition-all duration-300 ${
-            isFullscreen 
-              ? 'fixed inset-0 z-[200] w-screen h-screen max-w-none max-h-none rounded-none border-none p-0 my-0' 
-              : 'w-full max-w-6xl h-[92vh] max-h-[880px] border border-[#3d2b4f] rounded-2xl shadow-2xl my-auto'
-          }`}
-        >
+    <ModalPortal>
+      <AnimatePresence>
+        <div className={`fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 backdrop-blur-md overflow-hidden ${isFullscreen ? 'p-0' : 'p-2 sm:p-3'}`}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.97, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.97, y: 8 }}
+            className={`relative bg-[#0c0816] flex flex-col overflow-hidden transition-all duration-300 ${
+              isFullscreen 
+                ? 'fixed inset-0 z-[200] w-screen h-screen max-w-none max-h-none rounded-none border-none p-0 my-0' 
+                : 'w-full max-w-6xl h-[92vh] max-h-[880px] border border-[#3d2b4f] rounded-2xl shadow-2xl my-auto'
+            }`}
+          >
           {isFullscreen && (
             <div className="fixed top-2.5 right-12 z-[250] pointer-events-auto">
               <button
@@ -1825,5 +1827,6 @@ export const AhaEmbeddedBrowserModal: React.FC<AhaEmbeddedBrowserModalProps> = (
         </motion.div>
       </div>
     </AnimatePresence>
+    </ModalPortal>
   );
 };

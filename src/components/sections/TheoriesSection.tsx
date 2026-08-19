@@ -19,6 +19,7 @@ import { TimeAgo } from '../ui/TimeAgo';
 
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { SafeHtml } from '../security/AhaSecurity';
+import { MediaViewer } from '../ui/MediaViewer';
 import { TheorySkeletonGrid } from '../ui/SkeletonLoaders';
 import { AhaProtocolDiagram } from '../ui/AhaProtocolDiagram';
 import { getLocalizedCategory } from '../../utils/categories';
@@ -254,6 +255,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                     createdAt: selectedTheory.createdAt,
                     summary: selectedTheory.summary?.[lang] || selectedTheory.summary?.['en'],
                     contentHtml: selectedTheory.content[lang] || selectedTheory.content['en'],
+                    mediaUrl: selectedTheory.mediaUrl,
                     sectionName: lang === 'ru' ? 'Теория' : 'Theory',
                     lang
                   })}
@@ -288,6 +290,17 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                 </button>
               </div>
             </div>
+
+            {selectedTheory.mediaUrl && (
+              <div className="mb-8">
+                <MediaViewer
+                  url={selectedTheory.mediaUrl}
+                  maxHeight="max-h-[550px]"
+                  title={selectedTheory.title[lang] || 'Theory Media'}
+                  isCompact={false}
+                />
+              </div>
+            )}
 
             {(selectedTheory.summary?.[lang] || selectedTheory.summary?.['en']) && (
               <div className="mb-6 p-4 rounded-2xl bg-[#15101e]/40 border-l-4 border-[#ff4d4d] text-white/80 font-medium italic">

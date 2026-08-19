@@ -158,9 +158,9 @@ export const Header: React.FC<HeaderProps> = ({
               transition={{ type: "spring", stiffness: 300, damping: 15 }}
               className="shrink-0"
             >
-              <Zap className="text-[#ff4d4d] fill-[#ff4d4d] transition-all group-hover:drop-shadow-[0_0_12px_rgba(255,77,77,0.8)]" size={22} />
+              <Zap className="text-[#ff4d4d] fill-[#ff4d4d] transition-all group-hover:drop-shadow-[0_0_15px_rgba(255,77,77,0.9)]" size={22} />
             </motion.div>
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400 truncate">
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-100 to-[#ff4d4d] truncate font-black tracking-tight group-hover:drop-shadow-[0_0_12px_rgba(255,77,77,0.4)] transition-all">
               {t.siteName}
             </span>
           </h1>

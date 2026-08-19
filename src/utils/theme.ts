@@ -34,6 +34,22 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
   return { r, g, b };
 }
 
+export function getPrimaryAccentColor(): string {
+  try {
+    const cached = localStorage.getItem('aha_primary_accent');
+    if (cached && /^#[0-9a-fA-F]{3,6}$/.test(cached)) {
+      return cached;
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+  if (typeof document !== 'undefined') {
+    const fromCss = document.documentElement.style.getPropertyValue('--primary-accent');
+    if (fromCss && fromCss.trim()) return fromCss.trim();
+  }
+  return '#ff4d4d';
+}
+
 export function applyPrimaryAccentColor(colorHex: string) {
   const cleanHex = (colorHex || '').replace('#', '').trim().toLowerCase();
   const isValidHex = /^[0-9a-f]{3}$|^[0-9a-f]{6}$/.test(cleanHex);
@@ -49,6 +65,13 @@ export function applyPrimaryAccentColor(colorHex: string) {
   // 1. Set CSS Variables on document root
   document.documentElement.style.setProperty('--primary-accent', color);
   document.documentElement.style.setProperty('--primary-accent-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+
+  // Dispatch custom window event so reactive components update instantly
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('aha_accent_color_change', {
+      detail: { color, rgb }
+    }));
+  }
 
   // 2. Manage dynamic style element in document.head
   let styleEl = document.getElementById('aha-custom-accent-style') as HTMLStyleElement;

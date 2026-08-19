@@ -111,6 +111,8 @@ export default defineConfig(({mode}) => {
     },
     envPrefix: ['VITE_', 'WBM_STATIC_'],
     build: {
+      target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
+      cssTarget: ['chrome87', 'firefox78', 'safari14', 'edge88'],
       outDir: 'dist',
       emptyOutDir: true,
       chunkSizeWarningLimit: 2000,

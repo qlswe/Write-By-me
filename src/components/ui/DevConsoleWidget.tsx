@@ -13,6 +13,7 @@ import { auth, db } from '../../firebase';
 import { getDeviceId, getDeviceDiagnostics, rotateDeviceId } from '../../utils/deviceId';
 import { doc, getDoc, disableNetwork, enableNetwork } from 'firebase/firestore';
 import { AhaQueryMonitor } from '../monitoring/AhaQueryMonitor';
+import { ConnectionHealthCheck } from '../monitoring/ConnectionHealthCheck';
 import { purgeNonAdminDataAndResetPlatform, purgeTelemetryOnly } from '../../utils/platformReset';
 import { CustomSelect } from './CustomSelect';
 
@@ -29,7 +30,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
 }) => {
   const { user } = useAuth();
   const [logs, setLogs] = useState(() => logger.getLogs());
-  const [activeTab, setActiveTab] = useState<'logs' | 'auth_db' | 'env_state' | 'tests' | 'queries'>('logs');
+  const [activeTab, setActiveTab] = useState<'logs' | 'health' | 'auth_db' | 'env_state' | 'tests' | 'queries'>('logs');
   const [filterLevel, setFilterLevel] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedLogIndex, setExpandedLogIndex] = useState<number | null>(null);
@@ -387,11 +388,11 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                 </div>
 
                 {/* Tabs */}
-                <div className="flex items-center gap-1 bg-[#1a0e30] p-1 rounded-xl border border-[#3d2b4f]">
+                <div className="flex items-center gap-1 bg-[#1a0e30] p-1 rounded-xl border border-[#3d2b4f] overflow-x-auto no-scrollbar max-w-full">
                   <button
                     type="button"
                     onClick={() => setActiveTab('logs')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                       activeTab === 'logs'
                         ? 'bg-[#ff4d4d] text-[#15101e] shadow'
                         : 'text-gray-400 hover:text-white'
@@ -403,8 +404,21 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
 
                   <button
                     type="button"
+                    onClick={() => setActiveTab('health')}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                      activeTab === 'health'
+                        ? 'bg-[#ff4d4d] text-[#15101e] shadow'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Activity size={12} className={activeTab === 'health' ? 'text-[#15101e]' : 'text-emerald-400'} />
+                    <span>Связь & Health</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setActiveTab('auth_db')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                       activeTab === 'auth_db'
                         ? 'bg-[#ff4d4d] text-[#15101e] shadow'
                         : 'text-gray-400 hover:text-white'
@@ -417,7 +431,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('env_state')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                       activeTab === 'env_state'
                         ? 'bg-[#ff4d4d] text-[#15101e] shadow'
                         : 'text-gray-400 hover:text-white'
@@ -430,7 +444,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('tests')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                       activeTab === 'tests'
                         ? 'bg-[#ff4d4d] text-[#15101e] shadow'
                         : 'text-gray-400 hover:text-white'
@@ -443,7 +457,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveTab('queries')}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                       activeTab === 'queries'
                         ? 'bg-[#ff4d4d] text-[#15101e] shadow'
                         : 'text-gray-400 hover:text-white'
@@ -631,7 +645,12 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
               </>
             )}
 
-            {/* TAB CONTENT: 2. AUTH & DB DEBUG */}
+            {/* TAB CONTENT: 2. CONNECTION HEALTH CHECK */}
+            {activeTab === 'health' && (
+              <ConnectionHealthCheck />
+            )}
+
+            {/* TAB CONTENT: 3. AUTH & DB DEBUG */}
             {activeTab === 'auth_db' && (
               <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Auth Inspector Box */}
@@ -1048,9 +1067,33 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
               </div>
             )}
 
-            {/* TAB CONTENT: 4. TESTS & REPORTS */}
+            {/* TAB CONTENT: 5. TESTS & REPORTS */}
             {activeTab === 'tests' && (
-              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Connection Health Check Diagnostic Card */}
+                <div className="bg-[#150d26] border border-emerald-500/40 rounded-2xl p-4 flex flex-col justify-between shadow-lg shadow-emerald-950/20">
+                  <div>
+                    <div className="flex items-center gap-2 text-white font-bold text-xs border-b border-[#3d2b4f] pb-3 mb-3">
+                      <Activity size={16} className="text-emerald-400" />
+                      <span>ДИАГНОСТИКА СВЯЗИ (HEALTH CHECK)</span>
+                    </div>
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      Автоматическая проверка доступности Firebase Firestore, Identity Auth, шлюза нейросетей Gemini AI, локального бэкенда и IPv6-маршрутизации с замером задержки (RTT).
+                    </p>
+                  </div>
+
+                  <div className="pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('health')}
+                      className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-500 hover:opacity-90 text-white font-black uppercase tracking-wider rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    >
+                      <Activity size={18} className="text-white animate-pulse" />
+                      <span>ОТКРЫТЬ HEALTH CHECK</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Trigger Logging Test Entries */}
                 <div className="bg-[#150d26] border border-[#3d2b4f] rounded-2xl p-4">
                   <div className="flex items-center gap-2 text-white font-bold text-xs border-b border-[#3d2b4f] pb-3 mb-3">
@@ -1109,7 +1152,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                       className="w-full py-2 bg-[#251c35] hover:bg-[#ff4d4d] hover:text-[#15101e] text-white font-bold rounded-xl border border-[#3d2b4f] transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Flame size={14} className="text-[#ff4d4d] group-hover:text-[#15101e]" />
-                      <span>Сгенерировать 5 тестовых записей разом</span>
+                      <span>Сгенерировать 5 тестовых записей</span>
                     </button>
                   </div>
                 </div>
@@ -1122,7 +1165,7 @@ export const DevConsoleWidget: React.FC<DevConsoleWidgetProps> = ({
                       <span>ОТЧЕТ ДЛЯ БАГТРЕКЕРА И РАЗРАБОТЧИКОВ</span>
                     </div>
                     <p className="text-xs text-gray-300 leading-relaxed">
-                      Генерирует полный Markdown отчёт со всеми характеристиками системы, данными пользователя, ошибками и последними логами для быстрой вставки в GitHub Issues или чат поддержки.
+                      Генерирует полный Markdown отчёт со всеми характеристиками системы, данными пользователя, ошибками и последними логами для вставки в багтрекер.
                     </p>
                   </div>
 

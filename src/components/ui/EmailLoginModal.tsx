@@ -4,6 +4,7 @@ import { X, Mail, Lock, LogIn, UserPlus, User, Sparkles, Palette, MessageSquare,
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 import { getHumanFriendlyError } from '../../utils/authErrors';
+import { ModalPortal } from './ModalPortal';
 
 interface EmailLoginModalProps {
   isOpen: boolean;
@@ -109,21 +110,22 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/70 backdrop-blur-md"
-          onClick={onClose}
-        />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-[#15101e] border border-[#3d2b4f] w-full max-w-lg rounded-2xl shadow-2xl relative z-10 max-h-[90vh] flex flex-col overflow-hidden"
-        >
+    <ModalPortal>
+      <AnimatePresence>
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            onClick={onClose}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="bg-[#15101e] border border-[#3d2b4f] w-full max-w-lg rounded-2xl shadow-2xl relative z-10 max-h-[90vh] flex flex-col overflow-hidden"
+          >
           {/* Header */}
           <div className="p-6 border-b border-[#3d2b4f] flex justify-between items-center bg-[#251c35] shrink-0">
             <h2 className="text-xl font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-2">
@@ -385,6 +387,7 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
         </motion.div>
       </div>
     </AnimatePresence>
+    </ModalPortal>
   );
 };
 

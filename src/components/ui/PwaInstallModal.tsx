@@ -35,6 +35,7 @@ import {
 import { Language } from '../../data/translations';
 import { usePWA } from '../../hooks/usePWA';
 import { CustomSelect } from './CustomSelect';
+import { ModalPortal } from './ModalPortal';
 
 interface PwaInstallModalProps {
   isOpen: boolean;
@@ -662,18 +663,19 @@ echo "Target URL: ${url}"
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      <div 
-        className="fixed inset-0 z-[120] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 15 }}
-          className="bg-[#120d1d] border border-[#00f0ff]/30 rounded-3xl p-4 sm:p-6 md:p-8 w-full max-w-4xl shadow-[0_0_80px_rgba(0,240,255,0.15)] relative space-y-6 overflow-hidden my-auto"
-          onClick={(e) => e.stopPropagation()}
+    <ModalPortal>
+      <AnimatePresence>
+        <div 
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md overflow-y-auto"
+          onClick={onClose}
         >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 15 }}
+            className="bg-[#120d1d] border border-[#00f0ff]/30 rounded-3xl p-4 sm:p-6 md:p-8 w-full max-w-4xl shadow-[0_0_80px_rgba(0,240,255,0.15)] relative space-y-6 overflow-hidden my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
           {/* Glowing background highlights */}
           <div className="absolute top-0 left-1/4 w-80 h-40 bg-[#00f0ff]/15 blur-3xl rounded-full pointer-events-none" />
           <div className="absolute bottom-0 right-1/4 w-80 h-40 bg-[#a855f7]/15 blur-3xl rounded-full pointer-events-none" />
@@ -1238,5 +1240,6 @@ echo "Target URL: ${url}"
         </motion.div>
       </div>
     </AnimatePresence>
+    </ModalPortal>
   );
 };

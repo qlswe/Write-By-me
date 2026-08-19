@@ -96,3 +96,69 @@ export function cachedJsonParse<T>(key: string, rawJson: string | null, fallback
     return fallback;
   }
 }
+
+// 5. Cross-Browser Engine & Hardware Diagnostics
+export interface BrowserEngineInfo {
+  isWebKit: boolean;
+  isGecko: boolean;
+  isBlink: boolean;
+  isSafari: boolean;
+  isiOS: boolean;
+  isFirefox: boolean;
+  supportsBackdropFilter: boolean;
+  supportsTouch: boolean;
+  isLowEndDevice: boolean;
+}
+
+export function getBrowserEngineInfo(): BrowserEngineInfo {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return {
+      isWebKit: false,
+      isGecko: false,
+      isBlink: true,
+      isSafari: false,
+      isiOS: false,
+      isFirefox: false,
+      supportsBackdropFilter: true,
+      supportsTouch: false,
+      isLowEndDevice: false,
+    };
+  }
+
+  const ua = navigator.userAgent;
+  const isiOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+  const isFirefox = /firefox|fxios/i.test(ua);
+  const isWebKit = /webkit/i.test(ua) && !/chrome|chromium|edg/i.test(ua);
+  const isGecko = /gecko/i.test(ua) && !/webkit|trident/i.test(ua);
+  const isBlink = /chrome|chromium|edg/i.test(ua);
+  const supportsTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+  // Check hardware concurrency and device memory for low-end adaptation
+  const hardwareConcurrency = navigator.hardwareConcurrency || 4;
+  const deviceMemory = (navigator as any).deviceMemory || 4;
+  const isLowEndDevice = hardwareConcurrency <= 2 || deviceMemory <= 2;
+
+  let supportsBackdropFilter = false;
+  try {
+    supportsBackdropFilter = 
+      (typeof CSS !== 'undefined' && (
+        CSS.supports('backdrop-filter', 'blur(1px)') || 
+        CSS.supports('-webkit-backdrop-filter', 'blur(1px)')
+      ));
+  } catch {
+    supportsBackdropFilter = true;
+  }
+
+  return {
+    isWebKit,
+    isGecko,
+    isBlink,
+    isSafari,
+    isiOS,
+    isFirefox,
+    supportsBackdropFilter,
+    supportsTouch,
+    isLowEndDevice,
+  };
+}

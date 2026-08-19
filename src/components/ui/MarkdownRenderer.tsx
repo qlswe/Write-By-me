@@ -492,7 +492,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             img: ({ node, src, alt, ...props }) => {
               if (!src) return null;
               return (
-                <span className="block my-6 group/img relative rounded-2xl overflow-hidden border border-[#3d2b4f] bg-[#15101e]/60">
+                <span className="block my-6 group/img relative rounded-2xl overflow-hidden border border-[#3d2b4f] bg-[#15101e]/60 cursor-pointer">
                   <LazyImage
                     src={src}
                     alt={alt || 'Image'}
@@ -502,14 +502,15 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                     containerClassName="w-full"
                     {...props}
                   />
-                  <button
-                    type="button"
+                  <div 
                     onClick={() => setFullscreenImg(src)}
-                    className="absolute bottom-3 right-3 z-20 p-2 bg-black/60 hover:bg-[#ff4d4d] text-white hover:text-[#15101e] rounded-xl backdrop-blur-md opacity-0 group-hover/img:opacity-100 transition-all cursor-pointer shadow-lg"
-                    title="Zoom image"
+                    className="absolute inset-0 z-30 bg-black/20 hover:bg-black/40 transition-colors duration-200 flex items-center justify-center p-3"
                   >
-                    <Maximize2 size={16} />
-                  </button>
+                    <div className="bg-[#0c0914]/90 hover:bg-[#0c0914] backdrop-blur-md px-4 sm:px-5 py-2 sm:py-2.5 rounded-full border-2 border-emerald-400 text-white text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-[0_10px_35px_rgba(0,0,0,0.9)] scale-100 group-hover/img:scale-105 group-hover/img:border-emerald-300 transition-all">
+                      <Maximize2 size={16} className="text-emerald-400 shrink-0" />
+                      <span className="tracking-wide">Нажмите, чтобы открыть полностью</span>
+                    </div>
+                  </div>
                   {alt && (
                     <span className="block text-center text-xs text-white/50 py-2 italic">
                       {alt}

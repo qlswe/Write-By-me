@@ -515,15 +515,10 @@ export const FacebookPostCard: React.FC<FacebookPostCardProps> = ({
             isProtected={protectedViewFeatureEnabled && post.isProtected !== false}
             title={post.title}
             maxHeight="max-h-[500px]"
+            showExpandOverlay={!!onOpenFullPost}
+            expandLabel={lang === 'ru' ? 'Нажмите, чтобы открыть полностью' : 'Click to view full post'}
+            onOpenFull={() => onOpenFullPost?.(post)}
           />
-          {onOpenFullPost && (
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/media:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
-              <div className="bg-[#15101e]/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-[#ff4d4d]/50 text-white text-xs font-bold flex items-center gap-2 shadow-2xl scale-95 group-hover/media:scale-100 transition-transform">
-                <Maximize2 size={16} className="text-[#ff4d4d]" />
-                <span>{lang === 'ru' ? 'Нажмите, чтобы открыть полностью' : 'Click to view full post'}</span>
-              </div>
-            </div>
-          )}
         </div>
       )}
 

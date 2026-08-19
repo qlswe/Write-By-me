@@ -6,6 +6,7 @@ import { db } from '../../firebase';
 import { Language, translations } from '../../data/translations';
 import { CustomSelect } from '../ui/CustomSelect';
 import { generatePrefixedId } from '../../utils/idGenerator';
+import { ModalPortal } from '../ui/ModalPortal';
 
 interface AdminTheoryModalProps {
   isOpen: boolean;
@@ -100,14 +101,15 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-[#15101e] border border-[#3d2b4f] rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden"
-        >
+    <ModalPortal>
+      <AnimatePresence>
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-[#15101e] border border-[#3d2b4f] rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden"
+          >
           <div className="flex items-center justify-between p-4 border-b border-[#3d2b4f] bg-[#251c35] shrink-0">
             <h3 className="text-xl font-bold text-white">
               {theoryToEdit ? 'Редактировать запись' : 'Создать запись'}
@@ -246,5 +248,6 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
         </motion.div>
       </div>
     </AnimatePresence>
+    </ModalPortal>
   );
 };

@@ -25,6 +25,7 @@ import {
   AHA_PROTOCOL_CONCEPT 
 } from '../../utils/ahaProtocol';
 import { Language } from '../../data/translations';
+import { ModalPortal } from './ModalPortal';
 
 interface AhaProtocolModalProps {
   isOpen: boolean;
@@ -85,14 +86,15 @@ export const AhaProtocolModal: React.FC<AhaProtocolModalProps> = ({ isOpen, onCl
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 12 }}
-          className="relative w-full max-w-3xl bg-[#120d1a] border border-[#3d2b4f] rounded-3xl shadow-2xl overflow-hidden my-auto"
-        >
+    <ModalPortal>
+      <AnimatePresence>
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+            className="relative w-full max-w-3xl bg-[#120d1a] border border-[#3d2b4f] rounded-3xl shadow-2xl overflow-hidden my-auto"
+          >
           {/* Header */}
           <div className="relative p-5 sm:p-6 bg-gradient-to-r from-red-950/40 via-[#1f132e] to-purple-950/30 border-b border-[#3d2b4f]">
             <button
@@ -344,5 +346,6 @@ export const AhaProtocolModal: React.FC<AhaProtocolModalProps> = ({ isOpen, onCl
         </motion.div>
       </div>
     </AnimatePresence>
+    </ModalPortal>
   );
 };

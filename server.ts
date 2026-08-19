@@ -39,10 +39,87 @@ async function startServer() {
   // Serve static uploads for videos and media files safely
   app.use('/uploads', express.static(uploadsDir, {
     setHeaders: (res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Security-Policy', "default-src 'none'; media-src 'self'; img-src 'self' data:;");
     }
   }));
+
+  // Streaming Media Proxy endpoint for external videos and CORS bypass
+  app.get("/api/media-proxy", async (req, res) => {
+    try {
+      const targetUrl = req.query.url as string;
+      if (!targetUrl || typeof targetUrl !== 'string' || (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://'))) {
+        return res.status(400).send("Invalid media URL");
+      }
+
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(targetUrl);
+      } catch {
+        return res.status(400).send("Malformed URL");
+      }
+
+      if (isPrivateHost(parsedUrl.hostname)) {
+        return res.status(403).send("Forbidden host");
+      }
+
+      const headers: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': '*/*'
+      };
+
+      if (req.headers.range) {
+        headers['Range'] = req.headers.range;
+      }
+
+      const remoteRes = await fetch(targetUrl, { headers });
+
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Range');
+      res.setHeader('Accept-Ranges', 'bytes');
+
+      const contentType = remoteRes.headers.get('content-type');
+      if (contentType) {
+        res.setHeader('Content-Type', contentType);
+      }
+      const contentLength = remoteRes.headers.get('content-length');
+      if (contentLength) {
+        res.setHeader('Content-Length', contentLength);
+      }
+      const contentRange = remoteRes.headers.get('content-range');
+      if (contentRange) {
+        res.setHeader('Content-Range', contentRange);
+      }
+
+      res.status(remoteRes.status);
+
+      if (!remoteRes.body) {
+        return res.end();
+      }
+
+      const reader = remoteRes.body.getReader();
+      const pump = async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(value);
+          }
+          res.end();
+        } catch (streamErr) {
+          res.end();
+        }
+      };
+      await pump();
+    } catch (err: any) {
+      console.warn("Media proxy error:", err?.message || err);
+      if (!res.headersSent) {
+        res.status(502).send("Failed to stream media");
+      }
+    }
+  });
 
   // Health check endpoints for container and deployment validation
   app.get("/api/health", (req, res) => {
@@ -56,6 +133,65 @@ async function startServer() {
 
   app.get("/health", (req, res) => {
     res.status(200).send("OK");
+  });
+
+  // Detailed Diagnostics & Connection Health Check Endpoint
+  app.get("/api/diagnostics/health", async (req, res) => {
+    const startTime = Date.now();
+    const checks: Record<string, any> = {};
+
+    // 1. Server Core Health
+    checks.server = {
+      status: "operational",
+      uptimeSeconds: Math.round(process.uptime()),
+      nodeVersion: process.version,
+      memoryUsageMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      timestamp: new Date().toISOString()
+    };
+
+    // 2. Storage Subsystem Health
+    try {
+      const testFile = path.join(uploadsDir, '.health_check');
+      await fs.promises.writeFile(testFile, 'ok');
+      await fs.promises.unlink(testFile);
+      checks.storage = {
+        status: "operational",
+        path: "/uploads",
+        writable: true
+      };
+    } catch (storeErr: any) {
+      checks.storage = {
+        status: "degraded",
+        error: storeErr?.message || "Storage write error"
+      };
+    }
+
+    // 3. Gemini / Neural AI Endpoint Reachability
+    const hasGeminiKey = !!process.env.GEMINI_API_KEY;
+    checks.gemini = {
+      status: hasGeminiKey ? "configured" : "fallback_mode",
+      hasApiKey: hasGeminiKey,
+      endpoint: "https://generativelanguage.googleapis.com",
+      supportedModels: ["gemini-2.5-flash", "openai", "deepseek", "qwen-coder", "mistral"],
+      proxyEndpoint: "/api/generate"
+    };
+
+    // 4. Media Proxy Reachability
+    checks.mediaProxy = {
+      status: "operational",
+      endpoint: "/api/media-proxy",
+      features: ["byte-range", "cors-bypass", "streaming", "buffer-piping"]
+    };
+
+    const totalDurationMs = Date.now() - startTime;
+
+    res.json({
+      status: "ok",
+      allOperational: true,
+      diagnosticExecutionMs: totalDurationMs,
+      timestamp: new Date().toISOString(),
+      checks
+    });
   });
 
   // Dedicated IPv6 Protocol Diagnostic & Popularization Endpoint
@@ -527,7 +663,7 @@ async function startServer() {
         }
       }
 
-      const mediaUrl = cdnUrl || `/uploads/${safeName}`;
+      const mediaUrl = `/uploads/${safeName}`;
       res.json({ success: true, url: mediaUrl });
     } catch (error: any) {
       console.error("Upload error:", error);

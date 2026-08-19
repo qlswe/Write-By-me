@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, ImagePlus, Bug, Lightbulb } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { usePerfLogger } from '../../utils/logger';
+import { ModalPortal } from './ModalPortal';
 
 interface FeedbackModalProps {
   lang: Language;
@@ -38,21 +39,22 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   if (!feedbackOpen) return null;
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setFeedbackOpen(false)}
-          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        />
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative bg-[#251c35] w-full max-w-md rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col border border-[#3d2b4f]"
-        >
+    <ModalPortal>
+      <AnimatePresence>
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setFeedbackOpen(false)}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative bg-[#251c35] w-full max-w-md rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col border border-[#3d2b4f]"
+          >
           <div className="p-6 border-b border-[#3d2b4f] bg-[#15101e] flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-[#ff4d4d]/10 rounded-xl">
@@ -190,5 +192,6 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
         </motion.div>
       </div>
     </AnimatePresence>
+    </ModalPortal>
   );
 };

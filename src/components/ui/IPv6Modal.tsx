@@ -9,6 +9,7 @@ import {
   IPv6NetworkStatus 
 } from '../../utils/ipv6Manager';
 import { Language } from '../../data/translations';
+import { ModalPortal } from './ModalPortal';
 
 interface IPv6ModalProps {
   isOpen: boolean;
@@ -60,14 +61,15 @@ export const IPv6Modal: React.FC<IPv6ModalProps> = ({ isOpen, onClose, lang }) =
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative w-full max-w-2xl bg-[#15101e] border border-[#3d2b4f] rounded-3xl shadow-2xl overflow-hidden my-auto"
-        >
+    <ModalPortal>
+      <AnimatePresence>
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative w-full max-w-2xl bg-[#15101e] border border-[#3d2b4f] rounded-3xl shadow-2xl overflow-hidden my-auto"
+          >
           {/* Header Banner */}
           <div className="relative p-5 sm:p-6 bg-gradient-to-r from-purple-900/40 via-[#1f1532] to-emerald-900/30 border-b border-[#3d2b4f]/60">
             <button
@@ -526,5 +528,6 @@ export const IPv6Modal: React.FC<IPv6ModalProps> = ({ isOpen, onClose, lang }) =
         </motion.div>
       </div>
     </AnimatePresence>
+    </ModalPortal>
   );
 };

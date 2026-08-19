@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Star, Edit, Trash2, ArrowRight, Calendar, Share2, Check, Clock } from 'lucide-react';
+import { Star, Edit, Trash2, ArrowRight, Calendar, Share2, Check, Clock, Maximize2 } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { TimeAgo } from '../ui/TimeAgo';
@@ -115,8 +115,19 @@ export const BlogCard: React.FC<BlogCardProps> = React.memo(({
       </h3>
       
       {post.mediaUrl && (
-        <div className="mb-4 overflow-hidden rounded-2xl">
-          <MediaViewer url={post.mediaUrl} maxHeight="max-h-[220px]" title={sanitizeBeforeRender(post.title?.[lang] || 'Blog Media')} isCompact={true} />
+        <div 
+          onClick={(e) => { e.stopPropagation(); onClick(); }}
+          className="mb-4 overflow-hidden rounded-2xl relative group/media cursor-pointer"
+        >
+          <MediaViewer
+            url={post.mediaUrl}
+            maxHeight="max-h-[220px]"
+            title={sanitizeBeforeRender(post.title?.[lang] || 'Blog Media')}
+            isCompact={true}
+            showExpandOverlay={true}
+            expandLabel={lang === 'ru' ? 'Нажмите, чтобы открыть полностью' : 'Click to view full post'}
+            onOpenFull={() => onClick()}
+          />
         </div>
       )}
 

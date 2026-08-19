@@ -3,8 +3,10 @@ import { motion } from 'motion/react';
 import { Star, Share2, Check, Edit, Trash2, ArrowRight, Clock } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
+import { MediaViewer } from '../ui/MediaViewer';
 import { calculateReadTime } from '../../utils/time';
 import { getLocalizedCategory } from '../../utils/categories';
+import { sanitizeBeforeRender } from '../../utils/sanitizer';
 
 
 interface TheoryCardProps {
@@ -103,12 +105,29 @@ export const TheoryCard: React.FC<TheoryCardProps> = React.memo(({
       </div>
 
       <h3 className="text-xl sm:text-2xl font-black text-white mb-3 leading-tight tracking-tight group-hover:text-[#ff4d4d] transition-colors uppercase">
-        {theory.title[lang] || theory.title['en']}
+        {sanitizeBeforeRender(theory.title?.[lang] || theory.title?.['en'] || '')}
       </h3>
+
+      {theory.mediaUrl && (
+        <div 
+          onClick={(e) => { e.stopPropagation(); onClick(); }}
+          className="mb-4 overflow-hidden rounded-2xl relative group/media cursor-pointer"
+        >
+          <MediaViewer
+            url={theory.mediaUrl}
+            maxHeight="max-h-[220px]"
+            title={sanitizeBeforeRender(theory.title?.[lang] || 'Theory Media')}
+            isCompact={true}
+            showExpandOverlay={true}
+            expandLabel={lang === 'ru' ? 'Нажмите, чтобы открыть полностью' : 'Click to view full protocol'}
+            onOpenFull={() => onClick()}
+          />
+        </div>
+      )}
       
       <div className="relative mb-6 text-gray-300 group-hover:text-white transition-colors">
         <p className="text-xs sm:text-sm line-clamp-3 font-normal leading-relaxed text-gray-300">
-          {theory.summary[lang] || theory.summary['en']}
+          {sanitizeBeforeRender(theory.summary?.[lang] || theory.summary?.['en'] || '')}
         </p>
       </div>
 

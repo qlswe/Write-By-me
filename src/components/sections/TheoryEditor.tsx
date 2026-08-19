@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { motion } from 'motion/react';
-import { X, Save, Sparkles, HelpCircle } from 'lucide-react';
+import { X, Save, Video, Camera, Link as LinkIcon, Plus, Trash2, Sparkles, HelpCircle } from 'lucide-react';
 import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,7 +8,8 @@ import { handleFirestoreError, OperationType } from '../../utils/errorHandlers';
 import { translations, Language } from '../../data/translations';
 import { vercelFallback } from '../../utils/vercelFallback';
 import { generatePrefixedId } from '../../utils/idGenerator';
-import { sanitizePayloadForFirestore } from '../../utils/mediaUploader';
+import { MediaViewer, isVideoMedia, getYouTubeEmbedUrl } from '../ui/MediaViewer';
+import { uploadMediaFile, sanitizePayloadForFirestore } from '../../utils/mediaUploader';
 import { CustomSelect } from '../ui/CustomSelect';
 import { MarkdownEditorToolbar } from '../ui/MarkdownEditorToolbar';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
@@ -26,6 +27,10 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
   const t = translations[lang];
   const [currentLang, setCurrentLang] = useState(lang);
   const [category, setCategory] = useState(theory?.category || 'lore');
+  const [mediaUrl, setMediaUrl] = useState<string>(theory?.mediaUrl || '');
+  const [mediaUrlInput, setMediaUrlInput] = useState<string>('');
+  const [showUrlInput, setShowUrlInput] = useState<boolean>(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -95,6 +100,50 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
   
   const [isSaving, setIsSaving] = useState(false);
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 50 * 1024 * 1024) {
+      alert(lang === 'ru' ? 'Размер файла превышает 50 МБ' : 'File size exceeds 50MB');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const uploadedUrl = await uploadMediaFile(file);
+      setMediaUrl(uploadedUrl);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Error uploading file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleApplyUrl = () => {
+    if (!mediaUrlInput.trim()) return;
+    setMediaUrl(mediaUrlInput.trim());
+    setMediaUrlInput('');
+    setShowUrlInput(false);
+  };
+
+  const handleInsertMediaTagToContent = () => {
+    if (!mediaUrl) return;
+    const yt = getYouTubeEmbedUrl(mediaUrl);
+    let tag = '';
+    if (yt) {
+      tag = `\n<div className="my-4 aspect-video"><iframe src="${yt}" className="w-full h-full rounded-2xl" allowFullScreen></iframe></div>\n`;
+    } else if (isVideoMedia(mediaUrl)) {
+      tag = `\n<video src="${mediaUrl}" controls className="w-full max-h-[500px] rounded-2xl my-4 bg-black"></video>\n`;
+    } else {
+      tag = `\n<img src="${mediaUrl}" alt="Theory Media" className="w-full max-h-[500px] object-cover rounded-2xl my-4" />\n`;
+    }
+
+    setContent(prev => ({
+      ...prev,
+      [currentLang]: (prev[currentLang] || '') + tag
+    }));
+  };
+
   const handleSave = async () => {
     if (!title[currentLang] || !summary[currentLang] || !content[currentLang]) {
       alert(`${t.fillAllFields}${currentLang}`);
@@ -108,6 +157,7 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
         title,
         summary,
         content,
+        mediaUrl,
         authorUid: user?.uid,
         updatedAt: new Date().toISOString()
       };
@@ -210,7 +260,10 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
                 options={[
                   { value: 'lore', label: t.filterLore },
                   { value: 'characters', label: t.filterCharacters },
-                  { value: 'gameplay', label: t.filterGameplay }
+                  { value: 'gameplay', label: t.filterGameplay },
+                  { value: 'aha', label: 'AHA Protocol' },
+                  { value: 'tech', label: 'Технологии' },
+                  { value: 'archive', label: 'Архив' }
                 ]}
               />
             </div>
@@ -239,6 +292,87 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
               className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-4 text-white font-medium focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[100px] resize-none placeholder:text-white/40"
               placeholder={t.placeholderSummary}
             />
+          </div>
+
+          {/* Media Attachment Section (Photo, Video with Kuru Video Player, or YouTube) */}
+          <div className="bg-[#1A1528]/80 border border-[#3d2b4f]/40 rounded-3xl p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Video className="text-[#ff4d4d]" size={16} />
+                {lang === 'ru' ? 'Медиа-файлы (Видео / Плеер Kuru / Фото)' : 'Media Attachment (Video / Kuru Player / Photo)'}
+              </span>
+              
+              <div className="flex flex-wrap gap-2">
+                <input
+                  type="file"
+                  id="theory-media-file"
+                  className="hidden"
+                  accept="image/*,video/*"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                />
+                <label
+                  htmlFor="theory-media-file"
+                  className={`bg-[#251c35] border border-[#3d2b4f]/60 hover:border-[#ff4d4d]/50 text-white hover:text-[#ff4d4d] px-4 py-2 rounded-xl text-xs font-black cursor-pointer flex items-center gap-2 transition-all ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  <Camera size={14} />
+                  {lang === 'ru' ? 'Загрузить видео/фото' : 'Upload Video/Photo'}
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  className="bg-[#251c35] border border-[#3d2b4f]/60 hover:border-[#ff4d4d]/50 text-white hover:text-[#ff4d4d] px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <LinkIcon size={14} />
+                  {lang === 'ru' ? 'Ссылка (YouTube/MP4)' : 'Video/Photo URL'}
+                </button>
+
+                {mediaUrl && (
+                  <button
+                    type="button"
+                    onClick={handleInsertMediaTagToContent}
+                    className="bg-[#ff4d4d]/20 border border-[#ff4d4d]/40 text-[#ff4d4d] hover:bg-[#ff4d4d] hover:text-[#15101e] px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    {lang === 'ru' ? 'Вставить плеер в текст' : 'Embed Player into Text'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {showUrlInput && (
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={mediaUrlInput}
+                  onChange={(e) => setMediaUrlInput(e.target.value)}
+                  placeholder={lang === 'ru' ? 'Вставьте ссылку на YouTube, видео MP4 или Фото' : 'Paste YouTube, MP4 video or Photo URL'}
+                  className="flex-1 bg-[#0d0b14] border border-[#3d2b4f]/60 rounded-xl px-4 py-2 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-[#ff4d4d]"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyUrl}
+                  className="bg-[#ff4d4d] text-[#15101e] font-black text-xs px-4 py-2 rounded-xl hover:bg-white transition-all cursor-pointer"
+                >
+                  ОК
+                </button>
+              </div>
+            )}
+
+            {mediaUrl && (
+              <div className="relative group max-w-xl mx-auto">
+                <MediaViewer url={mediaUrl} maxHeight="max-h-[300px]" />
+                <button
+                  type="button"
+                  onClick={() => setMediaUrl('')}
+                  className="absolute top-3 right-3 bg-red-600 text-white rounded-full p-2 shadow-xl hover:bg-red-700 transition-all z-10 cursor-pointer"
+                  title="Удалить медиа"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -273,7 +407,7 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
                   value={content[currentLang] || ''}
                   onChange={(e) => handleContentChange(e.target.value)}
                   className="w-full bg-[#1A1528]/50 border border-[#3d2b4f]/30 rounded-3xl px-6 py-6 text-white font-mono text-sm leading-relaxed focus:outline-none focus:border-[#ff4d4d] transition-all min-h-[350px] placeholder:text-white/40 custom-scrollbar"
-                  placeholder={t.placeholderContent || '# Заголовок\n\n**Жирный текст** и *курсив*.\n\n- Пункт 1\n- Пункт 2'}
+                  placeholder={t.placeholderContent || '# Заголовок теории\n\n**Описание** и обоснование.\n\n- Пункт 1\n- Пункт 2'}
                 />
               )}
 

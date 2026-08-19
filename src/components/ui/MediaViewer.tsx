@@ -1,6 +1,6 @@
 import React from 'react';
 import { decryptImage } from '../../utils/encryption';
-import { Video, Image as ImageIcon, ShieldAlert, ShieldCheck, Download, Disc } from 'lucide-react';
+import { Video, Image as ImageIcon, ShieldAlert, ShieldCheck, Download, Disc, Maximize2 } from 'lucide-react';
 import { KuruVideoPlayer } from './KuruVideoPlayer';
 import { LazyImage } from './LazyImage';
 
@@ -11,6 +11,9 @@ interface MediaViewerProps {
   isProtected?: boolean;
   title?: string;
   isCompact?: boolean;
+  onOpenFull?: () => void;
+  showExpandOverlay?: boolean;
+  expandLabel?: string;
 }
 
 export const resolveMediaUrl = (rawUrl: string): string => {
@@ -33,7 +36,7 @@ export const isVideoMedia = (rawUrl: string): boolean => {
   if (url.startsWith('data:video')) return true;
   if (/\.(mp4|webm|ogg|mov|m4v|mkv|3gp|avi|flv)(\?.*)?$/i.test(url)) return true;
   if (/(youtube\.com|youtu\.be|vimeo\.com|vk\.com\/video)/i.test(url)) return true;
-  if (url.includes('/uploads/') || url.includes('media_')) {
+  if (url.includes('catbox.moe') || url.includes('/uploads/') || url.includes('media_')) {
     if (!/\.(png|jpg|jpeg|webp|gif|svg)(\?.*)?$/i.test(url)) return true;
   }
   return false;
@@ -69,15 +72,16 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
   maxHeight = "max-h-[500px]",
   isProtected = false,
   title = "attachment",
-  isCompact = false
+  isCompact = false,
+  onOpenFull,
+  showExpandOverlay = false,
+  expandLabel = "Нажмите, чтобы открыть полностью"
 }) => {
-  const [videoError, setVideoError] = React.useState(false);
-
   if (!url) return null;
 
   const resolved = resolveMediaUrl(url);
   const embedInfo = getEmbedVideoUrl(resolved);
-  const isVideo = isVideoMedia(url) && !videoError;
+  const isVideo = isVideoMedia(url);
 
   if (embedInfo) {
     return (
@@ -111,13 +115,15 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
         maxHeight={maxHeight}
         title={title}
         isCompact={isCompact}
-        onError={() => setVideoError(true)}
       />
     );
   }
 
   return (
-    <div className={`relative w-full rounded-2xl overflow-hidden border border-[#3d2b4f]/40 shadow-2xl bg-black/40 flex items-center justify-center ${className}`}>
+    <div 
+      onClick={onOpenFull}
+      className={`relative w-full rounded-2xl overflow-hidden border border-[#3d2b4f]/40 shadow-2xl bg-black/40 flex items-center justify-center group/mediaviewer ${onOpenFull ? 'cursor-pointer' : ''} ${className}`}
+    >
       <LazyImage
         src={resolved}
         alt={title}
@@ -126,6 +132,17 @@ export const MediaViewer: React.FC<MediaViewerProps> = ({
         onContextMenu={isProtected ? (e: React.MouseEvent) => e.preventDefault() : undefined}
         onDragStart={isProtected ? (e: React.DragEvent) => e.preventDefault() : undefined}
       />
+      
+      {/* Centered button overlay - ALWAYS OVER PHOTO */}
+      {(onOpenFull || showExpandOverlay) && (
+        <div className="absolute inset-0 z-30 bg-black/20 hover:bg-black/35 transition-colors duration-200 flex items-center justify-center p-3 pointer-events-none">
+          <div className="bg-[#0c0914]/90 hover:bg-[#0c0914] backdrop-blur-md px-4 sm:px-5 py-2 sm:py-2.5 rounded-full border-2 border-emerald-400 text-white text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-[0_10px_35px_rgba(0,0,0,0.9)] scale-100 group-hover/mediaviewer:scale-105 group-hover/mediaviewer:border-emerald-300 transition-all">
+            <Maximize2 size={16} className="text-emerald-400 shrink-0" />
+            <span className="tracking-wide">{expandLabel}</span>
+          </div>
+        </div>
+      )}
+
       {isProtected && (
         <div className="absolute bottom-3 right-3 z-20 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-xl border border-[#ff4d4d]/30 text-[10px] font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-1.5 select-none pointer-events-none">
           <ShieldAlert size={12} className="text-[#ff4d4d]" />

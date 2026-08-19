@@ -26,14 +26,26 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const resolvedSrc = src ? resolveMediaUrl(src) : '';
+  const [proxiedSrc, setProxiedSrc] = useState<string | null>(null);
+  
+  const baseResolved = src ? resolveMediaUrl(src) : '';
+  const currentSrc = proxiedSrc || baseResolved;
 
   useEffect(() => {
     setIsLoaded(false);
     setHasError(false);
+    setProxiedSrc(null);
   }, [src]);
 
-  if (!resolvedSrc || hasError) {
+  const handleImageError = () => {
+    if (!proxiedSrc && baseResolved && baseResolved.startsWith('http') && !baseResolved.includes('/api/media-proxy') && !baseResolved.startsWith('blob:') && !baseResolved.startsWith('data:')) {
+      setProxiedSrc(`/api/media-proxy?url=${encodeURIComponent(baseResolved)}`);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (!currentSrc || hasError) {
     return (
       <div 
         className={`relative overflow-hidden bg-[#15101e] border border-[#3d2b4f]/40 flex flex-col items-center justify-center p-6 text-white/30 text-xs text-center rounded-2xl ${containerClassName}`}
@@ -73,12 +85,12 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
       {/* Main Image with Progressive Blurry Fade-In Transition */}
       <img
-        src={resolvedSrc}
+        src={currentSrc}
         alt={alt}
         loading="lazy"
         decoding="async"
         onLoad={() => setIsLoaded(true)}
-        onError={() => setHasError(true)}
+        onError={handleImageError}
         onClick={onClick}
         className={`relative z-10 w-full h-full object-cover transition-all duration-700 ease-out will-change-[filter,opacity,transform] ${
           isLoaded 
