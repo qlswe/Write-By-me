@@ -112,7 +112,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const zoomContainerRef = useRef<HTMLDivElement>(null);
   const jsonFileInputRef = useRef<HTMLInputElement>(null);
 
-  const [mode, setMode] = useState<CanvasMode>('personal');
+  const mode = 'personal';
   const [personalSize, setPersonalSize] = useState<number>(32);
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [previewPixels, setPreviewPixels] = useState<Record<string, string>>({});
@@ -128,9 +128,9 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   const [customHexInput, setCustomHexInput] = useState<string>('#ff4d4d');
   const [recentColors, setRecentColors] = useState<string[]>(['#ff4d4d', '#4dffff', '#ffff4d', '#ffffff', '#000000']);
 
-  const canvasId = mode === 'global' ? 'canvas' : `canvas_personal/${user?.uid}_${personalSize}`;
+  const canvasId = `canvas_personal/${user?.uid || 'guest'}_${personalSize}`;
   const { pixels, loading, drawPixel, erasePixel, drawPixelsBatch, clearCanvas, size } = useCanvas(
-    mode === 'global' ? 0 : personalSize,
+    personalSize,
     canvasId
   );
 
@@ -194,7 +194,7 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   const [showExportMenu, setShowExportMenu] = useState<boolean>(false);
 
-  const isGlobal = mode === 'global';
+  const isGlobal = false;
   const PIXEL_CSS_SIZE = 20;
 
   // Add color to recent colors strip
@@ -378,7 +378,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
 
   // Canvas content manipulations
   const handleShiftPixels = async (dx: number, dy: number) => {
-    if (mode === 'global') return;
     const { updates, strokeActions } = shiftCanvasPixels(pixels, size, dx, dy, false);
     if (Object.keys(updates).length > 0) {
       await drawPixelsBatch(updates);
@@ -388,7 +387,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const handleFlipHorizontal = async () => {
-    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
     for (let y = 0; y < size; y++) {
@@ -416,7 +414,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const handleFlipVertical = async () => {
-    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
     for (let x = 0; x < size; x++) {
@@ -444,7 +441,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const handleRotate90 = async () => {
-    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
     for (let y = 0; y < size; y++) {
@@ -471,7 +467,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const handleInvertColors = async () => {
-    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
 
@@ -497,7 +492,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const handleGrayscale = async () => {
-    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
 
@@ -523,7 +517,6 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
   };
 
   const handleAdjustBrightness = async (factor: number) => {
-    if (mode === 'global') return;
     const updates: Record<string, string | null> = {};
     const strokeActions: StrokeAction[] = [];
 
@@ -721,15 +714,10 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
         updates[pixelId] = null;
       } else {
         if (existing && existing.color === selectedColor) return;
-        if (mode === 'global' && pixelsLeft <= 0) {
-          window.dispatchEvent(new CustomEvent('aha_toast', { detail: 'Достигнут часовой лимит пикселей!' }));
-          return;
-        }
         if (!currentStrokeRef.current.find(s => s.pixelId === pixelId)) {
           currentStrokeRef.current.push({ pixelId, oldColor, newColor: selectedColor });
         }
         updates[pixelId] = selectedColor;
-        if (mode === 'global') setPixelsLeft((prev: number) => prev - 1);
       }
     });
 
@@ -1364,55 +1352,32 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
           </div>
           <div>
             <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider flex items-center gap-2">
-              {mode === 'global' ? loc('Глобальный Холст', 'Global Canvas') : loc('Личный Холст', 'Personal Canvas')}
+              {loc('Личный Холст (Pixel Art)', 'Personal Canvas (Pixel Art)')}
             </h2>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">
-              {mode === 'global'
-                ? loc('Совместное полотно в реальном времени', 'Live real-time collaborative canvas')
-                : loc('Пиксель-арт студия со слоями, фильтрами и экспортом', 'Pixel art studio with filters, tools & export')}
+              {loc('Пиксель-арт студия со слоями, фильтрами, палитрами и экспортом', 'Pixel art studio with filters, tools, palettes & export')}
             </p>
           </div>
         </div>
 
-        {/* Top Action Buttons: Mode Switch + Shortcuts + Import */}
+        {/* Top Action Buttons: Shortcuts + Import */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex bg-[#15101e] p-1 rounded-2xl border border-[#3d2b4f]/60 shadow-lg">
-            <button
-              onClick={() => setMode('personal')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                mode === 'personal' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {loc('Личный', 'Personal')}
-            </button>
-            <button
-              onClick={() => setMode('global')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                mode === 'global' ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {loc('Глобальный', 'Global')}
-            </button>
-          </div>
-
           <button
             onClick={() => setIsHotkeysModalOpen(true)}
-            className="p-2 bg-[#251c35] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-300 hover:text-white rounded-xl transition-all shadow-md"
+            className="p-2 bg-[#251c35] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-300 hover:text-white rounded-xl transition-all shadow-md cursor-pointer"
             title={loc('Горячие клавиши (Шпаргалка)', 'Hotkeys Cheat-Sheet')}
           >
             <Keyboard size={18} />
           </button>
 
-          {mode === 'personal' && (
-            <button
-              onClick={() => setIsImportModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#251c35] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-200 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md"
-              title={loc('Импорт картинки в пиксели', 'Import Image to Pixels')}
-            >
-              <Upload size={14} className="text-[#ff4d4d]" />
-              <span className="hidden sm:inline">{loc('Импорт', 'Import')}</span>
-            </button>
-          )}
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#251c35] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-200 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md cursor-pointer"
+            title={loc('Импорт картинки в пиксели', 'Import Image to Pixels')}
+          >
+            <Upload size={14} className="text-[#ff4d4d]" />
+            <span className="hidden sm:inline">{loc('Импорт', 'Import')}</span>
+          </button>
         </div>
       </div>
 
@@ -1924,15 +1889,9 @@ export const CanvasSection: React.FC<{ lang: Language }> = ({ lang }) => {
                 </span>
               </div>
               <div className="text-gray-400">
-                {mode === 'global' ? (
-                  <span>
-                    {loc('Лимит:', 'Limit:')} <strong className="text-[#ff4d4d]">{pixelsLeft}</strong>/{MAX_PIXELS}
-                  </span>
-                ) : (
-                  <span>
-                    {size}x{size} • {Math.round(scale * 100)}% zoom
-                  </span>
-                )}
+                <span>
+                  {size}x{size} • {Math.round(scale * 100)}% zoom
+                </span>
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { Language } from '../data/translations';
 import { Theory, BlogPost, GameEvent, PromoCode } from '../data/content';
+import { defaultSystemPrompt } from '../constants/aiPrompt';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { GoogleGenAI } from "@google/genai";
@@ -1136,7 +1137,6 @@ export class AhaSDK {
    */
   public genai = {
     generate: async (prompt: string, lang: Language = 'ru', systemInstruction?: string, history: {role: string, content: string}[] = [], model: string = 'openai') => {
-      const { defaultSystemPrompt } = await import('../constants/aiPrompt');
       const finalSystemPrompt = systemInstruction || defaultSystemPrompt;
 
       // 1. Primary: Secure backend proxy /api/generate with global non-VPN neural engine

@@ -1,9 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { auth, db, googleProvider } from '../firebase';
 import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { getDeviceId } from '../utils/deviceId';
 import { PresenceManager } from '../utils/presenceManager';
+import { 
+  validateEmailFormat, 
+  isDisposableEmail, 
+  recordFailedLoginAttempt, 
+  resetLoginAttempts, 
+  checkRateLimitStatus,
+  isCurrentDeviceTrusted,
+  trustCurrentDevice as markDeviceTrusted,
+  evaluateAccountSecurity,
+  AccountSecurityReport
+} from '../utils/accountSecurity';
 
 // --- GLOBAL SINGLETON STATE ---
 let globalUser: User | null = null;
@@ -399,11 +410,34 @@ export function useAuth() {
       setError("Please provide a password.");
       return;
     }
+
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.valid) {
+      const errText = emailValidation.errorRu || emailValidation.error || "Invalid email.";
+      setError(errText);
+      throw new Error(errText);
+    }
+
+    // Brute-force rate limiting check
+    const rateStatus = checkRateLimitStatus(email);
+    if (rateStatus.isLocked) {
+      const lockMsg = `Слишком много неудачных попыток входа! Аккаунт временно заблокирован на ${rateStatus.remainingSeconds} сек. в целях безопасности.`;
+      setError(lockMsg);
+      throw new Error(lockMsg);
+    }
+
     setIsLoggingIn(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       localStorage.setItem('auth_session_start_time', Date.now().toString());
+      resetLoginAttempts(email);
     } catch (error: any) {
+      const attemptRes = recordFailedLoginAttempt(email);
+      if (attemptRes.isLocked) {
+        const lockMsg = `Превышен лимит попыток! Вход заблокирован на ${attemptRes.remainingSeconds} сек.`;
+        setError(lockMsg);
+        throw new Error(lockMsg);
+      }
       setError(error.message);
       throw error;
     } finally {
@@ -428,10 +462,26 @@ export function useAuth() {
       setError("Please provide a password.");
       return;
     }
+
+    // Security validation of email (rejects disposable email domains)
+    const emailValidation = validateEmailFormat(email);
+    if (!emailValidation.valid) {
+      const errText = emailValidation.errorRu || emailValidation.error || "Invalid email.";
+      setError(errText);
+      throw new Error(errText);
+    }
+
+    if (password.length < 6) {
+      const passMsg = "Пароль должен содержать как минимум 6 символов.";
+      setError(passMsg);
+      throw new Error(passMsg);
+    }
+
     setIsLoggingIn(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       localStorage.setItem('auth_session_start_time', Date.now().toString());
+      resetLoginAttempts(email);
       if (profile && cred.user) {
         const dName = profile.displayName || email.split('@')[0];
         const pUrl = profile.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`;
@@ -471,6 +521,15 @@ export function useAuth() {
 
   const proxiedUser = getProxiedUser();
 
+  const securityReport: AccountSecurityReport = useMemo(() => {
+    return evaluateAccountSecurity(
+      proxiedUser, 
+      { role: globalRole, isVerified: globalIsVerified, isBlocked: globalIsBlocked },
+      blockedDevicesList,
+      blockedEmailsList
+    );
+  }, [proxiedUser, globalRole, globalIsVerified, globalIsBlocked, stamp]);
+
   return { 
     user: proxiedUser, 
     loading: globalLoading, 
@@ -480,6 +539,11 @@ export function useAuth() {
     isVerified: globalIsVerified,
     isBlocked: globalIsBlocked,
     deviceId: getDeviceId(),
+    securityReport,
+    isDeviceTrusted: proxiedUser ? isCurrentDeviceTrusted(proxiedUser.uid) : false,
+    trustDevice: () => {
+      if (proxiedUser) markDeviceTrusted(proxiedUser.uid, 30);
+    },
     error: error || globalAuthError, 
     loginWithGoogle, 
     loginWithGoogleRedirect,

@@ -215,6 +215,11 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
                   <span className="px-3 py-1 rounded-full bg-[#ff4d4d]/20 text-[#ff4d4d] text-xs font-black uppercase tracking-widest border border-[#ff4d4d]/30 category-badge-print">
                     {getLocalizedCategory(selectedTheory.category, lang)}
                   </span>
+                  {selectedTheory.version && (
+                    <span className="px-2.5 py-0.5 rounded-md bg-purple-500/10 text-purple-300 text-[10px] font-black tracking-wider border border-purple-500/20 print:hidden">
+                      v{selectedTheory.version}
+                    </span>
+                  )}
                   <div className="flex items-center gap-2 text-white/40 text-xs font-medium print:hidden">
                     <Clock size={12} />
                     <TimeAgo date={selectedTheory.createdAt} lang={lang} />

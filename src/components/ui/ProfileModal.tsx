@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload, Download, Sparkles, Plus, Eye, Flame, Trash2 } from 'lucide-react';
+import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload, Download, Sparkles, Plus, Eye, Flame, Trash2, Smartphone, KeyRound } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { updateProfile as updateAuthProfile } from 'firebase/auth';
@@ -18,6 +18,10 @@ import { useStories } from '../../hooks/useStories';
 import { CreateStoryModal } from '../feed/CreateStoryModal';
 import { StoryViewerModal } from '../feed/StoryViewerModal';
 import { ModalPortal } from './ModalPortal';
+import { useGamification } from '../../hooks/useGamification';
+import { GamificationAvatarBadge } from '../gamification/GamificationAvatarBadge';
+import { TotpSetupModal } from '../security/TotpSetupModal';
+import { fetchUserTotpConfig, TotpConfig } from '../../utils/totp';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -30,6 +34,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const t = translations[lang];
   const { user: currentUser, logout, isAdmin, role: currentUserRole, updateGlobalPhoto, isVerified: isOwnVerified, sendVerificationEmail, reloadUser } = useAuth();
   const { xp: currentXp, reputation: currentRep, role: currentRole, photoURL: currentPhoto, updateProfile: updateUserData } = useUserData(lang);
+  const { points: gamificationPoints, level: gamificationLevel, unclaimedCount: gamificationUnclaimed, claimAll: claimAllGamification } = useGamification();
   
   const isOwnProfile = !viewUser || viewUser.uid === currentUser?.uid;
   const user = viewUser || currentUser;
@@ -69,6 +74,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const [toast, setToast] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // 2FA / TOTP Authenticator State
+  const [isTotpModalOpen, setIsTotpModalOpen] = useState(false);
+  const [totpConfig, setTotpConfig] = useState<TotpConfig | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !user?.uid) return;
+    let mounted = true;
+    fetchUserTotpConfig(user.uid).then(cfg => {
+      if (mounted) setTotpConfig(cfg);
+    });
+    return () => { mounted = false; };
+  }, [isOpen, user?.uid]);
 
   // Stories hook for profile
   const { stories, createStory, toggleLikeStory, deleteStory, markStoryViewed } = useStories();
@@ -856,6 +874,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       src={photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} 
                       alt="Avatar" 
                       className="w-38 h-38 sm:w-40 sm:h-40 shrink-0 aspect-square rounded-[3rem] border-[6px] border-[#251c35]/40 bg-[#251c35] object-cover shadow-2xl transition-transform group-hover:scale-105"
+                    />
+                  )}
+
+                  {/* Gamification Notification Badge on Avatar */}
+                  {isOwnProfile && (
+                    <GamificationAvatarBadge 
+                      lang={lang} 
+                      size="lg" 
+                      position="top-right" 
+                      onOpenChallenges={() => {
+                        onClose();
+                        window.dispatchEvent(new CustomEvent('aha_navigate_section', { detail: { section: 'warp' } }));
+                      }} 
                     />
                   )}
 

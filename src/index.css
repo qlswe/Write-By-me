@@ -72,6 +72,19 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* AHA Turbo Mode 6.0 Hardware Acceleration & FPS Booster */
+  html.aha-turbo-active * {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    will-change: auto;
+  }
+  html.aha-turbo-active .section-container,
+  html.aha-turbo-active .chat-container,
+  html.aha-turbo-active canvas {
+    will-change: transform, opacity;
+  }
+
   input, textarea, select {
     -webkit-appearance: none;
     -moz-appearance: none;

@@ -45,6 +45,69 @@ async function startServer() {
     }
   }));
 
+  // SSRF Protection Helper Function with comprehensive range checking
+  function isPrivateHost(hostname: string): boolean {
+    const cleanHost = hostname.toLowerCase().trim().replace(/^\[|\]$/g, '');
+    if (
+      cleanHost === 'localhost' ||
+      cleanHost === '0.0.0.0' ||
+      cleanHost === '127.0.0.1' ||
+      cleanHost.startsWith('127.') ||
+      cleanHost === '::1' ||
+      cleanHost === '::' ||
+      cleanHost.startsWith('::ffff:127.') ||
+      cleanHost.startsWith('10.') ||
+      cleanHost.startsWith('192.168.') ||
+      cleanHost.startsWith('169.254.') || // Link-local & Cloud Metadata (AWS/GCP/Azure)
+      cleanHost.startsWith('100.64.') ||  // Carrier-grade NAT
+      cleanHost.startsWith('fe80:') ||    // IPv6 Link-Local
+      cleanHost.startsWith('fc00:') ||    // IPv6 Unique Local Address
+      cleanHost.startsWith('fd00:') ||    // IPv6 Unique Local Address
+      cleanHost === 'metadata.google.internal' ||
+      cleanHost === 'instance-data' ||
+      cleanHost.endsWith('.local') ||
+      cleanHost.endsWith('.internal') ||
+      cleanHost.endsWith('.lan') ||
+      cleanHost.endsWith('.corp') ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(cleanHost)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  // Safe fetch with redirect validation against SSRF intranet bypasses
+  async function safeFetch(initialUrl: string, options: RequestInit = {}, maxRedirects = 4): Promise<Response> {
+    let currentUrl = initialUrl;
+    let redirects = 0;
+
+    while (redirects <= maxRedirects) {
+      const parsed = new URL(currentUrl);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error('Unsupported protocol: ' + parsed.protocol);
+      }
+      if (isPrivateHost(parsed.hostname)) {
+        throw new Error('Forbidden host: SSRF protection blocked target: ' + parsed.hostname);
+      }
+
+      const res = await fetch(currentUrl, {
+        ...options,
+        redirect: 'manual'
+      });
+
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get('location');
+        if (!location) return res;
+        redirects++;
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
+      }
+
+      return res;
+    }
+    throw new Error('Too many redirects');
+  }
+
   // Streaming Media Proxy endpoint for external videos and CORS bypass
   app.get("/api/media-proxy", async (req, res) => {
     try {
@@ -73,7 +136,7 @@ async function startServer() {
         headers['Range'] = req.headers.range;
       }
 
-      const remoteRes = await fetch(targetUrl, { headers });
+      const remoteRes = await safeFetch(targetUrl, { headers });
 
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
@@ -273,37 +336,6 @@ async function startServer() {
     });
   });
 
-  // SSRF Protection Helper Function with comprehensive range checking
-  function isPrivateHost(hostname: string): boolean {
-    const cleanHost = hostname.toLowerCase().trim().replace(/^\[|\]$/g, '');
-    if (
-      cleanHost === 'localhost' ||
-      cleanHost === '0.0.0.0' ||
-      cleanHost === '127.0.0.1' ||
-      cleanHost.startsWith('127.') ||
-      cleanHost === '::1' ||
-      cleanHost === '::' ||
-      cleanHost.startsWith('::ffff:127.') ||
-      cleanHost.startsWith('10.') ||
-      cleanHost.startsWith('192.168.') ||
-      cleanHost.startsWith('169.254.') || // Link-local & Cloud Metadata (AWS/GCP/Azure)
-      cleanHost.startsWith('100.64.') ||  // Carrier-grade NAT
-      cleanHost.startsWith('fe80:') ||    // IPv6 Link-Local
-      cleanHost.startsWith('fc00:') ||    // IPv6 Unique Local Address
-      cleanHost.startsWith('fd00:') ||    // IPv6 Unique Local Address
-      cleanHost === 'metadata.google.internal' ||
-      cleanHost === 'instance-data' ||
-      cleanHost.endsWith('.local') ||
-      cleanHost.endsWith('.internal') ||
-      cleanHost.endsWith('.lan') ||
-      cleanHost.endsWith('.corp') ||
-      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(cleanHost)
-    ) {
-      return true;
-    }
-    return false;
-  }
-
   // Network Protocol Configuration Info
   app.get("/api/network/config", (req, res) => {
     res.json({
@@ -374,8 +406,8 @@ async function startServer() {
       sanitizedHeaders['X-AHA-Protocol-Version'] = '6.0-HYPER-IPv6';
       sanitizedHeaders['X-AHA-Proxy-Validated'] = 'true';
 
-      // External request forwarding
-      const response = await fetch(targetUrl, {
+      // External request forwarding via SSRF-safe safeFetch
+      const response = await safeFetch(targetUrl, {
         method,
         headers: sanitizedHeaders,
         body: method !== "GET" && method !== "HEAD" ? (typeof body === "object" ? JSON.stringify(body) : body) : undefined
@@ -468,25 +500,23 @@ async function startServer() {
         "Cache-Control": "max-age=0"
       };
 
-      // Safely fetch target URL with Wikipedia/Mobile fallback
+      // Safely fetch target URL with Wikipedia/Mobile fallback and SSRF redirect validation
       let fetchResponse: Response | null = null;
       let rawText = "";
 
       try {
-        fetchResponse = await fetch(targetUrl, {
+        fetchResponse = await safeFetch(targetUrl, {
           method: "GET",
-          headers: requestHeaders,
-          redirect: "follow"
+          headers: requestHeaders
         });
       } catch (firstErr: any) {
         // Fallback for Wikipedia desktop -> mobile if DNS/CORS fails
         if (parsed.hostname.includes("wikipedia.org") && !parsed.hostname.includes(".m.wikipedia.org")) {
           const mobileUrl = targetUrl.replace("://en.wikipedia.org", "://en.m.wikipedia.org").replace("://ru.wikipedia.org", "://ru.m.wikipedia.org");
           try {
-            fetchResponse = await fetch(mobileUrl, {
+            fetchResponse = await safeFetch(mobileUrl, {
               method: "GET",
-              headers: requestHeaders,
-              redirect: "follow"
+              headers: requestHeaders
             });
           } catch {
             // ignore

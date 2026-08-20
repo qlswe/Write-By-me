@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { collection, onSnapshot, query, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { theoriesData as localTheories, blogPostsData as localBlogPosts, eventsData as localEvents, promoCodesData as localPromoCodes } from '../data/content';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
 import { vercelFallback } from '../utils/vercelFallback';
 import { subscribeToPageVisibility } from '../utils/performanceOptimizer';
 
-// Shared singleton state to prevent duplicate Firestore subscriptions across components
-interface ContentStoreState {
+export const CONTENT_CACHE_KEY_V3 = 'hsr_content_cache_v3';
+export const CONTENT_SCHEMA_VERSION = 3;
+
+export interface ContentStoreState {
   theories: any[];
   blogPosts: any[];
   events: any[];
@@ -16,26 +18,146 @@ interface ContentStoreState {
   isLoadingBlog: boolean;
   isLoadingEvents: boolean;
   isLoading: boolean;
+  contentVersion: number;
+  lastUpdated: number;
 }
 
-// Load initial cached state from localStorage for zero-latency instant rendering
+// Utility: Normalize timestamps into milliseconds for accurate version comparisons
+export const parseContentTimestamp = (val: any): number => {
+  if (!val) return 0;
+  if (typeof val === 'number') return val;
+  if (typeof val.toMillis === 'function') return val.toMillis();
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  if (val instanceof Date) return val.getTime();
+  if (typeof val.seconds === 'number') return val.seconds * 1000 + Math.floor((val.nanoseconds || 0) / 1000000);
+  if (typeof val === 'string') {
+    const parsed = Date.parse(val);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
+// Utility: Extract or normalize numerical revision version
+export const parseContentVersion = (item: any): number => {
+  if (!item) return 1;
+  const v = item.version ?? item._v ?? item.revision ?? item.v;
+  if (typeof v === 'number' && !isNaN(v)) return v;
+  if (typeof v === 'string') {
+    const parsed = parseInt(v, 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return 1;
+};
+
+// Helper: Normalize multilingual fields
+const normalizeLocalizedField = (field: any, defaultText = ''): Record<string, string> => {
+  if (typeof field === 'string') {
+    return { ru: field, en: field, by: field, de: field, fr: field, zh: field };
+  }
+  if (field && typeof field === 'object') {
+    return {
+      ru: field.ru || field.en || defaultText,
+      en: field.en || field.ru || defaultText,
+      by: field.by || field.ru || field.en || defaultText,
+      de: field.de || field.en || field.ru || defaultText,
+      fr: field.fr || field.en || field.ru || defaultText,
+      zh: field.zh || field.en || field.ru || defaultText
+    };
+  }
+  return { ru: defaultText, en: defaultText, by: defaultText, de: defaultText, fr: defaultText, zh: defaultText };
+};
+
+// Helper: Reconcile and merge items with Item-Level Version & Timestamp Comparison
+export const reconcileItemsWithVersioning = (
+  existingItems: any[],
+  incomingItems: any[],
+  staticFallbacks: any[] = []
+): { merged: any[]; hasChanges: boolean } => {
+  let hasChanges = false;
+  const itemMap = new Map<string, any>();
+
+  // 1. Seed with existing cached items
+  for (const item of existingItems) {
+    if (item && item.id) {
+      itemMap.set(item.id, item);
+    }
+  }
+
+  // 2. Merge incoming items with version checking
+  for (const incoming of incomingItems) {
+    if (!incoming || !incoming.id) continue;
+    const existing = itemMap.get(incoming.id);
+
+    if (!existing) {
+      itemMap.set(incoming.id, incoming);
+      hasChanges = true;
+    } else {
+      const existingVer = parseContentVersion(existing);
+      const incVer = parseContentVersion(incoming);
+      const existingTime = parseContentTimestamp(existing.updatedAt || existing.createdAt);
+      const incTime = parseContentTimestamp(incoming.updatedAt || incoming.createdAt);
+
+      // Automated versioning check: Incoming item wins if higher version, newer timestamp, or fresher content
+      if (incVer > existingVer || incTime > existingTime || (incTime === existingTime && incVer >= existingVer)) {
+        itemMap.set(incoming.id, {
+          ...existing,
+          ...incoming,
+          version: Math.max(incVer, existingVer),
+          updatedAt: incoming.updatedAt || existing.updatedAt || new Date().toISOString()
+        });
+        hasChanges = true;
+      }
+    }
+  }
+
+  // 3. Ensure static default items exist if not present in Firestore/cache
+  for (const fallback of staticFallbacks) {
+    if (fallback && fallback.id && !itemMap.has(fallback.id)) {
+      itemMap.set(fallback.id, fallback);
+    }
+  }
+
+  return {
+    merged: Array.from(itemMap.values()),
+    hasChanges
+  };
+};
+
+// Load initial cached state from localStorage with cache-busting validation
 const getInitialCachedState = (): ContentStoreState => {
   let cachedTheories = localTheories;
   let cachedBlog = localBlogPosts;
   let cachedEvents = localEvents;
   let cachedPromos = localPromoCodes;
+  let initialVersion = 1;
+  let lastUpdateTimestamp = Date.now();
 
   try {
-    const raw = localStorage.getItem('hsr_content_cache_v2');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.theories) && parsed.theories.length > 0) cachedTheories = parsed.theories;
-      if (Array.isArray(parsed.blog) && parsed.blog.length > 0) cachedBlog = parsed.blog;
-      if (Array.isArray(parsed.events) && parsed.events.length > 0) cachedEvents = parsed.events;
-      if (Array.isArray(parsed.promos) && parsed.promos.length > 0) cachedPromos = parsed.promos;
+    const rawV3 = localStorage.getItem(CONTENT_CACHE_KEY_V3);
+    if (rawV3) {
+      const parsed = JSON.parse(rawV3);
+      if (parsed && parsed.schemaVersion === CONTENT_SCHEMA_VERSION) {
+        if (Array.isArray(parsed.theories) && parsed.theories.length > 0) cachedTheories = parsed.theories;
+        if (Array.isArray(parsed.blog) && parsed.blog.length > 0) cachedBlog = parsed.blog;
+        if (Array.isArray(parsed.events) && parsed.events.length > 0) cachedEvents = parsed.events;
+        if (Array.isArray(parsed.promos) && parsed.promos.length > 0) cachedPromos = parsed.promos;
+        if (typeof parsed.contentVersion === 'number') initialVersion = parsed.contentVersion;
+        if (typeof parsed.lastUpdated === 'number') lastUpdateTimestamp = parsed.lastUpdated;
+      }
+    } else {
+      // Legacy cache migration
+      const rawV2 = localStorage.getItem('hsr_content_cache_v2');
+      if (rawV2) {
+        const parsedV2 = JSON.parse(rawV2);
+        if (Array.isArray(parsedV2.theories)) cachedTheories = parsedV2.theories;
+        if (Array.isArray(parsedV2.blog)) cachedBlog = parsedV2.blog;
+        if (Array.isArray(parsedV2.events)) cachedEvents = parsedV2.events;
+        if (Array.isArray(parsedV2.promos)) cachedPromos = parsedV2.promos;
+        localStorage.removeItem('hsr_content_cache_v2');
+      }
     }
   } catch (e) {
-    console.warn('Failed to parse cached content:', e);
+    console.warn('[useContent] Failed to parse content cache, using bundled fallbacks:', e);
   }
 
   return {
@@ -47,20 +169,29 @@ const getInitialCachedState = (): ContentStoreState => {
     isLoadingBlog: false,
     isLoadingEvents: false,
     isLoading: false,
+    contentVersion: initialVersion,
+    lastUpdated: lastUpdateTimestamp
   };
 };
 
 let sharedState: ContentStoreState = getInitialCachedState();
 
+// Save state to localStorage with metadata
 const saveCacheToLocalStorage = () => {
   try {
-    localStorage.setItem('hsr_content_cache_v2', JSON.stringify({
+    const payload = {
+      schemaVersion: CONTENT_SCHEMA_VERSION,
+      contentVersion: sharedState.contentVersion,
+      lastUpdated: sharedState.lastUpdated,
       theories: sharedState.theories.slice(0, 50),
       blog: sharedState.blogPosts.slice(0, 50),
       events: sharedState.events.slice(0, 20),
       promos: sharedState.promoCodes.slice(0, 20)
-    }));
-  } catch (e) {}
+    };
+    localStorage.setItem(CONTENT_CACHE_KEY_V3, JSON.stringify(payload));
+  } catch (e) {
+    console.warn('[useContent] Could not persist cache to localStorage:', e);
+  }
 };
 
 type Listener = (state: ContentStoreState) => void;
@@ -71,11 +202,132 @@ function notifyListeners() {
   listeners.forEach((listener) => listener(sharedState));
 }
 
+// Global Single-Doc Fetcher with Cache-Buster for Modals & Direct Lookups
+export async function fetchLatestDocument(
+  collectionName: 'theories' | 'blogPosts' | 'events' | 'promo_codes',
+  docId: string
+): Promise<any | null> {
+  if (!docId) return null;
+  try {
+    const docRef = doc(db, collectionName, docId);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return null;
+
+    const data = { id: snap.id, ...snap.data() } as any;
+    
+    // Normalize fields
+    if (collectionName === 'theories' || collectionName === 'blogPosts') {
+      data.title = normalizeLocalizedField(data.title);
+      data.summary = normalizeLocalizedField(data.summary);
+      data.content = normalizeLocalizedField(data.content);
+    } else if (collectionName === 'events') {
+      data.title = normalizeLocalizedField(data.title);
+      data.description = normalizeLocalizedField(data.description);
+    }
+    data.version = parseContentVersion(data);
+    data.updatedAt = data.updatedAt || data.createdAt || new Date().toISOString();
+
+    // Auto-update shared store if incoming doc is newer
+    if (collectionName === 'theories') {
+      const { merged, hasChanges } = reconcileItemsWithVersioning(sharedState.theories, [data], localTheories);
+      if (hasChanges) {
+        sharedState = {
+          ...sharedState,
+          theories: merged,
+          contentVersion: sharedState.contentVersion + 1,
+          lastUpdated: Date.now()
+        };
+        saveCacheToLocalStorage();
+        notifyListeners();
+      }
+    } else if (collectionName === 'blogPosts') {
+      const { merged, hasChanges } = reconcileItemsWithVersioning(sharedState.blogPosts, [data], localBlogPosts);
+      if (hasChanges) {
+        sharedState = {
+          ...sharedState,
+          blogPosts: merged,
+          contentVersion: sharedState.contentVersion + 1,
+          lastUpdated: Date.now()
+        };
+        saveCacheToLocalStorage();
+        notifyListeners();
+      }
+    }
+
+    return data;
+  } catch (error) {
+    console.warn(`[useContent] Direct fetch failed for ${collectionName}/${docId}:`, error);
+    return null;
+  }
+}
+
+// Invalidate or update a specific item across all active views without refresh
+export function invalidateContentItem(
+  type: 'theory' | 'blog' | 'event' | 'promo',
+  updatedItem: any
+) {
+  if (!updatedItem || !updatedItem.id) return;
+
+  const ver = parseContentVersion(updatedItem);
+  const normalizedItem = {
+    ...updatedItem,
+    version: ver,
+    updatedAt: updatedItem.updatedAt || new Date().toISOString()
+  };
+
+  if (type === 'theory') {
+    normalizedItem.title = normalizeLocalizedField(normalizedItem.title);
+    normalizedItem.summary = normalizeLocalizedField(normalizedItem.summary);
+    normalizedItem.content = normalizeLocalizedField(normalizedItem.content);
+    const { merged } = reconcileItemsWithVersioning(sharedState.theories, [normalizedItem], localTheories);
+    sharedState = {
+      ...sharedState,
+      theories: merged,
+      contentVersion: sharedState.contentVersion + 1,
+      lastUpdated: Date.now()
+    };
+  } else if (type === 'blog') {
+    normalizedItem.title = normalizeLocalizedField(normalizedItem.title);
+    normalizedItem.summary = normalizeLocalizedField(normalizedItem.summary);
+    normalizedItem.content = normalizeLocalizedField(normalizedItem.content);
+    const { merged } = reconcileItemsWithVersioning(sharedState.blogPosts, [normalizedItem], localBlogPosts);
+    sharedState = {
+      ...sharedState,
+      blogPosts: merged,
+      contentVersion: sharedState.contentVersion + 1,
+      lastUpdated: Date.now()
+    };
+  }
+
+  saveCacheToLocalStorage();
+  notifyListeners();
+}
+
 function initSingletonSubscription() {
   if (isSubscribed) return;
   isSubscribed = true;
 
-  // Safety timer: If Firestore takes >600ms, unlock loading state so available cached/local content renders instantly
+  // Listen for local content update dispatch events (from TheoryEditor, BlogEditor, etc.)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('aha_content_updated', (e: any) => {
+      if (e.detail?.id && e.detail?.type) {
+        if (e.detail.type === 'theory' || e.detail.type === 'theories') {
+          fetchLatestDocument('theories', e.detail.id);
+        } else if (e.detail.type === 'blog' || e.detail.type === 'blogPosts') {
+          fetchLatestDocument('blogPosts', e.detail.id);
+        }
+      }
+    });
+
+    window.addEventListener('aha_force_cache_bust', () => {
+      localStorage.removeItem(CONTENT_CACHE_KEY_V3);
+      sharedState.contentVersion += 1;
+      sharedState.lastUpdated = Date.now();
+      notifyListeners();
+    });
+  }
+
+  // Safety timer: unlock loading state if Firestore latency exceeds threshold
   setTimeout(() => {
     if (sharedState.isLoadingTheories || sharedState.isLoadingBlog || sharedState.isLoadingEvents || sharedState.isLoading) {
       sharedState = {
@@ -89,32 +341,31 @@ function initSingletonSubscription() {
     }
   }, 600);
 
-  // 1. Subscribe to theories (limited to 50 items)
+  // 1. Subscribe to theories with versioning reconciliation
   const qTheories = query(collection(db, 'theories'), orderBy('createdAt', 'desc'), limit(50));
-  const unsubscribeTheories = onSnapshot(qTheories, (snapshot) => {
+  onSnapshot(qTheories, (snapshot) => {
     const firestoreTheories = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
-    const mappedFirestoreTheories = firestoreTheories.map((t: any) => {
-      const title = typeof t.title === 'string' ? { ru: t.title, en: t.title, by: t.title, de: t.title, fr: t.title, zh: t.title } : t.title;
-      const summary = typeof t.summary === 'string' ? { ru: t.summary, en: t.summary, by: t.summary, de: t.summary, fr: t.summary, zh: t.summary } : t.summary;
-      const content = typeof t.content === 'string' ? { ru: t.content, en: t.content, by: t.content, de: t.content, fr: t.content, zh: t.content } : t.content;
-      return {
-        ...t,
-        title: title || { ru: '', en: '', by: '', de: '', fr: '', zh: '' },
-        summary: summary || { ru: '', en: '', by: '', de: '', fr: '', zh: '' },
-        content: content || { ru: '', en: '', by: '', de: '', fr: '', zh: '' }
-      };
-    });
-    const firestoreIds = new Set(mappedFirestoreTheories.map(t => t.id));
-    const filteredLocalTheories = localTheories.filter(t => !firestoreIds.has(t.id));
-    const newTheories = [...mappedFirestoreTheories, ...filteredLocalTheories];
+    const mappedFirestoreTheories = firestoreTheories.map((t: any) => ({
+      ...t,
+      title: normalizeLocalizedField(t.title),
+      summary: normalizeLocalizedField(t.summary),
+      content: normalizeLocalizedField(t.content),
+      version: parseContentVersion(t),
+      updatedAt: t.updatedAt || t.createdAt || new Date().toISOString()
+    }));
+
+    const { merged, hasChanges } = reconcileItemsWithVersioning(sharedState.theories, mappedFirestoreTheories, localTheories);
+    
     sharedState = {
       ...sharedState,
-      theories: newTheories,
+      theories: merged,
       isLoadingTheories: false,
-      isLoading: false
+      isLoading: false,
+      contentVersion: hasChanges ? sharedState.contentVersion + 1 : sharedState.contentVersion,
+      lastUpdated: Date.now()
     };
     saveCacheToLocalStorage();
     notifyListeners();
@@ -124,31 +375,31 @@ function initSingletonSubscription() {
     handleFirestoreError(error, OperationType.GET, 'theories');
   });
 
-  // 2. Subscribe to blogPosts (limited to 50 items)
+  // 2. Subscribe to blogPosts with versioning reconciliation
   const qBlogPosts = query(collection(db, 'blogPosts'), orderBy('createdAt', 'desc'), limit(50));
-  const unsubscribeBlogPosts = onSnapshot(qBlogPosts, (snapshot) => {
+  onSnapshot(qBlogPosts, (snapshot) => {
     const firestoreBlogPosts = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
-    const mappedFirestoreBlogPosts = firestoreBlogPosts.map((p: any) => {
-      const title = typeof p.title === 'string' ? { ru: p.title, en: p.title, by: p.title, de: p.title, fr: p.title, zh: p.title } : p.title;
-      const summary = typeof p.summary === 'string' ? { ru: p.summary, en: p.summary, by: p.summary, de: p.summary, fr: p.summary, zh: p.summary } : p.summary;
-      const content = typeof p.content === 'string' ? { ru: p.content, en: p.content, by: p.content, de: p.content, fr: p.content, zh: p.content } : p.content;
-      return {
-        ...p,
-        title: title || { ru: '', en: '', by: '', de: '', fr: '', zh: '' },
-        summary: summary || { ru: '', en: '', by: '', de: '', fr: '', zh: '' },
-        content: content || { ru: '', en: '', by: '', de: '', fr: '', zh: '' }
-      };
-    });
-    const firestorePostIds = new Set(mappedFirestoreBlogPosts.map(p => p.id));
-    const filteredLocalBlogPosts = localBlogPosts.filter(p => !firestorePostIds.has(p.id));
+    const mappedFirestoreBlogPosts = firestoreBlogPosts.map((p: any) => ({
+      ...p,
+      title: normalizeLocalizedField(p.title),
+      summary: normalizeLocalizedField(p.summary),
+      content: normalizeLocalizedField(p.content),
+      version: parseContentVersion(p),
+      updatedAt: p.updatedAt || p.createdAt || new Date().toISOString()
+    }));
+
+    const { merged, hasChanges } = reconcileItemsWithVersioning(sharedState.blogPosts, mappedFirestoreBlogPosts, localBlogPosts);
+    
     sharedState = {
       ...sharedState,
-      blogPosts: [...mappedFirestoreBlogPosts, ...filteredLocalBlogPosts],
+      blogPosts: merged,
       isLoadingBlog: false,
-      isLoading: false
+      isLoading: false,
+      contentVersion: hasChanges ? sharedState.contentVersion + 1 : sharedState.contentVersion,
+      lastUpdated: Date.now()
     };
     saveCacheToLocalStorage();
     notifyListeners();
@@ -158,29 +409,29 @@ function initSingletonSubscription() {
     handleFirestoreError(error, OperationType.GET, 'blogPosts');
   });
 
-  // 3. Subscribe to events (limited to 20 items)
+  // 3. Subscribe to events
   const qEvents = query(collection(db, 'events'), orderBy('createdAt', 'desc'), limit(20));
-  const unsubscribeEvents = onSnapshot(qEvents, (snapshot) => {
+  onSnapshot(qEvents, (snapshot) => {
     const firestoreEvents = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
-    const mappedFirestoreEvents = firestoreEvents.map((e: any) => {
-      const title = typeof e.title === 'string' ? { ru: e.title, en: e.title, by: e.title, de: e.title, fr: e.title, zh: e.title } : e.title;
-      const description = typeof e.description === 'string' ? { ru: e.description, en: e.description, by: e.description, de: e.description, fr: e.description, zh: e.description } : e.description;
-      return {
-        ...e,
-        title: title || { ru: '', en: '', by: '', de: '', fr: '', zh: '' },
-        description: description || { ru: '', en: '', by: '', de: '', fr: '', zh: '' }
-      };
-    });
-    const firestoreEventIds = new Set(mappedFirestoreEvents.map(e => e.id));
-    const filteredLocalEvents = localEvents.filter(e => !firestoreEventIds.has(e.id));
+    const mappedFirestoreEvents = firestoreEvents.map((e: any) => ({
+      ...e,
+      title: normalizeLocalizedField(e.title),
+      description: normalizeLocalizedField(e.description),
+      version: parseContentVersion(e),
+      updatedAt: e.updatedAt || e.createdAt || new Date().toISOString()
+    }));
+
+    const { merged, hasChanges } = reconcileItemsWithVersioning(sharedState.events, mappedFirestoreEvents, localEvents);
     sharedState = {
       ...sharedState,
-      events: [...mappedFirestoreEvents, ...filteredLocalEvents],
+      events: merged,
       isLoadingEvents: false,
-      isLoading: false
+      isLoading: false,
+      contentVersion: hasChanges ? sharedState.contentVersion + 1 : sharedState.contentVersion,
+      lastUpdated: Date.now()
     };
     saveCacheToLocalStorage();
     notifyListeners();
@@ -190,9 +441,9 @@ function initSingletonSubscription() {
     handleFirestoreError(error, OperationType.GET, 'events');
   });
 
-  // 4. Subscribe to promo codes (limited to 20 items)
+  // 4. Subscribe to promo codes
   const qPromoCodes = query(collection(db, 'promo_codes'), orderBy('createdAt', 'desc'), limit(20));
-  const unsubscribePromoCodes = onSnapshot(qPromoCodes, (snapshot) => {
+  onSnapshot(qPromoCodes, (snapshot) => {
     const firestorePromoCodes = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -201,7 +452,9 @@ function initSingletonSubscription() {
       const reward = typeof p.reward === 'string' ? { ru: p.reward, en: p.reward, by: p.reward, de: p.reward, fr: p.reward, zh: p.reward } : p.reward;
       return {
         ...p,
-        rewards: reward || { ru: '', en: '', by: '', de: '', fr: '', zh: '' }
+        rewards: reward || { ru: '', en: '', by: '', de: '', fr: '', zh: '' },
+        version: parseContentVersion(p),
+        updatedAt: p.updatedAt || p.createdAt || new Date().toISOString()
       };
     });
     const firestorePromoIds = new Set(mappedFirestorePromoCodes.map(p => p.id));
@@ -215,7 +468,7 @@ function initSingletonSubscription() {
     handleFirestoreError(error, OperationType.GET, 'promo_codes');
   });
 
-  // Throttled fallback polling (only when page is visible, every 45s instead of 10s)
+  // Fallback Polling (Throttled, only when tab is visible)
   let isPageVisible = typeof document !== 'undefined' ? document.visibilityState === 'visible' : true;
   subscribeToPageVisibility((visible) => {
     isPageVisible = visible;
@@ -227,19 +480,22 @@ function initSingletonSubscription() {
       const fallbackData = await vercelFallback.lrange('theories', 0, 50);
       if (fallbackData && fallbackData.length > 0) {
         const parsed = fallbackData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
-        sharedState.theories = Array.from(new Map([...sharedState.theories, ...parsed].map(t => [t.id, t])).values());
+        const { merged } = reconcileItemsWithVersioning(sharedState.theories, parsed, localTheories);
+        sharedState.theories = merged;
       }
       
       const fallbackBlogData = await vercelFallback.lrange('blogPosts', 0, 50);
       if (fallbackBlogData && fallbackBlogData.length > 0) {
         const parsed = fallbackBlogData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
-        sharedState.blogPosts = Array.from(new Map([...sharedState.blogPosts, ...parsed].map(t => [t.id, t])).values());
+        const { merged } = reconcileItemsWithVersioning(sharedState.blogPosts, parsed, localBlogPosts);
+        sharedState.blogPosts = merged;
       }
 
       const fallbackChronicleData = await vercelFallback.lrange('events', 0, 50);
       if (fallbackChronicleData && fallbackChronicleData.length > 0) {
         const parsed = fallbackChronicleData.map((str: any) => typeof str === 'string' ? JSON.parse(str) : str);
-        sharedState.events = Array.from(new Map([...sharedState.events, ...parsed].map(t => [t.id, t])).values()).sort((a,b) => (b.date || '').localeCompare(a.date || ''));
+        const { merged } = reconcileItemsWithVersioning(sharedState.events, parsed, localEvents);
+        sharedState.events = merged.sort((a,b) => (b.date || '').localeCompare(a.date || ''));
       }
 
       const fallbackPromoData = await vercelFallback.lrange('promo_codes', 0, 50);
@@ -252,7 +508,7 @@ function initSingletonSubscription() {
   };
 
   fetchFallback();
-  setInterval(fetchFallback, 45000); // Throttled from 10s to 45s for memory & CPU efficiency
+  setInterval(fetchFallback, 45000);
 }
 
 export function useContent() {
@@ -266,6 +522,55 @@ export function useContent() {
     };
   }, []);
 
-  return content;
-}
+  // Check freshness of a specific theory / blog post
+  const checkContentFreshness = useCallback((id: string, cachedUpdatedAt?: string | number, cachedVersion?: number) => {
+    const existing = sharedState.theories.find(t => t.id === id) || sharedState.blogPosts.find(b => b.id === id);
+    if (!existing) return { isFresh: true, latestItem: null, latestVersion: 1 };
 
+    const curVer = parseContentVersion(existing);
+    const curTime = parseContentTimestamp(existing.updatedAt || existing.createdAt);
+    const testVer = cachedVersion ? Number(cachedVersion) : 1;
+    const testTime = cachedUpdatedAt ? parseContentTimestamp(cachedUpdatedAt) : 0;
+
+    const isStale = (curVer > testVer) || (curTime > testTime);
+    return {
+      isFresh: !isStale,
+      latestItem: existing,
+      latestVersion: curVer,
+      latestUpdatedAt: existing.updatedAt
+    };
+  }, []);
+
+  // Force cache refresh
+  const refreshContent = useCallback(async (forceBustCache = true) => {
+    if (forceBustCache) {
+      try {
+        localStorage.removeItem(CONTENT_CACHE_KEY_V3);
+      } catch (e) {}
+    }
+    sharedState = {
+      ...sharedState,
+      contentVersion: sharedState.contentVersion + 1,
+      lastUpdated: Date.now()
+    };
+    notifyListeners();
+  }, []);
+
+  const getTheoryById = useCallback((id: string) => {
+    return sharedState.theories.find(t => t.id === id) || null;
+  }, [content.theories]);
+
+  const getBlogPostById = useCallback((id: string) => {
+    return sharedState.blogPosts.find(b => b.id === id) || null;
+  }, [content.blogPosts]);
+
+  return {
+    ...content,
+    checkContentFreshness,
+    refreshContent,
+    getTheoryById,
+    getBlogPostById,
+    fetchLatestDoc: fetchLatestDocument,
+    invalidateItem: invalidateContentItem
+  };
+}

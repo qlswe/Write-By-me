@@ -11,6 +11,7 @@ import { KuruVideoPlayer } from '../ui/KuruVideoPlayer';
 import { safeStorage, setZeroTraceMode, isZeroTraceActive } from '../../utils/securityStorage';
 import { sanitizeContent, getThreatsBlockedCount } from '../../utils/sanitizer';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
+import { openAccountSecurityCheckpoint } from '../../utils/accountSecurity';
 
 export { sanitizeContent, getThreatsBlockedCount };
 
@@ -233,6 +234,26 @@ export const AhaSecurityBadge: React.FC<{ autoHide?: boolean }> = ({ autoHide })
                         <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isCensored ? 'translate-x-5' : 'translate-x-1'}`} />
                         </button>
                     </div>
+
+                    {/* Account Security Verification Gate Button */}
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        openAccountSecurityCheckpoint('Ручная проверка безопасности');
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 transition-all text-left cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-purple-400" />
+                        <div>
+                          <p className="text-xs font-bold text-white">Центр Проверки Аккаунта</p>
+                          <p className="text-[10px] text-white/50">Проверка почты, Device ID и антибота</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        GATE
+                      </span>
+                    </button>
 
                     <div className="h-px bg-white/5 w-full my-2"></div>
 

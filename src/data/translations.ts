@@ -325,7 +325,7 @@ export const translations = {
     "tasksDelete": "Удалить задачу",
     "tasksPriorityToggle": "Сменить приоритет",
     "navCanvas": "Аха Холст",
-    "canvasTitle": "Глобальный Холст",
+    "canvasTitle": "Личный Холст",
     "canvasLoginPrompt": "Пожалуйста, войдите, чтобы рисовать на общем холсте.",
     "canvasDesc": "Это совместный холст в реальном времени. Любые изменения видны всем мгновенно!",
     "canvasColors": "Цвета",

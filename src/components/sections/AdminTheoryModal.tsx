@@ -77,6 +77,8 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
     setIsSaving(true);
     try {
       const theoryId = theoryToEdit?.id || generatePrefixedId('theory');
+      const nextVersion = (theoryToEdit?.version || theoryToEdit?._v || 0) + 1;
+      const nowIso = new Date().toISOString();
       const theoryData = {
         id: theoryId,
         title: { ru: titleRu, en: titleEn || titleRu },
@@ -84,11 +86,25 @@ export const AdminTheoryModal: React.FC<AdminTheoryModalProps> = ({ isOpen, onCl
         content: { ru: contentRu, en: contentEn || contentRu },
         category,
         author: author || 'Admin',
-        createdAt: theoryToEdit?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        version: nextVersion,
+        _v: nextVersion,
+        createdAt: theoryToEdit?.createdAt || nowIso,
+        updatedAt: nowIso
       };
 
       await setDoc(doc(db, 'theories', theoryId), theoryData);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('aha_content_updated', {
+          detail: {
+            id: theoryId,
+            type: 'theory',
+            version: nextVersion,
+            updatedAt: nowIso
+          }
+        }));
+      }
+
       onClose();
     } catch (error) {
       console.error("Error saving theory:", error);

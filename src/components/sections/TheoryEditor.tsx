@@ -152,6 +152,8 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
 
     setIsSaving(true);
     try {
+      const nextVersion = (theory?.version || theory?._v || 0) + 1;
+      const nowIso = new Date().toISOString();
       const rawTheoryData = {
         category,
         title,
@@ -159,7 +161,9 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
         content,
         mediaUrl,
         authorUid: user?.uid,
-        updatedAt: new Date().toISOString()
+        version: nextVersion,
+        _v: nextVersion,
+        updatedAt: nowIso
       };
 
       const theoryData = await sanitizePayloadForFirestore(rawTheoryData);
@@ -168,27 +172,42 @@ export const TheoryEditor: React.FC<TheoryEditorProps> = ({ theory, onClose, lan
       if (theory?.id) {
         await setDoc(doc(db, 'theories', theory.id), {
           ...theoryData,
-          createdAt: theory.createdAt || new Date().toISOString()
+          createdAt: theory.createdAt || nowIso
         });
       } else {
         const newDoc = await addDoc(collection(db, 'theories'), {
           ...theoryData,
-          createdAt: new Date().toISOString()
+          createdAt: nowIso
         });
         createdDocId = newDoc.id;
       }
 
+      const finalId = theory?.id || createdDocId;
+
       if (vercelFallback.isAvailable()) {
         try {
-          const uid = theory?.id || createdDocId || generatePrefixedId('th') + '_' + user?.uid;
+          const uid = finalId || generatePrefixedId('th') + '_' + user?.uid;
           const payload = {
             ...theoryData,
             id: uid,
-            createdAt: theory?.createdAt || new Date().toISOString()
+            createdAt: theory?.createdAt || nowIso
           };
           await vercelFallback.lpush('theories', JSON.stringify(payload));
         } catch (e) {}
       }
+
+      // Dispatch real-time cache busting event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('aha_content_updated', {
+          detail: {
+            id: finalId,
+            type: 'theory',
+            version: nextVersion,
+            updatedAt: nowIso
+          }
+        }));
+      }
+
       onClose();
     } catch (error) {
       handleFirestoreError(error, theory?.id ? OperationType.UPDATE : OperationType.CREATE, 'theories');

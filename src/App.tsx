@@ -29,7 +29,7 @@ import { Footer } from './components/layout/Footer';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { PromoBanner } from './components/ui/PromoBanner';
 import { ProfileModal } from './components/ui/ProfileModal';
-import { ContentModal } from './components/ui/ContentModal';
+import { ContentModal, ContentModalPayload } from './components/ui/ContentModal';
 import { FeedbackModal } from './components/ui/FeedbackModal';
 import { PerformanceWidget } from './components/ui/PerformanceWidget';
 import { PwaInstallModal } from './components/ui/PwaInstallModal';
@@ -47,7 +47,9 @@ import { MaintenanceScreen } from './components/ui/MaintenanceScreen';
 import { BroadcastBanner } from './components/ui/BroadcastBanner';
 import { AhaSecurityBadge, SafeHtml } from './components/security/AhaSecurity';
 import { DisguisePage } from './components/security/DisguisePage';
+import { AccountSecurityCheckpoint } from './components/security/AccountSecurityCheckpoint';
 import { DevConsoleWidget } from './components/ui/DevConsoleWidget';
+import { FloatingPointsOverlay } from './components/gamification/FloatingPointsOverlay';
 
 const getMillis = (val: any): number => {
   if (!val) return 0;
@@ -72,8 +74,9 @@ import { AhiAiSection } from './components/sections/AhiAiSection';
 import { SdkSettingsSection } from './components/sections/SdkSettingsSection';
 import { CanvasSection } from './components/sections/CanvasSection';
 import { TelemetrySection } from './components/sections/TelemetrySection';
+import { WarpSection } from './components/sections/WarpSection';
 
-type Section = 'home' | 'theories' | 'blog' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry' | 'browser';
+type Section = 'home' | 'theories' | 'blog' | 'promo' | 'users' | 'chats' | 'forum' | 'ai' | 'sdk' | 'canvas' | 'telemetry' | 'browser' | 'warp';
 
 let hasPrintedStopWarning = false;
 
@@ -145,9 +148,11 @@ export default function App() {
     };
   }, [section]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [modalContent, setModalContent] = useState<{id?: string, title: string, content: string} | null>(null);
+  const [modalContent, setModalContent] = useState<ContentModalPayload | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(false);
+  const [isSecurityCheckpointOpen, setIsSecurityCheckpointOpen] = useState(false);
+  const [securityActionName, setSecurityActionName] = useState<string | undefined>();
 
   // User Data (Syncs with Firebase)
   const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role } = useUserData('ru');
@@ -193,6 +198,16 @@ export default function App() {
 
   // Panic / Camouflage Mode
   const [isPanicked, setIsPanicked] = useState(() => safeStorage.getItem('aha_panic_mode') === 'true');
+
+  useEffect(() => {
+    const handleNavigate = (e: any) => {
+      if (e.detail?.section) {
+        setSection(e.detail.section);
+      }
+    };
+    window.addEventListener('aha_navigate_section', handleNavigate);
+    return () => window.removeEventListener('aha_navigate_section', handleNavigate);
+  }, []);
 
   useEffect(() => {
     const checkPanic = () => {
@@ -656,10 +671,25 @@ export default function App() {
     };
   }, [authLoading, isDataLoaded, lowPerfMode, productionMode]);
 
+  // Account Security Gate State
+  const [isSecurityCheckpointOpen, setIsSecurityCheckpointOpen] = useState(false);
+  const [securityActionName, setSecurityActionName] = useState<string | undefined>();
+  const [securitySuccessCallback, setSecuritySuccessCallback] = useState<(() => void) | undefined>();
+
   useEffect(() => {
     const handleToast = ((e: CustomEvent) => setToast(e.detail)) as EventListener;
+    const handleOpenSecurityCheckpoint = ((e: CustomEvent) => {
+      setSecurityActionName(e.detail?.actionName);
+      setSecuritySuccessCallback(() => e.detail?.onSuccess);
+      setIsSecurityCheckpointOpen(true);
+    }) as EventListener;
+
     window.addEventListener('aha_toast', handleToast);
-    return () => window.removeEventListener('aha_toast', handleToast);
+    window.addEventListener('aha_open_security_checkpoint', handleOpenSecurityCheckpoint);
+    return () => {
+      window.removeEventListener('aha_toast', handleToast);
+      window.removeEventListener('aha_open_security_checkpoint', handleOpenSecurityCheckpoint);
+    };
   }, []);
 
   useEffect(() => {
@@ -681,6 +711,7 @@ export default function App() {
   const navItems = [
     { id: 'home', label: t.navHome, icon: LayoutDashboard },
     { id: 'forum' as const, label: t.navForum, icon: Activity },
+    { id: 'warp' as const, label: (t as any).navWarp || (lang === 'ru' ? 'Варп Ахи' : 'Aha Warp'), icon: Sparkles },
     { id: 'canvas' as const, label: t.navCanvas || 'Aha Canvas', icon: Palette },
     { id: 'theories', label: t.navTheories, icon: Book },
     { id: 'blog', label: t.navBlog, icon: Globe },
@@ -1252,6 +1283,9 @@ export default function App() {
               {section === 'telemetry' && role === 'admin' && (
                 <TelemetrySection lang={lang as Language} />
               )}
+              {section === 'warp' && (
+                <WarpSection lang={lang as Language} />
+              )}
               {section === 'browser' && (
                 <div className="bg-[#251c35] rounded-2xl p-8 shadow-xl border border-[#3d2b4f] text-center space-y-6">
                   <div className="w-16 h-16 bg-purple-500/20 border border-purple-500/40 text-purple-400 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
@@ -1397,6 +1431,29 @@ export default function App() {
         isOpen={homePwaModalOpen} 
         onClose={() => setHomePwaModalOpen(false)} 
         lang={lang as Language} 
+      />
+
+      {/* Account Security Verification Checkpoint Modal */}
+      <AccountSecurityCheckpoint
+        isOpen={isSecurityCheckpointOpen}
+        onClose={() => {
+          setIsSecurityCheckpointOpen(false);
+          setSecuritySuccessCallback(undefined);
+        }}
+        lang={lang as Language}
+        requiredActionName={securityActionName}
+        onVerificationSuccess={() => {
+          if (securitySuccessCallback) {
+            securitySuccessCallback();
+            setSecuritySuccessCallback(undefined);
+          }
+        }}
+      />
+
+      {/* Real-time Gamification & Points Notification Overlay */}
+      <FloatingPointsOverlay 
+        lang={lang as Language} 
+        onNavigateToWarp={() => setSection('warp')} 
       />
 
       {/* Floating Scroll to Top/Bottom Navigation Widget (Everywhere) */}

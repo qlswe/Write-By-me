@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Mail, Lock, LogIn, UserPlus, User, Sparkles, Palette, MessageSquare, RefreshCw } from 'lucide-react';
+import { X, Mail, Lock, LogIn, UserPlus, User, Sparkles, Palette, MessageSquare, RefreshCw, ShieldAlert, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Language, translations } from '../../data/translations';
 import { getHumanFriendlyError } from '../../utils/authErrors';
 import { ModalPortal } from './ModalPortal';
+import { isDisposableEmail, evaluatePasswordStrength, checkRateLimitStatus } from '../../utils/accountSecurity';
 
 interface EmailLoginModalProps {
   isOpen: boolean;
@@ -40,6 +41,20 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const photoURL = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(avatarSeed)}`;
+
+  const isEmailDisposable = useMemo(() => {
+    return isDisposableEmail(email);
+  }, [email]);
+
+  const passwordStrength = useMemo(() => {
+    if (!password) return null;
+    return evaluatePasswordStrength(password);
+  }, [password]);
+
+  const rateLimitState = useMemo(() => {
+    if (!email) return null;
+    return checkRateLimitStatus(email);
+  }, [email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,8 +177,13 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
             {/* EMAIL & PASSWORD FIELDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                  Email <span className="text-red-400">*</span>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center justify-between">
+                  <span>Email <span className="text-red-400">*</span></span>
+                  {email && !isEmailDisposable && (
+                    <span className="text-[10px] text-emerald-400 font-normal flex items-center gap-1">
+                      <ShieldCheck size={11} /> {lang === 'ru' ? 'Корректный' : 'Valid'}
+                    </span>
+                  )}
                 </label>
                 <div className="relative">
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
@@ -174,11 +194,25 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoggingIn}
-                    className="w-full bg-[#0d0b14] border border-[#3d2b4f] rounded-xl py-2.5 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-[#ff4d4d] transition-colors"
+                    className={`w-full bg-[#0d0b14] border rounded-xl py-2.5 pl-10 pr-4 text-white text-sm focus:outline-none transition-colors ${
+                      isEmailDisposable ? 'border-red-500/80 focus:border-red-400' : 'border-[#3d2b4f] focus:border-[#ff4d4d]'
+                    }`}
                     placeholder="name@example.com"
                     required
                   />
                 </div>
+                {isEmailDisposable && (
+                  <p className="text-[11px] text-red-400 flex items-center gap-1 mt-1 leading-tight font-medium">
+                    <ShieldAlert size={12} className="shrink-0" />
+                    <span>{lang === 'ru' ? 'Временные / одноразовые email запрещены!' : 'Disposable email domains are blocked!'}</span>
+                  </p>
+                )}
+                {rateLimitState?.isLocked && (
+                  <p className="text-[11px] text-amber-400 flex items-center gap-1 mt-1 leading-tight font-medium">
+                    <AlertCircle size={12} className="shrink-0" />
+                    <span>{lang === 'ru' ? `Вход временно заблокирован (${rateLimitState.remainingSeconds}s)` : `Rate limited (${rateLimitState.remainingSeconds}s)`}</span>
+                  </p>
+                )}
               </div>
 
               {!isResetting && (
@@ -216,6 +250,34 @@ export const EmailLoginModal: React.FC<EmailLoginModalProps> = ({ isOpen, onClos
                       minLength={6}
                     />
                   </div>
+
+                  {/* Password Strength Meter when Registering */}
+                  {isRegistering && password && passwordStrength && (
+                    <div className="space-y-1 mt-1.5">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-white/60">
+                          {lang === 'ru' ? passwordStrength.feedbackRu : passwordStrength.feedbackEn}
+                        </span>
+                        <span className={`font-black uppercase ${
+                          passwordStrength.score >= 4 ? 'text-emerald-400' : passwordStrength.score >= 3 ? 'text-amber-400' : 'text-red-400'
+                        }`}>
+                          {passwordStrength.score >= 4 ? 'Strong' : passwordStrength.score >= 3 ? 'Medium' : 'Weak'}
+                        </span>
+                      </div>
+                      <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden flex gap-1">
+                        {[1, 2, 3, 4, 5].map((lvl) => (
+                          <div 
+                            key={lvl} 
+                            className={`h-full flex-1 rounded-full transition-all ${
+                              lvl <= passwordStrength.score 
+                                ? (passwordStrength.score >= 4 ? 'bg-emerald-400' : passwordStrength.score >= 3 ? 'bg-amber-400' : 'bg-red-400')
+                                : 'bg-transparent'
+                            }`} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

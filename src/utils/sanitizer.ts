@@ -300,8 +300,12 @@ export const sanitizeObject = <T>(
   }
 
   if (typeof data === 'object' && data !== null) {
-    const cleanedObj: any = {};
+    const cleanedObj: any = Object.create(null);
     for (const [key, val] of Object.entries(data)) {
+      // Prototype pollution & injection prevention
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        continue;
+      }
       if (typeof val === 'string') {
         const isRich = richKeys.includes(key);
         cleanedObj[key] = isRich 
@@ -313,7 +317,8 @@ export const sanitizeObject = <T>(
         cleanedObj[key] = val;
       }
     }
-    return cleanedObj as T;
+    // Return standard object safely
+    return { ...cleanedObj } as T;
   }
 
   return data;

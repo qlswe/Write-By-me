@@ -153,6 +153,8 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
 
     setIsSaving(true);
     try {
+      const nextVersion = (post?.version || post?._v || 0) + 1;
+      const nowIso = new Date().toISOString();
       const rawPostData = {
         category,
         title,
@@ -160,7 +162,9 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
         content,
         mediaUrl,
         authorUid: user?.uid,
-        updatedAt: new Date().toISOString()
+        version: nextVersion,
+        _v: nextVersion,
+        updatedAt: nowIso
       };
 
       // Strip dangerous characters and sanitize blog post fields
@@ -171,27 +175,42 @@ export const BlogEditor: React.FC<BlogEditorProps> = ({ post, onClose, lang }) =
       if (post?.id) {
         await setDoc(doc(db, 'blogPosts', post.id), {
           ...postData,
-          createdAt: post.createdAt || new Date().toISOString()
+          createdAt: post.createdAt || nowIso
         });
       } else {
         const newDoc = await addDoc(collection(db, 'blogPosts'), {
           ...postData,
-          createdAt: new Date().toISOString()
+          createdAt: nowIso
         });
         createdDocId = newDoc.id;
       }
 
+      const finalId = post?.id || createdDocId;
+
       if (vercelFallback.isAvailable()) {
         try {
-          const uid = post?.id || createdDocId || generatePrefixedId('blog') + '_' + user?.uid;
+          const uid = finalId || generatePrefixedId('blog') + '_' + user?.uid;
           const payload = {
             ...postData,
             id: uid,
-            createdAt: post?.createdAt || new Date().toISOString()
+            createdAt: post?.createdAt || nowIso
           };
           await vercelFallback.lpush('blogPosts', JSON.stringify(payload));
         } catch (e) {}
       }
+
+      // Dispatch real-time cache busting event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('aha_content_updated', {
+          detail: {
+            id: finalId,
+            type: 'blog',
+            version: nextVersion,
+            updatedAt: nowIso
+          }
+        }));
+      }
+
       onClose();
     } catch (error) {
       handleFirestoreError(error, post?.id ? OperationType.UPDATE : OperationType.CREATE, 'blogPosts');

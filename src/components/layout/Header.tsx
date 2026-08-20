@@ -16,6 +16,8 @@ import { AhaEmbeddedBrowserModal } from '../ui/AhaEmbeddedBrowserModal';
 import { NotificationDrawer } from '../notifications/NotificationDrawer';
 import { useNotifications } from '../../hooks/useNotifications';
 import { usePWA } from '../../hooks/usePWA';
+import { useGamification } from '../../hooks/useGamification';
+import { GamificationAvatarBadge } from '../gamification/GamificationAvatarBadge';
 import { sdk } from '../../sdk';
 
 interface HeaderProps {
@@ -76,6 +78,14 @@ export const Header: React.FC<HeaderProps> = ({
     deleteNotification,
     clearAll: clearAllNotifications
   } = useNotifications();
+
+  const {
+    badgeCount: gamificationBadgeCount,
+    unclaimedCount: gamificationUnclaimed,
+    points: gamificationPoints,
+    level: gamificationLevel,
+    claimAll: claimAllGamification
+  } = useGamification();
 
   const handleNavigateToPost = (postId: string, targetSection = 'forum') => {
     setSection(targetSection);
@@ -331,10 +341,25 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="relative">
                   <button 
                     onClick={() => setProfileOpen(!profileOpen)}
-                    className="flex items-center gap-2 bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    className="relative flex items-center gap-2 bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d] text-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors group cursor-pointer"
                   >
-                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-5 h-5 shrink-0 aspect-square rounded-full object-cover" />
-                    <span className="max-w-[100px] truncate">{user.displayName}</span>
+                    <div className="relative">
+                      <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-6 h-6 shrink-0 aspect-square rounded-full object-cover border border-white/10" />
+                      <GamificationAvatarBadge 
+                        lang={lang} 
+                        size="sm" 
+                        position="top-right" 
+                        onOpenChallenges={() => {
+                          setSection('warp');
+                          setProfileOpen(false);
+                        }} 
+                      />
+                    </div>
+                    <span className="max-w-[100px] truncate font-bold text-white group-hover:text-[#ff4d4d] transition-colors">{user.displayName}</span>
+                    <div className="flex items-center gap-1 bg-[#251c35] px-1.5 py-0.5 rounded-md text-[11px] font-black text-yellow-400 border border-yellow-500/20">
+                      <span>{gamificationPoints}</span>
+                      <span className="text-[9px]">✦</span>
+                    </div>
                   </button>
                   
                   <AnimatePresence>
@@ -343,22 +368,64 @@ export const Header: React.FC<HeaderProps> = ({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className="absolute right-0 mt-2 w-64 bg-[#251c35] border border-[#3d2b4f] rounded-xl shadow-xl overflow-hidden z-50"
+                        className="absolute right-0 mt-2 w-72 bg-[#251c35] border border-[#3d2b4f] rounded-2xl shadow-2xl overflow-hidden z-50"
                       >
                         <div className="p-4 border-b border-[#3d2b4f] bg-[#15101e]">
                           <div className="flex items-center gap-3 mb-2">
-                            <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-10 h-10 shrink-0 aspect-square rounded-full border border-[#3d2b4f] object-cover" />
-                            <div>
+                            <div className="relative">
+                              <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-12 h-12 shrink-0 aspect-square rounded-full border border-[#3d2b4f] object-cover" />
+                              <GamificationAvatarBadge 
+                                lang={lang} 
+                                size="md" 
+                                position="top-right" 
+                                onOpenChallenges={() => {
+                                  setSection('warp');
+                                  setProfileOpen(false);
+                                }} 
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
                               <div className="font-bold text-white truncate">{user.displayName}</div>
                               <div className="text-xs text-gray-400 truncate">{user.email}</div>
-                              {role && role !== 'user' && (
-                                <div className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                  role === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                }`}>
-                                  {role}
+                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                <div className="px-2 py-0.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 border border-pink-500/30 rounded text-[10px] font-black uppercase">
+                                  Ур. {gamificationLevel}
                                 </div>
-                              )}
+                                {role && role !== 'user' && (
+                                  <div className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                    role === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                  }`}>
+                                    {role}
+                                  </div>
+                                )}
+                              </div>
                             </div>
+                          </div>
+
+                          {/* Interactive Gamification Points & Challenges Quick Card */}
+                          <div className="mt-3 p-2.5 rounded-xl bg-gradient-to-r from-[#201335] to-[#160d26] border border-[#ff4d4d]/30 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1.5 rounded-lg bg-[#ff4d4d]/20 text-[#ff4d4d]">
+                                <Sparkles size={14} className="animate-spin" />
+                              </div>
+                              <div>
+                                <div className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Звёздный Нефрит</div>
+                                <div className="text-sm font-black text-yellow-300 flex items-center gap-1">
+                                  <span>{gamificationPoints}</span>
+                                  <span className="text-xs text-yellow-400">✦</span>
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSection('warp');
+                                setProfileOpen(false);
+                              }}
+                              className="px-2.5 py-1.5 bg-[#ff4d4d] hover:bg-[#ff2a5f] text-[#15101e] hover:text-white rounded-lg text-xs font-black tracking-wide transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1"
+                            >
+                              <span>{gamificationUnclaimed > 0 ? `Забрать (${gamificationUnclaimed})` : 'Задания'}</span>
+                            </button>
                           </div>
                         </div>
                         <div className="p-4">
@@ -571,18 +638,37 @@ export const Header: React.FC<HeaderProps> = ({
 
               {user ? (
                 <>
-                  <div className="flex items-center gap-3 bg-[#251c35] p-3 rounded-xl border border-[#3d2b4f]">
-                    <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-12 h-12 shrink-0 aspect-square rounded-full border border-[#3d2b4f] object-cover" />
-                    <div>
-                      <div className="text-white font-bold">{user.displayName}</div>
-                      <div className="text-xs text-gray-400">{user.email}</div>
-                      {role && role !== 'user' && (
-                        <div className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                          role === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                        }`}>
-                          {role}
-                        </div>
-                      )}
+                  <div className="flex items-center gap-3 bg-[#251c35] p-3 rounded-xl border border-[#3d2b4f] relative">
+                    <div className="relative shrink-0">
+                      <img src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'User')}&background=1c1528&color=fff`} alt="Avatar" className="w-12 h-12 shrink-0 aspect-square rounded-full border border-[#3d2b4f] object-cover" />
+                      <GamificationAvatarBadge 
+                        lang={lang} 
+                        size="md" 
+                        position="top-right" 
+                        onOpenChallenges={() => {
+                          setSection('warp');
+                          setMobileMenuOpen(false);
+                        }} 
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-white font-bold truncate">{user.displayName}</div>
+                      <div className="text-xs text-gray-400 truncate">{user.email}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-purple-500/20 text-pink-300 border border-pink-500/30">
+                          Ур. {gamificationLevel}
+                        </span>
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                          {gamificationPoints} ✦
+                        </span>
+                        {role && role !== 'user' && (
+                          <div className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            role === 'admin' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          }`}>
+                            {role}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="text-sm text-gray-300 bg-[#251c35]/50 p-3 rounded-xl border border-[#3d2b4f]/50">
