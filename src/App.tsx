@@ -50,6 +50,7 @@ import { DisguisePage } from './components/security/DisguisePage';
 import { AccountSecurityCheckpoint } from './components/security/AccountSecurityCheckpoint';
 import { DevConsoleWidget } from './components/ui/DevConsoleWidget';
 import { FloatingPointsOverlay } from './components/gamification/FloatingPointsOverlay';
+import { PullToRefresh } from './components/ui/PullToRefresh';
 
 const getMillis = (val: any): number => {
   if (!val) return 0;
@@ -151,15 +152,38 @@ export default function App() {
   const [modalContent, setModalContent] = useState<ContentModalPayload | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(false);
-  const [isSecurityCheckpointOpen, setIsSecurityCheckpointOpen] = useState(false);
-  const [securityActionName, setSecurityActionName] = useState<string | undefined>();
 
   // User Data (Syncs with Firebase)
-  const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role } = useUserData('ru');
-  const { theories, blogPosts, events, promoCodes, isLoadingTheories, isLoadingBlog, isLoadingEvents } = useContent();
+  const { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, isDataLoaded, role, primaryAccentColor, updatePrimaryAccentColor } = useUserData('ru');
+  const { theories, blogPosts, events, promoCodes, isLoadingTheories, isLoadingBlog, isLoadingEvents, refreshContent } = useContent();
   const { i18n } = useTranslation();
   const { canInstall, isInstalled, installPWA } = usePWA();
   const [homePwaModalOpen, setHomePwaModalOpen] = useState(false);
+
+  const handleGlobalPullRefresh = async () => {
+    try {
+      await refreshContent(true);
+      try {
+        await enableNetwork(db);
+      } catch (e) {}
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('aha_manual_sync', { detail: { timestamp: Date.now() } }));
+        window.dispatchEvent(new CustomEvent('aha_content_updated'));
+      }
+      const syncMessages: Record<string, string> = {
+        ru: 'Контент и данные успешно синхронизированы',
+        en: 'Content and data successfully synced',
+        by: 'Кантэнт і даныя паспяхова сінхранізаваны',
+        de: 'Inhalte und Daten synchronisiert',
+        fr: 'Contenu synchronisé avec succès',
+        zh: '内容与数据已成功同步'
+      };
+      setToast(syncMessages[lang] || syncMessages.en);
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      console.warn('Global pull refresh error:', err);
+    }
+  };
 
   useEffect(() => {
     if (i18n.language !== lang) {
@@ -353,8 +377,11 @@ export default function App() {
         setMaintenanceReason(data.maintenanceReason || '');
         setMaintenanceUpdatedAt(data.maintenanceUpdatedAt || undefined);
 
-        // Apply primary accent color from Firestore
-        if (data.primaryAccentColor) {
+        // Apply primary accent color: prefer user's customized accent color if set, else system default
+        const userCustomColor = safeStorage.getItem('aha_primary_accent');
+        if (userCustomColor && /^#[0-9a-fA-F]{3,6}$/.test(userCustomColor)) {
+          applyPrimaryAccentColor(userCustomColor);
+        } else if (data.primaryAccentColor) {
           applyPrimaryAccentColor(data.primaryAccentColor);
         } else {
           applyPrimaryAccentColor('#ff4d4d');
@@ -1034,17 +1061,22 @@ export default function App() {
       <main className={`flex-1 w-full mx-auto px-4 py-8 relative z-10 ${section === 'chats' ? 'max-w-7xl' : 'max-w-5xl'}`}>
         <PromoBanner showBanner={showBanner} lang={lang as Language} setModalContent={setModalContent} onClose={handleCloseBanner} />
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={section}
-            className="section-container"
-            initial={lowPerfMode ? { opacity: 1 } : { opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={lowPerfMode ? { opacity: 1 } : { opacity: 0, y: -15 }}
-            transition={lowPerfMode ? { duration: 0 } : { duration: 0.25, ease: 'easeOut' }}
-          >
-            <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(255,77,77,0.3)]"></div></div>}>
-              {section === 'home' && (
+        <PullToRefresh
+          onRefresh={handleGlobalPullRefresh}
+          lang={lang as Language}
+          id="app-main-pull-to-refresh"
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={section}
+              className="section-container"
+              initial={lowPerfMode ? { opacity: 1 } : { opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={lowPerfMode ? { opacity: 1 } : { opacity: 0, y: -15 }}
+              transition={lowPerfMode ? { duration: 0 } : { duration: 0.25, ease: 'easeOut' }}
+            >
+              <Suspense fallback={<div className="flex justify-center p-12"><div className="w-10 h-10 border-4 border-[#ff4d4d] border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(255,77,77,0.3)]"></div></div>}>
+                {section === 'home' && (
                 <div className="bg-[#251c35] rounded-2xl p-8 shadow-xl border border-[#3d2b4f]">
                   <div className="flex justify-between items-start mb-4">
                     <h2 className="text-3xl font-bold text-[#ff4d4d]">{t.homeTitle}</h2>
@@ -1208,6 +1240,8 @@ export default function App() {
                   showLoadWidget={showLoadWidget}
                   toggleLoadWidget={toggleLoadWidget}
                   role={role}
+                  userAccentColor={primaryAccentColor}
+                  onUpdateUserAccentColor={updatePrimaryAccentColor}
                 />
               )}
 
@@ -1311,6 +1345,7 @@ export default function App() {
             </Suspense>
           </motion.div>
         </AnimatePresence>
+        </PullToRefresh>
       </main>
 
       <Footer lang={lang as Language} setFeedbackOpen={setFeedbackOpen} />

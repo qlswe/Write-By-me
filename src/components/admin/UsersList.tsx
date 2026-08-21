@@ -9,6 +9,7 @@ import { db } from '../../firebase';
 import { CachedAvatar } from '../ui/CachedAvatar';
 import { logTelemetryEvent } from '../../utils/telemetry';
 import { auditDeviceDuplicates, isDeviceIdValid } from '../../utils/deviceId';
+import { PullToRefresh } from '../ui/PullToRefresh';
 
 interface UsersListProps {
   lang: Language;
@@ -410,6 +411,7 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
     blockedEmails,
     blockedDeviceIds = [],
     loading,
+    refreshUsers,
     updateUserRole,
     updateUserVerification,
     deleteUser,
@@ -1094,46 +1096,52 @@ export const UsersList: React.FC<UsersListProps> = ({ lang, onOpenChat, onViewPr
         </div>
       )}
 
-      <div className="space-y-3">
-        {filteredUsers.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-12 text-gray-500 bg-[#15101e]/10 rounded-3xl border border-[#3d2b4f]/10"
-          >
-            <Search className="mx-auto mb-4 opacity-20" size={32} />
-            <p className="text-sm font-bold uppercase tracking-widest">
-              {(t as any).adminNoUsersFound || t.adminNoUsers}
-            </p>
-          </motion.div>
-        ) : (
-          filteredUsers.map((user) => (
-            <UserListItem 
-              key={user.uid}
-              user={user}
-              isAdmin={isAdmin}
-              isModeratorOrAdmin={isModeratorOrAdmin}
-              t={t}
-              lang={lang}
-              openDropdownId={openDropdownId}
-              setOpenDropdownId={setOpenDropdownId}
-              onViewProfile={onViewProfile}
-              onOpenChat={onOpenChat}
-              updateUserRole={updateUserRole}
-              updateUserVerification={updateUserVerification}
-              deleteUser={deleteUser}
-              toggleBlockUser={toggleBlockUser}
-              deleteAvatar={deleteAvatar}
-              currentUserId={currentUser?.uid}
-              blockedDeviceIds={blockedDeviceIds}
-              blockDeviceId={blockDeviceId}
-              unblockDeviceId={unblockDeviceId}
-              deviceDuplicatesMap={deviceAudit.duplicateMap}
-              onFilterByDeviceId={(devId) => setSearchQuery(devId)}
-            />
-          ))
-        )}
-      </div>
+      <PullToRefresh
+        onRefresh={refreshUsers}
+        lang={lang}
+        id="users-list-pull-to-refresh"
+      >
+        <div className="space-y-3">
+          {filteredUsers.length === 0 ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-12 text-gray-500 bg-[#15101e]/10 rounded-3xl border border-[#3d2b4f]/10"
+            >
+              <Search className="mx-auto mb-4 opacity-20" size={32} />
+              <p className="text-sm font-bold uppercase tracking-widest">
+                {(t as any).adminNoUsersFound || t.adminNoUsers}
+              </p>
+            </motion.div>
+          ) : (
+            filteredUsers.map((user) => (
+              <UserListItem 
+                key={user.uid}
+                user={user}
+                isAdmin={isAdmin}
+                isModeratorOrAdmin={isModeratorOrAdmin}
+                t={t}
+                lang={lang}
+                openDropdownId={openDropdownId}
+                setOpenDropdownId={setOpenDropdownId}
+                onViewProfile={onViewProfile}
+                onOpenChat={onOpenChat}
+                updateUserRole={updateUserRole}
+                updateUserVerification={updateUserVerification}
+                deleteUser={deleteUser}
+                toggleBlockUser={toggleBlockUser}
+                deleteAvatar={deleteAvatar}
+                currentUserId={currentUser?.uid}
+                blockedDeviceIds={blockedDeviceIds}
+                blockDeviceId={blockDeviceId}
+                unblockDeviceId={unblockDeviceId}
+                deviceDuplicatesMap={deviceAudit.duplicateMap}
+                onFilterByDeviceId={(devId) => setSearchQuery(devId)}
+              />
+            ))
+          )}
+        </div>
+      </PullToRefresh>
     </div>
   );
 };

@@ -11,6 +11,7 @@ import { ACCENT_COLOR_PRESETS, applyPrimaryAccentColor } from '../../utils/theme
 import { useFontSize } from '../../hooks/useFontSize';
 import { AntiAdblockBanner } from '../ui/AntiAdblockBanner';
 import { CustomSelect } from '../ui/CustomSelect';
+import { VisualThemeEditor } from '../settings/VisualThemeEditor';
 
 interface SdkSettingsSectionProps {
   lang: Language;
@@ -21,6 +22,8 @@ interface SdkSettingsSectionProps {
   showLoadWidget: boolean;
   toggleLoadWidget: () => void;
   role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
+  userAccentColor?: string;
+  onUpdateUserAccentColor?: (color: string) => Promise<void>;
 }
 
 export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
@@ -31,7 +34,9 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
   toggleLowPerfMode,
   showLoadWidget,
   toggleLoadWidget,
-  role
+  role,
+  userAccentColor,
+  onUpdateUserAccentColor
 }) => {
   const [ahaSecurityHidden, setAhaSecurityHidden] = useState(localStorage.getItem('aha_security_hidden') === 'true');
   const [localTime, setLocalTime] = useState(new Date().toLocaleTimeString());
@@ -394,6 +399,16 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
               </div>
             </button>
 
+            {/* VISUAL THEME EDITOR SECTION (FIRESTORE SYNC) */}
+            <div className="pt-6 border-t border-[#3d2b4f]/50">
+              <VisualThemeEditor
+                lang={lang}
+                role={role}
+                userAccentColor={userAccentColor}
+                onUpdateUserAccentColor={onUpdateUserAccentColor}
+              />
+            </div>
+
             {/* ACCESSIBILITY & FONT SIZE SECTION */}
             <div className="space-y-4 pt-6 border-t border-[#3d2b4f]/50">
               <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d] flex items-center gap-2">
@@ -500,117 +515,6 @@ export const SdkSettingsSection: React.FC<SdkSettingsSectionProps> = ({
                <h3 className="text-sm font-black uppercase tracking-widest text-[#ff4d4d]">
                 {t.adminTools || (lang === 'ru' ? 'ИНСТРУМЕНТЫ АДМИНИСТРАТОРА' : 'ADMIN TOOLS')}
               </h3>
-              
-              {/* PRIMARY ACCENT COLOR CUSTOMIZATION (ADMIN FIRESTORE UI) */}
-              <div id="admin-accent-color-panel" className="p-5 bg-[#15101e] border border-[#3d2b4f] hover:border-[#ff4d4d]/50 rounded-2xl mb-4 space-y-4 transition-all">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <Palette className="text-[#ff4d4d] w-5 h-5" />
-                    <div>
-                      <h4 className="text-sm font-bold text-white">
-                        {lang === 'ru' ? 'Цветовой акцент сайта' : 'Primary Accent Color (Admin)'}
-                      </h4>
-                      <p className="text-xs text-gray-400">
-                        {lang === 'ru'
-                          ? 'Настройте главный акцентный цвет приложения для всех пользователей (сохраняется в Firestore)'
-                          : 'Customize primary application accent color for all users (saved to Firestore)'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block w-6 h-6 rounded-full border border-white/20 shadow-md"
-                      style={{ backgroundColor: currentAccentColor }}
-                    />
-                    <span className="text-xs font-mono text-gray-300 uppercase">
-                      {currentAccentColor}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Preset color swatches */}
-                <div className="flex items-center gap-2 flex-wrap pt-1">
-                  {ACCENT_COLOR_PRESETS.map((preset) => {
-                    const isSelected = currentAccentColor.toLowerCase() === preset.hex.toLowerCase();
-                    return (
-                      <button
-                        key={preset.hex}
-                        type="button"
-                        onClick={() => {
-                          setCurrentAccentColor(preset.hex);
-                          setCustomHexInput(preset.hex);
-                          applyPrimaryAccentColor(preset.hex);
-                        }}
-                        className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#251c35] border-white text-white shadow-[0_0_15px_rgba(255,255,255,0.2)]'
-                            : 'bg-[#15101e] border-[#3d2b4f] text-gray-400 hover:text-white hover:border-[#ff4d4d]/50'
-                        }`}
-                        title={lang === 'ru' ? preset.nameRu : preset.name}
-                      >
-                        <span
-                          className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/30"
-                          style={{ backgroundColor: preset.hex }}
-                        />
-                        <span>{lang === 'ru' ? (preset.shortRu || preset.nameRu) : (preset.shortEn || preset.name)}</span>
-                        {isSelected && <Check size={12} className="text-white shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Custom HEX input + Color Picker + Save to Firestore */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-[#3d2b4f]/40 flex-wrap">
-                  <div className="flex items-center gap-2 flex-1 min-w-[180px] bg-[#1a1326] border border-[#3d2b4f] rounded-xl px-3 py-1.5">
-                    <input
-                      type="color"
-                      value={customHexInput.startsWith('#') && customHexInput.length === 7 ? customHexInput : '#ff4d4d'}
-                      onChange={(e) => {
-                        setCustomHexInput(e.target.value);
-                        setCurrentAccentColor(e.target.value);
-                        applyPrimaryAccentColor(e.target.value);
-                      }}
-                      className="w-7 h-7 rounded cursor-pointer bg-transparent border-0 shrink-0"
-                    />
-                    <input
-                      type="text"
-                      value={customHexInput}
-                      onChange={(e) => {
-                        setCustomHexInput(e.target.value);
-                        if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                          setCurrentAccentColor(e.target.value);
-                          applyPrimaryAccentColor(e.target.value);
-                        }
-                      }}
-                      placeholder="#FF4D4D"
-                      className="flex-1 bg-transparent border-none text-xs font-mono text-white focus:outline-none uppercase min-w-0"
-                      maxLength={7}
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleSaveAccentColor('#ff4d4d')}
-                      disabled={isSavingColor}
-                      className="px-3 py-2 bg-[#251c35] hover:bg-[#3d2b4f] text-gray-300 hover:text-white text-xs font-bold rounded-xl border border-[#3d2b4f] transition-all cursor-pointer whitespace-nowrap"
-                    >
-                      {lang === 'ru' ? 'Сброс (#ff4d4d)' : 'Reset (#ff4d4d)'}
-                    </button>
-
-                    <button
-                      id="save-accent-color-btn"
-                      type="button"
-                      onClick={() => handleSaveAccentColor(currentAccentColor)}
-                      disabled={isSavingColor}
-                      className="px-3.5 py-2 bg-[#ff4d4d] hover:bg-[#ff3333] text-[#15101e] text-xs font-black uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(255,77,77,0.3)] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0"
-                    >
-                      {isSavingColor ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-                      <span>{lang === 'ru' ? 'Сохранить в Firestore' : 'Save to Firestore'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
 
               {/* AUTONOMOUS DATABASE MANAGEMENT & PURGE PANEL */}
               <div className="p-5 bg-[#15101e] border border-amber-500/30 hover:border-amber-500/60 rounded-2xl mb-4 space-y-4 transition-all">

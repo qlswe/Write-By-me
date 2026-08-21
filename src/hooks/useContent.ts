@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { theoriesData as localTheories, blogPostsData as localBlogPosts, eventsData as localEvents, promoCodesData as localPromoCodes } from '../data/content';
 import { handleFirestoreError, OperationType } from '../utils/errorHandlers';
@@ -541,18 +541,78 @@ export function useContent() {
     };
   }, []);
 
-  // Force cache refresh
+  // Force cache refresh and direct cloud sync
   const refreshContent = useCallback(async (forceBustCache = true) => {
     if (forceBustCache) {
       try {
         localStorage.removeItem(CONTENT_CACHE_KEY_V3);
       } catch (e) {}
     }
+
+    try {
+      // 1. Fetch fresh theories
+      const qTheories = query(collection(db, 'theories'), orderBy('createdAt', 'desc'), limit(50));
+      const snapTheories = await getDocs(qTheories);
+      if (!snapTheories.empty) {
+        const firestoreTheories = snapTheories.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+          title: normalizeLocalizedField(d.data().title),
+          summary: normalizeLocalizedField(d.data().summary),
+          content: normalizeLocalizedField(d.data().content),
+          version: parseContentVersion(d.data()),
+          updatedAt: d.data().updatedAt || d.data().createdAt || new Date().toISOString()
+        }));
+        const { merged } = reconcileItemsWithVersioning(sharedState.theories, firestoreTheories, localTheories);
+        sharedState.theories = merged;
+      }
+
+      // 2. Fetch fresh blog posts
+      const qBlog = query(collection(db, 'blogPosts'), orderBy('createdAt', 'desc'), limit(50));
+      const snapBlog = await getDocs(qBlog);
+      if (!snapBlog.empty) {
+        const firestoreBlog = snapBlog.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+          title: normalizeLocalizedField(d.data().title),
+          summary: normalizeLocalizedField(d.data().summary),
+          content: normalizeLocalizedField(d.data().content),
+          version: parseContentVersion(d.data()),
+          updatedAt: d.data().updatedAt || d.data().createdAt || new Date().toISOString()
+        }));
+        const { merged } = reconcileItemsWithVersioning(sharedState.blogPosts, firestoreBlog, localBlogPosts);
+        sharedState.blogPosts = merged;
+      }
+
+      // 3. Fetch fresh events
+      const qEvents = query(collection(db, 'events'), orderBy('createdAt', 'desc'), limit(20));
+      const snapEvents = await getDocs(qEvents);
+      if (!snapEvents.empty) {
+        const firestoreEvents = snapEvents.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+          title: normalizeLocalizedField(d.data().title),
+          description: normalizeLocalizedField(d.data().description),
+          version: parseContentVersion(d.data()),
+          updatedAt: d.data().updatedAt || d.data().createdAt || new Date().toISOString()
+        }));
+        const { merged } = reconcileItemsWithVersioning(sharedState.events, firestoreEvents, localEvents);
+        sharedState.events = merged;
+      }
+    } catch (err) {
+      console.warn('[useContent] Manual sync fetch error, using local/cached state:', err);
+    }
+
     sharedState = {
       ...sharedState,
       contentVersion: sharedState.contentVersion + 1,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
+      isLoadingTheories: false,
+      isLoadingBlog: false,
+      isLoadingEvents: false,
+      isLoading: false
     };
+    saveCacheToLocalStorage();
     notifyListeners();
   }, []);
 

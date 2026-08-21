@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc, setDoc, deleteDoc, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc, setDoc, deleteDoc, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './useAuth';
 import { logAdminAction } from '../utils/auditLogger';
@@ -292,11 +292,37 @@ export function useUsers() {
     }
   };
 
+  const refreshUsers = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const collectionName = isAdmin ? 'users' : 'public_profiles';
+      const q = query(collection(db, collectionName), limit(200));
+      const snapshot = await getDocs(q);
+      const usersData = snapshot.docs
+        .filter(doc => !deletedUidsRef.current.has(doc.id))
+        .map(doc => ({
+          ...doc.data(),
+          uid: doc.id
+        } as UserData));
+      
+      if (!usersData.some(u => u.uid === JUKY_BOT_USER.uid)) {
+        usersData.unshift(JUKY_BOT_USER);
+      }
+      setUsers(usersData);
+    } catch (err) {
+      console.warn('Error manually syncing users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     users,
     blockedEmails,
     blockedDeviceIds,
     loading,
+    refreshUsers,
     updateUserRole,
     updateUserVerification,
     deleteUser,

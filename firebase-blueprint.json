@@ -23,6 +23,10 @@
           "enum": ["admin", "moderator", "user"],
           "description": "The user's access role."
         },
+        "primaryAccentColor": {
+          "type": "string",
+          "description": "User's custom primary accent color hex."
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",

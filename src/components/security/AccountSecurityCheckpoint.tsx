@@ -17,6 +17,7 @@ import {
 import { getDeviceId } from '../../utils/deviceId';
 import { fetchUserTotpConfig, verifyAndConsumeTotpOrBackup, TotpConfig } from '../../utils/totp';
 import { TotpSetupModal } from './TotpSetupModal';
+import { logSecurityCheckpointAttempt } from '../../utils/securityActivityLogger';
 
 interface AccountSecurityCheckpointProps {
   isOpen: boolean;
@@ -106,12 +107,32 @@ export const AccountSecurityCheckpoint: React.FC<AccountSecurityCheckpointProps>
       trustCurrentDevice(user.uid, 30);
       setIsDeviceTrustedState(true);
       runDiagnostics();
+      logSecurityCheckpointAttempt(user.uid, {
+        status: 'success',
+        actionType: 'device_trusted',
+        actionName: requiredActionName || 'Device Trust Authorization',
+        details: 'Device cryptographic signature authorized as trusted for 30 days.',
+        detailsRu: 'Криптографическая подпись устройства авторизована как доверенная на 30 дней.',
+        score: report.score,
+        isTrusted: true
+      });
     }
   };
 
   const handleSolveHumanPuzzle = () => {
     setIsHumanVerified(true);
     runDiagnostics();
+    if (user?.uid) {
+      logSecurityCheckpointAttempt(user.uid, {
+        status: 'success',
+        actionType: 'biometric_verified',
+        actionName: requiredActionName || 'AHA Biometrics Check',
+        details: 'Interactive human biometric proof passed. Bot suspicion cleared.',
+        detailsRu: 'Интерактивная биометрическая проверка пройдена. Подозрение на бота снято.',
+        score: report.score,
+        isTrusted: isDeviceTrustedState
+      });
+    }
   };
 
   const handleVerifyTotpSubmit = async (e?: React.FormEvent) => {
@@ -127,11 +148,44 @@ export const AccountSecurityCheckpoint: React.FC<AccountSecurityCheckpointProps>
         setIsTotpVerified(true);
         setUsedBackupCode(result.isBackupCode);
         await runDiagnostics();
+        logSecurityCheckpointAttempt(user.uid, {
+          status: 'success',
+          actionType: result.isBackupCode ? 'backup_code_used' : 'totp_verified',
+          actionName: requiredActionName || '2FA Authentication',
+          details: result.isBackupCode 
+            ? 'Emergency single-use backup recovery code successfully validated.' 
+            : '6-digit RFC 6238 TOTP passcode confirmed.',
+          detailsRu: result.isBackupCode
+            ? 'Одноразовый резервный код восстановления успешно подтвержден.'
+            : '6-значный TOTP код из Authenticator успешно подтвержден.',
+          score: report.score,
+          isTrusted: isDeviceTrustedState
+        });
       } else {
-        setTotpError(result.error || (lang === 'ru' ? 'Неверный код 2FA' : 'Invalid 2FA code'));
+        const errMsg = result.error || (lang === 'ru' ? 'Неверный код 2FA' : 'Invalid 2FA code');
+        setTotpError(errMsg);
+        logSecurityCheckpointAttempt(user.uid, {
+          status: 'failed',
+          actionType: 'totp_failed',
+          actionName: requiredActionName || '2FA Authentication',
+          details: `Authentication rejected: ${errMsg}`,
+          detailsRu: `Аутентификация отклонена: ${errMsg}`,
+          score: report.score,
+          isTrusted: isDeviceTrustedState
+        });
       }
     } catch (err: any) {
-      setTotpError(err.message || 'Verification failed');
+      const errMsg = err.message || 'Verification failed';
+      setTotpError(errMsg);
+      logSecurityCheckpointAttempt(user.uid, {
+        status: 'failed',
+        actionType: 'totp_failed',
+        actionName: requiredActionName || '2FA Authentication',
+        details: `Verification error: ${errMsg}`,
+        detailsRu: `Ошибка верификации: ${errMsg}`,
+        score: report.score,
+        isTrusted: isDeviceTrustedState
+      });
     } finally {
       setIsVerifyingTotp(false);
     }
@@ -461,6 +515,17 @@ export const AccountSecurityCheckpoint: React.FC<AccountSecurityCheckpointProps>
 
               <button
                 onClick={() => {
+                  if (user?.uid) {
+                    logSecurityCheckpointAttempt(user.uid, {
+                      status: 'success',
+                      actionType: 'security_gate_passed',
+                      actionName: requiredActionName || 'Account Security Gate',
+                      details: `Checkpoint cleared successfully. Overall Security Score: ${report.score}/100.`,
+                      detailsRu: `Контрольная точка безопасности успешно пройдена. Общий рейтинг: ${report.score}/100.`,
+                      score: report.score,
+                      isTrusted: isDeviceTrustedState
+                    });
+                  }
                   if (onVerificationSuccess) onVerificationSuccess();
                   onClose();
                 }}

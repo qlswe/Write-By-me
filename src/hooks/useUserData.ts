@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { sdk } from '../sdk';
 import { toast } from 'sonner';
 import { cachedJsonParse } from '../utils/performanceOptimizer';
+import { applyPrimaryAccentColor, getPrimaryAccentColor } from '../utils/theme';
 
 interface UserData {
   favorites: string[];
@@ -22,6 +23,7 @@ interface UserData {
   reputation?: number;
   xp?: number;
   photoURL?: string;
+  primaryAccentColor?: string;
 }
 
 export function useUserData(initialLang: string) {
@@ -40,6 +42,7 @@ export function useUserData(initialLang: string) {
   const [reputation, setReputation] = useState<number>(0);
   const [xp, setXp] = useState<number>(0);
   const [photoURL, setPhotoURL] = useState<string>('');
+  const [primaryAccentColor, setPrimaryAccentColor] = useState<string>(() => getPrimaryAccentColor());
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // Load from local storage initially for fast render
@@ -68,6 +71,12 @@ export function useUserData(initialLang: string) {
           setLowPerfMode(true);
           localStorage.setItem('hsr_low_perf', 'true');
         }
+      }
+
+      const localAccent = localStorage.getItem('aha_primary_accent');
+      if (localAccent && /^#[0-9a-fA-F]{3,6}$/.test(localAccent)) {
+        setPrimaryAccentColor(localAccent);
+        applyPrimaryAccentColor(localAccent);
       }
     } catch (e) {
       console.error("Error loading local data", e);
@@ -108,6 +117,11 @@ export function useUserData(initialLang: string) {
         if (data.reputation !== undefined) setReputation(data.reputation);
         if (data.xp !== undefined) setXp(data.xp);
         if (data.photoURL !== undefined) setPhotoURL(data.photoURL);
+        if (data.primaryAccentColor) {
+          setPrimaryAccentColor(data.primaryAccentColor);
+          localStorage.setItem('aha_primary_accent', data.primaryAccentColor);
+          applyPrimaryAccentColor(data.primaryAccentColor);
+        }
       } else {
         // Create initial document if it doesn't exist
         setDoc(userRef, {
@@ -124,6 +138,7 @@ export function useUserData(initialLang: string) {
           reputation: 0,
           xp: 0,
           photoURL: user.photoURL || '',
+          primaryAccentColor: primaryAccentColor,
           createdAt: new Date().toISOString()
         }, { merge: true }).catch(err => handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}`));
       }
@@ -139,6 +154,28 @@ export function useUserData(initialLang: string) {
     });
 
     return () => unsubscribe();
+  }, [user]);
+
+  const updatePrimaryAccentColor = useCallback(async (newColorHex: string) => {
+    const cleanHex = (newColorHex || '').replace('#', '').trim().toLowerCase();
+    const isValidHex = /^[0-9a-f]{3}$|^[0-9a-f]{6}$/.test(cleanHex);
+    const validColor = isValidHex ? `#${cleanHex}` : '#ff4d4d';
+
+    setPrimaryAccentColor(validColor);
+    try {
+      localStorage.setItem('aha_primary_accent', validColor);
+    } catch (e) {}
+
+    applyPrimaryAccentColor(validColor);
+
+    if (user) {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { primaryAccentColor: validColor }, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+      }
+    }
   }, [user]);
 
   const toggleFavorite = useCallback(async (id: string, e: React.MouseEvent) => {
@@ -236,5 +273,5 @@ export function useUserData(initialLang: string) {
     }
   }, [user]);
 
-  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, hsrUid, hsrServer, trailblazerLevel, signature, mainCharacter, role, isPremium, reputation, xp, photoURL, updateProfile, isDataLoaded };
+  return { favorites, toggleFavorite, clearFavorites, lang, updateLang, lowPerfMode, toggleLowPerfMode, hsrUid, hsrServer, trailblazerLevel, signature, mainCharacter, role, isPremium, reputation, xp, photoURL, primaryAccentColor, updatePrimaryAccentColor, updateProfile, isDataLoaded };
 }

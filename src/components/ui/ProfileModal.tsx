@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload, Download, Sparkles, Plus, Eye, Flame, Trash2, Smartphone, KeyRound } from 'lucide-react';
+import { X, User, Mail, Calendar, Hash, Edit2, Check, Copy, Award, Star, Zap, Shield, LogOut, MessageSquare, Camera, Upload, Download, Sparkles, Plus, Eye, Flame, Trash2, Smartphone, KeyRound, QrCode, Clock, ShieldCheck, History, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Language, translations } from '../../data/translations';
 import { useAuth } from '../../hooks/useAuth';
 import { updateProfile as updateAuthProfile } from 'firebase/auth';
@@ -21,6 +21,8 @@ import { ModalPortal } from './ModalPortal';
 import { useGamification } from '../../hooks/useGamification';
 import { GamificationAvatarBadge } from '../gamification/GamificationAvatarBadge';
 import { TotpSetupModal } from '../security/TotpSetupModal';
+import { TotpProfileSection } from '../security/TotpProfileSection';
+import { SecurityActivityLogSection } from '../security/SecurityActivityLogSection';
 import { fetchUserTotpConfig, TotpConfig } from '../../utils/totp';
 
 interface ProfileModalProps {
@@ -67,7 +69,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [showChats, setShowChats] = useState(false);
   const [showPosts, setShowPosts] = useState(false);
-  const [activeProfileTab, setActiveProfileTab] = useState<'info' | 'posts' | 'stories'>('info');
+  const [activeProfileTab, setActiveProfileTab] = useState<'info' | 'posts' | 'stories' | 'security' | 'activity_logs'>('info');
+  const [securitySubTab, setSecuritySubTab] = useState<'2fa' | 'activity_logs'>('2fa');
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
@@ -78,6 +81,64 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
   // 2FA / TOTP Authenticator State
   const [isTotpModalOpen, setIsTotpModalOpen] = useState(false);
   const [totpConfig, setTotpConfig] = useState<TotpConfig | null>(null);
+
+  // Profile navigation tabs horizontal scroll & drag mechanics
+  const tabsNavRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [isTabsDragging, setIsTabsDragging] = useState(false);
+  const [tabsStartX, setTabsStartX] = useState(0);
+  const [tabsScrollLeft, setTabsScrollLeft] = useState(0);
+
+  const checkTabsScroll = () => {
+    if (tabsNavRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsNavRef.current;
+      setCanScrollLeft(scrollLeft > 4);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 4);
+    }
+  };
+
+  useEffect(() => {
+    checkTabsScroll();
+    window.addEventListener('resize', checkTabsScroll);
+    return () => window.removeEventListener('resize', checkTabsScroll);
+  }, [isOpen, activeProfileTab]);
+
+  const handleTabsWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (tabsNavRef.current && (e.deltaY !== 0 || e.deltaX !== 0)) {
+      e.preventDefault();
+      tabsNavRef.current.scrollLeft += e.deltaY !== 0 ? e.deltaY * 0.9 : e.deltaX;
+      checkTabsScroll();
+    }
+  };
+
+  const handleTabsMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!tabsNavRef.current) return;
+    setIsTabsDragging(true);
+    setTabsStartX(e.pageX - tabsNavRef.current.offsetLeft);
+    setTabsScrollLeft(tabsNavRef.current.scrollLeft);
+  };
+
+  const handleTabsMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isTabsDragging || !tabsNavRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - tabsNavRef.current.offsetLeft;
+    const walk = (x - tabsStartX) * 1.5;
+    tabsNavRef.current.scrollLeft = tabsScrollLeft - walk;
+    checkTabsScroll();
+  };
+
+  const handleTabsMouseUpOrLeave = () => {
+    setIsTabsDragging(false);
+  };
+
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (tabsNavRef.current) {
+      const amount = direction === 'left' ? -180 : 180;
+      tabsNavRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+      setTimeout(checkTabsScroll, 200);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !user?.uid) return;
@@ -830,7 +891,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="bg-[#15101e] border border-[#251c35] rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-lg overflow-hidden relative max-h-[90vh] flex flex-col"
+            className={`bg-[#15101e] border border-[#251c35] rounded-[2.5rem] sm:rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full transition-all duration-300 overflow-hidden relative max-h-[92vh] flex flex-col ${
+              activeProfileTab === 'security' || activeProfileTab === 'activity_logs'
+                ? 'max-w-2xl'
+                : 'max-w-lg'
+            }`}
           >
             {/* Header Section (Non-scrolling) */}
             <div className="relative shrink-0">
@@ -1143,36 +1208,114 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                 )}
               </div>
 
-              {/* Tabs for Profile */}
-              <div className="flex border-b border-[#251c35] mb-6 overflow-x-auto custom-scrollbar">
-                <button
-                  onClick={() => { setActiveProfileTab('info'); setShowChats(false); }}
-                  className={`px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap ${!showChats && activeProfileTab === 'info' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
+              {/* Tabs for Profile with Scroll Controls & Drag & Wheel Support */}
+              <div className="relative mb-6">
+                {/* Left Scroll Arrow */}
+                {canScrollLeft && (
+                  <button
+                    onClick={() => scrollTabs('left')}
+                    className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[#1e162a]/95 border border-[#3d2b4f] text-white/80 hover:text-white shadow-lg flex items-center justify-center transition-all active:scale-90 cursor-pointer"
+                    aria-label="Scroll Left"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                )}
+
+                {/* Right Scroll Arrow */}
+                {canScrollRight && (
+                  <button
+                    onClick={() => scrollTabs('right')}
+                    className="absolute -right-2 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full bg-[#1e162a]/95 border border-[#3d2b4f] text-white/80 hover:text-white shadow-lg flex items-center justify-center transition-all active:scale-90 cursor-pointer"
+                    aria-label="Scroll Right"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                )}
+
+                <div
+                  ref={tabsNavRef}
+                  onWheel={handleTabsWheel}
+                  onMouseDown={handleTabsMouseDown}
+                  onMouseMove={handleTabsMouseMove}
+                  onMouseUp={handleTabsMouseUpOrLeave}
+                  onMouseLeave={handleTabsMouseUpOrLeave}
+                  onScroll={checkTabsScroll}
+                  className="flex border-b border-[#251c35] overflow-x-auto scroll-smooth touch-pan-x select-none cursor-grab active:cursor-grabbing no-scrollbar"
                 >
-                  {t.profileInfo}
-                </button>
-                <button
-                  onClick={() => { setActiveProfileTab('posts'); setShowChats(false); }}
-                  className={`px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 ${!showChats && activeProfileTab === 'posts' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
-                >
-                  <span>{t.profileUses}</span>
-                  {posts.length > 0 && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 font-mono">
-                      {posts.length}
-                    </span>
+                  <button
+                    onClick={(e) => {
+                      setActiveProfileTab('info');
+                      setShowChats(false);
+                      (e.currentTarget as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }}
+                    className={`px-4 sm:px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap shrink-0 ${!showChats && activeProfileTab === 'info' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
+                  >
+                    {t.profileInfo}
+                  </button>
+
+                  {isOwnProfile && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          setActiveProfileTab('security');
+                          setSecuritySubTab('2fa');
+                          setShowChats(false);
+                          (e.currentTarget as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                        }}
+                        className={`px-4 sm:px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 shrink-0 ${!showChats && activeProfileTab === 'security' && securitySubTab === '2fa' ? 'border-purple-400 text-purple-400' : 'border-transparent text-white/40 hover:text-white/80'}`}
+                      >
+                        <Smartphone size={14} className="shrink-0" />
+                        <span>{lang === 'ru' ? '2FA Защита' : '2FA Security'}</span>
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${totpConfig?.enabled ? 'bg-emerald-400' : 'bg-white/20'}`} />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          setActiveProfileTab('activity_logs');
+                          setSecuritySubTab('activity_logs');
+                          setShowChats(false);
+                          (e.currentTarget as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                        }}
+                        className={`px-4 sm:px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 shrink-0 ${!showChats && (activeProfileTab === 'activity_logs' || (activeProfileTab === 'security' && securitySubTab === 'activity_logs')) ? 'border-amber-400 text-amber-300' : 'border-transparent text-white/40 hover:text-white/80'}`}
+                      >
+                        <Clock size={14} className="shrink-0" />
+                        <span>{lang === 'ru' ? 'Журнал проверок' : 'Checkpoint Logs'}</span>
+                      </button>
+                    </>
                   )}
-                </button>
-                <button
-                  onClick={() => { setActiveProfileTab('stories'); setShowChats(false); }}
-                  className={`px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 ${!showChats && activeProfileTab === 'stories' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
-                >
-                  <span>{lang === 'ru' ? 'Истории' : 'Stories'}</span>
-                  {userStories.length > 0 && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-[#ff4d4d] text-[#15101e] font-black font-mono">
-                      {userStories.length}
-                    </span>
-                  )}
-                </button>
+
+                  <button
+                    onClick={(e) => {
+                      setActiveProfileTab('posts');
+                      setShowChats(false);
+                      (e.currentTarget as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }}
+                    className={`px-4 sm:px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 shrink-0 ${!showChats && activeProfileTab === 'posts' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
+                  >
+                    <span>{t.profileUses}</span>
+                    {posts.length > 0 && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 font-mono">
+                        {posts.length}
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      setActiveProfileTab('stories');
+                      setShowChats(false);
+                      (e.currentTarget as HTMLElement).scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }}
+                    className={`px-4 sm:px-5 py-3 text-[11px] font-black uppercase tracking-[0.15em] transition-all border-b-2 whitespace-nowrap flex items-center gap-1.5 shrink-0 ${!showChats && activeProfileTab === 'stories' ? 'border-[#ff4d4d] text-[#ff4d4d]' : 'border-transparent text-white/40 hover:text-white/80'}`}
+                  >
+                    <span>{lang === 'ru' ? 'Истории' : 'Stories'}</span>
+                    {userStories.length > 0 && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-[#ff4d4d] text-[#15101e] font-black font-mono">
+                        {userStories.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
 
               <AnimatePresence mode="wait">
@@ -1427,6 +1570,75 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
                       </div>
                     )}
                   </motion.div>
+                ) : (activeProfileTab === 'security' || activeProfileTab === 'activity_logs') && isOwnProfile && user ? (
+                  <motion.div
+                    key="security_and_logs"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mb-8 space-y-6"
+                  >
+                    {/* Security Sub-Navigation Switcher */}
+                    <div className="grid grid-cols-2 gap-2 p-1.5 bg-[#120d1c] border border-[#3d2b4f] rounded-2xl">
+                      <button
+                        onClick={() => {
+                          setActiveProfileTab('security');
+                          setSecuritySubTab('2fa');
+                        }}
+                        className={`py-2.5 px-3 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center ${
+                          (activeProfileTab === 'security' && securitySubTab === '2fa')
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                            : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                        }`}
+                      >
+                        <Smartphone size={14} className="shrink-0" />
+                        <span className="truncate">{lang === 'ru' ? '2FA Защита' : '2FA Security'}</span>
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${totpConfig?.enabled ? 'bg-emerald-400' : 'bg-white/20'}`} />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setActiveProfileTab('activity_logs');
+                          setSecuritySubTab('activity_logs');
+                        }}
+                        className={`py-2.5 px-3 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center ${
+                          activeProfileTab === 'activity_logs' || securitySubTab === 'activity_logs'
+                            ? 'bg-gradient-to-r from-amber-500 to-[#ff4d4d] text-[#15101e] shadow-md shadow-amber-500/20 font-black'
+                            : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                        }`}
+                      >
+                        <Clock size={14} className="shrink-0" />
+                        <span className="truncate">{lang === 'ru' ? 'Журнал проверок' : 'Checkpoint Logs'}</span>
+                      </button>
+                    </div>
+
+                    {/* Active View */}
+                    {activeProfileTab === 'activity_logs' || securitySubTab === 'activity_logs' ? (
+                      <SecurityActivityLogSection
+                        userId={user.uid}
+                        lang={lang}
+                        onToast={(msg) => {
+                          setToast(msg);
+                          setTimeout(() => setToast(null), 3500);
+                        }}
+                      />
+                    ) : (
+                      <TotpProfileSection
+                        userId={user.uid}
+                        userEmail={user.email || ''}
+                        lang={lang}
+                        onTotpStatusChanged={(enabled) => {
+                          if (user.uid) {
+                            fetchUserTotpConfig(user.uid).then(cfg => setTotpConfig(cfg));
+                          }
+                        }}
+                        onToast={(msg) => {
+                          setToast(msg);
+                          setTimeout(() => setToast(null), 3500);
+                        }}
+                      />
+                    )}
+                  </motion.div>
                 ) : (
                   <motion.div
                     key="info"
@@ -1526,6 +1738,77 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
 
                       {isOwnProfile && (
                         <div className="mt-6 bg-[#251c35]/40 border border-[#3d2b4f]/40 p-5 rounded-2xl flex flex-col gap-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h4 className="text-xs font-black text-purple-400 uppercase tracking-wider mb-1 flex items-center gap-2">
+                                <Smartphone size={14} />
+                                {lang === 'ru' ? 'Двухфакторная Аутентификация (2FA / TOTP)' : 'Two-Factor Authentication (2FA / TOTP)'}
+                              </h4>
+                              <p className="text-[10px] text-white/50 leading-relaxed">
+                                {lang === 'ru'
+                                  ? 'Защитите аккаунт одноразовыми 6-значными кодами из Google Authenticator, Microsoft Authenticator или Apple Passwords. Требуется для подтверждения критических операций.'
+                                  : 'Protect your account with 6-digit one-time passcodes from Google Authenticator, Authy, or Apple Passwords. Required for critical security actions.'}
+                              </p>
+                            </div>
+                            <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shrink-0 border ${
+                              totpConfig?.enabled 
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+                                : 'bg-white/10 text-white/50 border-white/20'
+                            }`}>
+                              {totpConfig?.enabled 
+                                ? (lang === 'ru' ? 'АКТИВНА' : 'ACTIVE') 
+                                : (lang === 'ru' ? 'ОТКЛЮЧЕНА' : 'OFF')}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3">
+                            <button
+                              onClick={() => {
+                                setActiveProfileTab('security');
+                                setSecuritySubTab('2fa');
+                                setShowChats(false);
+                              }}
+                              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-[#ff4d4d] hover:from-purple-500 hover:to-[#ff6666] text-white transition-all rounded-xl text-xs font-black uppercase tracking-wider shadow-md shadow-purple-600/20 active:scale-95 cursor-pointer"
+                            >
+                              <KeyRound size={14} className="shrink-0" />
+                              <span>
+                                {totpConfig?.enabled 
+                                  ? (lang === 'ru' ? 'Настройки 2FA' : '2FA Settings') 
+                                  : (lang === 'ru' ? 'Настроить 2FA с QR' : 'Setup 2FA with QR')}
+                              </span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setActiveProfileTab('activity_logs');
+                                setSecuritySubTab('activity_logs');
+                                setShowChats(false);
+                              }}
+                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 transition-all rounded-xl text-xs font-black uppercase tracking-wider active:scale-95 cursor-pointer border border-amber-500/30"
+                            >
+                              <Clock size={14} className="shrink-0 text-amber-400" />
+                              <span>{lang === 'ru' ? 'Журнал проверок' : 'Checkpoint Logs'}</span>
+                            </button>
+
+                            <button
+                              onClick={() => setIsTotpModalOpen(true)}
+                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/5 hover:bg-white/10 text-white/80 transition-all rounded-xl text-xs font-bold active:scale-95 cursor-pointer border border-white/10"
+                            >
+                              <QrCode size={14} className="shrink-0 text-purple-400" />
+                              <span>{lang === 'ru' ? 'Мастер' : 'Wizard'}</span>
+                            </button>
+
+                            {totpConfig?.enabled && (
+                              <span className="text-[11px] text-white/40 font-mono">
+                                {totpConfig.backupCodes?.length || 0} {lang === 'ru' ? 'резервных кодов' : 'backup codes'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {isOwnProfile && (
+                        <div className="mt-4 bg-[#251c35]/40 border border-[#3d2b4f]/40 p-5 rounded-2xl flex flex-col gap-4">
                           <div>
                             <h4 className="text-xs font-black text-[#ff4d4d] uppercase tracking-wider mb-1 flex items-center gap-2">
                               <Shield size={14} />
@@ -1625,6 +1908,27 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, lan
             }}
             lang={lang}
           />
+
+          {/* TOTP 2FA Setup Modal */}
+          {user && (
+            <TotpSetupModal
+              isOpen={isTotpModalOpen}
+              onClose={() => {
+                setIsTotpModalOpen(false);
+                if (user.uid) {
+                  fetchUserTotpConfig(user.uid).then(cfg => setTotpConfig(cfg));
+                }
+              }}
+              lang={lang}
+              userId={user.uid}
+              userEmail={user.email || ''}
+              onTotpStatusChanged={(enabled) => {
+                if (user.uid) {
+                  fetchUserTotpConfig(user.uid).then(cfg => setTotpConfig(cfg));
+                }
+              }}
+            />
+          )}
         </motion.div>
       </div>
     </AnimatePresence>

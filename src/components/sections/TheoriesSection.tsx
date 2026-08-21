@@ -23,6 +23,8 @@ import { MediaViewer } from '../ui/MediaViewer';
 import { TheorySkeletonGrid } from '../ui/SkeletonLoaders';
 import { AhaProtocolDiagram } from '../ui/AhaProtocolDiagram';
 import { getLocalizedCategory } from '../../utils/categories';
+import { PullToRefresh } from '../ui/PullToRefresh';
+import { useContent } from '../../hooks/useContent';
 
 interface TheoriesSectionProps {
   lang: Language;
@@ -38,6 +40,7 @@ interface TheoriesSectionProps {
   onEdit?: (theory: any) => void;
   onCreate?: () => void;
   onOpenChat?: (uid: string, name: string) => void;
+  onRefresh?: () => Promise<any> | void;
   role?: 'admin' | 'moderator' | 'user' | 'beta-tester';
 }
 
@@ -55,6 +58,7 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   onEdit,
   onCreate,
   onOpenChat,
+  onRefresh,
   role
 }) => {
   const t = translations[lang];
@@ -65,9 +69,18 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
   const [copied, setCopied] = useState(false);
   const [theoryToDelete, setTheoryToDelete] = useState<string | null>(null);
   const { user } = useAuth();
+  const { refreshContent } = useContent();
   const isAdmin = role === 'admin';
   const isModerator = role === 'admin' || role === 'moderator';
   trackRender();
+
+  const handleManualRefresh = async () => {
+    if (onRefresh) {
+      await onRefresh();
+    } else {
+      await refreshContent(true);
+    }
+  };
 
   const handleDelete = async () => {
     if (!theoryToDelete) return;
@@ -355,95 +368,101 @@ export const TheoriesSection: React.FC<TheoriesSectionProps> = ({
             />
           </motion.div>
         ) : (
-          <motion.div 
-            key="theory-list"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="bg-[#251c35] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#3d2b4f]"
+          <PullToRefresh
+            onRefresh={handleManualRefresh}
+            lang={lang}
+            id="theories-pull-to-refresh"
           >
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
-              <div>
-                <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4 mb-2">
-                  <BookOpen className="text-[#ff4d4d]" size={32} />
-                  {t.navTheories}
-                </h2>
-                <p className="text-gray-300 font-medium tracking-wide text-xs">
-                  {t.theoriesSubTitle}
-                </p>
-              </div>
-              {isModerator && (
-                <button 
-                  onClick={onCreate}
-                  className="flex items-center gap-3 bg-[#ff4d4d] text-[#15101e] px-6 py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-white hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#ff4d4d]/20"
-                >
-                  <Plus size={20} />
-                  {t.createTheory}
-                </button>
-              )}
-            </div>
-            
-            <div className="flex flex-col lg:flex-row gap-6 mb-10">
-              <div className="flex gap-2 p-1.5 bg-[#15101e]/50 rounded-2xl border border-[#3d2b4f] overflow-x-auto no-scrollbar ml-6">
-                {['all', 'lore', 'characters', 'gameplay', 'infrastructure', 'favorites'].map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setTheoryCategory(cat)}
-                    className={`px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                      theoryCategory === cat 
-                        ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
-                        : 'text-white/40 hover:text-white hover:bg-[#3d2b4f]/30'
-                    }`}
+            <motion.div 
+              key="theory-list"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="bg-[#251c35] rounded-3xl p-6 sm:p-10 shadow-2xl border border-[#3d2b4f]"
+            >
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
+                <div>
+                  <h2 className="text-4xl md:text-5xl lg:text-5xl font-black text-white tracking-tighter uppercase flex items-center gap-4 mb-2">
+                    <BookOpen className="text-[#ff4d4d]" size={32} />
+                    {t.navTheories}
+                  </h2>
+                  <p className="text-gray-300 font-medium tracking-wide text-xs">
+                    {t.theoriesSubTitle}
+                  </p>
+                </div>
+                {isModerator && (
+                  <button 
+                    onClick={onCreate}
+                    className="flex items-center gap-3 bg-[#ff4d4d] text-[#15101e] px-6 py-3 rounded-2xl font-black uppercase tracking-widest hover:bg-white hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#ff4d4d]/20"
                   >
-                    {cat === 'all' ? t.filterAll : 
-                     cat === 'lore' ? t.filterLore : 
-                     cat === 'characters' ? t.filterCharacters : 
-                     cat === 'gameplay' ? t.filterGameplay : 
-                     cat === 'infrastructure' ? (lang === 'ru' ? 'Инфраструктура' : 'Infrastructure') : t.filterFavorites}
+                    <Plus size={20} />
+                    {t.createTheory}
                   </button>
-                ))}
+                )}
               </div>
-              <div className="relative flex-1">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#ff4d4d]/50" size={22} />
-                <input 
-                  type="text"
-                  placeholder={t.searchPlaceholder}
-                  value={theorySearch}
-                  onChange={(e) => setTheorySearch(e.target.value)}
-                  className="w-full bg-[#15101e]/50 border border-[#3d2b4f] rounded-2xl pl-14 pr-6 py-4 text-white placeholder:text-white/40 focus:outline-none focus:border-[#ff4d4d] focus:ring-4 focus:ring-[#ff4d4d]/10 transition-all"
-                />
-              </div>
-            </div>
-
-            {loading ? (
-              <TheorySkeletonGrid count={6} />
-            ) : filteredTheories.length === 0 ? (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-24 text-white/40 bg-[#15101e]/30 rounded-3xl border-2 border-dashed border-[#3d2b4f]/50 flex flex-col items-center gap-4"
-              >
-                <Sparkles size={48} className="text-[#3d2b4f]" />
-                <p className="text-xl font-bold uppercase tracking-widest">{t.noResults}</p>
-              </motion.div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {filteredTheories.map((theory, index) => (
-                  <TheoryCard
-                    key={theory.id}
-                    theory={theory}
-                    index={index}
-                    lang={lang}
-                    isFavorite={favorites.includes(theory.id)}
-                    onClick={() => handleTheoryClick(theory.id)}
-                    onToggleFavorite={(e) => handleToggleFavorite(theory.id, e)}
-                    onEdit={(e) => { e.stopPropagation(); onEdit?.(theory); }}
-                    onDelete={(e) => { e.stopPropagation(); setTheoryToDelete(theory.id); }}
+              
+              <div className="flex flex-col lg:flex-row gap-6 mb-10">
+                <div className="flex gap-2 p-1.5 bg-[#15101e]/50 rounded-2xl border border-[#3d2b4f] overflow-x-auto no-scrollbar ml-6">
+                  {['all', 'lore', 'characters', 'gameplay', 'infrastructure', 'favorites'].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setTheoryCategory(cat)}
+                      className={`px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                        theoryCategory === cat 
+                          ? 'bg-[#ff4d4d] text-[#15101e] shadow-lg shadow-[#ff4d4d]/20' 
+                          : 'text-white/40 hover:text-white hover:bg-[#3d2b4f]/30'
+                      }`}
+                    >
+                      {cat === 'all' ? t.filterAll : 
+                       cat === 'lore' ? t.filterLore : 
+                       cat === 'characters' ? t.filterCharacters : 
+                       cat === 'gameplay' ? t.filterGameplay : 
+                       cat === 'infrastructure' ? (lang === 'ru' ? 'Инфраструктура' : 'Infrastructure') : t.filterFavorites}
+                    </button>
+                  ))}
+                </div>
+                <div className="relative flex-1">
+                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#ff4d4d]/50" size={22} />
+                  <input 
+                    type="text"
+                    placeholder={t.searchPlaceholder}
+                    value={theorySearch}
+                    onChange={(e) => setTheorySearch(e.target.value)}
+                    className="w-full bg-[#15101e]/50 border border-[#3d2b4f] rounded-2xl pl-14 pr-6 py-4 text-white placeholder:text-white/40 focus:outline-none focus:border-[#ff4d4d] focus:ring-4 focus:ring-[#ff4d4d]/10 transition-all"
                   />
-                ))}
+                </div>
               </div>
-            )}
-          </motion.div>
+
+              {loading ? (
+                <TheorySkeletonGrid count={6} />
+              ) : filteredTheories.length === 0 ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center py-24 text-white/40 bg-[#15101e]/30 rounded-3xl border-2 border-dashed border-[#3d2b4f]/50 flex flex-col items-center gap-4"
+                >
+                  <Sparkles size={48} className="text-[#3d2b4f]" />
+                  <p className="text-xl font-bold uppercase tracking-widest">{t.noResults}</p>
+                </motion.div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {filteredTheories.map((theory, index) => (
+                    <TheoryCard
+                      key={theory.id}
+                      theory={theory}
+                      index={index}
+                      lang={lang}
+                      isFavorite={favorites.includes(theory.id)}
+                      onClick={() => handleTheoryClick(theory.id)}
+                      onToggleFavorite={(e) => handleToggleFavorite(theory.id, e)}
+                      onEdit={(e) => { e.stopPropagation(); onEdit?.(theory); }}
+                      onDelete={(e) => { e.stopPropagation(); setTheoryToDelete(theory.id); }}
+                    />
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </PullToRefresh>
         )}
       </AnimatePresence>
 
